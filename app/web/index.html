@@ -3,121 +3,222 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Cinemetrics V2 Prototype</title>
+  <meta name="description" content="FirstRoll helps filmmakers discover films and analyse clips." />
+  <title>FirstRoll — Film discovery and analysis</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Sora:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="./styles.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/assets/styles.css?v=20260807-1" />
 </head>
-<body>
-  <div class="bg-shape bg-shape-a"></div>
-  <div class="bg-shape bg-shape-b"></div>
+<body data-api-base="">
+  <div class="grain" aria-hidden="true"></div>
   <div class="app-shell">
-    <header class="topbar">
-      <div>
-        <p class="eyebrow">Prototype / UI-first rewrite</p>
-        <h1>Cinemetrics Scene Lab</h1>
+    <header class="site-header">
+      <button class="brand" type="button" data-product-view="discovery" aria-label="FirstRoll home">
+        <span class="brand-frame" aria-hidden="true"><span></span></span>
+        <span>FirstRoll</span>
+      </button>
+
+      <nav class="primary-nav" aria-label="Primary navigation">
+        <button class="nav-link active" type="button" data-product-view="discovery">Discover</button>
+        <button class="nav-link" type="button" data-product-view="analyse">Analyse</button>
+      </nav>
+
+      <div class="header-tools">
+        <div class="header-note">
+          <span class="signal-dot" aria-hidden="true"></span>
+          Evidence-led film research
+        </div>
+        <a class="settings-link" href="/settings">Settings</a>
       </div>
-      <p class="subhead">Scene-first film analysis for rough cuts and research clips.</p>
     </header>
 
-    <div class="workspace">
-      <aside class="control-panel card">
-        <h2>Import & Process</h2>
-
-        <label class="file-drop" for="videoFile">
-          <input id="videoFile" type="file" accept="video/*" />
-          <span class="file-title" id="fileTitle">Drop or choose a video clip</span>
-          <span class="file-meta" id="fileMeta">MP4, MOV, MKV supported by browser codec</span>
-        </label>
-
-        <div class="control-group">
-          <label for="sampleInterval">Sampling interval (sec)</label>
-          <input id="sampleInterval" type="range" min="0.5" max="3" step="0.25" value="1" />
-          <output id="sampleIntervalOut">1.00s</output>
-        </div>
-
-        <div class="control-group">
-          <label for="sceneSensitivity">Scene sensitivity</label>
-          <input id="sceneSensitivity" type="range" min="1" max="10" step="1" value="6" />
-          <output id="sceneSensitivityOut">6</output>
-        </div>
-
-        <div class="control-group">
-          <label for="backendUrl">Backend API URL</label>
-          <input id="backendUrl" type="text" value="http://127.0.0.1:8000/api/analyze" />
-        </div>
-
-        <button id="analyzeBtn" class="cta" disabled>Generate Scene-Centric Analysis</button>
-
-        <div class="quick-actions">
-          <p class="actions-title">Feature Actions</p>
-          <div class="actions-grid">
-            <button id="openShotDataBtn" class="ghost-btn" disabled>Open Detailed Shot Data</button>
-            <button id="openColorBtn" class="ghost-btn" disabled>Open Color Analysis</button>
-            <button id="openObjectsBtn" class="ghost-btn" disabled>Open Object Analysis</button>
+    <main>
+      <section id="product-discovery" class="product-view active">
+        <div class="discovery-hero">
+          <div class="hero-copy">
+            <p class="eyebrow">Discover</p>
+            <h1>Find a film.<br /><em>Study it.</em></h1>
+            <p class="hero-deck">
+              Search by title, year and director. Review online and local sources in one dossier.
+            </p>
           </div>
+
+          <aside class="manifesto-card" aria-label="FirstRoll research principle">
+            <span class="manifesto-number">01</span>
+            <p>Verify the film.</p>
+            <strong>Title · Year · Director</strong>
+            <span class="manifesto-rule"></span>
+            <small>Sources stay visible.</small>
+          </aside>
         </div>
 
-        <div class="quick-actions">
-          <p class="actions-title">Export Outputs</p>
-          <div class="actions-grid">
-            <button id="exportJsonBtn" class="ghost-btn" disabled>Export Analysis JSON</button>
-            <button id="exportScenesCsvBtn" class="ghost-btn" disabled>Export Scenes CSV</button>
-            <button id="exportShotsCsvBtn" class="ghost-btn" disabled>Export Shots CSV</button>
+        <form id="discoveryForm" class="search-stage" role="search">
+          <div class="search-field search-field-title">
+            <label for="filmTitle">Film title</label>
+            <input id="filmTitle" name="title" type="search" placeholder="Try In the Mood for Love" autocomplete="off" required />
           </div>
+          <div class="search-field">
+            <label for="filmYear">Year</label>
+            <input id="filmYear" name="year" type="number" min="1888" max="2100" placeholder="2000" inputmode="numeric" />
+          </div>
+          <div class="search-field">
+            <label for="filmDirector">Director</label>
+            <input id="filmDirector" name="director" type="text" placeholder="Wong Kar-wai" autocomplete="off" />
+          </div>
+          <button id="discoverySubmit" class="search-submit" type="submit">
+            <span>Search films</span><span aria-hidden="true">↗</span>
+          </button>
+        </form>
+
+        <div class="search-support">
+          <div class="sample-searches" aria-label="Example searches">
+            <span>Begin with</span>
+            <button type="button" data-sample-title="In the Mood for Love" data-sample-year="2000" data-sample-director="Wong Kar-wai">In the Mood for Love</button>
+            <button type="button" data-sample-title="Parasite" data-sample-year="2019" data-sample-director="Bong Joon Ho">Parasite</button>
+            <button type="button" data-sample-title="Seven Samurai" data-sample-year="1954" data-sample-director="Akira Kurosawa">Seven Samurai</button>
+          </div>
+          <p id="discoveryConnection" class="connection-state">Checking research sources…</p>
         </div>
 
-        <div class="status-wrap">
-          <p id="statusText">Waiting for video import...</p>
-          <div class="progress-track" aria-hidden="true">
-            <div id="progressBar" class="progress-bar"></div>
+        <section id="discoveryResultsSection" class="results-section hidden" aria-live="polite">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Identity matches</p>
+              <h2 id="resultsTitle">Search results</h2>
+            </div>
+            <p id="resultsMeta" class="section-meta"></p>
           </div>
-        </div>
-
-        <video id="previewVideo" controls playsinline muted></video>
-      </aside>
-
-      <main class="analysis-panel card">
-        <nav class="view-tabs" role="tablist" aria-label="Analysis sections">
-          <button class="tab active" data-view="overview">Overview</button>
-          <button class="tab" data-view="shotdata">Detailed Shot Data</button>
-          <button class="tab" data-view="color">Color Analysis</button>
-          <button class="tab" data-view="objects">Object Analysis</button>
-        </nav>
-
-        <section id="view-overview" class="view active" aria-live="polite">
-          <div id="overviewPlaceholder" class="placeholder">
-            Import a clip to generate metadata and scene-level summary.
-          </div>
-          <div id="overviewContent" class="hidden"></div>
+          <div id="sourceStatus" class="source-status"></div>
+          <div id="discoveryResults" class="film-grid"></div>
         </section>
 
-        <section id="view-shotdata" class="view">
-          <div id="shotdataPlaceholder" class="placeholder">Run analysis to see shot and scene metrics.</div>
-          <div id="shotdataContent" class="hidden"></div>
-        </section>
+        <section id="filmDetail" class="film-detail hidden" aria-live="polite"></section>
 
-        <section id="view-color" class="view">
-          <div id="colorPlaceholder" class="placeholder">Run analysis to render scene-level color wheels.</div>
-          <div id="colorContent" class="hidden"></div>
-        </section>
-
-        <section id="view-objects" class="view">
-          <div id="objectsPlaceholder" class="placeholder">Run analysis to inspect notable props per scene.</div>
-          <div id="objectsContent" class="hidden"></div>
-          <div id="llmDraftWrap" class="hidden">
-            <button id="generateLlmDraftBtn" class="ghost-btn inline">Generate LLM Interpretation Draft</button>
-            <textarea id="llmDraftText" readonly placeholder="Generated scene interpretation draft will appear here..."></textarea>
+        <section id="discoveryEmpty" class="discovery-empty">
+          <div class="empty-reel" aria-hidden="true"><span></span><span></span><span></span></div>
+          <div>
+            <p class="eyebrow">Film dossier</p>
+            <h2>Identity, sources,<br />context.</h2>
+          </div>
+          <div class="lens-list">
+            <article><span>01</span><h3>Identity</h3><p>Title, year, director and credits.</p></article>
+            <article><span>02</span><h3>Online sources</h3><p>Interviews, criticism and scholarship.</p></article>
+            <article><span>03</span><h3>Local library</h3><p>Your private books and notes.</p></article>
           </div>
         </section>
-      </main>
-    </div>
+      </section>
+
+      <section id="product-analyse" class="product-view">
+        <div class="analyse-intro">
+          <div>
+            <p class="eyebrow">Analyse</p>
+            <h1>Measure a clip.<br /><em>Scene by scene.</em></h1>
+          </div>
+          <p id="analyseContext">Import a private clip to inspect scenes, shots, colour and objects.</p>
+        </div>
+
+        <div class="workspace">
+          <aside class="control-panel card">
+            <div class="panel-kicker">Private clip workspace</div>
+            <h2>Import &amp; process</h2>
+
+            <label class="file-drop" for="videoFile">
+              <input id="videoFile" type="file" accept="video/*" />
+              <span class="file-icon" aria-hidden="true">＋</span>
+              <span class="file-title" id="fileTitle">Choose a film clip</span>
+              <span class="file-meta" id="fileMeta">Your source remains on this device until analysis begins</span>
+            </label>
+
+            <div class="control-group">
+              <label for="sampleInterval">Sampling interval</label>
+              <input id="sampleInterval" type="range" min="0.5" max="3" step="0.25" value="1" />
+              <output id="sampleIntervalOut">1.00s</output>
+            </div>
+
+            <div class="control-group">
+              <label for="sceneSensitivity">Scene sensitivity</label>
+              <input id="sceneSensitivity" type="range" min="1" max="10" step="1" value="6" />
+              <output id="sceneSensitivityOut">6</output>
+            </div>
+
+            <details class="connection-settings">
+              <summary>Analysis connection</summary>
+              <div class="control-group">
+                <label for="backendUrl">Backend API URL</label>
+                <input id="backendUrl" type="text" value="/api/analyze" />
+              </div>
+            </details>
+
+            <button id="analyzeBtn" class="cta" disabled>Generate scene analysis</button>
+
+            <div class="quick-actions">
+              <p class="actions-title">Explore evidence</p>
+              <div class="actions-grid">
+                <button id="openShotDataBtn" class="ghost-btn" disabled>Detailed shot data</button>
+                <button id="openColorBtn" class="ghost-btn" disabled>Colour analysis</button>
+                <button id="openObjectsBtn" class="ghost-btn" disabled>Object analysis</button>
+              </div>
+            </div>
+
+            <div class="quick-actions">
+              <p class="actions-title">Export</p>
+              <div class="actions-grid compact">
+                <button id="exportJsonBtn" class="ghost-btn" disabled>JSON</button>
+                <button id="exportScenesCsvBtn" class="ghost-btn" disabled>Scenes CSV</button>
+                <button id="exportShotsCsvBtn" class="ghost-btn" disabled>Shots CSV</button>
+              </div>
+            </div>
+
+            <div class="status-wrap">
+              <p id="statusText">Waiting for a video clip…</p>
+              <div class="progress-track" aria-hidden="true"><div id="progressBar" class="progress-bar"></div></div>
+            </div>
+            <video id="previewVideo" controls playsinline muted></video>
+          </aside>
+
+          <section class="analysis-panel card">
+            <nav class="view-tabs" role="tablist" aria-label="Analysis sections">
+              <button class="tab active" data-view="overview">Overview</button>
+              <button class="tab" data-view="shotdata">Shot data</button>
+              <button class="tab" data-view="color">Colour</button>
+              <button class="tab" data-view="objects">Objects</button>
+            </nav>
+
+            <section id="view-overview" class="view active" aria-live="polite">
+              <div id="overviewPlaceholder" class="placeholder">Import a clip to generate metadata and scene-level evidence.</div>
+              <div id="overviewContent" class="hidden"></div>
+            </section>
+            <section id="view-shotdata" class="view">
+              <div id="shotdataPlaceholder" class="placeholder">Run analysis to see shot and scene metrics.</div>
+              <div id="shotdataContent" class="hidden"></div>
+            </section>
+            <section id="view-color" class="view">
+              <div id="colorPlaceholder" class="placeholder">Run analysis to render scene-level colour wheels.</div>
+              <div id="colorContent" class="hidden"></div>
+            </section>
+            <section id="view-objects" class="view">
+              <div id="objectsPlaceholder" class="placeholder">Run analysis to inspect notable props per scene.</div>
+              <div id="objectsContent" class="hidden"></div>
+              <div id="llmDraftWrap" class="hidden">
+                <button id="generateLlmDraftBtn" class="ghost-btn inline">Generate interpretation brief</button>
+                <textarea id="llmDraftText" readonly placeholder="A structured scene brief will appear here…"></textarea>
+              </div>
+            </section>
+          </section>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <span>FirstRoll</span>
+      <p>Discover. Analyse.</p>
+      <small>Local research workspace</small>
+    </footer>
   </div>
 
   <video id="analysisVideo" preload="metadata" class="hidden-asset"></video>
   <canvas id="analysisCanvas" width="160" height="90" class="hidden-asset"></canvas>
-
-  <script src="./app.js"></script>
+  <script src="/assets/app.js?v=20260807-1"></script>
 </body>
 </html>

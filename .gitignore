@@ -129,6 +129,7 @@ celerybeat.pid
 # Environments
 .env
 .venv
+.firstroll/
 env/
 venv/
 ENV/

@@ -3,9 +3,35 @@ const state = {
   url: null,
   meta: null,
   analysis: null,
+  discovery: {
+    results: [],
+    selectedFilm: null,
+    mode: "unknown",
+  },
 };
 
 const refs = {
+  productViews: {
+    discovery: document.getElementById("product-discovery"),
+    analyse: document.getElementById("product-analyse"),
+  },
+  productNav: Array.from(document.querySelectorAll(".nav-link[data-product-view]")),
+  productViewTriggers: Array.from(document.querySelectorAll("[data-product-view]")),
+  discoveryForm: document.getElementById("discoveryForm"),
+  filmTitle: document.getElementById("filmTitle"),
+  filmYear: document.getElementById("filmYear"),
+  filmDirector: document.getElementById("filmDirector"),
+  discoverySubmit: document.getElementById("discoverySubmit"),
+  discoveryConnection: document.getElementById("discoveryConnection"),
+  discoveryResultsSection: document.getElementById("discoveryResultsSection"),
+  discoveryResults: document.getElementById("discoveryResults"),
+  discoveryEmpty: document.getElementById("discoveryEmpty"),
+  resultsTitle: document.getElementById("resultsTitle"),
+  resultsMeta: document.getElementById("resultsMeta"),
+  sourceStatus: document.getElementById("sourceStatus"),
+  filmDetail: document.getElementById("filmDetail"),
+  analyseContext: document.getElementById("analyseContext"),
+  sampleSearches: Array.from(document.querySelectorAll("[data-sample-title]")),
   videoFile: document.getElementById("videoFile"),
   fileTitle: document.getElementById("fileTitle"),
   fileMeta: document.getElementById("fileMeta"),
@@ -53,6 +79,21 @@ const refs = {
 setup();
 
 function setup() {
+  refs.productViewTriggers.forEach((trigger) => {
+    trigger.addEventListener("click", () => setProductView(trigger.dataset.productView));
+  });
+  refs.discoveryForm.addEventListener("submit", onDiscoverySearch);
+  refs.discoveryResults.addEventListener("click", onFilmResultClick);
+  refs.filmDetail.addEventListener("click", onFilmDetailClick);
+  refs.sampleSearches.forEach((sample) => {
+    sample.addEventListener("click", () => {
+      refs.filmTitle.value = sample.dataset.sampleTitle || "";
+      refs.filmYear.value = sample.dataset.sampleYear || "";
+      refs.filmDirector.value = sample.dataset.sampleDirector || "";
+      refs.discoveryForm.requestSubmit();
+    });
+  });
+
   refs.sampleInterval.addEventListener("input", () => {
     refs.sampleIntervalOut.value = `${Number(refs.sampleInterval.value).toFixed(2)}s`;
   });
@@ -75,6 +116,463 @@ function setup() {
   });
 
   setFeatureButtonsEnabled(false);
+  loadDiscoveryStatus();
+}
+
+function setProductView(viewKey) {
+  if (!refs.productViews[viewKey]) return;
+  Object.entries(refs.productViews).forEach(([key, section]) => {
+    section.classList.toggle("active", key === viewKey);
+  });
+  refs.productNav.forEach((button) => {
+    const active = button.dataset.productView === viewKey;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-current", active ? "page" : "false");
+  });
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function discoveryApiBase() {
+  return (document.body.dataset.apiBase || "").replace(/\/$/, "");
+}
+
+async function loadDiscoveryStatus() {
+  try {
+    const res = await fetch(`${discoveryApiBase()}/api/discovery/status`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    state.discovery.mode = data.mode || "unknown";
+    const primary = data.sources?.[0];
+    refs.discoveryConnection.textContent = primary
+      ? `${primary.name} / ${primary.state}`
+      : "Discovery source ready";
+  } catch (_) {
+    refs.discoveryConnection.textContent = "Start the FirstRoll backend to search";
+  }
+}
+
+async function onDiscoverySearch(event) {
+  event.preventDefault();
+  const title = refs.filmTitle.value.trim();
+  if (!title) {
+    refs.filmTitle.focus();
+    return;
+  }
+
+  const params = new URLSearchParams({ q: title });
+  const year = refs.filmYear.value.trim();
+  const director = refs.filmDirector.value.trim();
+  if (year) params.set("year", year);
+  if (director) params.set("director", director);
+
+  refs.discoverySubmit.disabled = true;
+  refs.discoverySubmit.querySelector("span").textContent = "Searching…";
+  refs.discoveryResultsSection.classList.remove("hidden");
+  refs.discoveryEmpty.classList.add("hidden");
+  refs.filmDetail.classList.add("hidden");
+  refs.discoveryResults.innerHTML = `<div class="no-results">Matching title, year and filmmaker identity…</div>`;
+  refs.resultsTitle.textContent = `Finding “${title}”`;
+  refs.resultsMeta.textContent = "";
+  refs.sourceStatus.innerHTML = "";
+
+  try {
+    const res = await fetch(`${discoveryApiBase()}/api/discovery/search?${params.toString()}`);
+    if (!res.ok) throw new Error(await readApiError(res));
+    const data = await res.json();
+    state.discovery.results = Array.isArray(data.results) ? data.results : [];
+    state.discovery.mode = data.mode || "unknown";
+    renderDiscoveryResults(data);
+  } catch (err) {
+    refs.resultsTitle.textContent = "Discovery is unavailable";
+    refs.discoveryResults.innerHTML = `<div class="no-results">${escapeHtml(err.message)} Check that the FirstRoll backend is running, then try again.</div>`;
+  } finally {
+    refs.discoverySubmit.disabled = false;
+    refs.discoverySubmit.querySelector("span").textContent = "Search films";
+  }
+}
+
+function renderDiscoveryResults(data) {
+  const films = Array.isArray(data.results) ? data.results : [];
+  const query = data.query || {};
+  refs.resultsTitle.textContent = films.length === 1 ? "One precise match" : `${films.length} identity matches`;
+  refs.resultsMeta.textContent = [query.title, query.year, query.director].filter(Boolean).join(" / ");
+  refs.sourceStatus.innerHTML = (data.sources || [])
+    .map((source) => `<span class="source-pill ${escapeHtml(source.state || "")}" title="${escapeHtml(source.message || "")}">${escapeHtml(source.name || "Source")} · ${escapeHtml(source.state || "unknown")}</span>`)
+    .join("");
+
+  if (!films.length) {
+    refs.discoveryResults.innerHTML = `
+      <div class="no-results">
+        No exact match was found. Check the release year or remove the director filter, then search again.
+      </div>`;
+    return;
+  }
+
+  refs.discoveryResults.innerHTML = films.map((film, index) => filmCard(film, index)).join("");
+}
+
+function filmCard(film, index) {
+  const title = escapeHtml(film.title || "Untitled");
+  const originalTitle = film.original_title && film.original_title !== film.title
+    ? escapeHtml(film.original_title)
+    : "&nbsp;";
+  const poster = film.poster_url
+    ? `<img src="${escapeHtml(film.poster_url)}" alt="Poster for ${title}" loading="lazy" />`
+    : `<span class="poster-title">${title}</span>`;
+  const score = Number.isFinite(film.match_score) ? `${Math.round(film.match_score * 100)}% match` : "Identity match";
+  const director = (film.directors || []).join(", ") || "Director not supplied";
+  return `
+    <article class="film-card" style="animation-delay:${Math.min(index * 45, 180)}ms">
+      <div class="film-poster">
+        ${poster}
+        <span class="match-stamp">${escapeHtml(score)}</span>
+      </div>
+      <div class="film-card-body">
+        <h3>${title}</h3>
+        <p class="original-title">${originalTitle}</p>
+        <div class="film-identity">
+          <span>${escapeHtml(film.year || "Year unknown")}</span>
+          <span class="film-director">${escapeHtml(director)}</span>
+        </div>
+      </div>
+      <button class="film-card-button" type="button" data-film-id="${escapeHtml(film.id)}">
+        <span>Open film dossier</span><span aria-hidden="true">↗</span>
+      </button>
+    </article>`;
+}
+
+async function onFilmResultClick(event) {
+  const button = event.target.closest("[data-film-id]");
+  if (!button) return;
+  await loadFilmDetail(button.dataset.filmId);
+}
+
+async function loadFilmDetail(filmId) {
+  refs.filmDetail.classList.remove("hidden");
+  refs.filmDetail.innerHTML = `<div class="no-results">Building the film dossier…</div>`;
+  refs.filmDetail.scrollIntoView({ behavior: "smooth", block: "start" });
+  try {
+    const res = await fetch(`${discoveryApiBase()}/api/discovery/films/${encodeURIComponent(filmId)}`);
+    if (!res.ok) throw new Error(await readApiError(res));
+    const data = await res.json();
+    state.discovery.selectedFilm = data.film;
+    renderFilmDetail(data.film);
+  } catch (err) {
+    refs.filmDetail.innerHTML = `<button class="detail-close" type="button" data-detail-close aria-label="Close">×</button><div class="no-results">${escapeHtml(err.message)}</div>`;
+  }
+}
+
+function renderFilmDetail(film) {
+  const directors = (film.credits?.directors || film.directors || []).join(", ") || "Not supplied";
+  const writers = (film.credits?.writers || []).join(", ") || "Not supplied";
+  const cinematographers = (film.credits?.cinematographers || []).join(", ") || "Not supplied";
+  const genres = (film.genres || []).join(" · ") || "Not supplied";
+  const backdrop = film.backdrop_url
+    ? `<img class="detail-backdrop" src="${escapeHtml(film.backdrop_url)}" alt="" />`
+    : "";
+  const originalTitle = film.original_title && film.original_title !== film.title
+    ? `<p class="detail-original">${escapeHtml(film.original_title)}</p>`
+    : "";
+  const reviews = Array.isArray(film.reviews) ? film.reviews : [];
+  const sourceUrl = safeHttpUrl(film.source?.url);
+  const researchLinks = Array.isArray(film.research_links) ? film.research_links : [];
+  const studyQuestions = Array.isArray(film.study_questions) ? film.study_questions : [];
+  const localLibrary = film.local_library || { document_count: 0, documents: [] };
+  const localDocuments = Array.isArray(localLibrary.documents) ? localLibrary.documents : [];
+  const overviewSourceUrl = safeHttpUrl(film.overview_source?.url);
+  const studyReading = film.study_reading || { status: { state: "not_built" }, passages: [] };
+  const readingPassages = Array.isArray(studyReading.passages) ? studyReading.passages : [];
+  const criticalResearch = film.critical_research || {};
+  const doubanStatus = criticalResearch.providers?.douban || {};
+  const criticalBundle = criticalResearch.bundle || null;
+
+  refs.filmDetail.innerHTML = `
+    <button class="detail-close" type="button" data-detail-close aria-label="Close film dossier">×</button>
+    <div class="detail-hero">
+      ${backdrop}
+      <div class="detail-copy">
+        <p class="eyebrow">Study dossier / ${escapeHtml(film.year || "Undated")}</p>
+        <h2>${escapeHtml(film.title || "Untitled")}</h2>
+        ${originalTitle}
+        <p class="detail-overview">${escapeHtml(film.overview || "No synopsis is available from this source.")}</p>
+        ${overviewSourceUrl ? `<p class="detail-attribution">Overview: <a href="${escapeHtml(overviewSourceUrl)}" target="_blank" rel="noopener noreferrer">Wikipedia · CC BY-SA ↗</a></p>` : ""}
+        <div class="detail-actions">
+          <button class="detail-action primary" type="button" data-analyse-film>Analyse a clip</button>
+          ${sourceUrl ? `<a class="detail-action" href="${escapeHtml(sourceUrl)}" target="_blank" rel="noopener noreferrer">View source ↗</a>` : ""}
+        </div>
+      </div>
+      <aside class="detail-facts">
+        ${detailFact("Director", directors)}
+        ${detailFact("Written by", writers)}
+        ${detailFact("Cinematography", cinematographers)}
+        ${detailFact("Runtime", film.runtime_minutes ? `${film.runtime_minutes} minutes` : "Not supplied")}
+        ${detailFact("Genres", genres)}
+      </aside>
+    </div>
+    <div class="evidence-banner">
+      <strong>Evidence boundary</strong>
+      <span>${escapeHtml(film.evidence_notice || "Discovery metadata does not establish the filmmakers’ intentions.")}</span>
+    </div>
+    <div class="research-workspace">
+      <section class="research-module">
+        <div class="module-heading"><span>01 / Online</span><h3>Research</h3></div>
+        <div class="source-link-list">
+          ${researchLinks.length ? researchLinks.map(researchLinkCard).join("") : `<p class="module-empty">No online sources found.</p>`}
+        </div>
+      </section>
+      <section class="research-module">
+        <div class="module-heading"><span>02 / Private</span><h3>Local library</h3><small>${escapeHtml(localLibrary.document_count || 0)} documents</small></div>
+        <div class="library-list">
+          ${localDocuments.length ? localDocuments.slice(0, 7).map(libraryDocumentRow).join("") : `<p class="module-empty">Add books or notes in Settings.</p>`}
+        </div>
+      </section>
+      <section class="research-module research-questions">
+        <div class="module-heading"><span>03 / Study</span><h3>Questions</h3></div>
+        <ol>${studyQuestions.map((question) => `<li>${escapeHtml(question)}</li>`).join("")}</ol>
+      </section>
+    </div>
+    <section class="critical-perspectives">
+      <div class="critical-head">
+        <div><span>Attributed secondary evidence</span><h3>Critical perspectives</h3></div>
+        <button type="button" data-load-douban ${doubanStatus.installed ? "" : "disabled"}>${criticalBundle ? "Refresh Douban" : "Load Douban"}</button>
+      </div>
+      <p class="critical-note">Review summaries are structured without inventing missing scenes, techniques or timecodes.</p>
+      <div data-critical-output>
+        ${criticalBundle ? criticalResearchMarkup(criticalBundle) : `<p class="module-empty">${doubanStatus.installed ? "Load attributed Douban perspectives for this film." : "Install the optional local Douban connector first."}</p>`}
+      </div>
+    </section>
+    <section class="deep-study">
+      <div class="deep-study-head">
+        <div><span>Grounded synthesis</span><h3>Deep Study</h3></div>
+        <small>DeepSeek · film record + cited books</small>
+      </div>
+      <div class="study-prompt-row">
+        <textarea data-study-question rows="2" maxlength="500" aria-label="Optional focus for Deep Study" placeholder="Optional focus — for example: spatial hierarchy, cutting rhythm, or point of view"></textarea>
+        <button type="button" data-generate-study>Generate study</button>
+      </div>
+      <div class="deep-study-output" data-study-output>
+        <p>Build a film-specific argument from the verified record and your cited reading passages.</p>
+      </div>
+    </section>
+    <section class="study-reading">
+      <div class="reading-heading">
+        <div><span>Private retrieval</span><h3>From your books</h3></div>
+        <small>${escapeHtml(studyReading.status?.chunk_count || 0)} indexed passages</small>
+      </div>
+      ${readingPassages.length ? `<div class="reading-grid">${readingPassages.map(readingPassageCard).join("")}</div>` : `<p class="module-empty">Build the local index with <code>uv run firstroll-index</code>.</p>`}
+    </section>
+    ${reviews.length ? `<div class="reviews-section"><h3>Perspectives</h3><div class="review-grid">${reviews.map(reviewCard).join("")}</div></div>` : ""}`;
+}
+
+function researchLinkCard(link) {
+  const url = safeHttpUrl(link.url);
+  if (!url) return "";
+  const kind = String(link.kind || "source").replaceAll("_", " ");
+  return `<a class="source-link-card" href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer"><span>${escapeHtml(kind)}</span><strong>${escapeHtml(link.label || "Open source")}</strong><i aria-hidden="true">↗</i></a>`;
+}
+
+function libraryDocumentRow(document) {
+  const topics = Array.isArray(document.topics) ? document.topics.slice(0, 3).join(" · ") : "Film studies";
+  return `<article class="library-document"><div><strong>${escapeHtml(document.title || "Untitled document")}</strong><span>${escapeHtml(topics)}</span></div><small>${escapeHtml(document.format || "FILE")} · ${escapeHtml(document.size_mb || 0)} MB</small></article>`;
+}
+
+function readingPassageCard(passage) {
+  return `<article class="reading-card"><span>${escapeHtml(passage.concept || "Film form")}</span><p>${escapeHtml(passage.excerpt || "")}</p><footer><strong>${escapeHtml(passage.title || "Local source")}</strong><small>PDF p. ${escapeHtml(passage.page || "?")}</small></footer></article>`;
+}
+
+function detailFact(label, value) {
+  return `<div class="detail-fact"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`;
+}
+
+function reviewCard(review) {
+  const url = safeHttpUrl(review.url);
+  return `
+    <article class="review-card">
+      <div class="review-head"><strong>${escapeHtml(review.author || "Community member")}</strong><span>${escapeHtml(review.source?.name || "Source-labelled")}</span></div>
+      <p>${escapeHtml(review.excerpt || "No excerpt supplied.")}</p>
+      ${url ? `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">Read at source ↗</a>` : ""}
+    </article>`;
+}
+
+async function onFilmDetailClick(event) {
+  if (event.target.closest("[data-detail-close]")) {
+    refs.filmDetail.classList.add("hidden");
+    refs.filmDetail.innerHTML = "";
+    return;
+  }
+  if (event.target.closest("[data-analyse-film]")) {
+    const film = state.discovery.selectedFilm;
+    refs.analyseContext.textContent = film
+      ? `Analyse a clip from ${film.title}: scenes, shots, colour and objects.`
+      : "Import a private clip to inspect scenes, shots, colour and objects.";
+    setProductView("analyse");
+    refs.videoFile.focus();
+    return;
+  }
+  const studyButton = event.target.closest("[data-generate-study]");
+  if (studyButton) {
+    await generateDeepStudy(studyButton);
+    return;
+  }
+  const doubanButton = event.target.closest("[data-load-douban]");
+  if (doubanButton) {
+    await loadDoubanCriticism(doubanButton);
+  }
+}
+
+async function loadDoubanCriticism(button) {
+  const film = state.discovery.selectedFilm;
+  const output = refs.filmDetail.querySelector("[data-critical-output]");
+  if (!film || !output) return;
+  button.disabled = true;
+  button.textContent = "Structuring…";
+  output.innerHTML = `<p class="module-empty">Retrieving attributed summaries and extracting claims…</p>`;
+  try {
+    const response = await fetch(
+      `${discoveryApiBase()}/api/discovery/films/${encodeURIComponent(film.id)}/criticism/douban`,
+      { method: "POST" },
+    );
+    if (!response.ok) throw new Error(await readApiError(response));
+    const data = await response.json();
+    const bundle = data.critical_research;
+    state.discovery.selectedFilm.critical_research.bundle = bundle;
+    output.innerHTML = criticalResearchMarkup(bundle);
+    button.textContent = "Refresh Douban";
+  } catch (error) {
+    output.innerHTML = `<p class="study-error">${escapeHtml(error.message)}</p>`;
+    button.textContent = "Load Douban";
+  } finally {
+    button.disabled = false;
+  }
+}
+
+function criticalResearchMarkup(bundle) {
+  const claims = Array.isArray(bundle?.claims) ? bundle.claims : [];
+  const reviews = Array.isArray(bundle?.reviews) ? bundle.reviews : [];
+  const reviewMap = Object.fromEntries(reviews.map((review) => [review.source_id, review]));
+  if (!claims.length) return `<p class="module-empty">No substantive critical claims were found in the available summaries.</p>`;
+  return `
+    <div class="critical-grid">${claims.map((claim) => criticalClaimMarkup(claim, reviewMap[claim.source_id])).join("")}</div>
+    <p class="critical-boundary">${escapeHtml(bundle.notice || "Secondary criticism; not verified film observation.")}</p>`;
+}
+
+function criticalClaimMarkup(claim, review) {
+  const sourceUrl = safeHttpUrl(review?.url);
+  const tags = Array.isArray(claim.lens_tags) ? claim.lens_tags.map((tag) => tag.replaceAll("_", " ")).join(" · ") : "critical perspective";
+  const missing = Array.isArray(claim.missing_fields) ? claim.missing_fields.map((field) => field.replaceAll("_", " ")).join(" · ") : "";
+  return `<article class="critical-card">
+    <header><span>${escapeHtml(claim.claim_id || "Claim")} · ${escapeHtml(tags)}</span><em>${escapeHtml(claim.extraction_confidence || "unknown")} confidence</em></header>
+    <p>${escapeHtml(claim.critic_claim || "")}</p>
+    ${claim.short_source_excerpt ? `<blockquote lang="${escapeHtml(review?.language || "und")}"><span>Source excerpt</span>${escapeHtml(claim.short_source_excerpt)}</blockquote>` : ""}
+    ${claim.scene_or_sequence ? `<dl><dt>Sequence</dt><dd>${escapeHtml(claim.scene_or_sequence)}</dd></dl>` : ""}
+    ${claim.described_observation ? `<dl><dt>Reported observation</dt><dd>${escapeHtml(claim.described_observation)}</dd></dl>` : ""}
+    ${missing ? `<small>Not supplied: ${escapeHtml(missing)}</small>` : ""}
+    <footer><div><strong>${escapeHtml(review?.title || "Douban review")}</strong><span>${escapeHtml(review?.rating_label || "Summary")}</span></div>${sourceUrl ? `<a href="${escapeHtml(sourceUrl)}" target="_blank" rel="noopener noreferrer">Read at Douban ↗</a>` : ""}</footer>
+  </article>`;
+}
+
+async function generateDeepStudy(button) {
+  const film = state.discovery.selectedFilm;
+  const output = refs.filmDetail.querySelector("[data-study-output]");
+  const question = refs.filmDetail.querySelector("[data-study-question]")?.value.trim() || null;
+  if (!film || !output) return;
+  button.disabled = true;
+  button.textContent = "Studying…";
+  output.innerHTML = `<p class="study-progress">Reading the film record against your cited sources…</p>`;
+  try {
+    const response = await fetch(
+      `${discoveryApiBase()}/api/discovery/films/${encodeURIComponent(film.id)}/study`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question }),
+      },
+    );
+    if (!response.ok) throw new Error(await readApiError(response));
+    const data = await response.json();
+    output.innerHTML = deepStudyMarkup(data.study || {});
+  } catch (error) {
+    output.innerHTML = `<p class="study-error">${escapeHtml(error.message)}</p>`;
+  } finally {
+    button.disabled = false;
+    button.textContent = "Generate study";
+  }
+}
+
+function deepStudyMarkup(study) {
+  const sections = Array.isArray(study.sections) ? study.sections : [];
+  const sources = Array.isArray(study.sources) ? study.sources : [];
+  const criticalClaims = Array.isArray(study.critical_claims) ? study.critical_claims : [];
+  const sourceMap = Object.fromEntries(sources.map((source) => [source.id, source]));
+  const viewingTasks = Array.isArray(study.next_viewing) ? study.next_viewing : [];
+  const quality = study.quality || {};
+  const retrieval = study.evidence_packet?.retrieval || {};
+  const plan = Array.isArray(retrieval.plan) ? retrieval.plan : [];
+  const qualityLabel = quality.status === "passed" ? "Quality gate passed" : "Evidence remains insufficient";
+  return `
+    <div class="study-quality ${quality.status === "passed" ? "is-passed" : "is-limited"}">
+      <strong>${escapeHtml(qualityLabel)}</strong>
+      <span>${escapeHtml(Math.round((quality.score || 0) * 100))}% specificity · ${quality.repair_attempted ? "one audit pass used" : "first draft passed"}</span>
+    </div>
+    <article class="study-essay">
+      <header><span>${escapeHtml(study.model || "DeepSeek")} · evidence-grounded essay</span><h4>${escapeHtml(study.title || "Film study")}</h4></header>
+      <p class="study-essay-lede">${escapeHtml(study.central_argument || "No central argument was returned.")}</p>
+      <div class="study-essay-body">
+        ${sections.map((section, index) => studyEssayParagraphMarkup(section, sourceMap, quality.sections?.[index])).join("")}
+      </div>
+      <p class="study-essay-boundary"><strong>Evidence boundary.</strong> ${escapeHtml(study.creator_intent_boundary || study.grounding_notice || "Current evidence does not establish creator intention.")}</p>
+    </article>
+    ${viewingTasks.length ? `<details class="study-viewing-guide"><summary>How to test this reading against the film</summary><ol>${viewingTasks.map((task) => `<li>${escapeHtml(task)}</li>`).join("")}</ol></details>` : ""}
+    <details class="study-retrieval"><summary>Why these sources</summary><p>${escapeHtml(String(retrieval.method || "local retrieval").replaceAll("_", " "))} · ${escapeHtml(retrieval.candidate_count || 0)} candidates · ${escapeHtml(retrieval.embedding?.state || "lexical only")}</p>${plan.map((item) => `<span>${escapeHtml(item.origin)} · ${escapeHtml(item.lens)} — ${escapeHtml(item.query)}</span>`).join("")}</details>
+    <div class="study-source-key"><strong>Evidence used</strong>${sources.map((source) => `<details><summary><b>${escapeHtml(source.id)}</b> ${escapeHtml(source.title)} · ${escapeHtml(source.locator || `p. ${source.page || "?"}`)}</summary><p>${escapeHtml(source.excerpt || "")}</p></details>`).join("")}${criticalClaims.map((claim) => `<span><b>${escapeHtml(claim.claim_id)}</b> Attributed critic report · ${escapeHtml(claim.source_id)}</span>`).join("")}</div>`;
+}
+
+function studyEssayParagraphMarkup(section, sourceMap, quality) {
+  const ids = Array.isArray(section.source_ids) ? section.source_ids : [];
+  const citations = ids.map((id) => {
+    const source = sourceMap[id];
+    const label = source ? `${id} · p. ${source.page || "?"}` : id;
+    return `<span title="${escapeHtml(source?.title || "Local source")}">${escapeHtml(label)}</span>`;
+  }).join("");
+  const criticIds = Array.isArray(section.critic_claim_ids) ? section.critic_claim_ids : [];
+  const criticCitations = criticIds.map((id) => `<span class="critic-citation">${escapeHtml(id)} · critic</span>`).join("");
+  const qualityIssues = Array.isArray(quality?.issues) ? quality.issues : [];
+  const prose = [
+    section.critic_reports,
+    section.theory_explains,
+    section.hypothesis || section.analysis,
+    section.mechanism,
+    section.alternative_reading,
+  ].filter(Boolean).join(" ");
+  return `<div class="study-essay-paragraph"><p>${escapeHtml(prose || "No study paragraph was returned.")}<span class="essay-citations">${citations}${criticCitations}</span></p>${qualityIssues.length ? `<small>Editorial note: ${qualityIssues.map((item) => item.replaceAll("_", " ")).join(" · ")}</small>` : ""}</div>`;
+}
+
+async function readApiError(response) {
+  try {
+    const body = await response.json();
+    return body.detail || `HTTP ${response.status}`;
+  } catch (_) {
+    return `HTTP ${response.status}`;
+  }
+}
+
+function safeHttpUrl(value) {
+  if (!value) return null;
+  try {
+    const url = new URL(value);
+    return ["http:", "https:"].includes(url.protocol) ? url.toString() : null;
+  } catch (_) {
+    return null;
+  }
+}
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
 }
 
 function setActiveView(viewKey) {

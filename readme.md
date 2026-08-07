@@ -1,49 +1,289 @@
-# Cinemetrics UI Rebuild (V2 Blueprint)
+# FirstRoll — Evidence-Grounded Film Study
 
-This document defines the **from-scratch rewrite direction** for the next version of the project.
+FirstRoll is a local film-study platform for filmmakers. It combines open film metadata,
+attributed criticism, a private study library, evidence-constrained language-model
+synthesis and clip-based visual analysis.
 
-Current decision: prioritize **UI/UX design first**, then implementation.
+The central rule is simple: identity records, critic reports, theory frameworks, model
+hypotheses and measured film observations are different kinds of evidence. FirstRoll
+keeps those layers visible instead of presenting one fluent but unsupported answer.
 
-## V2 Focus
+> **Current status:** local working prototype. Discover, private-library retrieval,
+> optional Douban criticism, DeepSeek synthesis and clip analysis are implemented. The
+> next major milestone is connecting measured clip evidence to Deep Study.
 
-The repository has been intentionally cleaned up to focus on V2:
+See [Project Progress](docs/PROGRESS.md) for completed milestones, verification results,
+known limitations and the next priorities.
 
-1. Legacy desktop UI runtime and Windows packaging assets were removed from active project structure.
-2. Active stack is now:
+## Lineage and Attribution
 
-- Web UI in `app/web`
-- Backend API in `app/backend`
-- Reused algorithm modules in `app/backend/algorithms`
+FirstRoll is an independent evolution of
+[CBD-Lab/pyCinemetrics](https://github.com/CBD-Lab/pyCinemetrics). The original project
+provided the computational film-analysis foundation, including work on shot boundaries,
+shot scale, colour and object analysis. FirstRoll retains that contribution in its Git
+history and `upstream` remote while developing a new web interface, API, discovery and
+evidence-grounded research architecture.
 
-## Current Prototype (Implemented)
+The original GPL-3.0 licence and contributor attribution remain applicable. See
+[Original pyCinemetrics Work](#original-pycinemetrics-work).
 
-A working UI prototype is now available at:
+## What Works
 
-```text
-app/web/
+### Discover and study
+
+- Search by title, year and director through key-free Wikidata.
+- Read attributed Wikipedia context and follow visible source links.
+- Open Google Scholar, OpenAlex, IMDb, Wikidata and Wikipedia research routes.
+- Browse a private local library without publishing books or file paths.
+- Retrieve page-cited theory through hybrid SQLite FTS5 and local multilingual vectors.
+- Use the study focus and attributed critic claims to plan retrieval.
+- Fuse lexical and semantic rankings, then reduce page, document and semantic duplicates.
+
+### Critical perspectives
+
+- Optionally run the unofficial local Douban MCP connector.
+- Retrieve review summaries and retain links to the original reviews.
+- Ask DeepSeek to extract Pydantic-validated, attributed critical claims.
+- Preserve missing scenes, observations, techniques and alternative readings as missing.
+- Keep critic reports separate from verified film observations and creator statements.
+
+### Deep Study
+
+- Configure a DeepSeek key from the local Settings page.
+- Build a typed evidence packet from the film record, retrieved theory and criticism.
+- Generate four to six sections with separate fields for:
+  - critic reports;
+  - theory explanations;
+  - FirstRoll hypotheses;
+  - proposed formal mechanisms;
+  - alternative readings;
+  - verification tasks and confidence.
+- Validate every theory and critic citation against supplied evidence IDs.
+- Run a deterministic specificity and evidence-quality gate.
+- Permit at most one bounded repair request.
+- Label unresolved work as **insufficient evidence** rather than silently accepting it.
+- Show the retrieval plan, source rationale and expandable evidence excerpts in the UI.
+
+### Analyse
+
+- Import a private film clip through the browser.
+- Generate duration, resolution, frame-rate and frame-count metadata.
+- Detect shot and scene boundaries.
+- Calculate global and scene-level average shot length.
+- Estimate shot-scale composition.
+- Summarise scene-level dominant colour.
+- Aggregate detected objects or use clearly identified fallback results when optional
+  inference is unavailable.
+- Export backend results as JSON and CSV.
+
+Clip measurements do not yet enter Deep Study automatically. Until that bridge is
+implemented, film-specific formal claims remain viewing hypotheses.
+
+## System Architecture
+
+```mermaid
+flowchart TB
+    subgraph external["External services"]
+        WD["Wikidata + Wikipedia<br/>identity and attributed context"]
+        DB["Optional Douban MCP<br/>review summaries"]
+        DS["DeepSeek V4 Pro<br/>structured synthesis"]
+    end
+
+    subgraph local["FirstRoll — local and private"]
+        UI["Web interface<br/>Discover · Analyse"]
+
+        subgraph discovery["Discovery and criticism"]
+            FD["Film discovery service"]
+            CA["Douban adapter"]
+            CE["Pydantic criticism extraction"]
+            FR["Verified film record"]
+            CC["Attributed critic claims"]
+        end
+
+        subgraph retrieval["Private knowledge retrieval"]
+            BK["User-owned books and notes"]
+            ING["Page extraction<br/>token chunks · stable IDs"]
+            IDX["SQLite hybrid index<br/>FTS5 + local multilingual vectors"]
+            QP["Query planner<br/>study focus + craft taxonomy + criticism"]
+            HR["Rank fusion and diversity selection"]
+            TP["Page-cited theory passages"]
+        end
+
+        subgraph study["Evidence-grounded Deep Study"]
+            EP["Typed evidence packet<br/>record · criticism · theory"]
+            PS["Pydantic study sections<br/>internal reasoning scaffold"]
+            QG{"Deterministic quality gate"}
+            RP["One bounded repair attempt"]
+            ES["Continuous critical essay<br/>inline citations · evidence boundary"]
+            IE["Insufficient-evidence state"]
+        end
+
+        subgraph analyse["Clip analysis"]
+            VC["Private film clip"]
+            CV["Scene and shot pipeline<br/>cuts · scale · colour · objects"]
+            ME["Measured scene evidence<br/>timecodes and metrics"]
+            EX["JSON and CSV exports"]
+        end
+    end
+
+    UI -->|"title, year, director"| FD
+    FD <--> WD
+    FD --> FR
+
+    UI -->|"load criticism"| CA
+    CA <--> DB
+    CA --> CE --> CC
+
+    BK --> ING --> IDX
+    UI -->|"study focus"| QP
+    CC --> QP
+    QP --> IDX
+    IDX --> HR --> TP
+
+    FR --> EP
+    CC --> EP
+    TP --> EP
+    EP -->|"selected evidence only leaves the device"| DS
+    DS --> PS --> QG
+    QG -->|"pass"| ES
+    QG -->|"repair once"| RP --> DS
+    QG -->|"still weak"| IE --> ES
+    ES --> UI
+
+    UI --> VC --> CV --> ME
+    CV --> EX
+    ME -. "planned clip-to-study evidence bridge" .-> EP
+
+    classDef externalNode fill:#f3ddd8,stroke:#8f382b,color:#241713;
+    classDef privateNode fill:#e9eadc,stroke:#6f7544,color:#171813;
+    classDef evidenceNode fill:#f4ead7,stroke:#a45b38,color:#171813;
+    class WD,DB,DS externalNode;
+    class BK,ING,IDX,VC,CV,ME,EX privateNode;
+    class FR,CC,TP,EP,PS,QG,RP,ES,IE evidenceNode;
 ```
 
-### Run Prototype
+The large boundary represents processes and data that remain on the user's machine.
+Wikidata, Wikipedia and the optional Douban connector supply attributed research data;
+DeepSeek is the only synthesis service. The embedding model runs locally. Only the typed,
+selected evidence packet—not the complete books, vectors or private file paths—is sent to
+DeepSeek when the user chooses **Generate study**. The dotted line is planned work: clip
+measurements do not yet support claims in Deep Study.
 
-From repo root:
+## Quick Start
+
+FirstRoll supports Python 3.11 and uses
+[uv](https://docs.astral.sh/uv/) for environment and dependency management.
 
 ```bash
-python3 -m http.server 4173
+git clone https://github.com/Luo-Z-Y/FirstRoll.git
+cd FirstRoll
+uv sync
+uv run firstroll
 ```
 
-Then open:
+Open [http://127.0.0.1:8000](http://127.0.0.1:8000).
 
-```text
-http://localhost:4173/app/web/
-```
+The frontend and API are served by the same FastAPI process; no separate frontend server
+or TMDB credential is required. Full macOS, Windows and Linux instructions are in
+[Local Setup](docs/LOCAL_SETUP.md).
 
-### Start Backend API
+### Local settings
 
-In a separate terminal from repo root:
+Open [http://127.0.0.1:8000/settings](http://127.0.0.1:8000/settings) to configure optional
+connectors. Secrets are write-only from the browser's perspective and are stored in the
+Git-ignored `.firstroll/settings.json` file with local-only permissions.
+
+Environment variables are also supported:
 
 ```bash
-python3 -m uvicorn app.backend.main:app --host 127.0.0.1 --port 8000 --reload
+DEEPSEEK_API_KEY=
+DEEPSEEK_MODEL=deepseek-v4-pro
+DOUBAN_COOKIE=
+FIRSTROLL_EMBEDDINGS=1
+FIRSTROLL_EMBEDDING_MODEL=sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+FIRSTROLL_LIBRARY_PATH=
+FIRSTROLL_LIBRARY_MANIFEST=
+FIRSTROLL_LIBRARY_INDEX=
+FIRSTROLL_DOUBAN_MCP_PATH=
 ```
+
+Use [.env.example](.env.example) as the reference. FirstRoll does not automatically load
+an `.env` file; export variables before starting the process or use Settings.
+
+FirstRoll defaults to `deepseek-v4-pro` for stronger long-form synthesis. Set
+`DEEPSEEK_MODEL=deepseek-v4-flash` for a faster, lower-cost option; the retrieval,
+evidence schema and quality gate are identical for both models.
+
+## Private Study Library
+
+Place documents in `.firstroll/library`, or register absolute paths in
+`.firstroll/library.json`:
+
+```json
+{
+  "documents": [
+    "/absolute/path/to/a-film-book.pdf",
+    "/absolute/path/to/research-notes.md"
+  ]
+}
+```
+
+Build or rebuild the private index:
+
+```bash
+uv run firstroll-index
+```
+
+The current index schema provides:
+
+- page-bounded, token-aware chunks with overlap;
+- stable SHA-256-derived chunk IDs;
+- document, page, section, topic and language metadata;
+- SQLite FTS5 lexical retrieval;
+- 384-dimensional local multilingual embeddings;
+- reciprocal-rank fusion and diversity selection;
+- an FTS-only fallback when local embeddings are disabled or unavailable.
+
+The default embedding model supports multilingual semantic similarity and is downloaded
+on the first embedding build. Set `FIRSTROLL_EMBEDDINGS=0` before rebuilding to keep only
+the lexical index.
+
+Books, derived chunks, vectors, criticism caches and credentials remain under
+`.firstroll`, which is excluded from Git. Only index material you are entitled to use.
+
+## Optional Douban MCP
+
+Douban MCP is an unofficial research adapter, not a core dependency. Install it only in
+the private Git-ignored connector directory:
+
+```bash
+mkdir -p .firstroll/connectors
+git clone https://github.com/moria97/douban-mcp.git .firstroll/connectors/douban-mcp
+cd .firstroll/connectors/douban-mcp
+npm install
+cd ../../..
+```
+
+FirstRoll uses the connector's `search-movie` and `list-movie-reviews` tools. A personal
+Douban cookie may be required when anonymous requests fail. Never commit or share the
+cookie. Provider behaviour may break when Douban changes its pages or access controls.
+
+See [Data Sources](docs/DATA_SOURCES.md) for the source, copyright and model-use policy.
+
+## API Overview
+
+| Endpoint | Purpose |
+|---|---|
+| `GET /api/health` | Local process health |
+| `GET /api/contract` | Public API summary |
+| `GET /api/settings` | Masked local connector status |
+| `GET /api/discovery/status` | Discovery and private-index status |
+| `GET /api/discovery/search` | Film identity search |
+| `GET /api/discovery/films/{film_id}` | Full film dossier |
+| `POST /api/discovery/films/{film_id}/criticism/douban` | Retrieve and structure Douban criticism |
+| `POST /api/discovery/films/{film_id}/study` | Generate an evidence-grounded Deep Study |
+| `GET /api/library/status` | Private library and index status |
+| `POST /api/analyze` | Analyse an uploaded private clip |
 
 Health check:
 
@@ -51,321 +291,102 @@ Health check:
 curl http://127.0.0.1:8000/api/health
 ```
 
-Contract check:
+## Repository Structure
+
+```text
+FirstRoll/
+├── app/
+│   ├── backend/
+│   │   ├── algorithms/          # inherited and adapted pyCinemetrics analysis
+│   │   ├── criticism.py         # Douban adapter, schemas and private cache
+│   │   ├── discovery.py         # Wikidata/Wikipedia discovery
+│   │   ├── evidence.py          # typed synthesis boundary
+│   │   ├── library.py           # private document catalogue
+│   │   ├── library_index.py     # chunking, embeddings and hybrid retrieval
+│   │   ├── main.py              # FastAPI routes
+│   │   ├── settings.py          # local credential store
+│   │   └── study_service.py     # DeepSeek synthesis and quality gate
+│   └── web/
+│       ├── app.js
+│       ├── index.html
+│       └── styles.css
+├── docs/
+│   ├── DATA_SOURCES.md
+│   ├── LOCAL_SETUP.md
+│   ├── PROGRESS.md
+│   └── RELEASE.md
+├── tests/
+├── .env.example
+├── pyproject.toml
+└── uv.lock
+```
+
+## Evidence and Reliability Rules
+
+1. Wikidata and Wikipedia establish identity and attributed context, not intention.
+2. A critic claim is a report of that critic's interpretation.
+3. A theory passage supplies an analytical framework; it does not describe the film.
+4. Without clip evidence, formal claims must remain conditional viewing hypotheses.
+5. Creator intention requires an attributable creator statement.
+6. Model outputs may cite only evidence identifiers supplied in their request.
+7. Missing evidence should produce a verification task or insufficient-evidence result.
+8. Private source text is treated as untrusted data, never as model instructions.
+
+## Development and Verification
+
+Run the test suite:
 
 ```bash
-curl http://127.0.0.1:8000/api/contract
+uv run pytest
 ```
 
-### What Works Right Now
+Run scoped lint and frontend checks:
 
-1. Import local video clip in browser.
-2. Auto-generate metadata (duration, resolution, estimated fps/frame count).
-3. Generate detailed shot data:
-
-- average shot length (global)
-- average scene length
-- average shot length per scene
-- shot scale composition per scene (heuristic)
-
-4. Scene-level color analysis:
-
-- per-scene dominant color
-- color wheel with dominant hue highlighted
-
-5. Scene-level object analysis:
-
-- object detector output aggregated to scene-level notable props
-- fallback heuristic props if detector is unavailable
-
-6. API-driven frontend:
-
-- web UI calls `POST /api/analyze`
-- exports JSON/CSV from backend response model
-
-### Current Technical Note
-
-The web UI is now connected to a real backend contract and existing Python algorithms.
-Some modules still use pragmatic fallback behavior when optional model inference fails.
-
-## V2 Repository Structure
-
-```text
-pyCinemetrics/
-├── app/
-│   ├── __init__.py
-│   ├── backend/
-│   │   ├── __init__.py
-│   │   ├── main.py                  # FastAPI app + /api endpoints
-│   │   ├── analysis_pipeline.py     # Scene/shot orchestration
-│   │   └── algorithms/              # Integrated analysis modules (migrated legacy core)
-│   └── web/
-│       ├── index.html               # Cinematic UI shell
-│       ├── styles.css               # Dark cinema theme
-│       └── app.js                   # API-driven frontend logic
-├── docs/
-│   └── RELEASE.md
-├── models/                          # Model assets/weights
-├── img/                             # Generated analysis outputs (gitignored except .gitkeep)
-├── video/                           # Optional local input clips
-├── pyproject.toml
-├── uv.lock
-├── README.md
-└── .github/workflows/ci.yml
+```bash
+uv run ruff check app/backend/library_index.py app/backend/evidence.py \
+  app/backend/study_service.py app/backend/main.py tests
+node --check app/web/app.js
+git diff --check
 ```
 
-## Backend API Contract (Implemented)
-
-### `POST /api/analyze`
-
-`multipart/form-data` request fields:
-
-1. `video` (binary, required)
-2. `scene_sensitivity` (int 1..10, default `6`)
-3. `shot_threshold` (float 0.05..0.95, default `0.35`)
-4. `include_object_detection` (bool, default `true`)
-5. `include_shot_scale` (bool, default `true`)
-
-Response keys:
-
-1. `meta`
-2. `global`
-3. `shots`
-4. `scenes`
-5. `outputs`
-
-The response is designed to directly power the web UI tabs.
-
-## Progress Update
-
-Implemented and integrated:
-
-1. Scene/shot analysis backend endpoint with contract.
-2. Existing algorithms integrated in backend pipeline:
-
-- shot boundary generation (`TransNetV2`)
-- shot scale inference (`shotscale`)
-- object detection (`ObjectDetection`)
-
-3. Scene-level metrics generated from backend output:
-
-- ASL (global)
-- average scene length
-- average shot length per scene
-- shot scale composition per scene
-
-4. Scene-level color and props summaries surfaced in UI.
-2. Export flows (JSON / scenes CSV / shots CSV) from live analysis results.
-
-KIV (kept intentionally for now):
-
-1. LLM API integration (UI draft generator is local template only).
-2. Deeper semantic scene interpretation pipeline.
-
-## Product Goal
-
-Build a scene-centric film analysis app with a clear, modern interface where users can:
-
-1. Import one video clip.
-2. Instantly get metadata and high-level structure.
-3. Explore analytics by **scene** first, then drill down to shots.
-4. Export interpretable visual and tabular outputs.
-
-## Features To Keep (Core Scope)
-
-1. **Video Import + Metadata Generation**
-
-- Once user imports a clip, generate metadata:
-- filename, duration, fps, resolution, frame count
-- shot count, scene count
-- timecode range for each scene
-
-1. **Detailed Shot Data**
-
-- Generate average shot length (ASL).
-- Generate average scene length (new).
-- Generate average shot length per scene (new).
-- Include shot scale composition per scene (new):
-- long / medium / close-up proportions per scene
-
-1. **Scene-Level Color Analysis**
-
-- Compute dominant color at scene level (not shot level).
-- Render a color wheel and highlight dominant hue per scene.
-
-1. **Scene-Level Object Detection**
-
-- Output notable props per scene.
-- Keep output structured so future LLM interpretation can be plugged in.
-
-## UX Principles
-
-1. **Scene-first storytelling**
-
-- Scene becomes the default unit for navigation and comparison.
-
-1. **Progressive disclosure**
-
-- First show summary metrics, then reveal detailed charts and tables.
-
-1. **One primary path**
-
-- Import -> Process -> Explore -> Export.
-
-1. **Readable over technical**
-
-- Keep labels academic but understandable for non-engineers.
-
-## Proposed UI Information Architecture
-
-1. **Import Screen**
-
-- Dropzone / file picker
-- recent projects
-- processing requirements hint
-
-1. **Project Overview Dashboard**
-
-- metadata cards
-- timeline strip with scene segmentation
-- global KPIs (ASL, avg scene length, total scenes, total shots)
-
-1. **Detailed Shot Data View**
-
-- scene table
-- per-scene metrics:
-- scene duration
-- shot count
-- avg shot length in that scene
-- shot scale composition (stacked bars or donuts)
-
-1. **Color Analysis View**
-
-- scene list on left
-- color wheel on right
-- dominant scene hue highlighted
-- optional secondary palette per scene
-
-1. **Object Analysis View**
-
-- scene list
-- notable props chips/tags per scene
-- confidence/occurrence ranking
-- placeholder panel: “LLM interpretation (future)”
-
-1. **Export Center**
-
-- export CSV/JSON
-- export chart PNG/SVG
-- export per-scene report bundle
-
-## Primary User Flow
-
-1. User imports a clip.
-2. System computes metadata + shot boundaries + scene boundaries.
-3. User lands on Overview with key numbers and segmented timeline.
-4. User opens “Detailed Shot Data” for scene/shot structural metrics.
-5. User opens “Color Analysis” and “Object Analysis” for scene meaning cues.
-6. User exports selected outputs.
-
-## Data Contracts (UI-facing)
-
-Define these entities early so UI and backend stay aligned:
-
-1. `VideoMeta`
-
-- id, filename, duration_s, fps, width, height, frame_count
-
-1. `Scene`
-
-- scene_id, start_frame, end_frame, start_tc, end_tc, duration_s
-
-1. `Shot`
-
-- shot_id, scene_id, start_frame, end_frame, duration_s, shot_scale
-
-1. `SceneColorSummary`
-
-- scene_id, dominant_hue_deg, dominant_rgb, wheel_bin, palette[]
-
-1. `SceneObjectSummary`
-
-- scene_id, objects[] (`label`, `score`, `count`)
-
-## Proposed UI Rewrite Folder Structure (Design-first)
-
-```text
-pyCinemetrics/
-├── docs/
-│   ├── product/
-│   │   ├── vision.md
-│   │   ├── user-flows.md
-│   │   └── metrics-definitions.md
-│   ├── ui/
-│   │   ├── information-architecture.md
-│   │   ├── wireframes.md
-│   │   └── component-spec.md
-│   └── api/
-│       └── ui-data-contracts.md
-├── app/
-│   ├── web/
-│   └── backend/
-│       └── algorithms/
-└── README.md
-```
-
-## Milestones
-
-1. **M0 - Design Spec Complete**
-
-- finalize IA, wireframes, metric definitions, scene/shot terminology
-
-1. **M1 - Clickable Prototype**
-
-- no real model inference
-- mock data for all major screens
-
-1. **M2 - Real Data Integration**
-
-- metadata + scene/shot metrics endpoints connected
-
-1. **M3 - Analysis Views**
-
-- scene-level color wheel and object summaries from real pipeline
-
-1. **M4 - Export + Review**
-
-- report export and analyst feedback cycle
-
-## Non-Goals For First Iteration
-
-1. Perfect model accuracy.
-2. Full cloud deployment.
-3. LLM meaning analysis (only keep integration-ready output format now).
-
-## Immediate Next Steps
-
-1. Freeze KPI definitions:
-
-- ASL, average scene length, average shot length per scene.
-
-1. Lock the scene detection strategy:
-
-- choose algorithm and scene/shot merge rule.
-
-1. Draft wireframes for these 5 screens:
-
-- Import, Overview, Detailed Shot Data, Color Analysis, Object Analysis.
-
-1. Define API/JSON contracts for all UI panels before coding.
-
-## Homage / Original Work
-
-This V2 rewrite is built in respect of the original PyCinemetrics effort and contributors.
-
-Please cite and acknowledge the original work:
-
-1. Project portal: [https://movie.yingshinet.com](https://movie.yingshinet.com)
-2. Research paper: [https://www.sciencedirect.com/science/article/pii/S2352711024000578](https://www.sciencedirect.com/science/article/pii/S2352711024000578)
-
-V2 changes focus on architecture, UI, and API modernization while preserving the research intent of computational film analysis.
+The current verification baseline is recorded in [Project Progress](docs/PROGRESS.md).
+Some inherited algorithm modules still contain historical lint warnings and pragmatic
+fallback behaviour; these are tracked separately from the new FirstRoll modules.
+
+## Roadmap
+
+| Milestone | Status | Outcome |
+|---|---|---|
+| Film discovery and dossier | Complete | Key-free identity, context and visible research routes |
+| Private RAG foundation | Complete | Token chunking, FTS5, local vectors, hybrid retrieval and citations |
+| Attributed criticism | Complete | Optional Douban retrieval and structured critic claims |
+| Evidence-grounded Deep Study | Complete | Typed evidence, Pydantic output, quality gate and layered UI |
+| Clip analysis web migration | Complete | Scene, shot, colour, object and export workflow |
+| Clip-to-study evidence bridge | Next | Feed measured scenes, shots and timecodes into synthesis |
+| Creator primary-source layer | Planned | Search, store and cite interviews or production records |
+| Persistent film projects | Planned | Retain film records, clips, analyses, notes and studies |
+| Evaluation suite | Planned | Retrieval relevance, citation accuracy, abstention, latency and cost |
+
+Progress is maintained in [docs/PROGRESS.md](docs/PROGRESS.md), including dated changes
+and acceptance evidence. Update that file whenever a milestone changes state.
+
+## Known Limitations
+
+- Deep Study does not yet observe the film itself; it produces viewing hypotheses.
+- Creator interviews and production records are not yet automatically collected.
+- Douban MCP is unofficial and may return sparse summaries or stop working.
+- The first semantic retrieval after process start may pause while the local model loads.
+- A study may correctly remain labelled insufficient evidence after its one repair pass.
+- Some inherited computer-vision dependencies are large and have platform-specific setup.
+- Object and shot-scale analysis may use labelled fallbacks when optional models fail.
+
+## Original pyCinemetrics Work
+
+FirstRoll remains indebted to the original pyCinemetrics contributors.
+
+- Source: [CBD-Lab/pyCinemetrics](https://github.com/CBD-Lab/pyCinemetrics)
+- Project portal: [movie.yingshinet.com](https://movie.yingshinet.com)
+- Research paper: [SoftwareX article](https://www.sciencedirect.com/science/article/pii/S2352711024000578)
+
+When publishing work based on the inherited analysis pipeline, cite the original project
+and paper as well as describing FirstRoll's subsequent changes.

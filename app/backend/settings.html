@@ -1,0 +1,286 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex,nofollow" />
+  <title>FirstRoll — Local Settings</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --ink: #171813;
+      --soft: #55574e;
+      --paper: #f0eadf;
+      --light: #faf6ee;
+      --red: #b9412e;
+      --red-dark: #79271f;
+      --olive: #777b49;
+      --line: rgba(23, 24, 19, 0.18);
+    }
+    * { box-sizing: border-box; }
+    body {
+      min-height: 100vh;
+      margin: 0;
+      color: var(--ink);
+      background:
+        linear-gradient(rgba(104, 81, 55, 0.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(104, 81, 55, 0.025) 1px, transparent 1px),
+        var(--paper);
+      background-size: 28px 28px;
+      font-family: "DM Sans", sans-serif;
+    }
+    button, input { font: inherit; }
+    .shell { max-width: 1240px; margin: 0 auto; padding: 0 32px 60px; }
+    header {
+      min-height: 84px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--line);
+    }
+    .brand { display: flex; align-items: center; gap: 10px; font-family: "Bebas Neue", sans-serif; font-size: 1.5rem; letter-spacing: .06em; }
+    .mark { position: relative; width: 28px; height: 21px; display: grid; place-items: center; border: 2px solid var(--ink); }
+    .mark::after { content: ""; width: 7px; height: 7px; border: 2px solid var(--red); border-radius: 50%; }
+    .back { color: var(--ink); font-size: .75rem; font-weight: 700; text-decoration: none; }
+    .back:hover { color: var(--red); }
+    .hero { padding: 58px 0 42px; display: grid; grid-template-columns: 1fr 340px; align-items: end; gap: 50px; }
+    .eyebrow { margin: 0; color: var(--red); font: 500 .66rem "IBM Plex Mono", monospace; letter-spacing: .13em; text-transform: uppercase; }
+    h1 { margin: 17px 0 0; font: 400 clamp(4rem, 8vw, 7.5rem)/.82 "Bebas Neue", sans-serif; text-transform: uppercase; }
+    h1 em { color: var(--red); font-style: normal; }
+    .hero-copy { margin: 0; color: var(--soft); line-height: 1.65; }
+    .privacy {
+      margin-bottom: 28px;
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      align-items: center;
+      gap: 16px;
+      padding: 16px 18px;
+      border: 1px solid rgba(119, 123, 73, .38);
+      background: rgba(119, 123, 73, .08);
+    }
+    .privacy-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--olive); box-shadow: 0 0 0 5px rgba(119, 123, 73, .13); }
+    .privacy strong { display: block; margin-bottom: 2px; font-size: .8rem; }
+    .privacy span { color: var(--soft); font-size: .7rem; }
+    .privacy code { font: .65rem "IBM Plex Mono", monospace; }
+    .section-head { display: flex; justify-content: space-between; align-items: end; gap: 20px; margin: 42px 0 17px; }
+    h2 { margin: 7px 0 0; font: 400 2.6rem "Bebas Neue", sans-serif; text-transform: uppercase; }
+    .section-head > span { color: var(--soft); font: .65rem "IBM Plex Mono", monospace; text-transform: uppercase; }
+    .connector-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+    .connector {
+      position: relative;
+      min-height: 310px;
+      padding: 23px;
+      border: 1px solid var(--line);
+      background: rgba(250, 246, 238, .76);
+    }
+    .connector.available { box-shadow: inset 0 3px var(--red); }
+    .connector-top { display: flex; justify-content: space-between; gap: 15px; }
+    .connector h3 { margin: 0 0 8px; font: 400 2rem "Bebas Neue", sans-serif; letter-spacing: .02em; text-transform: uppercase; }
+    .connector-description { min-height: 45px; margin: 0; color: var(--soft); font-size: .76rem; line-height: 1.5; }
+    .badge { height: fit-content; padding: 5px 7px; border: 1px solid var(--line); font: .58rem "IBM Plex Mono", monospace; text-transform: uppercase; }
+    .badge.ready { color: #4e5829; border-color: rgba(119,123,73,.4); background: rgba(119,123,73,.1); }
+    .badge.planned { color: var(--soft); }
+    .credential-state { min-height: 42px; margin: 18px 0 12px; display: flex; align-items: center; justify-content: space-between; gap: 10px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); font: .64rem "IBM Plex Mono", monospace; }
+    .credential-state strong { text-transform: uppercase; letter-spacing: .06em; }
+    .credential-state span { color: var(--soft); }
+    .secret-row { display: grid; grid-template-columns: 1fr auto; }
+    .secret-row input { min-width: 0; border: 1px solid var(--ink); border-right: 0; padding: 11px 12px; background: var(--light); outline: 0; }
+    .secret-row input:focus { box-shadow: inset 0 -3px var(--red); }
+    .reveal { border: 1px solid var(--ink); padding: 0 12px; background: transparent; cursor: pointer; font-size: .68rem; font-weight: 700; }
+    .actions { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 10px; }
+    .actions button, .docs { border: 1px solid var(--ink); padding: 8px 12px; background: transparent; color: var(--ink); font-size: .68rem; font-weight: 700; text-decoration: none; cursor: pointer; }
+    .actions .save { color: var(--light); border-color: var(--red); background: var(--red); }
+    .actions button:disabled { opacity: .35; cursor: not-allowed; }
+    .connector-message { min-height: 18px; margin: 11px 0 0; color: var(--soft); font-size: .67rem; }
+    .connector-message.error { color: var(--red-dark); }
+    .planned-panel { margin-top: 15px; padding: 13px; background: rgba(23,24,19,.045); color: var(--soft); font-size: .7rem; line-height: 1.5; }
+    footer { margin-top: 55px; padding-top: 18px; display: flex; justify-content: space-between; border-top: 1px solid var(--line); color: var(--soft); font: .62rem "IBM Plex Mono", monospace; text-transform: uppercase; }
+    .loading { grid-column: 1 / -1; padding: 50px; border: 1px dashed var(--line); text-align: center; color: var(--soft); }
+    @media (max-width: 780px) {
+      .shell { padding: 0 15px 40px; }
+      .hero { grid-template-columns: 1fr; }
+      .hero-copy { max-width: 560px; }
+      .connector-grid { grid-template-columns: 1fr; }
+      .privacy { grid-template-columns: auto 1fr; }
+      .privacy code { grid-column: 2; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header>
+      <div class="brand"><span class="mark" aria-hidden="true"></span><span>FirstRoll Settings</span></div>
+      <a class="back" href="/">← Return to discovery</a>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div>
+          <p class="eyebrow">Local backend / Private configuration</p>
+          <h1>Connect models<br /><em>and evidence.</em></h1>
+        </div>
+        <p class="hero-copy">Film identity works without an API key. Add optional LLM and research services here without placing private credentials in source code or the browser application.</p>
+      </section>
+
+      <aside class="privacy">
+        <span class="privacy-dot" aria-hidden="true"></span>
+        <div><strong>Local secret boundary</strong><span>Credentials are write-only: FirstRoll reports their status but never sends their values back to this page.</span></div>
+        <code>.firstroll/settings.json · Git ignored</code>
+      </aside>
+
+      <section>
+        <div class="section-head">
+          <div><p class="eyebrow">Connector registry</p><h2>Models and sources</h2></div>
+          <span id="summary">Loading local configuration…</span>
+        </div>
+        <div id="connectors" class="connector-grid"><div class="loading">Reading FirstRoll settings…</div></div>
+      </section>
+    </main>
+
+    <footer><span>FirstRoll local console</span><span>Secrets remain on this machine</span></footer>
+  </div>
+
+  <script>
+    const connectorRoot = document.getElementById("connectors");
+    const summary = document.getElementById("summary");
+
+    loadSettings();
+
+    async function loadSettings() {
+      try {
+        const response = await fetch("/api/settings", { headers: settingsHeaders() });
+        if (!response.ok) throw new Error(await apiError(response));
+        const data = await response.json();
+        renderConnectors(data.connectors || []);
+      } catch (error) {
+        connectorRoot.innerHTML = `<div class="loading">${escapeHtml(error.message)}</div>`;
+        summary.textContent = "Configuration unavailable";
+      }
+    }
+
+    function renderConnectors(connectors) {
+      const configured = connectors.filter((connector) => connector.configured).length;
+      summary.textContent = `${configured} configured / ${connectors.length} registered`;
+      connectorRoot.innerHTML = connectors.map(connectorCard).join("");
+      connectorRoot.querySelectorAll("[data-action]").forEach((button) => {
+        button.addEventListener("click", () => handleAction(button));
+      });
+    }
+
+    function connectorCard(connector) {
+      const available = connector.state === "available";
+      const environmentManaged = connector.credential_source === "environment";
+      const stateLabel = connector.configured
+        ? `Configured ${connector.credential_hint || ""} · ${connector.credential_source.replaceAll("_", " ")}`
+        : "Not configured";
+      return `
+        <article class="connector ${available ? "available" : "planned"}" data-connector="${escapeHtml(connector.id)}">
+          <div class="connector-top">
+            <div><h3>${escapeHtml(connector.name)}</h3><p class="connector-description">${escapeHtml(connector.description)}</p></div>
+            <span class="badge ${available ? "ready" : "planned"}">${available ? "Available" : "Planned"}</span>
+          </div>
+          <div class="credential-state"><strong>${escapeHtml(connector.credential_label)}</strong><span>${escapeHtml(stateLabel)}</span></div>
+          ${available ? `
+            <div class="secret-row">
+              <input type="password" data-secret aria-label="${escapeHtml(connector.credential_label)} for ${escapeHtml(connector.name)}" placeholder="Enter a new credential" autocomplete="new-password" ${environmentManaged ? "disabled" : ""} />
+              <button class="reveal" type="button" data-action="reveal" ${environmentManaged ? "disabled" : ""}>Show</button>
+            </div>
+            <div class="actions">
+              <button class="save" type="button" data-action="save" ${environmentManaged ? "disabled" : ""}>Save locally</button>
+              <button type="button" data-action="test" ${connector.testable && connector.configured ? "" : "disabled"}>Test connection</button>
+              <button type="button" data-action="clear" ${connector.configured && !environmentManaged ? "" : "disabled"}>Clear</button>
+              <a class="docs" href="${escapeHtml(connector.documentation_url)}" target="_blank" rel="noopener noreferrer">Documentation ↗</a>
+            </div>
+            ${environmentManaged ? `<div class="planned-panel">This value is controlled by <code>${escapeHtml(connector.environment_key)}</code>. Unset that environment variable before managing it here.</div>` : ""}
+          ` : `
+            <div class="planned-panel">This adapter is visible now so FirstRoll has one configuration home. Credential entry will unlock when the adapter is implemented.</div>
+            <div class="actions"><a class="docs" href="${escapeHtml(connector.documentation_url)}" target="_blank" rel="noopener noreferrer">Review source ↗</a></div>
+          `}
+          <p class="connector-message" aria-live="polite"></p>
+        </article>`;
+    }
+
+    async function handleAction(button) {
+      const card = button.closest("[data-connector]");
+      const connectorId = card.dataset.connector;
+      const input = card.querySelector("[data-secret]");
+      const message = card.querySelector(".connector-message");
+      const action = button.dataset.action;
+
+      if (action === "reveal") {
+        const showing = input.type === "text";
+        input.type = showing ? "password" : "text";
+        button.textContent = showing ? "Show" : "Hide";
+        return;
+      }
+
+      setMessage(message, "Working…");
+      button.disabled = true;
+      try {
+        let response;
+        if (action === "save") {
+          const value = input.value.trim();
+          if (!value) throw new Error("Enter a credential before saving.");
+          response = await fetch(`/api/settings/connectors/${encodeURIComponent(connectorId)}`, {
+            method: "PUT",
+            headers: { ...settingsHeaders(), "Content-Type": "application/json" },
+            body: JSON.stringify({ value }),
+          });
+          input.value = "";
+        } else if (action === "clear") {
+          if (!window.confirm("Clear this local credential?")) return;
+          response = await fetch(`/api/settings/connectors/${encodeURIComponent(connectorId)}`, {
+            method: "DELETE",
+            headers: settingsHeaders(),
+          });
+        } else if (action === "test") {
+          response = await fetch(`/api/settings/connectors/${encodeURIComponent(connectorId)}/test`, {
+            method: "POST",
+            headers: settingsHeaders(),
+          });
+        }
+        if (!response.ok) throw new Error(await apiError(response));
+        const result = await response.json();
+        if (action === "test") {
+          setMessage(message, result.message || "Connection succeeded.");
+          button.disabled = false;
+          return;
+        }
+        await loadSettings();
+      } catch (error) {
+        setMessage(message, error.message, true);
+        button.disabled = false;
+      }
+    }
+
+    function settingsHeaders() {
+      return { "X-FirstRoll-Settings": "local" };
+    }
+
+    function setMessage(element, text, error = false) {
+      element.textContent = text;
+      element.classList.toggle("error", error);
+    }
+
+    async function apiError(response) {
+      try {
+        const body = await response.json();
+        return body.detail || `HTTP ${response.status}`;
+      } catch (_) {
+        return `HTTP ${response.status}`;
+      }
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+  </script>
+</body>
+</html>

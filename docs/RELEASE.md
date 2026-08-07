@@ -33,7 +33,7 @@ uv lock
 Run locally:
 
 ```bash
-python3 -m uvicorn app.backend.main:app --host 127.0.0.1 --port 8000 --reload
+uv run firstroll
 ```
 
 Then verify:
@@ -45,18 +45,14 @@ curl http://127.0.0.1:8000/api/contract
 
 ## 4. Validate Web Client
 
-Run static server:
+The backend serves the web client. Open `http://127.0.0.1:8000` and run one full
+discovery and analysis pass:
 
-```bash
-python3 -m http.server 4173
-```
-
-Open `http://localhost:4173/app/web/` and run one full analysis pass:
-
-1. Import video.
-2. Run analysis.
-3. Confirm all tabs render.
-4. Export JSON + CSV outputs.
+1. Search for a film and confirm the Wikidata source label.
+2. Import video.
+3. Run analysis.
+4. Confirm all tabs render.
+5. Export JSON + CSV outputs.
 
 ## 5. Tag and Publish
 

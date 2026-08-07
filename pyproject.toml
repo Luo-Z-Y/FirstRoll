@@ -1,7 +1,11 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
 [project]
-name = "pycinemetrics"
+name = "firstroll"
 version = "0.1.0"
-description = "Scene-centric film analysis toolkit with V2 web UI and backend API."
+description = "FirstRoll evidence-grounded film discovery and scene analysis platform."
 readme = "readme.md"
 requires-python = ">=3.11,<3.13"
 dependencies = [
@@ -13,13 +17,27 @@ dependencies = [
     "numpy>=2.1.3",
     "opencv-python>=4.12.0.88",
     "pillow>=11.3.0",
+    "pypdf>=5.0.0",
     "tensorflow>=2.19.0",
     "torchvision>=0.23.0",
     "transnetv2",
     "uvicorn>=0.35.0",
     "wordcloud>=1.9.4",
     "python-multipart>=0.0.20",
+    "mcp>=1.0,<2.0",
+    "sentence-transformers>=5.0,<6.0",
 ]
+
+[project.scripts]
+firstroll = "app.backend.main:run"
+firstroll-index = "app.backend.library_index:main"
+
+[tool.uv]
+package = true
+
+[tool.setuptools.packages.find]
+include = ["app*"]
+exclude = ["img*", "models*", "tests*", "video*"]
 
 [project.optional-dependencies]
 dev = [

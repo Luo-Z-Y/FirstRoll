@@ -13,7 +13,9 @@ class WordCloud2Frame:
         pass
 
     def resolve_font_path(self):
-        custom_font = os.environ.get("PYCINEMETRICS_WORDCLOUD_FONT")
+        custom_font = os.environ.get("FIRSTROLL_WORDCLOUD_FONT") or os.environ.get(
+            "PYCINEMETRICS_WORDCLOUD_FONT"
+        )
         if custom_font and os.path.exists(custom_font):
             return custom_font
 
