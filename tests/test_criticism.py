@@ -34,6 +34,26 @@ def test_douban_markdown_is_normalised_with_stable_review_urls() -> None:
     assert DoubanMcpAdapter._language(rows[0]["summary"]) == "zh"
 
 
+def test_douban_multiline_review_rows_are_reconstructed() -> None:
+    table = """| title | rating | summary | id |
+| ----- | ------ | ------- | --- |
+| 我的一脸懵逼观影感受 | 4 (有用：4381人) | 第一段提到《路边野餐》。
+* 2015洛迦诺国际电影节：最佳新导演
+第二段包含未转义的形式术语 | 长镜头 | 和声音。 | 7507249 |
+| 关于毕赣和《路边野餐》 | 4 (有用：71人) | 毕赣，1989年生，贵州凯里人。
+影片最知名的是长达42分钟的长镜头。 | 7917771 |
+"""
+
+    rows = DoubanMcpAdapter._markdown_table(table)
+
+    assert len(rows) == 2
+    assert rows[0]["id"] == "7507249"
+    assert "2015洛迦诺国际电影节" in rows[0]["summary"]
+    assert "形式术语 | 长镜头 | 和声音" in rows[0]["summary"]
+    assert rows[1]["id"] == "7917771"
+    assert "42分钟的长镜头" in rows[1]["summary"]
+
+
 def test_douban_match_requires_title_and_prefers_year() -> None:
     film = {"title": "Example Film", "original_title": "示例电影", "year": 2024}
     candidates = [

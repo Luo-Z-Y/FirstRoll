@@ -144,6 +144,21 @@ Acceptance evidence:
 - live connector test for *Syndromes and a Century*: correct Douban film match, one
   attributed review summary and four structured critical claims returned.
 
+### 7 August 2026 — Multiline Douban review parsing
+
+Delivered:
+
+1. Reconstructed logical review rows when Douban summaries contain physical line breaks.
+2. Preserved multiline review prose rather than rejecting partial Markdown-table lines.
+3. Tolerated unescaped pipe characters inside summary text while retaining the final review ID.
+4. Added a regression fixture based on the malformed *Kaili Blues* response shape.
+
+Acceptance evidence:
+
+- live *Kaili Blues* response: eight reviews reconstructed from a 280-line table and eight
+  attributed critical claims returned;
+- focused parser tests and Ruff checks: passed.
+
 ## Next Milestone
 
 ### Clip-to-study evidence bridge — Planned

@@ -202,19 +202,88 @@ class DoubanMcpAdapter:
 
     @staticmethod
     def _markdown_table(value: str) -> list[dict[str, str]]:
-        lines = [line.strip() for line in value.splitlines() if line.strip().startswith("|")]
-        if len(lines) < 2:
+        lines = value.splitlines()
+        table_start = next(
+            (index for index, line in enumerate(lines) if line.strip().startswith("|")),
+            None,
+        )
+        if table_start is None:
             return []
-        headers = DoubanMcpAdapter._table_cells(lines[0])
+        headers = DoubanMcpAdapter._table_cells(lines[table_start].strip())
+        if not headers:
+            return []
+        separator_index = next(
+            (
+                index
+                for index in range(table_start + 1, len(lines))
+                if DoubanMcpAdapter._is_table_separator(lines[index])
+            ),
+            None,
+        )
+        if separator_index is None:
+            return []
+
+        logical_rows: list[str] = []
+        current: list[str] = []
+        for line in lines[separator_index + 1 :]:
+            stripped = line.strip()
+            cells = (
+                DoubanMcpAdapter._table_cells(stripped)
+                if stripped.startswith("|")
+                else []
+            )
+            if DoubanMcpAdapter._is_table_row_start(headers, cells):
+                if current:
+                    logical_rows.append(" ".join(current))
+                current = [stripped]
+            elif current and stripped:
+                current.append(stripped)
+        if current:
+            logical_rows.append(" ".join(current))
+
         rows: list[dict[str, str]] = []
-        for line in lines[1:]:
+        for line in logical_rows:
             cells = DoubanMcpAdapter._table_cells(line)
-            if cells and all(re.fullmatch(r":?-{3,}:?", cell) for cell in cells):
-                continue
+            cells = DoubanMcpAdapter._merge_summary_cells(headers, cells)
             if len(cells) != len(headers):
                 continue
             rows.append(dict(zip(headers, cells)))
         return rows
+
+    @staticmethod
+    def _is_table_separator(line: str) -> bool:
+        cells = DoubanMcpAdapter._table_cells(line.strip())
+        return bool(cells) and all(re.fullmatch(r":?-{3,}:?", cell) for cell in cells)
+
+    @staticmethod
+    def _is_table_row_start(headers: list[str], cells: list[str]) -> bool:
+        if not cells:
+            return False
+        if "rating" in headers:
+            rating_index = headers.index("rating")
+            if rating_index >= len(cells):
+                return False
+            return bool(re.match(r"^\d+(?:\.\d+)?\s*\(", cells[rating_index]))
+        if len(cells) != len(headers):
+            return False
+        if "id" in headers:
+            return bool(cells[headers.index("id")])
+        return True
+
+    @staticmethod
+    def _merge_summary_cells(headers: list[str], cells: list[str]) -> list[str]:
+        if len(cells) <= len(headers) or "summary" not in headers:
+            return cells
+        summary_index = headers.index("summary")
+        trailing_count = len(headers) - summary_index - 1
+        if trailing_count <= 0:
+            return cells[:summary_index] + [" | ".join(cells[summary_index:])]
+        summary_end = len(cells) - trailing_count
+        return (
+            cells[:summary_index]
+            + [" | ".join(cells[summary_index:summary_end])]
+            + cells[summary_end:]
+        )
 
     @staticmethod
     def _table_cells(line: str) -> list[str]:
