@@ -12,6 +12,7 @@ from app.backend.criticism import (
     CriticismError,
     CriticismStore,
     DoubanMcpAdapter,
+    LetterboxdApiAdapter,
     build_bundle,
 )
 from app.backend.discovery import DiscoveryService
@@ -33,13 +34,15 @@ library_catalogue = LocalLibraryCatalogue()
 library_index = LocalLibraryIndex()
 study_service = DeepSeekStudyService(settings_store)
 douban_adapter = DoubanMcpAdapter(settings_store)
+letterboxd_adapter = LetterboxdApiAdapter(settings_store)
 criticism_store = CriticismStore()
 web_directory = Path(__file__).resolve().parents[1] / "web"
 app.mount("/assets", StaticFiles(directory=web_directory), name="web-assets")
 
 
 class ConnectorSecretUpdate(BaseModel):
-    value: SecretStr
+    value: SecretStr | None = None
+    credentials: dict[str, SecretStr] | None = None
 
 
 class FilmStudyRequest(BaseModel):
@@ -102,14 +105,28 @@ def save_connector_secret(
     require_local_settings_request(request)
     if connector_id not in CONNECTORS:
         raise HTTPException(status_code=404, detail="Unknown connector.")
-    current = settings_store.secret_state(connector_id)
-    if current.source == "environment":
+    definitions = settings_store.credential_definitions(connector_id)
+    values = update.credentials or {}
+    if update.value is not None and len(definitions) == 1:
+        values = {definitions[0]["id"]: update.value}
+    if not values:
+        raise HTTPException(status_code=400, detail="No credentials were supplied.")
+    known = {definition["id"]: definition for definition in definitions}
+    unknown = sorted(set(values) - set(known))
+    if unknown:
         raise HTTPException(
-            status_code=409,
-            detail=f"This credential is controlled by {CONNECTORS[connector_id]['environment_key']}.",
+            status_code=400,
+            detail=f"Unknown credential fields: {', '.join(unknown)}.",
         )
     try:
-        settings_store.set(CONNECTORS[connector_id]["secret_key"], update.value.get_secret_value())
+        for credential_id, secret in values.items():
+            definition = known[credential_id]
+            if os.getenv(definition["environment_key"], "").strip():
+                raise HTTPException(
+                    status_code=409,
+                    detail=f"This credential is controlled by {definition['environment_key']}.",
+                )
+            settings_store.set(definition["secret_key"], secret.get_secret_value())
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     return {"connector": public_connector(connector_id)}
@@ -120,13 +137,19 @@ def clear_connector_secret(connector_id: str, request: Request) -> dict:
     require_local_settings_request(request)
     if connector_id not in CONNECTORS:
         raise HTTPException(status_code=404, detail="Unknown connector.")
-    current = settings_store.secret_state(connector_id)
-    if current.source == "environment":
+    cleared = False
+    environment_keys: list[str] = []
+    for definition in settings_store.credential_definitions(connector_id):
+        if os.getenv(definition["environment_key"], "").strip():
+            environment_keys.append(definition["environment_key"])
+            continue
+        settings_store.clear(definition["secret_key"])
+        cleared = True
+    if not cleared and environment_keys:
         raise HTTPException(
             status_code=409,
-            detail=f"Unset {CONNECTORS[connector_id]['environment_key']} in the backend environment.",
+            detail=f"Unset {', '.join(environment_keys)} in the backend environment.",
         )
-    settings_store.clear(CONNECTORS[connector_id]["secret_key"])
     return {"connector": public_connector(connector_id)}
 
 
@@ -140,6 +163,8 @@ async def test_connector(connector_id: str, request: Request) -> dict:
             return await run_in_threadpool(study_service.test_connection)
         if connector_id == "douban":
             return await douban_adapter.test_connection()
+        if connector_id == "letterboxd":
+            return await run_in_threadpool(letterboxd_adapter.test_connection)
         raise HTTPException(status_code=501, detail="This optional connector is not implemented yet.")
     except (StudyGenerationError, CriticismError) as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
@@ -157,6 +182,7 @@ def contract() -> dict:
             "GET /api/discovery/films/{film_id}",
             "POST /api/discovery/films/{film_id}/study",
             "POST /api/discovery/films/{film_id}/criticism/douban",
+            "POST /api/discovery/films/{film_id}/criticism/letterboxd",
             "GET /api/library/status",
             "POST /api/analyze",
         ],
@@ -207,10 +233,16 @@ def discovery_film(film_id: str) -> dict:
         result = discovery_service.detail(film_id)
         result["film"]["local_library"] = library_catalogue.public_catalogue()
         result["film"]["study_reading"] = library_index.retrieve_for_film(result["film"])
-        cached_criticism = criticism_store.load(film_id)
+        cached_bundles = criticism_store.load_all(film_id)
         result["film"]["critical_research"] = {
-            "providers": {"douban": douban_adapter.status()},
-            "bundle": cached_criticism.model_dump() if cached_criticism else None,
+            "providers": {
+                "douban": douban_adapter.status(),
+                "letterboxd": letterboxd_adapter.status(),
+            },
+            "bundles": {
+                bundle.provider.casefold(): bundle.model_dump() for bundle in cached_bundles
+            },
+            "bundle": cached_bundles[0].model_dump() if cached_bundles else None,
         }
         return result
     except LookupError as exc:
@@ -222,8 +254,8 @@ def generate_film_study(film_id: str, study_request: FilmStudyRequest) -> dict:
     try:
         detail = discovery_service.detail(film_id)
         film = detail["film"]
-        critical_bundle = criticism_store.load(film_id)
-        claims = critical_bundle.claims if critical_bundle else []
+        critical_bundles = criticism_store.load_all(film_id)
+        claims = [claim for bundle in critical_bundles for claim in bundle.claims]
         reading = library_index.retrieve_for_film(
             film,
             focus=study_request.question,
@@ -260,6 +292,31 @@ async def research_douban_criticism(film_id: str) -> dict:
         provider_id, provider_title, reviews = await douban_adapter.fetch_reviews(film)
         claims = await run_in_threadpool(study_service.structure_reviews, film, reviews)
         bundle = build_bundle(film_id, provider_id, provider_title, reviews, claims)
+        await run_in_threadpool(criticism_store.save, bundle)
+        return {"critical_research": bundle.model_dump()}
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except (CriticismError, StudyGenerationError) as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+
+@app.post("/api/discovery/films/{film_id:path}/criticism/letterboxd")
+async def research_letterboxd_criticism(film_id: str) -> dict:
+    try:
+        detail = discovery_service.detail(film_id)
+        film = detail["film"]
+        provider_id, provider_title, reviews = await run_in_threadpool(
+            letterboxd_adapter.fetch_reviews, film
+        )
+        claims = await run_in_threadpool(study_service.structure_reviews, film, reviews)
+        bundle = build_bundle(
+            film_id,
+            provider_id,
+            provider_title,
+            reviews,
+            claims,
+            provider="Letterboxd",
+        )
         await run_in_threadpool(criticism_store.save, bundle)
         return {"critical_research": bundle.model_dump()}
     except LookupError as exc:

@@ -35,6 +35,31 @@ CONNECTORS: dict[str, dict[str, Any]] = {
         "documentation_url": "https://lobehub.com/mcp/moria97-douban-mcp",
         "testable": True,
     },
+    "letterboxd": {
+        "name": "Letterboxd API",
+        "credentials": [
+            {
+                "id": "client_id",
+                "label": "Client ID",
+                "secret_key": "letterboxd_client_id",
+                "environment_key": "LETTERBOXD_CLIENT_ID",
+            },
+            {
+                "id": "client_secret",
+                "label": "Client Secret",
+                "secret_key": "letterboxd_client_secret",
+                "environment_key": "LETTERBOXD_CLIENT_SECRET",
+            },
+        ],
+        "state": "available",
+        "description": (
+            "Official OAuth API access for attributed Letterboxd reviews. "
+            "Requires credentials granted by Letterboxd."
+        ),
+        "credential_label": "OAuth credentials",
+        "documentation_url": "https://api-docs.letterboxd.com/",
+        "testable": True,
+    },
     "nyt": {
         "name": "The New York Times",
         "secret_key": "nyt_api_key",
@@ -101,25 +126,67 @@ class LocalSettingsStore:
                 self._write(settings)
 
     def secret_state(self, connector_id: str) -> SecretState:
-        definition = CONNECTORS[connector_id]
-        environment_value = os.getenv(definition["environment_key"], "").strip()
-        if environment_value:
-            return SecretState(True, "environment", self._mask(environment_value))
-        stored_value = self.get(definition["secret_key"])
-        if stored_value:
-            return SecretState(True, "local_store", self._mask(stored_value))
-        return SecretState(False, "none", None)
+        states = self.credential_states(connector_id)
+        configured = bool(states) and all(state["configured"] for state in states)
+        sources = {state["source"] for state in states if state["configured"]}
+        source = next(iter(sources)) if len(sources) == 1 else "mixed" if sources else "none"
+        hint = states[0]["hint"] if len(states) == 1 else f"{len(states)} fields" if configured else None
+        return SecretState(configured, source, hint)
 
     def effective_secret(self, connector_id: str) -> str:
-        definition = CONNECTORS[connector_id]
-        return os.getenv(definition["environment_key"], "").strip() or self.get(
-            definition["secret_key"]
+        credential = self.credential_definitions(connector_id)[0]
+        return self._effective_credential(credential)
+
+    def effective_credential(self, connector_id: str, credential_id: str) -> str:
+        credential = next(
+            (
+                item
+                for item in self.credential_definitions(connector_id)
+                if item["id"] == credential_id
+            ),
+            None,
         )
+        if credential is None:
+            raise KeyError(f"Unknown credential {credential_id!r} for {connector_id!r}.")
+        return self._effective_credential(credential)
+
+    def credential_definitions(self, connector_id: str) -> list[dict[str, str]]:
+        definition = CONNECTORS[connector_id]
+        credentials = definition.get("credentials")
+        if credentials:
+            return [dict(item) for item in credentials]
+        return [
+            {
+                "id": "value",
+                "label": definition["credential_label"],
+                "secret_key": definition["secret_key"],
+                "environment_key": definition["environment_key"],
+            }
+        ]
+
+    def credential_states(self, connector_id: str) -> list[dict[str, Any]]:
+        states: list[dict[str, Any]] = []
+        for credential in self.credential_definitions(connector_id):
+            environment_value = os.getenv(credential["environment_key"], "").strip()
+            stored_value = self.get(credential["secret_key"])
+            value = environment_value or stored_value
+            states.append(
+                {
+                    "id": credential["id"],
+                    "label": credential["label"],
+                    "configured": bool(value),
+                    "source": "environment" if environment_value else "local_store" if stored_value else "none",
+                    "hint": self._mask(value) if value else None,
+                    "environment_key": credential["environment_key"],
+                }
+            )
+        return states
 
     def public_connectors(self) -> list[dict[str, Any]]:
         connectors: list[dict[str, Any]] = []
         for connector_id, definition in CONNECTORS.items():
             secret = self.secret_state(connector_id)
+            credentials = self.credential_states(connector_id)
             connectors.append(
                 {
                     "id": connector_id,
@@ -132,10 +199,19 @@ class LocalSettingsStore:
                     "configured": secret.configured,
                     "credential_source": secret.source,
                     "credential_hint": secret.hint,
-                    "environment_key": definition["environment_key"],
+                    "environment_key": ", ".join(
+                        credential["environment_key"]
+                        for credential in self.credential_definitions(connector_id)
+                    ),
+                    "credentials": credentials,
                 }
             )
         return connectors
+
+    def _effective_credential(self, credential: dict[str, str]) -> str:
+        return os.getenv(credential["environment_key"], "").strip() or self.get(
+            credential["secret_key"]
+        )
 
     def _read(self) -> dict[str, Any]:
         if not self.path.exists():

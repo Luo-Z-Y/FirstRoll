@@ -13,24 +13,25 @@ Status vocabulary:
 
 ## Current Snapshot
 
-**Last updated:** 7 August 2026
+**Last updated:** 9 August 2026
 
 **Release stage:** local working prototype
 
 **Primary development URL:** `http://127.0.0.1:8000`
-**Automated verification:** 22 tests passing
+**Automated verification:** 29 tests passing
 
 | Area | Status | Current evidence |
 |---|---|---|
 | Film discovery | Complete | Wikidata search by title, year and director; Wikipedia context and source links |
 | Product navigation | Complete | Discover and Analyse modes; Study consolidated into Discover |
-| Local settings | Complete | Write-only DeepSeek and optional Douban credentials; local-only settings routes |
+| Local settings | Complete | Write-only single- and multi-field credentials, including Letterboxd OAuth; local-only routes |
 | Private library catalogue | Complete | Seven registered film-study PDFs; paths and content withheld from public APIs |
 | PDF ingestion | Complete | Token-aware page chunks, overlap, section hints, language and stable IDs |
 | Local embeddings | Complete | 4,381 of 4,381 chunks embedded with a local multilingual 384-dimension model |
 | Hybrid retrieval | Complete | FTS5 + vector candidates, reciprocal-rank fusion and diversity selection |
 | Query planning | Complete | User focus, craft taxonomy and attributed criticism generate subqueries |
 | Douban adapter | Complete | Optional local MCP connection, title matching, review links and private cache |
+| Letterboxd adapter | Complete | Official client-credentials OAuth, film matching and popularity-ranked reviews |
 | Criticism structuring | Complete | Pydantic critic claims with missing-field preservation and evidence labels |
 | Evidence packet | Complete | Film record, theory and critic claims separated by explicit permitted uses |
 | Deep Study schema | Complete | Critic, theory, hypothesis, mechanism, alternative, verification and confidence fields |
@@ -42,6 +43,27 @@ Status vocabulary:
 | Persistent projects | Planned | Film, clip, study and note sessions are not retained as reusable projects |
 
 ## Latest Completed Milestone
+
+### 9 August 2026 — Official Letterboxd API adapter
+
+Delivered:
+
+1. Added write-only Client ID and Client Secret fields to the local Settings registry.
+2. Implemented official OAuth client-credentials authentication with clear rejection errors.
+3. Added official film search and popularity-ranked public review retrieval.
+4. Preserved member attribution, log-entry ID, rating, language and source links.
+5. Stored criticism bundles per provider so Letterboxd and Douban claims can coexist.
+6. Added a Letterboxd action to film dossiers and combined both providers in Deep Study.
+7. Added transport-isolated tests with no scraping or unofficial fallback.
+
+Acceptance evidence:
+
+- automated tests: 29 passed;
+- scoped Ruff checks: passed;
+- frontend JavaScript syntax and repository whitespace checks: passed;
+- live Settings API: Letterboxd exposes separate masked Client ID and Client Secret fields;
+- live unconfigured request: returns a specific incomplete-credentials response without making
+  an unofficial fallback request.
 
 ### 7 August 2026 — README architecture map
 

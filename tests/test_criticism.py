@@ -8,6 +8,7 @@ from app.backend.criticism import (
     CriticalClaim,
     CriticismStore,
     DoubanMcpAdapter,
+    LetterboxdApiAdapter,
     ReviewSource,
     build_bundle,
 )
@@ -62,6 +63,70 @@ def test_douban_match_requires_title_and_prefers_year() -> None:
     ]
 
     assert DoubanMcpAdapter._choose_match(film, candidates)["id"] == "2"
+
+
+def test_letterboxd_official_api_reviews_are_normalised() -> None:
+    calls: list[tuple[str, str, dict[str, str], bytes | None]] = []
+
+    def transport(
+        method: str,
+        url: str,
+        headers: dict[str, str],
+        body: bytes | None,
+    ) -> dict[str, Any]:
+        calls.append((method, url, headers, body))
+        if url.endswith("/auth/token"):
+            return {"access_token": "official-token", "expires_in": 3600}
+        if "/search?" in url:
+            return {
+                "items": [
+                    {
+                        "type": "FilmSearchItem",
+                        "score": 1,
+                        "film": {
+                            "id": "abc123",
+                            "name": "Kaili Blues",
+                            "releaseYear": 2015,
+                            "link": "https://letterboxd.com/film/kaili-blues/",
+                        },
+                    }
+                ]
+            }
+        return {
+            "items": [
+                {
+                    "id": "review42",
+                    "name": "A cinema of memory",
+                    "owner": {"username": "critic", "displayName": "Film Critic"},
+                    "rating": 4.5,
+                    "review": {
+                        "text": "The long take <em>folds</em> space.<br>It resists certainty.",
+                        "languageCode": "en",
+                        "moderated": False,
+                    },
+                }
+            ]
+        }
+
+    with tempfile.TemporaryDirectory() as directory:
+        settings = LocalSettingsStore(Path(directory) / "settings.json")
+        settings.set("letterboxd_client_id", "client-id")
+        settings.set("letterboxd_client_secret", "client-secret")
+        adapter = LetterboxdApiAdapter(settings, transport=transport)
+
+        provider_id, provider_title, reviews = adapter.fetch_reviews(
+            {"title": "Kaili Blues", "original_title": "路边野餐", "year": 2015}
+        )
+
+    assert provider_id == "abc123"
+    assert provider_title == "Kaili Blues"
+    assert reviews[0].provider == "Letterboxd"
+    assert reviews[0].author == "Film Critic"
+    assert reviews[0].summary == "The long take folds space. It resists certainty."
+    assert reviews[0].url == "https://letterboxd.com/critic/film/kaili-blues/"
+    assert calls[0][0] == "POST"
+    assert calls[1][2]["Authorization"] == "Bearer official-token"
+    assert "where=HasReview" in calls[2][1]
 
 
 def test_douban_diagnostic_distinguishes_empty_review_table() -> None:

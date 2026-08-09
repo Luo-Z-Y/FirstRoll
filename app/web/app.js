@@ -284,7 +284,11 @@ function renderFilmDetail(film) {
   const readingPassages = Array.isArray(studyReading.passages) ? studyReading.passages : [];
   const criticalResearch = film.critical_research || {};
   const doubanStatus = criticalResearch.providers?.douban || {};
-  const criticalBundle = criticalResearch.bundle || null;
+  const letterboxdStatus = criticalResearch.providers?.letterboxd || {};
+  const criticalBundles = criticalResearch.bundles || (
+    criticalResearch.bundle ? { [String(criticalResearch.bundle.provider || "source").toLowerCase()]: criticalResearch.bundle } : {}
+  );
+  const hasCriticalBundles = Object.keys(criticalBundles).length > 0;
 
   refs.filmDetail.innerHTML = `
     <button class="detail-close" type="button" data-detail-close aria-label="Close film dossier">×</button>
@@ -334,11 +338,14 @@ function renderFilmDetail(film) {
     <section class="critical-perspectives">
       <div class="critical-head">
         <div><span>Attributed secondary evidence</span><h3>Critical perspectives</h3></div>
-        <button type="button" data-load-douban ${doubanStatus.installed ? "" : "disabled"}>${criticalBundle ? "Refresh Douban" : "Load Douban"}</button>
+        <div class="critical-provider-actions">
+          <button type="button" data-load-criticism="douban" ${doubanStatus.installed ? "" : "disabled"}>${criticalBundles.douban ? "Refresh Douban" : "Load Douban"}</button>
+          <button type="button" data-load-criticism="letterboxd" ${letterboxdStatus.configured ? "" : "disabled"}>${criticalBundles.letterboxd ? "Refresh Letterboxd" : "Load Letterboxd"}</button>
+        </div>
       </div>
       <p class="critical-note">Review summaries are structured without inventing missing scenes, techniques or timecodes.</p>
       <div data-critical-output>
-        ${criticalBundle ? criticalResearchMarkup(criticalBundle) : `<p class="module-empty">${doubanStatus.installed ? "Load attributed Douban perspectives for this film." : "Install the optional local Douban connector first."}</p>`}
+        ${hasCriticalBundles ? criticalResearchBundlesMarkup(criticalBundles) : `<p class="module-empty">Load an attributed provider above. Letterboxd requires official API credentials in Settings.</p>`}
       </div>
     </section>
     <section class="deep-study">
@@ -414,36 +421,47 @@ async function onFilmDetailClick(event) {
     await generateDeepStudy(studyButton);
     return;
   }
-  const doubanButton = event.target.closest("[data-load-douban]");
-  if (doubanButton) {
-    await loadDoubanCriticism(doubanButton);
+  const criticismButton = event.target.closest("[data-load-criticism]");
+  if (criticismButton) {
+    await loadProviderCriticism(criticismButton);
   }
 }
 
-async function loadDoubanCriticism(button) {
+async function loadProviderCriticism(button) {
   const film = state.discovery.selectedFilm;
   const output = refs.filmDetail.querySelector("[data-critical-output]");
   if (!film || !output) return;
+  const provider = button.dataset.loadCriticism;
+  const providerLabel = provider === "letterboxd" ? "Letterboxd" : "Douban";
   button.disabled = true;
   button.textContent = "Structuring…";
   output.innerHTML = `<p class="module-empty">Retrieving attributed summaries and extracting claims…</p>`;
   try {
     const response = await fetch(
-      `${discoveryApiBase()}/api/discovery/films/${encodeURIComponent(film.id)}/criticism/douban`,
+      `${discoveryApiBase()}/api/discovery/films/${encodeURIComponent(film.id)}/criticism/${provider}`,
       { method: "POST" },
     );
     if (!response.ok) throw new Error(await readApiError(response));
     const data = await response.json();
     const bundle = data.critical_research;
-    state.discovery.selectedFilm.critical_research.bundle = bundle;
-    output.innerHTML = criticalResearchMarkup(bundle);
-    button.textContent = "Refresh Douban";
+    const research = state.discovery.selectedFilm.critical_research;
+    research.bundles = research.bundles || {};
+    research.bundles[provider] = bundle;
+    output.innerHTML = criticalResearchBundlesMarkup(research.bundles);
+    button.textContent = `Refresh ${providerLabel}`;
   } catch (error) {
     output.innerHTML = `<p class="study-error">${escapeHtml(error.message)}</p>`;
-    button.textContent = "Load Douban";
+    button.textContent = `Load ${providerLabel}`;
   } finally {
     button.disabled = false;
   }
+}
+
+function criticalResearchBundlesMarkup(bundles) {
+  return Object.values(bundles || {})
+    .filter(Boolean)
+    .map((bundle) => criticalResearchMarkup(bundle))
+    .join("");
 }
 
 function criticalResearchMarkup(bundle) {
@@ -452,11 +470,12 @@ function criticalResearchMarkup(bundle) {
   const reviewMap = Object.fromEntries(reviews.map((review) => [review.source_id, review]));
   if (!claims.length) return `<p class="module-empty">No substantive critical claims were found in the available summaries.</p>`;
   return `
-    <div class="critical-grid">${claims.map((claim) => criticalClaimMarkup(claim, reviewMap[claim.source_id])).join("")}</div>
+    <div class="critical-source-heading">${escapeHtml(bundle.provider || "Attributed source")}</div>
+    <div class="critical-grid">${claims.map((claim) => criticalClaimMarkup(claim, reviewMap[claim.source_id], bundle.provider)).join("")}</div>
     <p class="critical-boundary">${escapeHtml(bundle.notice || "Secondary criticism; not verified film observation.")}</p>`;
 }
 
-function criticalClaimMarkup(claim, review) {
+function criticalClaimMarkup(claim, review, provider) {
   const sourceUrl = safeHttpUrl(review?.url);
   const tags = Array.isArray(claim.lens_tags) ? claim.lens_tags.map((tag) => tag.replaceAll("_", " ")).join(" · ") : "critical perspective";
   const missing = Array.isArray(claim.missing_fields) ? claim.missing_fields.map((field) => field.replaceAll("_", " ")).join(" · ") : "";
@@ -467,7 +486,7 @@ function criticalClaimMarkup(claim, review) {
     ${claim.scene_or_sequence ? `<dl><dt>Sequence</dt><dd>${escapeHtml(claim.scene_or_sequence)}</dd></dl>` : ""}
     ${claim.described_observation ? `<dl><dt>Reported observation</dt><dd>${escapeHtml(claim.described_observation)}</dd></dl>` : ""}
     ${missing ? `<small>Not supplied: ${escapeHtml(missing)}</small>` : ""}
-    <footer><div><strong>${escapeHtml(review?.title || "Douban review")}</strong><span>${escapeHtml(review?.rating_label || "Summary")}</span></div>${sourceUrl ? `<a href="${escapeHtml(sourceUrl)}" target="_blank" rel="noopener noreferrer">Read at Douban ↗</a>` : ""}</footer>
+    <footer><div><strong>${escapeHtml(review?.title || `${provider || "Source"} review`)}</strong><span>${escapeHtml(review?.rating_label || "Summary")}</span></div>${sourceUrl ? `<a href="${escapeHtml(sourceUrl)}" target="_blank" rel="noopener noreferrer">Read at ${escapeHtml(provider || "source")} ↗</a>` : ""}</footer>
   </article>`;
 }
 

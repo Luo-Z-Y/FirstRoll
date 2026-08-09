@@ -9,7 +9,8 @@ hypotheses and measured film observations are different kinds of evidence. First
 keeps those layers visible instead of presenting one fluent but unsupported answer.
 
 > **Current status:** local working prototype. Discover, private-library retrieval,
-> optional Douban criticism, DeepSeek synthesis and clip analysis are implemented. The
+> optional Douban and official Letterboxd criticism, DeepSeek synthesis and clip analysis
+> are implemented. The
 > next major milestone is connecting measured clip evidence to Deep Study.
 
 See [Project Progress](docs/PROGRESS.md) for completed milestones, verification results,
@@ -42,6 +43,8 @@ The original GPL-3.0 licence and contributor attribution remain applicable. See
 ### Critical perspectives
 
 - Optionally run the unofficial local Douban MCP connector.
+- Connect approved Letterboxd OAuth credentials through the official API.
+- Retrieve popularity-ranked, attributed Letterboxd reviews without a scraping fallback.
 - Retrieve review summaries and retain links to the original reviews.
 - Ask DeepSeek to extract Pydantic-validated, attributed critical claims.
 - Preserve missing scenes, observations, techniques and alternative readings as missing.
@@ -86,6 +89,7 @@ flowchart TB
     subgraph external["External services"]
         WD["Wikidata + Wikipedia<br/>identity and attributed context"]
         DB["Optional Douban MCP<br/>review summaries"]
+        LB["Official Letterboxd API<br/>attributed reviews"]
         DS["DeepSeek V4 Pro<br/>structured synthesis"]
     end
 
@@ -94,7 +98,7 @@ flowchart TB
 
         subgraph discovery["Discovery and criticism"]
             FD["Film discovery service"]
-            CA["Douban adapter"]
+            CA["Criticism adapters<br/>Douban · Letterboxd OAuth"]
             CE["Pydantic criticism extraction"]
             FR["Verified film record"]
             CC["Attributed critic claims"]
@@ -132,6 +136,7 @@ flowchart TB
 
     UI -->|"load criticism"| CA
     CA <--> DB
+    CA <--> LB
     CA --> CE --> CC
 
     BK --> ING --> IDX
@@ -157,14 +162,14 @@ flowchart TB
     classDef externalNode fill:#f3ddd8,stroke:#8f382b,color:#241713;
     classDef privateNode fill:#e9eadc,stroke:#6f7544,color:#171813;
     classDef evidenceNode fill:#f4ead7,stroke:#a45b38,color:#171813;
-    class WD,DB,DS externalNode;
+    class WD,DB,LB,DS externalNode;
     class BK,ING,IDX,VC,CV,ME,EX privateNode;
     class FR,CC,TP,EP,PS,QG,RP,ES,IE evidenceNode;
 ```
 
 The large boundary represents processes and data that remain on the user's machine.
-Wikidata, Wikipedia and the optional Douban connector supply attributed research data;
-DeepSeek is the only synthesis service. The embedding model runs locally. Only the typed,
+Wikidata, Wikipedia, optional Douban and the official Letterboxd API supply attributed
+research data; DeepSeek is the only synthesis service. The embedding model runs locally. Only the typed,
 selected evidence packet—not the complete books, vectors or private file paths—is sent to
 DeepSeek when the user chooses **Generate study**. The dotted line is planned work: clip
 measurements do not yet support claims in Deep Study.
@@ -270,6 +275,18 @@ cookie. Provider behaviour may break when Douban changes its pages or access con
 
 See [Data Sources](docs/DATA_SOURCES.md) for the source, copyright and model-use policy.
 
+## Optional Official Letterboxd API
+
+FirstRoll supports Letterboxd's official OAuth client-credentials flow. Request API access
+from Letterboxd, then enter the granted **Client ID** and **Client Secret** on the local
+Settings page. Alternatively, set `LETTERBOXD_CLIENT_ID` and
+`LETTERBOXD_CLIENT_SECRET` before starting FirstRoll.
+
+The adapter searches the official `/search` endpoint and retrieves popularity-ranked public
+reviews through `/log-entries`. It has no HTML-scraping or access-control bypass fallback.
+Credentials remain write-only in `.firstroll/settings.json` and are never returned to the
+browser or committed to Git.
+
 ## API Overview
 
 | Endpoint | Purpose |
@@ -281,6 +298,7 @@ See [Data Sources](docs/DATA_SOURCES.md) for the source, copyright and model-use
 | `GET /api/discovery/search` | Film identity search |
 | `GET /api/discovery/films/{film_id}` | Full film dossier |
 | `POST /api/discovery/films/{film_id}/criticism/douban` | Retrieve and structure Douban criticism |
+| `POST /api/discovery/films/{film_id}/criticism/letterboxd` | Retrieve and structure official Letterboxd reviews |
 | `POST /api/discovery/films/{film_id}/study` | Generate an evidence-grounded Deep Study |
 | `GET /api/library/status` | Private library and index status |
 | `POST /api/analyze` | Analyse an uploaded private clip |
@@ -359,7 +377,7 @@ fallback behaviour; these are tracked separately from the new FirstRoll modules.
 |---|---|---|
 | Film discovery and dossier | Complete | Key-free identity, context and visible research routes |
 | Private RAG foundation | Complete | Token chunking, FTS5, local vectors, hybrid retrieval and citations |
-| Attributed criticism | Complete | Optional Douban retrieval and structured critic claims |
+| Attributed criticism | Complete | Optional Douban and official Letterboxd retrieval with structured critic claims |
 | Evidence-grounded Deep Study | Complete | Typed evidence, Pydantic output, quality gate and layered UI |
 | Clip analysis web migration | Complete | Scene, shot, colour, object and export workflow |
 | Clip-to-study evidence bridge | Next | Feed measured scenes, shots and timecodes into synthesis |
@@ -375,6 +393,7 @@ and acceptance evidence. Update that file whenever a milestone changes state.
 - Deep Study does not yet observe the film itself; it produces viewing hypotheses.
 - Creator interviews and production records are not yet automatically collected.
 - Douban MCP is unofficial and may return sparse summaries or stop working.
+- Letterboxd requires API credentials explicitly granted by Letterboxd; no scraper fallback is included.
 - The first semantic retrieval after process start may pause while the local model loads.
 - A study may correctly remain labelled insufficient evidence after its one repair pass.
 - Some inherited computer-vision dependencies are large and have platform-specific setup.

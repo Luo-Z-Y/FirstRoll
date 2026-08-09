@@ -13,6 +13,7 @@ to send to an LLM.
 | Wikimedia Commons | Optional image referenced by a Wikidata item | No | Check the individual file licence before reuse |
 | Curated offline catalogue | Demonstration and network fallback | No | May be used inside FirstRoll |
 | Douban MCP | Optional Chinese-language review summaries and attributed critic claims | No | Selected summaries may enter DeepSeek claim extraction only after an explicit user action |
+| Letterboxd API | Optional popularity-ranked public reviews and attributed critic claims | No | Official API review text enters claim extraction only after an explicit user action |
 | User-provided documents | Private, page-cited study retrieval | No | Allowed only when the user has the necessary rights; documents and derived index remain local |
 | DeepSeek | Grounded synthesis over selected evidence | No | Receives the film record, user focus and retrieved excerpts only after the user selects Generate study |
 
@@ -53,6 +54,22 @@ DeepSeek converts summaries into Pydantic-validated `critic_reported` claims. Sc
 observation, technique, alternative reading and timecode fields remain empty when the
 summary does not contain them. FirstRoll stores the private result beneath
 `.firstroll/criticism` and links readers back to the original Douban review.
+
+## Official Letterboxd API
+
+FirstRoll supports only Letterboxd's documented OAuth API. Users must obtain a Client ID and
+Client Secret from Letterboxd and store them locally in Settings or the corresponding
+environment variables. FirstRoll does not scrape Letterboxd pages or fall back to an
+unofficial endpoint.
+
+The adapter uses client-credentials OAuth, matches a film through `/search`, and requests
+public log entries filtered to reviews and ordered by review popularity. It retains the log
+entry ID, member attribution, rating, language and source link before DeepSeek extracts
+bounded `critic_reported` claims. Multiple provider bundles are stored separately so Douban
+and Letterboxd evidence can coexist in a study.
+
+API access and permitted use remain controlled by Letterboxd's approval and terms. FirstRoll
+being technically compatible does not itself grant access or reuse permission.
 
 ## Planned Research Adapters
 

@@ -86,6 +86,7 @@
     .credential-state strong { text-transform: uppercase; letter-spacing: .06em; }
     .credential-state span { color: var(--soft); }
     .secret-row { display: grid; grid-template-columns: 1fr auto; }
+    .credential-fields { display: grid; gap: 8px; }
     .secret-row input { min-width: 0; border: 1px solid var(--ink); border-right: 0; padding: 11px 12px; background: var(--light); outline: 0; }
     .secret-row input:focus { box-shadow: inset 0 -3px var(--red); }
     .reveal { border: 1px solid var(--ink); padding: 0 12px; background: transparent; cursor: pointer; font-size: .68rem; font-weight: 700; }
@@ -171,10 +172,18 @@
 
     function connectorCard(connector) {
       const available = connector.state === "available";
-      const environmentManaged = connector.credential_source === "environment";
+      const credentials = Array.isArray(connector.credentials) ? connector.credentials : [];
+      const environmentManaged = credentials.length > 0 && credentials.every((credential) => credential.source === "environment");
+      const localCredential = credentials.some((credential) => credential.source === "local_store");
+      const environmentKeys = credentials.filter((credential) => credential.source === "environment").map((credential) => credential.environment_key);
       const stateLabel = connector.configured
         ? `Configured ${connector.credential_hint || ""} · ${connector.credential_source.replaceAll("_", " ")}`
-        : "Not configured";
+        : credentials.some((credential) => credential.configured) ? "Partially configured" : "Not configured";
+      const credentialInputs = credentials.map((credential) => `
+        <div class="secret-row">
+          <input type="password" data-secret data-credential-key="${escapeHtml(credential.id)}" aria-label="${escapeHtml(credential.label)} for ${escapeHtml(connector.name)}" placeholder="${escapeHtml(credential.label)}" autocomplete="new-password" ${credential.source === "environment" ? "disabled" : ""} />
+          <button class="reveal" type="button" data-action="reveal" ${credential.source === "environment" ? "disabled" : ""}>Show</button>
+        </div>`).join("");
       return `
         <article class="connector ${available ? "available" : "planned"}" data-connector="${escapeHtml(connector.id)}">
           <div class="connector-top">
@@ -183,17 +192,14 @@
           </div>
           <div class="credential-state"><strong>${escapeHtml(connector.credential_label)}</strong><span>${escapeHtml(stateLabel)}</span></div>
           ${available ? `
-            <div class="secret-row">
-              <input type="password" data-secret aria-label="${escapeHtml(connector.credential_label)} for ${escapeHtml(connector.name)}" placeholder="Enter a new credential" autocomplete="new-password" ${environmentManaged ? "disabled" : ""} />
-              <button class="reveal" type="button" data-action="reveal" ${environmentManaged ? "disabled" : ""}>Show</button>
-            </div>
+            <div class="credential-fields">${credentialInputs}</div>
             <div class="actions">
               <button class="save" type="button" data-action="save" ${environmentManaged ? "disabled" : ""}>Save locally</button>
               <button type="button" data-action="test" ${connector.testable && connector.configured ? "" : "disabled"}>Test connection</button>
-              <button type="button" data-action="clear" ${connector.configured && !environmentManaged ? "" : "disabled"}>Clear</button>
+              <button type="button" data-action="clear" ${localCredential ? "" : "disabled"}>Clear</button>
               <a class="docs" href="${escapeHtml(connector.documentation_url)}" target="_blank" rel="noopener noreferrer">Documentation ↗</a>
             </div>
-            ${environmentManaged ? `<div class="planned-panel">This value is controlled by <code>${escapeHtml(connector.environment_key)}</code>. Unset that environment variable before managing it here.</div>` : ""}
+            ${environmentKeys.length ? `<div class="planned-panel">Environment-managed fields: <code>${escapeHtml(environmentKeys.join(", "))}</code>.</div>` : ""}
           ` : `
             <div class="planned-panel">This adapter is visible now so FirstRoll has one configuration home. Credential entry will unlock when the adapter is implemented.</div>
             <div class="actions"><a class="docs" href="${escapeHtml(connector.documentation_url)}" target="_blank" rel="noopener noreferrer">Review source ↗</a></div>
@@ -205,11 +211,11 @@
     async function handleAction(button) {
       const card = button.closest("[data-connector]");
       const connectorId = card.dataset.connector;
-      const input = card.querySelector("[data-secret]");
       const message = card.querySelector(".connector-message");
       const action = button.dataset.action;
 
       if (action === "reveal") {
+        const input = button.closest(".secret-row").querySelector("[data-secret]");
         const showing = input.type === "text";
         input.type = showing ? "password" : "text";
         button.textContent = showing ? "Show" : "Hide";
@@ -221,14 +227,16 @@
       try {
         let response;
         if (action === "save") {
-          const value = input.value.trim();
-          if (!value) throw new Error("Enter a credential before saving.");
+          const entries = [...card.querySelectorAll("[data-secret]:not(:disabled)")]
+            .map((input) => [input.dataset.credentialKey, input.value.trim()])
+            .filter(([, value]) => value);
+          if (!entries.length) throw new Error("Enter at least one credential before saving.");
           response = await fetch(`/api/settings/connectors/${encodeURIComponent(connectorId)}`, {
             method: "PUT",
             headers: { ...settingsHeaders(), "Content-Type": "application/json" },
-            body: JSON.stringify({ value }),
+            body: JSON.stringify({ credentials: Object.fromEntries(entries) }),
           });
-          input.value = "";
+          card.querySelectorAll("[data-secret]").forEach((input) => { input.value = ""; });
         } else if (action === "clear") {
           if (!window.confirm("Clear this local credential?")) return;
           response = await fetch(`/api/settings/connectors/${encodeURIComponent(connectorId)}`, {

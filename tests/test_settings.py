@@ -72,3 +72,42 @@ def test_environment_secret_takes_precedence_without_being_exposed() -> None:
             os.environ.pop("DOUBAN_COOKIE", None)
         else:
             os.environ["DOUBAN_COOKIE"] = previous
+
+
+def test_letterboxd_requires_two_write_only_credentials() -> None:
+    previous_id = os.environ.pop("LETTERBOXD_CLIENT_ID", None)
+    previous_secret = os.environ.pop("LETTERBOXD_CLIENT_SECRET", None)
+    try:
+        with tempfile.TemporaryDirectory() as directory:
+            store = LocalSettingsStore(Path(directory) / "settings.json")
+            store.set("letterboxd_client_id", "client-123456")
+
+            partial = next(
+                connector
+                for connector in store.public_connectors()
+                if connector["id"] == "letterboxd"
+            )
+            assert partial["configured"] is False
+            assert len(partial["credentials"]) == 2
+
+            store.set("letterboxd_client_secret", "secret-987654")
+            configured = next(
+                connector
+                for connector in store.public_connectors()
+                if connector["id"] == "letterboxd"
+            )
+            public = json.dumps(configured)
+
+            assert configured["configured"] is True
+            assert "client-123456" not in public
+            assert "secret-987654" not in public
+            assert store.effective_credential("letterboxd", "client_id") == "client-123456"
+            assert (
+                store.effective_credential("letterboxd", "client_secret")
+                == "secret-987654"
+            )
+    finally:
+        if previous_id is not None:
+            os.environ["LETTERBOXD_CLIENT_ID"] = previous_id
+        if previous_secret is not None:
+            os.environ["LETTERBOXD_CLIENT_SECRET"] = previous_secret

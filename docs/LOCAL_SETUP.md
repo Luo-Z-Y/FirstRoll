@@ -168,6 +168,21 @@ as verified film observation.
 
 See [DATA_SOURCES.md](DATA_SOURCES.md) for the current provider policy.
 
+### Optional official Letterboxd API
+
+FirstRoll can use API credentials granted by Letterboxd. Open Settings and enter both the
+**Client ID** and **Client Secret**, then choose **Test connection**. Environment-managed
+setups may instead define:
+
+```bash
+export LETTERBOXD_CLIENT_ID="your-client-id"
+export LETTERBOXD_CLIENT_SECRET="your-client-secret"
+```
+
+Restart FirstRoll after changing environment variables. The film dossier enables **Load
+Letterboxd** only when both credentials are present. FirstRoll uses the official OAuth token,
+search and log-entry endpoints; it does not include an unofficial scraping fallback.
+
 ## Add a Private Study Library
 
 Create the private library folder and place PDF, EPUB, Markdown or text files inside it:

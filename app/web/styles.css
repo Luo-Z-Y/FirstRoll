@@ -675,7 +675,9 @@ button {
 .critical-head h3 { margin: 4px 0 0; font: 400 2.3rem "Bebas Neue", sans-serif; text-transform: uppercase; }
 .critical-head button { padding: 10px 14px; border: 1px solid var(--ink); color: var(--ink); background: transparent; font-size: 0.68rem; font-weight: 700; cursor: pointer; }
 .critical-head button:disabled { opacity: 0.42; cursor: not-allowed; }
+.critical-provider-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 7px; }
 .critical-note { margin: 13px 0 20px; color: var(--ink-soft); font-size: 0.68rem; }
+.critical-source-heading { margin: 22px 0 8px; color: var(--red-dark); font: 500 0.62rem "IBM Plex Mono", monospace; letter-spacing: 0.1em; text-transform: uppercase; }
 .critical-grid { display: grid; grid-template-columns: repeat(2, 1fr); border-top: 1px solid var(--line); border-left: 1px solid var(--line); }
 .critical-card { display: flex; min-height: 280px; flex-direction: column; padding: 20px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); }
 .critical-card header { display: flex; justify-content: space-between; gap: 12px; }
