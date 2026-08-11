@@ -97,6 +97,20 @@ Acceptance evidence:
 - scoped criticism tests: 23 passed;
 - scoped Ruff checks pass.
 
+### 11 August 2026 — Secondary-evidence technical documentation
+
+Delivered:
+
+1. Documented the complete Crossref, Douban, Letterboxd and Guardian acquisition pipelines.
+2. Recorded provider-specific identity resolution, confidence thresholds, result limits,
+   attribution fields, response-size limits, redirect restrictions and failure behaviour.
+3. Added the *Memoria* translated-title diagnosis as a concrete explanation of IMDb-based
+   Douban resolution and MCP task-group error unwrapping.
+4. Distinguished Letterboxd public-page acquisition from its official OAuth API without a
+   hidden fallback between them.
+5. Documented the raw-evidence cache, stable source-ID relationship and Pydantic boundary
+   that precede optional DeepSeek claim structuring.
+
 ### 11 August 2026 — Source documentation and Letterboxd identity repair
 
 Delivered:

@@ -231,8 +231,23 @@ attributed context, not creator intention or formal analysis.
 ### Research: Crossref scholarship
 
 The **Research** tab uses Crossref's public metadata API rather than returning generic search
-links. Its query combines the film title, director and film/cinema terms, requesting records
-that contain abstracts. FirstRoll then applies a second local relevance check:
+links. The acquisition path is:
+
+```text
+Wikidata title + original title + director
+        ↓
+GET api.crossref.org/works
+query.bibliographic="<title>" <director> film cinema
+filter=has-abstract:true · rows=24
+        ↓
+local relevance and attribution checks
+        ↓
+up to 6 normalised scholarly abstracts
+```
+
+The HTTP client permits only `https://api.crossref.org`, uses a 20-second timeout and rejects
+responses larger than 3 MB. It strips markup from abstracts, then applies a second local
+relevance check:
 
 - the title or original title must occur in the work title or abstract;
 - short or ambiguous film titles require the director or explicit film context;
@@ -241,15 +256,38 @@ that contain abstracts. FirstRoll then applies a second local relevance check:
 
 Up to six matched abstracts are cached as attributed secondary evidence. Crossref is the
 discovery and metadata channel; the named author and publication remain the actual source.
+FirstRoll stores the DOI URL, authors, publication, year, work type and abstract, but it does
+not imply that Crossref endorses the work or that an abstract is equivalent to the full paper.
 
 ### Douban: optional local MCP
 
-The Douban adapter starts the separately installed MCP server over stdio and calls only
-`search-movie` and `list-movie-reviews`. When Wikidata supplies an IMDb ID, FirstRoll uses
-that stable identifier as the Douban search query and validates the returned release year.
-This avoids literal-string failures across English, Traditional Chinese and Simplified
-Chinese titles. Without an IMDb ID it falls back to title-and-year scoring, and refuses a
-weak or ambiguous identity match rather than silently selecting the first result.
+The Douban adapter starts the separately installed Node MCP server as a child process and
+communicates with it using MCP JSON-RPC over standard input/output. FirstRoll exposes only
+`PATH` and, when configured, the user's local Douban cookie to that subprocess. It calls only
+`search-movie` and `list-movie-reviews`.
+
+```text
+Wikidata film + IMDb ID tt…
+        ↓
+MCP search-movie(q=IMDb ID)
+        ↓
+unique Douban subject + exact release-year validation
+        ↓
+MCP list-movie-reviews(id=Douban subject ID)
+        ↓
+up to 8 attributed long-form review summaries
+```
+
+When Wikidata supplies an IMDb ID, FirstRoll uses that stable identifier as the search query.
+If the MCP returns one subject with the expected release year, the adapter accepts it even
+when its displayed title is translated. Without an IMDb ID, it falls back to title similarity
+plus year scoring and refuses weak or ambiguous matches rather than selecting the first row.
+
+This distinction fixed the *Memoria* failure: FirstRoll had compared `Memoria / 記憶`
+literally with Douban's Simplified Chinese `记忆`. Searching `tt8399288` instead resolved the
+unique 2021 subject `30137576`, from which the connector returned eight long-form reviews.
+The earlier `unhandled errors in a TaskGroup` message was only an MCP shutdown wrapper around
+FirstRoll's rejected identity match, not evidence that Douban had no reviews.
 
 The connector returns Markdown tables, so FirstRoll reconstructs logical rows when long
 Chinese summaries contain line breaks and repairs unescaped pipe characters without losing
@@ -261,8 +299,25 @@ connector error instead of Python's generic `unhandled errors in a TaskGroup` me
 
 ### Letterboxd: public pages and verified identity
 
-The local-only public-web adapter resolves identity before collecting reviews. Its priority
-order is:
+The local-only public-web adapter reads public pages without a login. It does not extract or
+reuse a Letterboxd session, private API credential or member cookie. Identity is resolved
+before any review is accepted:
+
+```text
+Wikidata IMDb ID
+        ↓
+GET letterboxd.com/imdb/tt… and follow canonical redirect
+        ↓
+validate HTTPS host + Open Graph title/year + JSON-LD director
+        ↓
+extract review URLs belonging to that canonical film slug
+        ↓
+open at most 6 public review pages
+        ↓
+parse attributed JSON-LD Review objects
+```
+
+Its candidate priority is:
 
 1. use the verified IMDb ID at Letterboxd's `/imdb/{id}/` route and follow the redirect to
    the canonical film page;
@@ -277,19 +332,43 @@ director guard rejects the unrelated namesake.
 After resolution, FirstRoll reads popular-review links from the canonical film page, opens a
 bounded number of individual public review pages and extracts the JSON-LD `Review` object.
 It preserves member name, rating, language, complete source URL and up to 12,000 characters
-for local processing. Requests are restricted to HTTPS Letterboxd hosts and size-limited.
-This adapter is unofficial and can fail if public markup or access controls change.
+for local processing. A review body shorter than 40 characters is rejected. Requests use a
+20-second timeout, accept only `https://letterboxd.com` or `https://www.letterboxd.com`, and
+reject pages larger than 2 MB—including after redirects. Individual malformed review pages
+are skipped; the provider fails only when no usable attributed review remains. This adapter
+is unofficial and can fail if public markup or access controls change.
 
 The separate official Letterboxd adapter remains available for approved OAuth clients. It
-uses client credentials, `/search` for film matching and `/log-entries` for public reviews.
+uses the client-credentials grant to obtain a bearer token, calls `/search` for candidates,
+matches title and release year, then calls `/log-entries` with `where=HasReview`,
+`filter=NoDuplicateMembers` and `sort=ReviewPopularity`. Official and public-web modes never
+silently fall back to one another, so the provenance and access method remain explicit.
 
 ### Guardian: professional criticism
 
-The Guardian adapter searches its public content index for an exact film-title query within
-the film section and review tag, ranks headline matches, then retrieves a bounded set of
-public articles. It reads headline and author from JSON-LD and collects paragraphs only from
-the Guardian article-body container. Redirects outside Guardian, oversized responses and
-weak film matches are rejected.
+The Guardian adapter uses the public Content API as an index, then reads the matched public
+article pages:
+
+```text
+quoted Wikidata film title
+        ↓
+GET content.guardianapis.com/search
+section=film · tag=tone/reviews · order-by=relevance · page-size=10
+        ↓
+local headline similarity score (minimum 0.65)
+        ↓
+open at most 6 public Guardian articles
+        ↓
+JSON-LD attribution + paragraphs from data-gu-name="body"
+```
+
+The adapter extracts headline and author from JSON-LD, rating from the accessible star label,
+and prose only from the article-body container—not navigation, recommendations or comments.
+Articles shorter than 80 characters are rejected and accepted bodies are capped at 12,000
+characters. Search is restricted to `https://content.guardianapis.com`; article requests and
+redirects are restricted to Guardian HTTPS hosts, use a 20-second timeout and reject pages
+larger than 3 MB. Weak title matches, invalid JSON-LD and pages with no attributed body are
+not cached.
 
 ### Raw evidence, structuring and cache
 
@@ -297,6 +376,13 @@ Each provider first returns a `CriticalResearchBundle` with raw attributed sourc
 `pending` claim status. FirstRoll saves it beneath `.firstroll/criticism` and displays it
 immediately. A second endpoint sends small batches to DeepSeek, validates the returned
 `critic_reported` claims and replaces the pending bundle only after validation succeeds.
+
+Every normalised `ReviewSource` carries a provider, provider review ID, title, author when
+available, canonical URL, language, source-scoped text and a stable local source ID. The
+subsequent `CriticalClaim` must point back to one of those source IDs. Pydantic rejects extra
+fields and constrains lengths, evidence status, confidence labels and lens tags. FirstRoll
+therefore cannot accept a model-produced claim whose cited source was not in the retrieved
+bundle.
 
 Refreshes preserve previously validated claims when the provider returns the same source
 IDs. Missing scenes, techniques, observations or alternative readings remain `null` or
