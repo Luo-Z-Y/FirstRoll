@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="robots" content="noindex,nofollow" />
   <title>FirstRoll — Local Settings</title>
-  <link rel="icon" href="/assets/favicon.svg?v=20260811-1" type="image/svg+xml" />
+  <link rel="icon" href="/assets/favicon.svg?v=20260811-2" type="image/svg+xml" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
@@ -43,11 +43,11 @@
     }
     .brand { display: flex; align-items: center; gap: 10px; font-family: "Bebas Neue", sans-serif; font-size: 1.5rem; letter-spacing: .06em; }
     .brand-mark { width: 49px; height: 25px; flex: 0 0 auto; overflow: visible; color: var(--ink); }
-    .brand-strip-reveal { width: 0; animation: brand-strip-roll 4.8s cubic-bezier(.65, 0, .35, 1) infinite; }
+    .brand-strip-reveal { width: 15px; animation: brand-strip-roll 4.8s cubic-bezier(.65, 0, .35, 1) infinite; }
     @keyframes brand-strip-roll {
-      0%, 12%, 100% { width: 0; }
+      0%, 12%, 100% { width: 15px; }
       42%, 68% { width: 48px; }
-      88% { width: 0; }
+      88% { width: 15px; }
     }
     @media (prefers-reduced-motion: reduce) {
       .brand-strip-reveal { width: 48px; animation: none; }
@@ -145,7 +145,7 @@
         <svg class="brand-mark" viewBox="0 0 72 32" aria-hidden="true" focusable="false">
           <defs>
             <clipPath id="brand-strip-reveal-settings">
-              <rect class="brand-strip-reveal" x="22" y="4" width="0" height="24" />
+              <rect class="brand-strip-reveal" x="22" y="4" width="15" height="24" />
             </clipPath>
           </defs>
           <g clip-path="url(#brand-strip-reveal-settings)">
@@ -153,7 +153,7 @@
             <path fill="#fff" d="M24 8h5v3h-5zm8 0h5v3h-5zm8 0h5v3h-5zm8 0h5v3h-5zm8 0h5v3h-5zm8 0h3v3h-3zM24 21h5v3h-5zm8 0h5v3h-5zm8 0h5v3h-5zm8 0h5v3h-5zm8 0h5v3h-5zm8 0h3v3h-3zM23 13h43v6H23z" />
             <path stroke="currentColor" d="M34 13v6m11-6v6m11-6v6" />
           </g>
-          <path fill="currentColor" d="M16 2C8.8 2 4 5.3 4 9.5v13C4 26.7 8.8 30 16 30s12-3.3 12-7.5v-13C28 5.3 23.2 2 16 2Z" />
+          <path fill="currentColor" d="M15.5 2C9.8 2 6 5.3 6 9.5v13C6 26.7 9.8 30 15.5 30s9.5-3.3 9.5-7.5v-13C25 5.3 21.2 2 15.5 2Z" />
         </svg>
         <span>FirstRoll Settings</span>
       </div>

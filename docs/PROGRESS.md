@@ -47,6 +47,21 @@ Status vocabulary:
 
 ## Latest Completed Milestone
 
+### 11 August 2026 — Architecture map with implementation stack
+
+Delivered:
+
+1. Reworked the system diagram into five explicit responsibility layers.
+2. Added the shared runtime and specialised technologies to each architectural component.
+3. Separated public inputs, private inputs, local processing and external synthesis visually.
+4. Added a compact layer-to-stack reference beneath the diagram.
+
+Acceptance evidence:
+
+- every named technology maps to the current project configuration or implementation;
+- Mermaid uses GitHub-compatible flowchart, subgraph, class and labelled-edge syntax;
+- the local/private boundary and planned clip-evidence bridge remain explicit.
+
 ### 11 August 2026 — Simplified discovery landing page
 
 Delivered:
@@ -87,6 +102,7 @@ Delivered:
 2. Animated the film strip to extend from the roll, pause and retract.
 3. Applied the same identity to the discovery and local Settings headers.
 4. Added a compact SVG favicon and a static reduced-motion state.
+5. Slimmed the cylinder and left a short film tab visible in the resting state.
 
 Acceptance evidence:
 

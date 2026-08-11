@@ -86,47 +86,65 @@ implemented, film-specific formal claims remain viewing hypotheses.
 
 ## System Architecture
 
-FirstRoll is organised as a local-first pipeline. Each layer has one responsibility:
-the interface gathers intent, application services acquire and process material, the
-evidence layer preserves provenance, and the study pipeline turns only selected evidence
-into a validated essay.
+FirstRoll is a local-first, five-layer pipeline. Layer headings name the shared runtime;
+the bold second line inside each component names its specialised technology.
 
 ```mermaid
 flowchart TB
     MAKER(["Filmmaker"])
 
-    EXPERIENCE["1 · LOCAL EXPERIENCE<br/><b>Discover · Deep Study · Analyse</b>"]
-
-    subgraph SOURCES["INPUTS AND ATTRIBUTED SOURCES"]
-        direction LR
-        RESEARCH["External research<br/>Wikidata · Wikipedia · Crossref<br/>Douban · Letterboxd · Guardian"]
-        LIBRARY[("Private library<br/>books · notes · local vectors")]
-        VIDEO[("Private film clip")]
+    subgraph L1["1 · LOCAL WEB INTERFACE — HTML5 · CSS3 · VANILLA JAVASCRIPT"]
+        UI["Discover · Deep Study · Analyse<br/><b>Responsive browser UI</b>"]
     end
 
-    SERVICES["2 · LOCAL APPLICATION SERVICES<br/><b>Film discovery</b> · <b>Criticism adapters</b><br/><b>Hybrid retrieval</b> · <b>Clip analysis</b>"]
+    subgraph INPUTS["INPUTS"]
+        direction LR
+        RESEARCH["Public and authorised sources<br/><b>Wikidata · Wikipedia · Crossref<br/>Douban · Letterboxd · Guardian</b>"]
+        LIBRARY[("Private study library<br/><b>PDF · EPUB · Markdown · text</b>")]
+        VIDEO[("Private film clip<br/><b>Browser upload</b>")]
+    end
 
-    EVIDENCE["3 · LOCAL PROVENANCE-PRESERVING EVIDENCE<br/>Verified film record · Attributed critic claims<br/>Page-cited theory passages"]
-    MEASURE["Measured clip evidence<br/>timecodes · scene and shot metrics"]
+    subgraph L2["2 · LOCAL APPLICATION SERVICES — PYTHON 3.11 · FASTAPI · UVICORN"]
+        direction LR
+        DISCOVERY["Film identity and source adapters<br/><b>REST/JSON · JSON-LD · MCP · OAuth 2.0</b>"]
+        RETRIEVAL["Library ingestion and hybrid search<br/><b>PyPDF · SQLite FTS5 · Sentence Transformers</b>"]
+        ANALYSIS["Clip measurement<br/><b>OpenCV · FFmpeg · TransNetV2 · NumPy</b>"]
+    end
 
-    PACKET["4A · LOCAL EVIDENCE ASSEMBLY<br/><b>Typed evidence packet</b><br/>record · criticism · theory"]
-    DEEPSEEK["4B · EXTERNAL SYNTHESIS<br/><b>DeepSeek structured draft</b><br/>selected evidence only"]
-    GATE["4C · LOCAL VALIDATION<br/><b>Schema · citations · evidence quality</b><br/>one repair maximum"]
+    subgraph L3["3 · LOCAL EVIDENCE AND STORAGE — PYDANTIC · SQLITE · JSON"]
+        direction LR
+        EVIDENCE[("Provenance-preserving evidence<br/><b>film record · critic claims · page-cited theory</b>")]
+        MEASURE[("Measured clip evidence<br/><b>timecodes · scene and shot metrics</b>")]
+    end
 
-    OUTPUTS["5 · LOCAL OUTPUTS<br/><b>Critical essay</b> · inline citations<br/><b>Insufficient evidence</b> clearly labelled<br/><b>Analysis exports</b> · JSON · CSV"]
+    subgraph L4["4 · SYNTHESIS AND QUALITY CONTROL"]
+        direction LR
+        PACKET["Local evidence assembly<br/><b>Pydantic typed packet</b>"]
+        DEEPSEEK["External synthesis<br/><b>DeepSeek HTTPS API · structured JSON</b>"]
+        GATE["Local validation<br/><b>schema · citation · quality checks</b>"]
+    end
 
-    MAKER --> EXPERIENCE --> SERVICES
-    RESEARCH -->|"attributed context and reviews"| SERVICES
-    LIBRARY -->|"local retrieval"| SERVICES
-    VIDEO -->|"local analysis"| SERVICES
+    subgraph L5["5 · LOCAL OUTPUTS — HTML · JSON · CSV"]
+        OUTPUTS["Critical essay · inline citations<br/><b>insufficient-evidence labels · analysis exports</b>"]
+    end
 
-    SERVICES --> EVIDENCE --> PACKET
-    SERVICES --> MEASURE
+    MAKER --> UI
+    UI --> DISCOVERY
+    UI --> RETRIEVAL
+    UI --> ANALYSIS
+
+    RESEARCH -->|"attributed material"| DISCOVERY
+    LIBRARY -->|"private ingestion"| RETRIEVAL
+    VIDEO -->|"private analysis"| ANALYSIS
+
+    DISCOVERY --> EVIDENCE
+    RETRIEVAL --> EVIDENCE
+    ANALYSIS --> MEASURE
+    EVIDENCE --> PACKET
+    PACKET -->|"selected evidence only"| DEEPSEEK
+    DEEPSEEK --> GATE --> OUTPUTS
     MEASURE -->|"JSON · CSV"| OUTPUTS
     MEASURE -. "planned evidence bridge" .-> PACKET
-
-    PACKET -->|"only this packet leaves the device"| DEEPSEEK
-    DEEPSEEK --> GATE --> OUTPUTS
 
     classDef person fill:#2f5d50,stroke:#2f5d50,color:#ffffff;
     classDef service fill:#e8f0ed,stroke:#5d7f74,color:#17211e;
@@ -136,19 +154,29 @@ flowchart TB
     classDef external fill:#f8e8e4,stroke:#a55445,color:#2b1b18;
 
     class MAKER person;
-    class EXPERIENCE,SERVICES service;
+    class UI,DISCOVERY,RETRIEVAL,ANALYSIS service;
     class EVIDENCE,MEASURE evidence;
     class PACKET,GATE,OUTPUTS study;
     class LIBRARY,VIDEO private;
     class RESEARCH,DEEPSEEK external;
 ```
 
-The numbered bands show the path from user intent to a cited essay. Layers labelled
-**local** run on the user's machine; books, vectors, clips and exports stay there. External
-research services return attributed source material, while DeepSeek is the only synthesis
-service. When the user chooses **Generate study**, only the typed, selected evidence packet
-leaves the device—not complete books, local vectors, clips or private file paths. The dotted
-connection is planned work: clip measurements do not yet support claims in Deep Study.
+The numbered bands show both system responsibility and implementation technology. Layers
+labelled **local** run on the user's machine; books, vectors, clips and exports stay there.
+External research services return attributed source material, while DeepSeek is the only
+synthesis service. When the user chooses **Generate study**, only the typed, selected
+evidence packet leaves the device—not complete books, local vectors, clips or private file
+paths. The dotted connection is planned work: clip measurements do not yet support claims
+in Deep Study.
+
+| Layer | Primary stack |
+|---|---|
+| Web interface | HTML5, CSS3, vanilla JavaScript |
+| API and orchestration | Python 3.11, FastAPI, Uvicorn, Pydantic |
+| Private retrieval | PyPDF, SQLite FTS5, Sentence Transformers, NumPy |
+| Clip analysis | OpenCV, FFmpeg, TransNetV2, TensorFlow and Torchvision |
+| External acquisition | REST/JSON, JSON-LD, MCP and OAuth 2.0 |
+| Synthesis and validation | DeepSeek structured output, Pydantic and deterministic checks |
 
 ## Research and Criticism Acquisition
 
