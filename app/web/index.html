@@ -5,17 +5,30 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description" content="FirstRoll helps filmmakers discover films and analyse clips." />
   <title>FirstRoll — Film discovery and analysis</title>
+  <link rel="icon" href="/assets/favicon.svg?v=20260811-1" type="image/svg+xml" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/assets/styles.css?v=20260807-1" />
+  <link rel="stylesheet" href="/assets/styles.css?v=20260811-8" />
 </head>
 <body data-api-base="">
   <div class="grain" aria-hidden="true"></div>
   <div class="app-shell">
     <header class="site-header">
       <button class="brand" type="button" data-product-view="discovery" aria-label="FirstRoll home">
-        <span class="brand-frame" aria-hidden="true"><span></span></span>
+        <svg class="brand-mark" viewBox="0 0 72 32" aria-hidden="true" focusable="false">
+          <defs>
+            <clipPath id="brand-strip-reveal">
+              <rect class="brand-strip-reveal" x="22" y="4" width="0" height="24" />
+            </clipPath>
+          </defs>
+          <g clip-path="url(#brand-strip-reveal)">
+            <path fill="currentColor" d="M20 5h49v22H20z" />
+            <path fill="#fff" d="M24 8h5v3h-5zm8 0h5v3h-5zm8 0h5v3h-5zm8 0h5v3h-5zm8 0h5v3h-5zm8 0h3v3h-3zM24 21h5v3h-5zm8 0h5v3h-5zm8 0h5v3h-5zm8 0h5v3h-5zm8 0h5v3h-5zm8 0h3v3h-3zM23 13h43v6H23z" />
+            <path stroke="currentColor" d="M34 13v6m11-6v6m11-6v6" />
+          </g>
+          <path fill="currentColor" d="M16 2C8.8 2 4 5.3 4 9.5v13C4 26.7 8.8 30 16 30s12-3.3 12-7.5v-13C28 5.3 23.2 2 16 2Z" />
+        </svg>
         <span>FirstRoll</span>
       </button>
 
@@ -39,32 +52,21 @@
           <div class="hero-copy">
             <p class="eyebrow">Discover</p>
             <h1>Find a film.<br /><em>Study it.</em></h1>
-            <p class="hero-deck">
-              Search by title, year and director. Review online and local sources in one dossier.
-            </p>
           </div>
-
-          <aside class="manifesto-card" aria-label="FirstRoll research principle">
-            <span class="manifesto-number">01</span>
-            <p>Verify the film.</p>
-            <strong>Title · Year · Director</strong>
-            <span class="manifesto-rule"></span>
-            <small>Sources stay visible.</small>
-          </aside>
         </div>
 
         <form id="discoveryForm" class="search-stage" role="search">
           <div class="search-field search-field-title">
             <label for="filmTitle">Film title</label>
-            <input id="filmTitle" name="title" type="search" placeholder="Try In the Mood for Love" autocomplete="off" required />
+            <input id="filmTitle" name="title" type="search" autocomplete="off" required />
           </div>
           <div class="search-field">
             <label for="filmYear">Year</label>
-            <input id="filmYear" name="year" type="number" min="1888" max="2100" placeholder="2000" inputmode="numeric" />
+            <input id="filmYear" name="year" type="number" min="1888" max="2100" inputmode="numeric" />
           </div>
           <div class="search-field">
             <label for="filmDirector">Director</label>
-            <input id="filmDirector" name="director" type="text" placeholder="Wong Kar-wai" autocomplete="off" />
+            <input id="filmDirector" name="director" type="text" autocomplete="off" />
           </div>
           <button id="discoverySubmit" class="search-submit" type="submit">
             <span>Search films</span><span aria-hidden="true">↗</span>
@@ -72,12 +74,7 @@
         </form>
 
         <div class="search-support">
-          <div class="sample-searches" aria-label="Example searches">
-            <span>Begin with</span>
-            <button type="button" data-sample-title="In the Mood for Love" data-sample-year="2000" data-sample-director="Wong Kar-wai">In the Mood for Love</button>
-            <button type="button" data-sample-title="Parasite" data-sample-year="2019" data-sample-director="Bong Joon Ho">Parasite</button>
-            <button type="button" data-sample-title="Seven Samurai" data-sample-year="1954" data-sample-director="Akira Kurosawa">Seven Samurai</button>
-          </div>
+          <div id="recentSearches" class="recent-searches" aria-label="Recent searches"></div>
           <p id="discoveryConnection" class="connection-state">Checking research sources…</p>
         </div>
 
@@ -94,19 +91,6 @@
         </section>
 
         <section id="filmDetail" class="film-detail hidden" aria-live="polite"></section>
-
-        <section id="discoveryEmpty" class="discovery-empty">
-          <div class="empty-reel" aria-hidden="true"><span></span><span></span><span></span></div>
-          <div>
-            <p class="eyebrow">Film dossier</p>
-            <h2>Identity, sources,<br />context.</h2>
-          </div>
-          <div class="lens-list">
-            <article><span>01</span><h3>Identity</h3><p>Title, year, director and credits.</p></article>
-            <article><span>02</span><h3>Online sources</h3><p>Interviews, criticism and scholarship.</p></article>
-            <article><span>03</span><h3>Local library</h3><p>Your private books and notes.</p></article>
-          </div>
-        </section>
       </section>
 
       <section id="product-analyse" class="product-view">
@@ -219,6 +203,6 @@
 
   <video id="analysisVideo" preload="metadata" class="hidden-asset"></video>
   <canvas id="analysisCanvas" width="160" height="90" class="hidden-asset"></canvas>
-  <script src="/assets/app.js?v=20260807-1"></script>
+  <script src="/assets/app.js?v=20260811-8"></script>
 </body>
 </html>

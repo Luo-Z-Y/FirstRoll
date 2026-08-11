@@ -185,22 +185,29 @@ search and log-entry endpoints; it does not include an unofficial scraping fallb
 
 ## Add a Private Study Library
 
-Create the private library folder and place PDF, EPUB, Markdown or text files inside it:
+Open `http://127.0.0.1:8000/settings` and use **Study library** to add PDF, EPUB,
+Markdown or text documents. FirstRoll copies uploads into its private, Git-ignored managed
+library. The same panel lists the current catalogue, removes registrations without deleting
+the original source files, and rebuilds the local PDF search index. EPUB, Markdown and text
+files are currently catalogue-only; Deep Study retrieval requires page-cited PDF content.
+
+For a manual setup, create the private library folder and place documents inside it:
 
 ```bash
 mkdir -p .firstroll/library
 ```
 
-FirstRoll lists document titles, formats, sizes and broad study topics in each film
-dossier. To make their actual content searchable, build the private page-level index:
+FirstRoll lists document titles, formats, sizes and broad study topics without returning
+their paths to the browser. To make their actual content searchable, use **Rebuild search
+index** in Settings, or build the private page-level index from the terminal:
 
 ```bash
 uv run firstroll-index
 ```
 
-Restart FirstRoll, then open a film dossier. Discover will present substantial passages
+Open a film dossier after the build completes. Discover will present substantial passages
 selected for the study focus, with the source book and PDF page shown beside each one.
-Rerun the command whenever you add, remove or replace documents.
+Rebuild the index whenever you add, remove or replace documents.
 
 The index is stored at `.firstroll/library.sqlite3`. It contains stable token-bounded
 chunks, SQLite full-text data and 384-dimensional multilingual vectors generated locally
@@ -221,8 +228,8 @@ Documents stored elsewhere can be registered in `.firstroll/library.json`:
 }
 ```
 
-Build the index and restart FirstRoll after changing the library. Its current status is available at
-`http://127.0.0.1:8000/api/library/status`.
+Rebuild the index after changing the library. Its current status is available in Settings or
+at `http://127.0.0.1:8000/api/library/status`.
 
 ## Troubleshooting
 

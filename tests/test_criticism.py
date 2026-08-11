@@ -1,4 +1,5 @@
 import json
+import re
 import stat
 import tempfile
 from pathlib import Path
@@ -6,9 +7,13 @@ from typing import Any
 
 from app.backend.criticism import (
     CriticalClaim,
+    CriticismError,
     CriticismStore,
+    CrossrefResearchAdapter,
     DoubanMcpAdapter,
+    GuardianPublicWebAdapter,
     LetterboxdApiAdapter,
+    LetterboxdPublicWebAdapter,
     ReviewSource,
     build_bundle,
 )
@@ -63,6 +68,30 @@ def test_douban_match_requires_title_and_prefers_year() -> None:
     ]
 
     assert DoubanMcpAdapter._choose_match(film, candidates)["id"] == "2"
+
+
+def test_douban_match_does_not_choose_near_title_from_wrong_year() -> None:
+    film = {
+        "title": "In the Mood for Love",
+        "original_title": "花樣年華",
+        "year": 2000,
+    }
+    candidates = [
+        {
+            "id": "1291557",
+            "title": "花样年华",
+            "publish_date": "2000",
+            "subtitle": "中国香港 / 剧情 爱情 / 王家卫",
+        },
+        {
+            "id": "35211201",
+            "title": "I'm in the Mood for Love",
+            "publish_date": "2010",
+            "subtitle": "加拿大 / 剧情 短片",
+        },
+    ]
+
+    assert DoubanMcpAdapter._choose_match(film, candidates)["id"] == "1291557"
 
 
 def test_letterboxd_official_api_reviews_are_normalised() -> None:
@@ -129,6 +158,143 @@ def test_letterboxd_official_api_reviews_are_normalised() -> None:
     assert "where=HasReview" in calls[2][1]
 
 
+def test_letterboxd_public_web_resolves_title_and_imports_attributed_reviews() -> None:
+    film_page = '''<meta property="og:title" content="Syndromes and a Century (2006) directed by Apichatpong Weerasethakul">
+    <a href="/critic/film/syndromes-and-a-century/">Review</a>'''
+    review_page = '''<script type="application/ld+json">/* <![CDATA[ */
+    {"@type":"Review","author":[{"@type":"Person","name":"Film Critic"}],
+    "reviewBody":"The hospital repeats as a transformed memory, with sound carrying relations across spaces.",
+    "itemReviewed":{"@type":"Movie","name":"Syndromes and a Century"},
+    "reviewRating":{"ratingValue":4,"bestRating":5}}
+    /* ]]> */</script>'''
+    pages = {
+        "https://letterboxd.com/film/syndromes-and-a-century/": film_page,
+        "https://letterboxd.com/critic/film/syndromes-and-a-century/": review_page,
+    }
+
+    def transport(url: str) -> tuple[str, str]:
+        if url not in pages:
+            raise CriticismError("not found")
+        return url, pages[url]
+
+    adapter = LetterboxdPublicWebAdapter(transport=transport)
+    provider_id, provider_title, reviews = adapter.fetch_reviews(
+        {"title": "Syndromes and a Century", "year": 2006}
+    )
+
+    assert provider_id == "syndromes-and-a-century"
+    assert provider_title == "Syndromes and a Century"
+    assert reviews[0].author == "Film Critic"
+    assert reviews[0].rating_label == "4/5"
+    assert reviews[0].provider == "Letterboxd public web"
+    assert reviews[0].url == "https://letterboxd.com/critic/film/syndromes-and-a-century/"
+
+
+def test_letterboxd_public_web_prefers_verified_imdb_identity_for_same_title() -> None:
+    imdb_url = "https://letterboxd.com/imdb/tt32186579/"
+    film_url = "https://letterboxd.com/film/an-unfinished-film-2024/"
+    review_url = "https://letterboxd.com/critic/film/an-unfinished-film-2024/"
+    film_page = '''<meta property="og:title" content="An Unfinished Film (2024)">
+    <a href="/critic/film/an-unfinished-film-2024/">Review</a>
+    <script type="application/ld+json">{"@type":"Movie","name":"An Unfinished Film",
+    "director":[{"@type":"Person","name":"Lou Ye"}]}</script>'''
+    review_page = '''<script type="application/ld+json">
+    {"@type":"Review","author":{"@type":"Person","name":"Film Critic"},
+    "reviewBody":"Lou Ye combines production footage and phone screens to preserve a contested collective memory.",
+    "itemReviewed":{"@type":"Movie","name":"An Unfinished Film"}}
+    </script>'''
+    calls: list[str] = []
+
+    def transport(url: str) -> tuple[str, str]:
+        calls.append(url)
+        if url == imdb_url:
+            return film_url, film_page
+        if url == review_url:
+            return review_url, review_page
+        raise CriticismError("not found")
+
+    adapter = LetterboxdPublicWebAdapter(transport=transport)
+    provider_id, _, reviews = adapter.fetch_reviews(
+        {
+            "title": "An Unfinished Film",
+            "year": 2024,
+            "credits": {"directors": ["Lou Ye"]},
+            "external_ids": {"imdb": "tt32186579"},
+        }
+    )
+
+    assert calls[0] == imdb_url
+    assert provider_id == "an-unfinished-film-2024"
+    assert reviews[0].author == "Film Critic"
+    assert reviews[0].url == review_url
+
+
+def test_letterboxd_public_web_rejects_same_title_wrong_director() -> None:
+    wrong_page = '''<meta property="og:title" content="An Unfinished Film (2024)">
+    <script type="application/ld+json">{"@type":"Movie","name":"An Unfinished Film",
+    "director":[{"@type":"Person","name":"Another Director"}]}</script>'''
+
+    assert not LetterboxdPublicWebAdapter._film_page_matches(
+        wrong_page,
+        "An Unfinished Film",
+        "2024",
+        ["Lou Ye"],
+    )
+
+
+def test_letterboxd_public_web_rejects_non_letterboxd_urls() -> None:
+    try:
+        LetterboxdPublicWebAdapter._validate_letterboxd_url("https://example.com/review")
+    except CriticismError as exc:
+        assert "letterboxd.com" in str(exc)
+    else:
+        raise AssertionError("A non-Letterboxd URL should be rejected")
+
+
+def test_guardian_public_web_imports_attributed_article_body() -> None:
+    search = {
+        "response": {
+            "results": [
+                {
+                    "id": "film/2007/sep/21/example",
+                    "sectionId": "film",
+                    "webTitle": "Syndromes and a Century",
+                    "webUrl": "https://www.theguardian.com/film/2007/sep/21/example",
+                }
+            ]
+        }
+    }
+    article = '''<script type="application/ld+json">
+    [{"@type":"NewsArticle","headline":"Syndromes and a Century",
+    "author":[{"@type":"Person","name":"Peter Bradshaw"}]}]
+    </script><main><div data-gu-name="body"><div><p>The repeated hospital spaces turn memory into architectural rhythm.</p>
+    <p>Sound and duration allow apparently ordinary gestures to acquire a mysterious charge.</p></div></div></main>'''
+
+    adapter = GuardianPublicWebAdapter(
+        search_transport=lambda _: search,
+        html_transport=lambda url: (url, article),
+    )
+    provider_id, title, reviews = adapter.fetch_reviews(
+        {"title": "Syndromes and a Century", "year": 2006}
+    )
+
+    assert provider_id == "film/2007/sep/21/example"
+    assert title == "Syndromes and a Century"
+    assert reviews[0].author == "Peter Bradshaw"
+    assert reviews[0].provider == "The Guardian public web"
+    assert "architectural rhythm" in reviews[0].summary
+    assert "mysterious charge" in reviews[0].summary
+
+
+def test_guardian_public_web_rejects_redirects_outside_guardian() -> None:
+    try:
+        GuardianPublicWebAdapter._validate_article_url("https://example.com/film/review")
+    except CriticismError as exc:
+        assert "theguardian.com" in str(exc)
+    else:
+        raise AssertionError("A non-Guardian URL should be rejected")
+
+
 def test_douban_diagnostic_distinguishes_empty_review_table() -> None:
     response = """| title | rating | summary | id |
 | --- | --- | --- | --- |
@@ -140,8 +306,8 @@ def test_douban_diagnostic_distinguishes_empty_review_table() -> None:
         cookie_configured=False,
     )
 
-    assert "valid response" in message
-    assert "no long-form review summaries" in message
+    assert "empty review table" in message
+    assert "does not establish that the film has no long-form reviews" in message
 
 
 def test_douban_diagnostic_explains_authentication_action() -> None:
@@ -234,6 +400,106 @@ def test_structured_criticism_preserves_null_missing_fields() -> None:
     assert "Do not add facts from memory" in captured["payload"]["messages"][0]["content"]
 
 
+def test_structured_criticism_repairs_invalid_json_once() -> None:
+    review = ReviewSource(
+        source_id="R1",
+        provider="Douban",
+        review_id="12345",
+        title="空间与记忆",
+        summary="医院空间像记忆一样重复。",
+        url="https://movie.douban.com/review/12345/",
+        language="zh",
+    )
+    valid = {
+        "claims": [
+            {
+                "claim_id": "C1",
+                "source_id": "R1",
+                "critic_claim": "The reviewer relates repeated hospital space to unstable memory.",
+                "scene_or_sequence": None,
+                "described_observation": None,
+                "techniques": [],
+                "interpretation": None,
+                "alternative_reading": None,
+                "lens_tags": ["mise_en_scene"],
+                "short_source_excerpt": None,
+                "evidence_status": "critic_reported",
+                "extraction_confidence": "medium",
+                "missing_fields": ["scene_or_sequence", "techniques"],
+            }
+        ]
+    }
+    calls = 0
+
+    def transport(_: str, payload: dict[str, Any] | None, __: str) -> dict[str, Any]:
+        nonlocal calls
+        calls += 1
+        content = "{not-json" if calls == 1 else json.dumps(valid)
+        return {"choices": [{"message": {"content": content}}]}
+
+    with tempfile.TemporaryDirectory() as directory:
+        settings = LocalSettingsStore(Path(directory) / "settings.json")
+        settings.set("deepseek_api_key", "test-key")
+        claims = DeepSeekStudyService(settings, transport=transport).structure_reviews(
+            {"title": "Example Film", "year": 2024}, [review]
+        )
+
+    assert calls == 2
+    assert claims[0].source_id == "R1"
+
+
+def test_structured_criticism_batches_reviews_and_reindexes_claims() -> None:
+    reviews = [
+        ReviewSource(
+            source_id=f"R{index}",
+            provider="Douban",
+            review_id=str(index),
+            title=f"Review {index}",
+            summary="A substantive critical observation about recurring space and memory.",
+            url=f"https://movie.douban.com/review/{index}/",
+            language="en",
+        )
+        for index in range(1, 5)
+    ]
+    batches: list[list[str]] = []
+
+    def transport(_: str, payload: dict[str, Any] | None, __: str) -> dict[str, Any]:
+        assert payload is not None
+        user_content = payload["messages"][1]["content"]
+        source_ids = re.findall(r'"source_id": "(R\d+)"', user_content)
+        batches.append(source_ids)
+        response = {
+            "claims": [
+                {
+                    "claim_id": "C1",
+                    "source_id": source_ids[0],
+                    "critic_claim": "The reviewer identifies a recurring relation between space and memory.",
+                    "scene_or_sequence": None,
+                    "described_observation": None,
+                    "techniques": [],
+                    "interpretation": None,
+                    "alternative_reading": None,
+                    "lens_tags": ["narrative"],
+                    "short_source_excerpt": None,
+                    "evidence_status": "critic_reported",
+                    "extraction_confidence": "medium",
+                    "missing_fields": ["scene_or_sequence", "techniques"],
+                }
+            ]
+        }
+        return {"choices": [{"message": {"content": json.dumps(response)}}]}
+
+    with tempfile.TemporaryDirectory() as directory:
+        settings = LocalSettingsStore(Path(directory) / "settings.json")
+        settings.set("deepseek_api_key", "test-key")
+        claims = DeepSeekStudyService(settings, transport=transport).structure_reviews(
+            {"title": "Example Film", "year": 2024}, reviews
+        )
+
+    assert batches == [["R1", "R2", "R3"], ["R4"]]
+    assert [claim.claim_id for claim in claims] == ["C1", "C2"]
+
+
 def test_criticism_cache_remains_private_and_round_trips() -> None:
     claim = CriticalClaim(
         claim_id="C1",
@@ -263,3 +529,44 @@ def test_criticism_cache_remains_private_and_round_trips() -> None:
         assert loaded is not None
         assert loaded.claims[0].evidence_status == "critic_reported"
         assert stat.S_IMODE(path.stat().st_mode) == 0o600
+def test_crossref_research_imports_only_matched_attributed_abstracts() -> None:
+    payload = {
+        "message": {
+            "items": [
+                {
+                    "DOI": "10.1234/mood.2000",
+                    "title": ["The Architecture of Desire in In the Mood for Love"],
+                    "abstract": "<jats:p>Wong Kar-wai uses corridors, repetition, and withheld reverse shots to organise desire through constrained space.</jats:p>",
+                    "author": [{"given": "Mei", "family": "Lin"}],
+                    "container-title": ["Journal of Film Studies"],
+                    "published": {"date-parts": [[2021, 4, 1]]},
+                    "type": "journal-article",
+                    "language": "en",
+                },
+                {
+                    "DOI": "10.1234/biology.1",
+                    "title": ["Parasites in love"],
+                    "abstract": "<p>This unrelated biological abstract studies parasite reproduction in a laboratory.</p>",
+                    "author": [{"given": "A", "family": "Biologist"}],
+                    "container-title": ["Biology"],
+                },
+            ]
+        }
+    }
+    adapter = CrossrefResearchAdapter(transport=lambda _: payload)
+
+    provider_id, title, reviews = adapter.fetch_reviews(
+        {
+            "title": "In the Mood for Love",
+            "year": 2000,
+            "credits": {"directors": ["Wong Kar-wai"]},
+        }
+    )
+
+    assert provider_id == "crossref:in-the-mood-for-love"
+    assert title == "In the Mood for Love"
+    assert len(reviews) == 1
+    assert reviews[0].author == "Mei Lin"
+    assert reviews[0].provider == "Crossref scholarship"
+    assert reviews[0].url == "https://doi.org/10.1234/mood.2000"
+    assert "Journal of Film Studies" in (reviews[0].rating_label or "")

@@ -13,26 +13,29 @@ Status vocabulary:
 
 ## Current Snapshot
 
-**Last updated:** 9 August 2026
+**Last updated:** 11 August 2026
 
 **Release stage:** local working prototype
 
 **Primary development URL:** `http://127.0.0.1:8000`
-**Automated verification:** 29 tests passing
+**Automated verification:** 43 tests passing
 
 | Area | Status | Current evidence |
 |---|---|---|
 | Film discovery | Complete | Wikidata search by title, year and director; Wikipedia context and source links |
 | Product navigation | Complete | Discover and Analyse modes; Study consolidated into Discover |
-| Local settings | Complete | Write-only single- and multi-field credentials, including Letterboxd OAuth; local-only routes |
-| Private library catalogue | Complete | Seven registered film-study PDFs; paths and content withheld from public APIs |
+| Local settings | Complete | Write-only connector credentials plus local add, remove and index controls for the private library |
+| Private library catalogue | Complete | Seven existing film-study PDFs retained; managed uploads and non-destructive removal; paths and content withheld from public APIs |
 | PDF ingestion | Complete | Token-aware page chunks, overlap, section hints, language and stable IDs |
 | Local embeddings | Complete | 4,381 of 4,381 chunks embedded with a local multilingual 384-dimension model |
 | Hybrid retrieval | Complete | FTS5 + vector candidates, reciprocal-rank fusion and diversity selection |
 | Query planning | Complete | User focus, craft taxonomy and attributed criticism generate subqueries |
 | Douban adapter | Complete | Optional local MCP connection, title matching, review links and private cache |
-| Letterboxd adapter | Complete | Official client-credentials OAuth, film matching and popularity-ranked reviews |
+| Research adapter | Complete | Crossref abstracts with local identity relevance checks and DOI attribution |
+| Letterboxd adapter | Complete | Public-web IMDb identity resolution plus optional official OAuth retrieval |
+| Guardian adapter | Complete | Public content-index matching and attributed article-body retrieval |
 | Criticism structuring | Complete | Pydantic critic claims with missing-field preservation and evidence labels |
+| Criticism source controls | Complete | Tabbed provider switcher; first selection fetches and later selections reuse the cached bundle |
 | Evidence packet | Complete | Film record, theory and critic claims separated by explicit permitted uses |
 | Deep Study schema | Complete | Critic, theory, hypothesis, mechanism, alternative, verification and confidence fields |
 | Quality control | Complete | Deterministic gate, citation checks and at most one bounded repair call |
@@ -43,6 +46,123 @@ Status vocabulary:
 | Persistent projects | Planned | Film, clip, study and note sessions are not retained as reusable projects |
 
 ## Latest Completed Milestone
+
+### 11 August 2026 — Simplified discovery landing page
+
+Delivered:
+
+1. Removed the research-principle card from the discovery hero.
+2. Removed the empty-state film-dossier explainer and its three descriptive panels.
+3. Removed the redundant hero guidance sentence and tightened the surrounding layout.
+
+Acceptance evidence:
+
+- frontend JavaScript syntax and repository whitespace checks pass;
+- browser checks confirm clean initial, search-results and narrow-width layouts.
+
+### 11 August 2026 — Source documentation and Letterboxd identity repair
+
+Delivered:
+
+1. Documented the Wikidata, Wikipedia, Crossref, Douban, Letterboxd and Guardian
+   acquisition paths in the README.
+2. Recorded the raw-retrieval, private-cache and separate DeepSeek-structuring boundary.
+3. Replaced ambiguous Letterboxd slug-first matching with verified IMDb-ID resolution when
+   Wikidata supplies an IMDb identifier.
+4. Added a JSON-LD director guard for title/year fallback pages.
+5. Added regressions for same-title, same-year films with different directors.
+
+Acceptance evidence:
+
+- live *An Unfinished Film* check resolves Lou Ye's canonical Letterboxd slug and retrieves
+  four attributed reviews;
+- automated tests: 43 passed;
+- scoped Ruff, frontend JavaScript syntax and repository whitespace checks pass.
+
+### 11 August 2026 — Animated monochrome identity
+
+Delivered:
+
+1. Replaced the framed reel symbol with a minimal black-and-white film-roll mark.
+2. Animated the film strip to extend from the roll, pause and retract.
+3. Applied the same identity to the discovery and local Settings headers.
+4. Added a compact SVG favicon and a static reduced-motion state.
+
+Acceptance evidence:
+
+- SVG validity, frontend JavaScript syntax and repository whitespace checks pass;
+- browser checks confirm the animation cycle, favicon response, Settings header and narrow layout;
+- the stylesheet provides a static, fully extended mark when reduced motion is preferred.
+
+### 11 August 2026 — Local recent-search history
+
+Delivered:
+
+1. Removed example values from the film title, year and director fields.
+2. Replaced the three suggested films with the five most recent searches.
+3. Stored recent searches locally, deduplicated them and kept the newest search first.
+4. Made each recent item restore the full title, year and director query and search again.
+
+Acceptance evidence:
+
+- automated tests: 43 passed;
+- frontend JavaScript syntax and repository whitespace checks pass;
+- browser checks confirm empty, persisted, deduplicated and narrow-width states.
+
+### 11 August 2026 — Criticism source switcher
+
+Delivered:
+
+1. Replaced the separate provider actions with a compact, accessible source tab switcher.
+2. Made the first selection of an unloaded source initialise its fetch and structuring flow.
+3. Made later selections switch instantly to the cached provider bundle without refetching.
+4. Moved refresh controls into the active source panel and marked active and loaded states.
+5. Prevented slower background requests from replacing a source selected in the meantime.
+
+Acceptance evidence:
+
+- automated tests: 40 passed;
+- frontend JavaScript syntax, scoped Ruff checks and repository whitespace checks pass;
+- browser checks confirm cached Douban and Letterboxd switching sends no new request;
+- desktop and narrow-width layouts have no horizontal overflow or console errors.
+
+### 11 August 2026 — Settings-based private library management
+
+Delivered:
+
+1. Added a Study library panel to Settings with the current private catalogue and index state.
+2. Added local catalogue uploads for PDF, EPUB, Markdown and text documents with a 500 MB
+   limit, while clearly identifying PDF as the current indexed format.
+3. Added non-destructive removal that unregisters a document without deleting its source file.
+4. Added an explicit local search-index rebuild action and visible rebuild recommendation.
+5. Preserved all seven books already registered on the development machine.
+6. Kept file paths, document contents, uploaded copies and derived index data outside public
+   responses and source control.
+7. Reduced Settings guidance copy to essential labels, privacy cues and index limitations.
+
+Acceptance evidence:
+
+- automated tests: 40 passed, including add, remove, validation and rebuild flows;
+- frontend JavaScript syntax, scoped Ruff checks and repository whitespace checks pass;
+- live catalogue metadata still reports seven registered books after the change;
+- desktop and narrow-width browser checks show the complete catalogue with no console errors.
+
+### 11 August 2026 — Layered README architecture map
+
+Delivered:
+
+1. Reorganised the system map into five readable layers from user experience to outputs.
+2. Simplified service labels while retaining the implemented discovery, criticism,
+   retrieval, synthesis, quality-control and clip-analysis flows.
+3. Strengthened the visual distinction between local/private processing, provenance-bearing
+   evidence and external services.
+4. Kept the clip-to-study connection visibly marked as planned work.
+
+Acceptance evidence:
+
+- Mermaid block uses GitHub-compatible flowchart, subgraph and class syntax;
+- every architecture node maps to an implemented service, evidence type or documented plan;
+- the privacy and external-transmission boundary is stated directly beneath the graph.
 
 ### 9 August 2026 — Official Letterboxd API adapter
 

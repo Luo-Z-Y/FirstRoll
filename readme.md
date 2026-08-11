@@ -9,8 +9,8 @@ hypotheses and measured film observations are different kinds of evidence. First
 keeps those layers visible instead of presenting one fluent but unsupported answer.
 
 > **Current status:** local working prototype. Discover, private-library retrieval,
-> optional Douban and official Letterboxd criticism, DeepSeek synthesis and clip analysis
-> are implemented. The
+> Crossref scholarship, optional Douban, Letterboxd and Guardian criticism, DeepSeek
+> synthesis and clip analysis are implemented. The
 > next major milestone is connecting measured clip evidence to Deep Study.
 
 See [Project Progress](docs/PROGRESS.md) for completed milestones, verification results,
@@ -33,8 +33,8 @@ The original GPL-3.0 licence and contributor attribution remain applicable. See
 ### Discover and study
 
 - Search by title, year and director through key-free Wikidata.
-- Read attributed Wikipedia context and follow visible source links.
-- Open Google Scholar, OpenAlex, IMDb, Wikidata and Wikipedia research routes.
+- Read an attributed Wikipedia overview and poster after Wikidata resolves the film.
+- Retrieve matched scholarly abstracts and DOI links through Crossref.
 - Browse a private local library without publishing books or file paths.
 - Retrieve page-cited theory through hybrid SQLite FTS5 and local multilingual vectors.
 - Use the study focus and attributed critic claims to plan retrieval.
@@ -43,9 +43,11 @@ The original GPL-3.0 licence and contributor attribution remain applicable. See
 ### Critical perspectives
 
 - Optionally run the unofficial local Douban MCP connector.
+- Retrieve attributed reviews from Letterboxd public film pages in local-only mode.
+- Retrieve attributed Guardian film reviews through its public content index and pages.
 - Connect approved Letterboxd OAuth credentials through the official API.
-- Retrieve popularity-ranked, attributed Letterboxd reviews without a scraping fallback.
-- Retrieve review summaries and retain links to the original reviews.
+- Keep each provider in a separate selectable and refreshable evidence bundle.
+- Retrieve source text first, cache and display it, then structure it in a separate step.
 - Ask DeepSeek to extract Pydantic-validated, attributed critical claims.
 - Preserve missing scenes, observations, techniques and alternative readings as missing.
 - Keep critic reports separate from verified film observations and creator statements.
@@ -84,95 +86,188 @@ implemented, film-specific formal claims remain viewing hypotheses.
 
 ## System Architecture
 
+FirstRoll is organised as a local-first pipeline. Each layer has one responsibility:
+the interface gathers intent, application services acquire and process material, the
+evidence layer preserves provenance, and the study pipeline turns only selected evidence
+into a validated essay.
+
 ```mermaid
 flowchart TB
-    subgraph external["External services"]
-        WD["Wikidata + Wikipedia<br/>identity and attributed context"]
-        DB["Optional Douban MCP<br/>review summaries"]
-        LB["Official Letterboxd API<br/>attributed reviews"]
-        DS["DeepSeek V4 Pro<br/>structured synthesis"]
+    MAKER(["Filmmaker"])
+
+    EXPERIENCE["1 · LOCAL EXPERIENCE<br/><b>Discover · Deep Study · Analyse</b>"]
+
+    subgraph SOURCES["INPUTS AND ATTRIBUTED SOURCES"]
+        direction LR
+        RESEARCH["External research<br/>Wikidata · Wikipedia · Crossref<br/>Douban · Letterboxd · Guardian"]
+        LIBRARY[("Private library<br/>books · notes · local vectors")]
+        VIDEO[("Private film clip")]
     end
 
-    subgraph local["FirstRoll — local and private"]
-        UI["Web interface<br/>Discover · Analyse"]
+    SERVICES["2 · LOCAL APPLICATION SERVICES<br/><b>Film discovery</b> · <b>Criticism adapters</b><br/><b>Hybrid retrieval</b> · <b>Clip analysis</b>"]
 
-        subgraph discovery["Discovery and criticism"]
-            FD["Film discovery service"]
-            CA["Criticism adapters<br/>Douban · Letterboxd OAuth"]
-            CE["Pydantic criticism extraction"]
-            FR["Verified film record"]
-            CC["Attributed critic claims"]
-        end
+    EVIDENCE["3 · LOCAL PROVENANCE-PRESERVING EVIDENCE<br/>Verified film record · Attributed critic claims<br/>Page-cited theory passages"]
+    MEASURE["Measured clip evidence<br/>timecodes · scene and shot metrics"]
 
-        subgraph retrieval["Private knowledge retrieval"]
-            BK["User-owned books and notes"]
-            ING["Page extraction<br/>token chunks · stable IDs"]
-            IDX["SQLite hybrid index<br/>FTS5 + local multilingual vectors"]
-            QP["Query planner<br/>study focus + craft taxonomy + criticism"]
-            HR["Rank fusion and diversity selection"]
-            TP["Page-cited theory passages"]
-        end
+    PACKET["4A · LOCAL EVIDENCE ASSEMBLY<br/><b>Typed evidence packet</b><br/>record · criticism · theory"]
+    DEEPSEEK["4B · EXTERNAL SYNTHESIS<br/><b>DeepSeek structured draft</b><br/>selected evidence only"]
+    GATE["4C · LOCAL VALIDATION<br/><b>Schema · citations · evidence quality</b><br/>one repair maximum"]
 
-        subgraph study["Evidence-grounded Deep Study"]
-            EP["Typed evidence packet<br/>record · criticism · theory"]
-            PS["Pydantic study sections<br/>internal reasoning scaffold"]
-            QG{"Deterministic quality gate"}
-            RP["One bounded repair attempt"]
-            ES["Continuous critical essay<br/>inline citations · evidence boundary"]
-            IE["Insufficient-evidence state"]
-        end
+    OUTPUTS["5 · LOCAL OUTPUTS<br/><b>Critical essay</b> · inline citations<br/><b>Insufficient evidence</b> clearly labelled<br/><b>Analysis exports</b> · JSON · CSV"]
 
-        subgraph analyse["Clip analysis"]
-            VC["Private film clip"]
-            CV["Scene and shot pipeline<br/>cuts · scale · colour · objects"]
-            ME["Measured scene evidence<br/>timecodes and metrics"]
-            EX["JSON and CSV exports"]
-        end
-    end
+    MAKER --> EXPERIENCE --> SERVICES
+    RESEARCH -->|"attributed context and reviews"| SERVICES
+    LIBRARY -->|"local retrieval"| SERVICES
+    VIDEO -->|"local analysis"| SERVICES
 
-    UI -->|"title, year, director"| FD
-    FD <--> WD
-    FD --> FR
+    SERVICES --> EVIDENCE --> PACKET
+    SERVICES --> MEASURE
+    MEASURE -->|"JSON · CSV"| OUTPUTS
+    MEASURE -. "planned evidence bridge" .-> PACKET
 
-    UI -->|"load criticism"| CA
-    CA <--> DB
-    CA <--> LB
-    CA --> CE --> CC
+    PACKET -->|"only this packet leaves the device"| DEEPSEEK
+    DEEPSEEK --> GATE --> OUTPUTS
 
-    BK --> ING --> IDX
-    UI -->|"study focus"| QP
-    CC --> QP
-    QP --> IDX
-    IDX --> HR --> TP
+    classDef person fill:#2f5d50,stroke:#2f5d50,color:#ffffff;
+    classDef service fill:#e8f0ed,stroke:#5d7f74,color:#17211e;
+    classDef evidence fill:#fff3dc,stroke:#b8792a,color:#2a2115;
+    classDef study fill:#f2eafa,stroke:#77569a,color:#21192b;
+    classDef private fill:#eef0df,stroke:#7c824f,color:#1f2117;
+    classDef external fill:#f8e8e4,stroke:#a55445,color:#2b1b18;
 
-    FR --> EP
-    CC --> EP
-    TP --> EP
-    EP -->|"selected evidence only leaves the device"| DS
-    DS --> PS --> QG
-    QG -->|"pass"| ES
-    QG -->|"repair once"| RP --> DS
-    QG -->|"still weak"| IE --> ES
-    ES --> UI
-
-    UI --> VC --> CV --> ME
-    CV --> EX
-    ME -. "planned clip-to-study evidence bridge" .-> EP
-
-    classDef externalNode fill:#f3ddd8,stroke:#8f382b,color:#241713;
-    classDef privateNode fill:#e9eadc,stroke:#6f7544,color:#171813;
-    classDef evidenceNode fill:#f4ead7,stroke:#a45b38,color:#171813;
-    class WD,DB,LB,DS externalNode;
-    class BK,ING,IDX,VC,CV,ME,EX privateNode;
-    class FR,CC,TP,EP,PS,QG,RP,ES,IE evidenceNode;
+    class MAKER person;
+    class EXPERIENCE,SERVICES service;
+    class EVIDENCE,MEASURE evidence;
+    class PACKET,GATE,OUTPUTS study;
+    class LIBRARY,VIDEO private;
+    class RESEARCH,DEEPSEEK external;
 ```
 
-The large boundary represents processes and data that remain on the user's machine.
-Wikidata, Wikipedia, optional Douban and the official Letterboxd API supply attributed
-research data; DeepSeek is the only synthesis service. The embedding model runs locally. Only the typed,
-selected evidence packet—not the complete books, vectors or private file paths—is sent to
-DeepSeek when the user chooses **Generate study**. The dotted line is planned work: clip
-measurements do not yet support claims in Deep Study.
+The numbered bands show the path from user intent to a cited essay. Layers labelled
+**local** run on the user's machine; books, vectors, clips and exports stay there. External
+research services return attributed source material, while DeepSeek is the only synthesis
+service. When the user chooses **Generate study**, only the typed, selected evidence packet
+leaves the device—not complete books, local vectors, clips or private file paths. The dotted
+connection is planned work: clip measurements do not yet support claims in Deep Study.
+
+## Research and Criticism Acquisition
+
+FirstRoll does not ask an LLM to browse blindly. Every source has a bounded adapter, an
+identity check and a normalised evidence record. Retrieval and interpretation are separate:
+
+```text
+verified film identity
+        ↓
+provider-specific search and identity matching
+        ↓
+attributed raw source + canonical URL
+        ↓
+private local cache (claim status: pending)
+        ↓
+optional DeepSeek claim extraction
+        ↓
+Pydantic validation + source-ID checks
+```
+
+This separation is why a fetched review remains readable when DeepSeek is unavailable or
+returns malformed structured output. A provider failure also affects only its own tab; it
+does not erase evidence cached from another provider.
+
+### Wikidata: canonical film identity
+
+Wikidata is the first lookup because it offers key-free, CC0 structured metadata. FirstRoll:
+
+1. searches items with `wbsearchentities`;
+2. retrieves candidate entities with `wbgetentities`;
+3. rejects items that do not look like films;
+4. filters or ranks by title, release year and director; and
+5. retains the Wikidata QID as FirstRoll's canonical external identity.
+
+The entity claims supply release date, runtime, director, writer, cinematographer, genre,
+country, poster filename and IMDb ID when present. Related entity labels are fetched in
+batches. The IMDb ID is especially useful for resolving the same film safely in other
+services. If Wikidata is unavailable, a small, explicitly labelled demo catalogue keeps the
+interface usable in degraded mode; it is never presented as a live match.
+
+### Wikipedia: overview and poster
+
+Wikipedia enrichment happens only after Wikidata supplies an English Wikipedia sitelink.
+FirstRoll calls the Wikipedia REST summary endpoint, retains the article URL and CC BY-SA
+attribution, and keeps the overview separate from Wikidata's CC0 identity record.
+
+For posters, FirstRoll accepts only Wikimedia upload URLs returned by the article summary.
+It prefers the original image, falls back to the thumbnail, rejects invalid dimensions and
+avoids landscape images that are unlikely to be posters. Wikipedia prose establishes
+attributed context, not creator intention or formal analysis.
+
+### Research: Crossref scholarship
+
+The **Research** tab uses Crossref's public metadata API rather than returning generic search
+links. Its query combines the film title, director and film/cinema terms, requesting records
+that contain abstracts. FirstRoll then applies a second local relevance check:
+
+- the title or original title must occur in the work title or abstract;
+- short or ambiguous film titles require the director or explicit film context;
+- records without a usable abstract, attribution or HTTP(S) source URL are rejected; and
+- accepted items retain author, publication, year, work type and canonical DOI URL.
+
+Up to six matched abstracts are cached as attributed secondary evidence. Crossref is the
+discovery and metadata channel; the named author and publication remain the actual source.
+
+### Douban: optional local MCP
+
+The Douban adapter starts the separately installed MCP server over stdio and calls only
+`search-movie` and `list-movie-reviews`. It prefers a title-and-year match and refuses a weak
+identity match rather than silently selecting the first result.
+
+The connector returns Markdown tables, so FirstRoll reconstructs logical rows when long
+Chinese summaries contain line breaks and repairs unescaped pipe characters without losing
+the final review ID. Each accepted row receives a stable Douban review URL and language
+label. Authentication blocks, empty tables, missing columns and schema drift produce
+different diagnostics; an empty response is not treated as proof that no reviews exist.
+
+### Letterboxd: public pages and verified identity
+
+The local-only public-web adapter resolves identity before collecting reviews. Its priority
+order is:
+
+1. use the verified IMDb ID at Letterboxd's `/imdb/{id}/` route and follow the redirect to
+   the canonical film page;
+2. fall back to title and title-year slugs when no IMDb ID exists; and
+3. compare JSON-LD director metadata when a fallback page supplies it.
+
+This matters because Letterboxd can contain different films with the same English title and
+release year. Title-year matching alone selected the wrong *An Unfinished Film* page; the
+IMDb redirect correctly resolves Lou Ye's film to `an-unfinished-film-2024`, while the
+director guard rejects the unrelated namesake.
+
+After resolution, FirstRoll reads popular-review links from the canonical film page, opens a
+bounded number of individual public review pages and extracts the JSON-LD `Review` object.
+It preserves member name, rating, language, complete source URL and up to 12,000 characters
+for local processing. Requests are restricted to HTTPS Letterboxd hosts and size-limited.
+This adapter is unofficial and can fail if public markup or access controls change.
+
+The separate official Letterboxd adapter remains available for approved OAuth clients. It
+uses client credentials, `/search` for film matching and `/log-entries` for public reviews.
+
+### Guardian: professional criticism
+
+The Guardian adapter searches its public content index for an exact film-title query within
+the film section and review tag, ranks headline matches, then retrieves a bounded set of
+public articles. It reads headline and author from JSON-LD and collects paragraphs only from
+the Guardian article-body container. Redirects outside Guardian, oversized responses and
+weak film matches are rejected.
+
+### Raw evidence, structuring and cache
+
+Each provider first returns a `CriticalResearchBundle` with raw attributed sources and a
+`pending` claim status. FirstRoll saves it beneath `.firstroll/criticism` and displays it
+immediately. A second endpoint sends small batches to DeepSeek, validates the returned
+`critic_reported` claims and replaces the pending bundle only after validation succeeds.
+
+Refreshes preserve previously validated claims when the provider returns the same source
+IDs. Missing scenes, techniques, observations or alternative readings remain `null` or
+explicitly missing; FirstRoll does not ask DeepSeek to invent them.
 
 ## Quick Start
 
@@ -195,8 +290,9 @@ or TMDB credential is required. Full macOS, Windows and Linux instructions are i
 ### Local settings
 
 Open [http://127.0.0.1:8000/settings](http://127.0.0.1:8000/settings) to configure optional
-connectors. Secrets are write-only from the browser's perspective and are stored in the
-Git-ignored `.firstroll/settings.json` file with local-only permissions.
+connectors and manage the private study library. Secrets are write-only from the browser's
+perspective and are stored in the Git-ignored `.firstroll/settings.json` file with local-only
+permissions.
 
 Environment variables are also supported:
 
@@ -221,8 +317,22 @@ evidence schema and quality gate are identical for both models.
 
 ## Private Study Library
 
-Place documents in `.firstroll/library`, or register absolute paths in
-`.firstroll/library.json`:
+Open **Settings → Study library** to:
+
+- add a PDF, EPUB, Markdown or text document to FirstRoll's private managed library;
+- remove a document from FirstRoll without deleting the original source file;
+- review the current local catalogue without exposing file paths; and
+- rebuild the local PDF search index after catalogue changes.
+
+PDF content can supply page-cited passages to Deep Study after indexing. EPUB, Markdown and
+text files are currently catalogue-only.
+
+Existing registered books remain available until the user explicitly removes them. Uploaded
+documents, catalogue preferences and derived index data remain under `.firstroll`, which is
+excluded from Git.
+
+For manual or automated setups, place documents in `.firstroll/library`, or register absolute
+paths in `.firstroll/library.json`:
 
 ```json
 {
@@ -233,7 +343,7 @@ Place documents in `.firstroll/library`, or register absolute paths in
 }
 ```
 
-Build or rebuild the private index:
+Build or rebuild the private index from Settings, or run:
 
 ```bash
 uv run firstroll-index
@@ -275,17 +385,24 @@ cookie. Provider behaviour may break when Douban changes its pages or access con
 
 See [Data Sources](docs/DATA_SOURCES.md) for the source, copyright and model-use policy.
 
-## Optional Official Letterboxd API
+## Letterboxd Configuration
+
+The **Letterboxd** tab uses the local-only public-web adapter described above and requires
+no credentials. It is intentionally bounded to public film and review pages, stores its
+cache locally and may require maintenance when Letterboxd changes markup or access controls.
+
+### Optional official API
 
 FirstRoll supports Letterboxd's official OAuth client-credentials flow. Request API access
 from Letterboxd, then enter the granted **Client ID** and **Client Secret** on the local
 Settings page. Alternatively, set `LETTERBOXD_CLIENT_ID` and
 `LETTERBOXD_CLIENT_SECRET` before starting FirstRoll.
 
-The adapter searches the official `/search` endpoint and retrieves popularity-ranked public
-reviews through `/log-entries`. It has no HTML-scraping or access-control bypass fallback.
-Credentials remain write-only in `.firstroll/settings.json` and are never returned to the
-browser or committed to Git.
+The official adapter searches `/search` and retrieves popularity-ranked public reviews
+through `/log-entries`. It remains separate from the public-web adapter: selecting
+**Letterboxd API** never silently falls back to HTML, and selecting **Letterboxd** never uses
+OAuth credentials. Credentials remain write-only in `.firstroll/settings.json` and are
+never returned to the browser or committed to Git.
 
 ## API Overview
 
@@ -294,11 +411,19 @@ browser or committed to Git.
 | `GET /api/health` | Local process health |
 | `GET /api/contract` | Public API summary |
 | `GET /api/settings` | Masked local connector status |
+| `GET /api/settings/library` | Private catalogue and local index status for Settings |
+| `POST /api/settings/library` | Add a document to the managed private library |
+| `DELETE /api/settings/library/{document_id}` | Unregister a document without deleting its source file |
+| `POST /api/settings/library/rebuild` | Rebuild the private search index locally |
 | `GET /api/discovery/status` | Discovery and private-index status |
 | `GET /api/discovery/search` | Film identity search |
 | `GET /api/discovery/films/{film_id}` | Full film dossier |
-| `POST /api/discovery/films/{film_id}/criticism/douban` | Retrieve and structure Douban criticism |
-| `POST /api/discovery/films/{film_id}/criticism/letterboxd` | Retrieve and structure official Letterboxd reviews |
+| `POST /api/discovery/films/{film_id}/criticism/crossref` | Retrieve and cache matched scholarly abstracts |
+| `POST /api/discovery/films/{film_id}/criticism/douban` | Retrieve and cache Douban criticism |
+| `POST /api/discovery/films/{film_id}/criticism/letterboxd-web` | Retrieve and cache public Letterboxd reviews locally |
+| `POST /api/discovery/films/{film_id}/criticism/guardian-web` | Retrieve and cache Guardian film criticism |
+| `POST /api/discovery/films/{film_id}/criticism/letterboxd` | Retrieve and cache official Letterboxd reviews |
+| `POST /api/discovery/films/{film_id}/criticism/{provider}/structure` | Structure an already cached provider bundle with DeepSeek |
 | `POST /api/discovery/films/{film_id}/study` | Generate an evidence-grounded Deep Study |
 | `GET /api/library/status` | Private library and index status |
 | `POST /api/analyze` | Analyse an uploaded private clip |
@@ -316,7 +441,7 @@ FirstRoll/
 ├── app/
 │   ├── backend/
 │   │   ├── algorithms/          # inherited and adapted pyCinemetrics analysis
-│   │   ├── criticism.py         # Douban adapter, schemas and private cache
+│   │   ├── criticism.py         # Research/criticism adapters, schemas and private cache
 │   │   ├── discovery.py         # Wikidata/Wikipedia discovery
 │   │   ├── evidence.py          # typed synthesis boundary
 │   │   ├── library.py           # private document catalogue
@@ -377,7 +502,7 @@ fallback behaviour; these are tracked separately from the new FirstRoll modules.
 |---|---|---|
 | Film discovery and dossier | Complete | Key-free identity, context and visible research routes |
 | Private RAG foundation | Complete | Token chunking, FTS5, local vectors, hybrid retrieval and citations |
-| Attributed criticism | Complete | Optional Douban and official Letterboxd retrieval with structured critic claims |
+| Attributed criticism | Complete | Crossref, Douban, Letterboxd and Guardian retrieval with structured critic claims |
 | Evidence-grounded Deep Study | Complete | Typed evidence, Pydantic output, quality gate and layered UI |
 | Clip analysis web migration | Complete | Scene, shot, colour, object and export workflow |
 | Clip-to-study evidence bridge | Next | Feed measured scenes, shots and timecodes into synthesis |
@@ -392,8 +517,11 @@ and acceptance evidence. Update that file whenever a milestone changes state.
 
 - Deep Study does not yet observe the film itself; it produces viewing hypotheses.
 - Creator interviews and production records are not yet automatically collected.
+- Crossref may contain no sufficiently matched abstract for a new or rarely studied film.
 - Douban MCP is unofficial and may return sparse summaries or stop working.
-- Letterboxd requires API credentials explicitly granted by Letterboxd; no scraper fallback is included.
+- Letterboxd public-web retrieval is unofficial and may break when markup or access controls
+  change; the official API still requires explicitly granted credentials.
+- Guardian search may have no confidently matched review for a film.
 - The first semantic retrieval after process start may pause while the local model loads.
 - A study may correctly remain labelled insufficient evidence after its one repair pass.
 - Some inherited computer-vision dependencies are large and have platform-specific setup.

@@ -268,9 +268,11 @@ class DiscoveryService:
                 score += 0.16
             film["match_score"] = round(min(1.0, score), 3)
             self._detail_cache[qid] = film
-            results.append(self._public_live_summary(film))
+            results.append(film)
         results.sort(key=lambda film: film["match_score"], reverse=True)
-        return results
+        for film in results[:8]:
+            self._enrich_poster(film)
+        return [self._public_live_summary(film) for film in results]
 
     def _get_entities(self, qids: list[str]) -> dict[str, dict[str, Any]]:
         if not qids:
@@ -386,6 +388,7 @@ class DiscoveryService:
                 summary = self._wikipedia_summary(str(wikipedia_title))
             except DiscoveryProviderError:
                 summary = {}
+            self._apply_wikipedia_image(film, summary, wikipedia_url)
             extract = summary.get("extract")
             if isinstance(extract, str) and extract.strip():
                 film["overview"] = extract.strip()
@@ -439,6 +442,48 @@ class DiscoveryService:
         film["research_links"] = [link for link in links if link.get("url")]
         film["study_questions"] = self._study_questions(film)
         return film
+
+    def _enrich_poster(self, film: dict[str, Any]) -> None:
+        if film.get("poster_url") or not self._wikipedia_summary:
+            return
+        wikipedia_title = film.get("_wikipedia_title")
+        if not wikipedia_title:
+            return
+        wikipedia_url = (
+            f"https://en.wikipedia.org/wiki/"
+            f"{quote(str(wikipedia_title).replace(' ', '_'))}"
+        )
+        try:
+            summary = self._wikipedia_summary(str(wikipedia_title))
+        except DiscoveryProviderError:
+            return
+        self._apply_wikipedia_image(film, summary, wikipedia_url)
+
+    @staticmethod
+    def _apply_wikipedia_image(
+        film: dict[str, Any],
+        summary: dict[str, Any],
+        wikipedia_url: str | None,
+    ) -> None:
+        if film.get("poster_url"):
+            return
+        image = summary.get("originalimage") or summary.get("thumbnail")
+        if not isinstance(image, dict):
+            return
+        source = str(image.get("source") or "").strip()
+        width = image.get("width")
+        height = image.get("height")
+        if not source.startswith("https://upload.wikimedia.org/"):
+            return
+        if isinstance(width, (int, float)) and isinstance(height, (int, float)):
+            if width <= 0 or height / width < 1.12:
+                return
+        film["poster_url"] = source
+        film["poster_source"] = {
+            "name": "Wikipedia article image",
+            "url": summary.get("content_urls", {}).get("desktop", {}).get("page")
+            or wikipedia_url,
+        }
 
     @staticmethod
     def _study_questions(film: dict[str, Any]) -> list[str]:
@@ -660,6 +705,7 @@ class DiscoveryService:
                 "directors",
                 "overview",
                 "poster_url",
+                "poster_source",
                 "backdrop_url",
                 "match_score",
                 "source",

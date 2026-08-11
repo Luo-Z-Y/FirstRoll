@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="robots" content="noindex,nofollow" />
   <title>FirstRoll — Local Settings</title>
+  <link rel="icon" href="/assets/favicon.svg?v=20260811-1" type="image/svg+xml" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
@@ -41,8 +42,16 @@
       border-bottom: 1px solid var(--line);
     }
     .brand { display: flex; align-items: center; gap: 10px; font-family: "Bebas Neue", sans-serif; font-size: 1.5rem; letter-spacing: .06em; }
-    .mark { position: relative; width: 28px; height: 21px; display: grid; place-items: center; border: 2px solid var(--ink); }
-    .mark::after { content: ""; width: 7px; height: 7px; border: 2px solid var(--red); border-radius: 50%; }
+    .brand-mark { width: 49px; height: 25px; flex: 0 0 auto; overflow: visible; color: var(--ink); }
+    .brand-strip-reveal { width: 0; animation: brand-strip-roll 4.8s cubic-bezier(.65, 0, .35, 1) infinite; }
+    @keyframes brand-strip-roll {
+      0%, 12%, 100% { width: 0; }
+      42%, 68% { width: 48px; }
+      88% { width: 0; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .brand-strip-reveal { width: 48px; animation: none; }
+    }
     .back { color: var(--ink); font-size: .75rem; font-weight: 700; text-decoration: none; }
     .back:hover { color: var(--red); }
     .hero { padding: 58px 0 42px; display: grid; grid-template-columns: 1fr 340px; align-items: end; gap: 50px; }
@@ -70,7 +79,7 @@
     .connector-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
     .connector {
       position: relative;
-      min-height: 310px;
+      min-height: 270px;
       padding: 23px;
       border: 1px solid var(--line);
       background: rgba(250, 246, 238, .76);
@@ -78,7 +87,7 @@
     .connector.available { box-shadow: inset 0 3px var(--red); }
     .connector-top { display: flex; justify-content: space-between; gap: 15px; }
     .connector h3 { margin: 0 0 8px; font: 400 2rem "Bebas Neue", sans-serif; letter-spacing: .02em; text-transform: uppercase; }
-    .connector-description { min-height: 45px; margin: 0; color: var(--soft); font-size: .76rem; line-height: 1.5; }
+    .connector-description { min-height: 36px; margin: 0; color: var(--soft); font-size: .76rem; line-height: 1.5; }
     .badge { height: fit-content; padding: 5px 7px; border: 1px solid var(--line); font: .58rem "IBM Plex Mono", monospace; text-transform: uppercase; }
     .badge.ready { color: #4e5829; border-color: rgba(119,123,73,.4); background: rgba(119,123,73,.1); }
     .badge.planned { color: var(--soft); }
@@ -97,6 +106,24 @@
     .connector-message { min-height: 18px; margin: 11px 0 0; color: var(--soft); font-size: .67rem; }
     .connector-message.error { color: var(--red-dark); }
     .planned-panel { margin-top: 15px; padding: 13px; background: rgba(23,24,19,.045); color: var(--soft); font-size: .7rem; line-height: 1.5; }
+    .library-panel { border: 1px solid var(--line); background: rgba(250, 246, 238, .76); }
+    .library-toolbar { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 18px; align-items: end; padding: 22px; border-bottom: 1px solid var(--line); }
+    .library-toolbar p { margin: 7px 0 0; color: var(--soft); font-size: .74rem; line-height: 1.5; }
+    .library-upload { display: grid; grid-template-columns: minmax(220px, 1fr) auto; }
+    .library-upload input { min-width: 0; padding: 9px 11px; border: 1px solid var(--ink); background: var(--light); font-size: .7rem; }
+    .library-button { border: 1px solid var(--ink); padding: 9px 13px; background: transparent; color: var(--ink); font-size: .68rem; font-weight: 700; cursor: pointer; }
+    .library-button.primary { color: var(--light); border-color: var(--red); background: var(--red); }
+    .library-button:disabled { opacity: .35; cursor: not-allowed; }
+    .library-status { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; padding: 13px 22px; border-bottom: 1px solid var(--line); color: var(--soft); font: .64rem "IBM Plex Mono", monospace; }
+    .library-status strong { color: var(--ink); text-transform: uppercase; }
+    .library-list { display: grid; }
+    .library-book { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 18px; align-items: center; padding: 17px 22px; border-bottom: 1px solid var(--line); }
+    .library-book:last-child { border-bottom: 0; }
+    .library-book h3 { margin: 0 0 5px; font-size: .86rem; }
+    .library-meta { margin: 0; color: var(--soft); font: .62rem "IBM Plex Mono", monospace; }
+    .library-empty { padding: 34px 22px; color: var(--soft); text-align: center; font-size: .75rem; }
+    .library-message { min-height: 20px; margin: 10px 0 0; color: var(--soft); font-size: .7rem; }
+    .library-message.error { color: var(--red-dark); }
     footer { margin-top: 55px; padding-top: 18px; display: flex; justify-content: space-between; border-top: 1px solid var(--line); color: var(--soft); font: .62rem "IBM Plex Mono", monospace; text-transform: uppercase; }
     .loading { grid-column: 1 / -1; padding: 50px; border: 1px dashed var(--line); text-align: center; color: var(--soft); }
     @media (max-width: 780px) {
@@ -106,28 +133,45 @@
       .connector-grid { grid-template-columns: 1fr; }
       .privacy { grid-template-columns: auto 1fr; }
       .privacy code { grid-column: 2; }
+      .library-toolbar { grid-template-columns: 1fr; }
+      .library-upload { grid-template-columns: 1fr; gap: 8px; }
     }
   </style>
 </head>
 <body>
   <div class="shell">
     <header>
-      <div class="brand"><span class="mark" aria-hidden="true"></span><span>FirstRoll Settings</span></div>
+      <div class="brand">
+        <svg class="brand-mark" viewBox="0 0 72 32" aria-hidden="true" focusable="false">
+          <defs>
+            <clipPath id="brand-strip-reveal-settings">
+              <rect class="brand-strip-reveal" x="22" y="4" width="0" height="24" />
+            </clipPath>
+          </defs>
+          <g clip-path="url(#brand-strip-reveal-settings)">
+            <path fill="currentColor" d="M20 5h49v22H20z" />
+            <path fill="#fff" d="M24 8h5v3h-5zm8 0h5v3h-5zm8 0h5v3h-5zm8 0h5v3h-5zm8 0h5v3h-5zm8 0h3v3h-3zM24 21h5v3h-5zm8 0h5v3h-5zm8 0h5v3h-5zm8 0h5v3h-5zm8 0h5v3h-5zm8 0h3v3h-3zM23 13h43v6H23z" />
+            <path stroke="currentColor" d="M34 13v6m11-6v6m11-6v6" />
+          </g>
+          <path fill="currentColor" d="M16 2C8.8 2 4 5.3 4 9.5v13C4 26.7 8.8 30 16 30s12-3.3 12-7.5v-13C28 5.3 23.2 2 16 2Z" />
+        </svg>
+        <span>FirstRoll Settings</span>
+      </div>
       <a class="back" href="/">← Return to discovery</a>
     </header>
 
     <main>
       <section class="hero">
         <div>
-          <p class="eyebrow">Local backend / Private configuration</p>
-          <h1>Connect models<br /><em>and evidence.</em></h1>
+          <p class="eyebrow">Private configuration</p>
+          <h1>Local<br /><em>settings.</em></h1>
         </div>
-        <p class="hero-copy">Film identity works without an API key. Add optional LLM and research services here without placing private credentials in source code or the browser application.</p>
+        <p class="hero-copy">Models, research sources and study books.</p>
       </section>
 
       <aside class="privacy">
         <span class="privacy-dot" aria-hidden="true"></span>
-        <div><strong>Local secret boundary</strong><span>Credentials are write-only: FirstRoll reports their status but never sends their values back to this page.</span></div>
+        <div><strong>Local only</strong><span>Credentials are never returned to the browser.</span></div>
         <code>.firstroll/settings.json · Git ignored</code>
       </aside>
 
@@ -138,6 +182,31 @@
         </div>
         <div id="connectors" class="connector-grid"><div class="loading">Reading FirstRoll settings…</div></div>
       </section>
+
+      <section>
+        <div class="section-head">
+          <div><p class="eyebrow">Private evidence</p><h2>Study library</h2></div>
+          <span id="library-summary">Loading private catalogue…</span>
+        </div>
+        <div class="library-panel">
+          <div class="library-toolbar">
+            <div>
+              <strong>Add a local book</strong>
+              <p>Add private study files. PDFs can be indexed for Deep Study.</p>
+            </div>
+            <form id="library-upload" class="library-upload">
+              <input id="library-file" type="file" name="document" accept=".pdf,.epub,.md,.txt" required aria-label="Choose a study document" />
+              <button class="library-button primary" type="submit">Add to library</button>
+            </form>
+          </div>
+          <div class="library-status">
+            <span id="library-index"><strong>Search index</strong> · Reading status…</span>
+            <button id="library-rebuild" class="library-button" type="button">Rebuild search index</button>
+          </div>
+          <div id="library-books" class="library-list"><div class="library-empty">Reading private catalogue…</div></div>
+        </div>
+        <p id="library-message" class="library-message" aria-live="polite"></p>
+      </section>
     </main>
 
     <footer><span>FirstRoll local console</span><span>Secrets remain on this machine</span></footer>
@@ -146,8 +215,19 @@
   <script>
     const connectorRoot = document.getElementById("connectors");
     const summary = document.getElementById("summary");
+    const libraryRoot = document.getElementById("library-books");
+    const librarySummary = document.getElementById("library-summary");
+    const libraryIndex = document.getElementById("library-index");
+    const libraryMessage = document.getElementById("library-message");
+    const libraryUpload = document.getElementById("library-upload");
+    const libraryFile = document.getElementById("library-file");
+    const libraryRebuild = document.getElementById("library-rebuild");
 
     loadSettings();
+    loadLibrary();
+
+    libraryUpload.addEventListener("submit", addLibraryDocument);
+    libraryRebuild.addEventListener("click", rebuildLibraryIndex);
 
     async function loadSettings() {
       try {
@@ -176,6 +256,7 @@
       const environmentManaged = credentials.length > 0 && credentials.every((credential) => credential.source === "environment");
       const localCredential = credentials.some((credential) => credential.source === "local_store");
       const environmentKeys = credentials.filter((credential) => credential.source === "environment").map((credential) => credential.environment_key);
+      const conciseDescription = String(connector.description || "").split(". ")[0];
       const stateLabel = connector.configured
         ? `Configured ${connector.credential_hint || ""} · ${connector.credential_source.replaceAll("_", " ")}`
         : credentials.some((credential) => credential.configured) ? "Partially configured" : "Not configured";
@@ -187,7 +268,7 @@
       return `
         <article class="connector ${available ? "available" : "planned"}" data-connector="${escapeHtml(connector.id)}">
           <div class="connector-top">
-            <div><h3>${escapeHtml(connector.name)}</h3><p class="connector-description">${escapeHtml(connector.description)}</p></div>
+            <div><h3>${escapeHtml(connector.name)}</h3><p class="connector-description">${escapeHtml(conciseDescription)}</p></div>
             <span class="badge ${available ? "ready" : "planned"}">${available ? "Available" : "Planned"}</span>
           </div>
           <div class="credential-state"><strong>${escapeHtml(connector.credential_label)}</strong><span>${escapeHtml(stateLabel)}</span></div>
@@ -197,11 +278,11 @@
               <button class="save" type="button" data-action="save" ${environmentManaged ? "disabled" : ""}>Save locally</button>
               <button type="button" data-action="test" ${connector.testable && connector.configured ? "" : "disabled"}>Test connection</button>
               <button type="button" data-action="clear" ${localCredential ? "" : "disabled"}>Clear</button>
-              <a class="docs" href="${escapeHtml(connector.documentation_url)}" target="_blank" rel="noopener noreferrer">Documentation ↗</a>
+              <a class="docs" href="${escapeHtml(connector.documentation_url)}" target="_blank" rel="noopener noreferrer">Docs ↗</a>
             </div>
             ${environmentKeys.length ? `<div class="planned-panel">Environment-managed fields: <code>${escapeHtml(environmentKeys.join(", "))}</code>.</div>` : ""}
           ` : `
-            <div class="planned-panel">This adapter is visible now so FirstRoll has one configuration home. Credential entry will unlock when the adapter is implemented.</div>
+            <div class="planned-panel">Not yet available.</div>
             <div class="actions"><a class="docs" href="${escapeHtml(connector.documentation_url)}" target="_blank" rel="noopener noreferrer">Review source ↗</a></div>
           `}
           <p class="connector-message" aria-live="polite"></p>
@@ -261,6 +342,115 @@
         setMessage(message, error.message, true);
         button.disabled = false;
       }
+    }
+
+    async function loadLibrary() {
+      try {
+        const response = await fetch("/api/settings/library", { headers: settingsHeaders() });
+        if (!response.ok) throw new Error(await apiError(response));
+        renderLibrary(await response.json());
+      } catch (error) {
+        libraryRoot.innerHTML = `<div class="library-empty">${escapeHtml(error.message)}</div>`;
+        librarySummary.textContent = "Private catalogue unavailable";
+        libraryRebuild.disabled = true;
+      }
+    }
+
+    function renderLibrary(library) {
+      const documents = Array.isArray(library.documents) ? library.documents : [];
+      const count = Number(library.document_count || documents.length);
+      librarySummary.textContent = `${count} ${count === 1 ? "document" : "documents"} registered`;
+      const index = library.index || {};
+      const indexed = Number(index.document_count || 0);
+      const indexLabel = index.state === "ready"
+        ? `${indexed} PDF ${indexed === 1 ? "document" : "documents"} indexed locally`
+        : index.state === "not_built" ? "Not built yet" : "Needs attention";
+      libraryIndex.innerHTML = `<strong>Search index</strong> · ${escapeHtml(indexLabel)}${library.index_needs_rebuild ? " · Rebuild recommended" : ""}`;
+      libraryRebuild.disabled = count === 0;
+      libraryRoot.innerHTML = documents.length ? documents.map((document) => {
+        const source = document.source === "managed_library" ? "Managed copy" : "Registered file";
+        return `
+          <article class="library-book">
+            <div>
+              <h3>${escapeHtml(document.title)}</h3>
+              <p class="library-meta">${escapeHtml(document.format)} · ${escapeHtml(document.size_mb)} MB · ${escapeHtml(source)}</p>
+            </div>
+            <button class="library-button" type="button" data-library-remove="${escapeHtml(document.id)}" data-library-title="${escapeHtml(document.title)}">Remove</button>
+          </article>`;
+      }).join("") : `<div class="library-empty">No study documents are registered yet.</div>`;
+      libraryRoot.querySelectorAll("[data-library-remove]").forEach((button) => {
+        button.addEventListener("click", () => removeLibraryDocument(button));
+      });
+    }
+
+    async function addLibraryDocument(event) {
+      event.preventDefault();
+      const file = libraryFile.files[0];
+      if (!file) return;
+      const button = libraryUpload.querySelector("button");
+      setLibraryMessage(`Adding ${file.name}…`);
+      button.disabled = true;
+      try {
+        const body = new FormData();
+        body.append("document", file);
+        const response = await fetch("/api/settings/library", {
+          method: "POST",
+          headers: settingsHeaders(),
+          body,
+        });
+        if (!response.ok) throw new Error(await apiError(response));
+        libraryFile.value = "";
+        const result = await response.json();
+        renderLibrary(result.library);
+        setLibraryMessage(result.document.format === "PDF"
+          ? "Added. Rebuild the index for Deep Study."
+          : "Added. Only PDFs are indexed.");
+      } catch (error) {
+        setLibraryMessage(error.message, true);
+      } finally {
+        button.disabled = false;
+      }
+    }
+
+    async function removeLibraryDocument(button) {
+      const title = button.dataset.libraryTitle;
+      if (!window.confirm(`Remove “${title}” from FirstRoll? The original file stays on this machine.`)) return;
+      setLibraryMessage(`Removing ${title}…`);
+      button.disabled = true;
+      try {
+        const response = await fetch(`/api/settings/library/${encodeURIComponent(button.dataset.libraryRemove)}`, {
+          method: "DELETE",
+          headers: settingsHeaders(),
+        });
+        if (!response.ok) throw new Error(await apiError(response));
+        renderLibrary((await response.json()).library);
+        setLibraryMessage("Removed. Rebuild the index to apply the change.");
+      } catch (error) {
+        setLibraryMessage(error.message, true);
+        button.disabled = false;
+      }
+    }
+
+    async function rebuildLibraryIndex() {
+      setLibraryMessage("Rebuilding locally…");
+      libraryRebuild.disabled = true;
+      try {
+        const response = await fetch("/api/settings/library/rebuild", {
+          method: "POST",
+          headers: settingsHeaders(),
+        });
+        if (!response.ok) throw new Error(await apiError(response));
+        renderLibrary(await response.json());
+        setLibraryMessage("Index rebuilt.");
+      } catch (error) {
+        setLibraryMessage(error.message, true);
+        libraryRebuild.disabled = false;
+      }
+    }
+
+    function setLibraryMessage(text, error = false) {
+      libraryMessage.textContent = text;
+      libraryMessage.classList.toggle("error", error);
     }
 
     function settingsHeaders() {

@@ -4,12 +4,14 @@ import html
 import json
 import os
 import re
+import unicodedata
 from datetime import datetime, timezone
 from difflib import SequenceMatcher
+from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any, Callable, Literal
 from urllib.error import HTTPError, URLError
-from urllib.parse import urlencode, urlparse
+from urllib.parse import quote_plus, urlencode, urlparse
 from urllib.request import Request, urlopen
 
 from mcp import ClientSession, StdioServerParameters
@@ -72,6 +74,7 @@ class CriticalResearchBundle(BaseModel):
     fetched_at: str
     reviews: list[ReviewSource]
     claims: list[CriticalClaim]
+    claim_status: Literal["pending", "structured"] = "structured"
     notice: str
 
 
@@ -339,7 +342,11 @@ class DoubanMcpAdapter:
             return f"Douban blocked the review request or requires authentication. {credential_guidance}"
 
         if any(marker in folded for marker in empty_markers) or DoubanMcpAdapter._empty_table(value):
-            return "Douban returned a valid response, but no long-form review summaries were available for this film."
+            return (
+                "Douban MCP returned an empty review table for the matched provider record. "
+                "This may indicate an identity mismatch or temporary access restriction; it "
+                "does not establish that the film has no long-form reviews."
+            )
 
         if rows:
             columns = sorted({column for row in rows for column in row})
@@ -387,6 +394,12 @@ class DoubanMcpAdapter:
         target_title = str(film.get("title") or "").casefold()
         original_title = str(film.get("original_title") or "").casefold()
         target_year = str(film.get("year") or "")
+        year_matches = [
+            candidate
+            for candidate in candidates
+            if target_year and candidate.get("publish_date") == target_year
+        ]
+        eligible = year_matches or candidates
 
         def score(candidate: dict[str, str]) -> float:
             title = candidate.get("title", "").casefold()
@@ -399,7 +412,7 @@ class DoubanMcpAdapter:
             subtitle_score = 0.1 if target_year and target_year in subtitle else 0
             return title_score + year_score + subtitle_score
 
-        match = max(candidates, key=score)
+        match = max(eligible, key=score)
         if score(match) < 0.55 or not match.get("id"):
             raise CriticismError("Douban did not return a confident film identity match.")
         return match
@@ -652,6 +665,690 @@ class LetterboxdApiAdapter:
         return payload
 
 
+class LetterboxdPublicWebAdapter:
+    """Bounded, local-only importer for attributed reviews on public film pages."""
+
+    web_base = "https://letterboxd.com"
+    max_response_bytes = 2_000_000
+
+    def __init__(
+        self,
+        transport: Callable[[str], tuple[str, str]] | None = None,
+    ) -> None:
+        self.transport = transport or self._request_html
+
+    def status(self) -> dict[str, Any]:
+        return {
+            "provider": "Letterboxd public web",
+            "state": "ready",
+            "configured": True,
+            "official": False,
+            "local_only": True,
+            "content_scope": "public attributed reviews selected from one film page",
+        }
+
+    def fetch_reviews(
+        self,
+        film: dict[str, Any],
+        limit: int = 4,
+    ) -> tuple[str, str, list[ReviewSource]]:
+        title = str(film.get("title") or "").strip()
+        if not title:
+            raise CriticismError("The film record has no title for Letterboxd matching.")
+
+        film_url, film_html = self._resolve_film_page(film)
+        film_slug = urlparse(film_url).path.strip("/").split("/")[-1]
+        review_urls = self._review_links(film_html, film_slug)[: max(1, min(limit, 6))]
+        if not review_urls:
+            raise CriticismError(
+                "Letterboxd's public film page returned no attributed review links."
+            )
+
+        reviews: list[ReviewSource] = []
+        for review_url in review_urls:
+            try:
+                final_url, review_html = self.transport(review_url)
+                self._validate_letterboxd_url(final_url)
+                review = self._normalise_review(review_html, final_url, len(reviews) + 1)
+            except CriticismError:
+                continue
+            if review is not None:
+                reviews.append(review)
+
+        if not reviews:
+            raise CriticismError(
+                "Letterboxd's public pages contained no usable attributed review text."
+            )
+        return film_slug, title, reviews
+
+    def _resolve_film_page(self, film: dict[str, Any]) -> tuple[str, str]:
+        title = str(film.get("title") or "").strip()
+        year = str(film.get("year") or "").strip()
+        directors = film.get("credits", {}).get("directors") or film.get("directors") or []
+        slug = self._slugify(title)
+        external_ids = film.get("external_ids") or {}
+        imdb_id = str(external_ids.get("imdb") or "").strip()
+        candidates = []
+        if re.fullmatch(r"tt\d+", imdb_id):
+            candidates.append(f"{self.web_base}/imdb/{imdb_id}/")
+        candidates.append(f"{self.web_base}/film/{slug}/")
+        if year:
+            candidates.append(f"{self.web_base}/film/{slug}-{year}/")
+
+        for candidate in candidates:
+            try:
+                final_url, body = self.transport(candidate)
+                self._validate_letterboxd_url(final_url)
+            except CriticismError:
+                continue
+            if self._film_page_matches(body, title, year, directors):
+                return final_url, body
+        raise CriticismError(
+            "Letterboxd did not resolve a public film page confidently from the verified "
+            "film identity."
+        )
+
+    @staticmethod
+    def _slugify(value: str) -> str:
+        normalised = unicodedata.normalize("NFKD", value).encode("ascii", "ignore").decode()
+        normalised = re.sub(r"['’]", "", normalised.casefold())
+        return re.sub(r"[^a-z0-9]+", "-", normalised).strip("-")
+
+    @staticmethod
+    def _film_page_matches(
+        body: str,
+        title: str,
+        year: str,
+        directors: list[Any] | tuple[Any, ...] = (),
+    ) -> bool:
+        match = re.search(
+            r'<meta\s+property=["\']og:title["\']\s+content=["\']([^"\']+)',
+            body,
+            re.IGNORECASE,
+        )
+        if not match:
+            return False
+        page_title = html.unescape(match.group(1)).casefold()
+        title_score = SequenceMatcher(None, title.casefold(), page_title.split(" (")[0]).ratio()
+        year_matches = not year or f"({year})" in page_title
+        if title_score < 0.75 or not year_matches:
+            return False
+        page_directors = LetterboxdPublicWebAdapter._film_page_directors(body)
+        target_directors = [
+            LetterboxdPublicWebAdapter._slugify(str(director)).replace("-", " ")
+            for director in directors
+            if str(director).strip()
+        ]
+        if page_directors and target_directors:
+            return any(
+                SequenceMatcher(None, target, page_director).ratio() >= 0.72
+                for target in target_directors
+                for page_director in page_directors
+            )
+        return True
+
+    @staticmethod
+    def _film_page_directors(body: str) -> list[str]:
+        payloads = re.findall(
+            r'<script[^>]+type=["\']application/ld\+json["\'][^>]*>(.*?)</script>',
+            body,
+            re.IGNORECASE | re.DOTALL,
+        )
+        for payload in payloads:
+            try:
+                value = json.loads(html.unescape(payload).strip())
+            except json.JSONDecodeError:
+                continue
+            values = value if isinstance(value, list) else [value]
+            for item in values:
+                if not isinstance(item, dict) or item.get("@type") != "Movie":
+                    continue
+                directors = item.get("director") or []
+                if isinstance(directors, dict):
+                    directors = [directors]
+                return [
+                    LetterboxdPublicWebAdapter._slugify(str(director.get("name") or "")).replace("-", " ")
+                    for director in directors
+                    if isinstance(director, dict) and director.get("name")
+                ]
+        return []
+
+    @classmethod
+    def _review_links(cls, body: str, film_slug: str) -> list[str]:
+        pattern = re.compile(
+            rf'href=["\'](/[^/"\']+/film/{re.escape(film_slug)}/)(?:#[^"\']*)?["\']',
+            re.IGNORECASE,
+        )
+        links: list[str] = []
+        seen: set[str] = set()
+        for path in pattern.findall(body):
+            url = f"{cls.web_base}{html.unescape(path)}"
+            if url not in seen:
+                seen.add(url)
+                links.append(url)
+        return links
+
+    @staticmethod
+    def _normalise_review(body: str, url: str, index: int) -> ReviewSource | None:
+        payloads = re.findall(
+            r'<script[^>]+type=["\']application/ld\+json["\'][^>]*>(.*?)</script>',
+            body,
+            re.IGNORECASE | re.DOTALL,
+        )
+        review: dict[str, Any] | None = None
+        for payload in payloads:
+            try:
+                clean_payload = re.sub(
+                    r"/\*\s*(?:<!\[CDATA\[|\]\]>)\s*\*/",
+                    "",
+                    html.unescape(payload),
+                ).strip()
+                value = json.loads(clean_payload)
+            except json.JSONDecodeError:
+                continue
+            values = value if isinstance(value, list) else [value]
+            review = next(
+                (
+                    item
+                    for item in values
+                    if isinstance(item, dict) and item.get("@type") == "Review"
+                ),
+                None,
+            )
+            if review:
+                break
+        if not review:
+            return None
+
+        text = LetterboxdApiAdapter._plain_text(str(review.get("reviewBody") or ""))
+        if len(text) < 40:
+            return None
+        authors = review.get("author") or []
+        if isinstance(authors, dict):
+            authors = [authors]
+        author = next(
+            (
+                str(item.get("name") or "").strip()
+                for item in authors
+                if isinstance(item, dict) and item.get("name")
+            ),
+            "Letterboxd member",
+        )
+        item = review.get("itemReviewed") if isinstance(review.get("itemReviewed"), dict) else {}
+        film_title = str(item.get("name") or "Film").strip()
+        rating = review.get("reviewRating")
+        rating_value = rating.get("ratingValue") if isinstance(rating, dict) else None
+        identifier = urlparse(url).path.strip("/").replace("/", "-")
+        return ReviewSource(
+            source_id=f"W{index}",
+            provider="Letterboxd public web",
+            review_id=identifier,
+            title=f"{author} on {film_title}",
+            summary=text[:12_000],
+            rating_label=f"{rating_value}/5" if rating_value is not None else None,
+            author=author,
+            url=url,
+            language="und",
+        )
+
+    @classmethod
+    def _request_html(cls, url: str) -> tuple[str, str]:
+        cls._validate_letterboxd_url(url)
+        request = Request(
+            url,
+            headers={
+                "Accept": "text/html,application/xhtml+xml",
+                "Accept-Language": "en-GB,en;q=0.8",
+                "User-Agent": "Mozilla/5.0 FirstRoll/0.1 local-public-review-import",
+            },
+            method="GET",
+        )
+        try:
+            with urlopen(request, timeout=20) as response:
+                final_url = response.geturl()
+                cls._validate_letterboxd_url(final_url)
+                payload = response.read(cls.max_response_bytes + 1)
+                if len(payload) > cls.max_response_bytes:
+                    raise CriticismError("Letterboxd returned an unexpectedly large page.")
+                charset = response.headers.get_content_charset() or "utf-8"
+                return final_url, payload.decode(charset, errors="replace")
+        except HTTPError as exc:
+            raise CriticismError(f"Letterboxd public web returned HTTP {exc.code}.") from exc
+        except (URLError, TimeoutError, UnicodeError) as exc:
+            raise CriticismError(f"Letterboxd public web request failed: {exc}") from exc
+
+    @staticmethod
+    def _validate_letterboxd_url(url: str) -> None:
+        parsed = urlparse(url)
+        if parsed.scheme != "https" or parsed.hostname not in {"letterboxd.com", "www.letterboxd.com"}:
+            raise CriticismError("Only public HTTPS pages on letterboxd.com may be imported.")
+
+
+class _GuardianBodyParser(HTMLParser):
+    """Collect paragraph text only from the Guardian article-body container."""
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.body_depth: int | None = None
+        self.depth = 0
+        self.paragraph_depth: int | None = None
+        self.current: list[str] = []
+        self.paragraphs: list[str] = []
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        attributes = dict(attrs)
+        self.depth += 1
+        if self.body_depth is None and attributes.get("data-gu-name") == "body":
+            self.body_depth = self.depth
+        if self.body_depth is not None and tag == "p" and self.paragraph_depth is None:
+            self.paragraph_depth = self.depth
+            self.current = []
+
+    def handle_endtag(self, tag: str) -> None:
+        if self.paragraph_depth == self.depth and tag == "p":
+            paragraph = re.sub(r"\s+", " ", " ".join(self.current)).strip()
+            if paragraph:
+                self.paragraphs.append(paragraph)
+            self.paragraph_depth = None
+            self.current = []
+        if self.body_depth == self.depth:
+            self.body_depth = None
+        self.depth = max(0, self.depth - 1)
+
+    def handle_data(self, data: str) -> None:
+        if self.paragraph_depth is not None:
+            value = data.strip()
+            if value:
+                self.current.append(value)
+
+
+class GuardianPublicWebAdapter:
+    """Bounded local importer for public Guardian film reviews."""
+
+    search_base = "https://content.guardianapis.com/search"
+    max_response_bytes = 3_000_000
+
+    def __init__(
+        self,
+        search_transport: Callable[[str], dict[str, Any]] | None = None,
+        html_transport: Callable[[str], tuple[str, str]] | None = None,
+    ) -> None:
+        self.search_transport = search_transport or self._request_json
+        self.html_transport = html_transport or self._request_html
+
+    def status(self) -> dict[str, Any]:
+        return {
+            "provider": "The Guardian public web",
+            "state": "ready",
+            "configured": True,
+            "official": False,
+            "local_only": True,
+            "content_scope": "public film-review articles selected for one film",
+        }
+
+    def fetch_reviews(
+        self,
+        film: dict[str, Any],
+        limit: int = 4,
+    ) -> tuple[str, str, list[ReviewSource]]:
+        title = str(film.get("title") or "").strip()
+        if not title:
+            raise CriticismError("The film record has no title for Guardian matching.")
+        quoted_title = quote_plus(f'"{title}"')
+        url = (
+            f"{self.search_base}?q={quoted_title}"
+            "&section=film&tag=tone/reviews&order-by=relevance&page-size=10&api-key=test"
+        )
+        response = self.search_transport(url).get("response") or {}
+        results = response.get("results") if isinstance(response, dict) else []
+        if not isinstance(results, list):
+            results = []
+        candidates = self._choose_matches(title, results)[: max(1, min(limit, 6))]
+        if not candidates:
+            raise CriticismError("The Guardian returned no confident film-review matches.")
+
+        reviews: list[ReviewSource] = []
+        for candidate in candidates:
+            article_url = str(candidate.get("webUrl") or "")
+            try:
+                final_url, body = self.html_transport(article_url)
+                self._validate_article_url(final_url)
+                review = self._normalise_article(body, final_url, len(reviews) + 1)
+            except CriticismError:
+                continue
+            if review is not None:
+                reviews.append(review)
+        if not reviews:
+            raise CriticismError(
+                "The Guardian's public pages contained no usable attributed review text."
+            )
+        provider_id = str(candidates[0].get("id") or urlparse(reviews[0].url).path.strip("/"))
+        return provider_id, title, reviews
+
+    @staticmethod
+    def _choose_matches(title: str, results: list[Any]) -> list[dict[str, Any]]:
+        target = title.casefold()
+
+        def score(item: dict[str, Any]) -> float:
+            headline = str(item.get("webTitle") or "").casefold()
+            simplified = re.split(r"\s+[–—:-]\s+", headline, maxsplit=1)[0]
+            similarity = max(
+                SequenceMatcher(None, target, headline).ratio(),
+                SequenceMatcher(None, target, simplified).ratio(),
+            )
+            if headline == target:
+                similarity += 0.5
+            elif target in headline:
+                similarity += 0.25
+            if "review" in headline:
+                similarity += 0.1
+            return similarity
+
+        valid = [
+            item
+            for item in results
+            if isinstance(item, dict)
+            and item.get("webUrl")
+            and str(item.get("sectionId") or "") == "film"
+        ]
+        ranked = sorted(valid, key=score, reverse=True)
+        return [item for item in ranked if score(item) >= 0.65]
+
+    @staticmethod
+    def _normalise_article(body: str, url: str, index: int) -> ReviewSource | None:
+        payloads = re.findall(
+            r'<script[^>]+type=["\']application/ld\+json["\'][^>]*>(.*?)</script>',
+            body,
+            re.IGNORECASE | re.DOTALL,
+        )
+        article: dict[str, Any] | None = None
+        for payload in payloads:
+            try:
+                value = json.loads(html.unescape(payload).strip())
+            except json.JSONDecodeError:
+                continue
+            values = value if isinstance(value, list) else [value]
+            article = next(
+                (
+                    item
+                    for item in values
+                    if isinstance(item, dict)
+                    and item.get("@type") in {"Article", "NewsArticle", "Review"}
+                ),
+                None,
+            )
+            if article:
+                break
+        if not article:
+            return None
+
+        parser = _GuardianBodyParser()
+        parser.feed(body)
+        text = "\n\n".join(parser.paragraphs).strip()
+        if len(text) < 80:
+            return None
+        authors = article.get("author") or []
+        if isinstance(authors, dict):
+            authors = [authors]
+        author = next(
+            (
+                str(item.get("name") or "").strip()
+                for item in authors
+                if isinstance(item, dict) and item.get("name")
+            ),
+            "Guardian critic",
+        )
+        headline = str(article.get("headline") or "Guardian film review").strip()
+        rating_match = re.search(
+            r'aria-label=["\']([0-5](?:\.5)?)\s+out\s+of\s+5\s+stars?["\']',
+            body,
+            re.IGNORECASE,
+        )
+        identifier = urlparse(url).path.strip("/")
+        return ReviewSource(
+            source_id=f"G{index}",
+            provider="The Guardian public web",
+            review_id=identifier,
+            title=headline,
+            summary=text[:12_000],
+            rating_label=f"{rating_match.group(1)}/5" if rating_match else None,
+            author=author,
+            url=url,
+            language="en",
+        )
+
+    @classmethod
+    def _request_json(cls, url: str) -> dict[str, Any]:
+        parsed = urlparse(url)
+        if parsed.scheme != "https" or parsed.hostname != "content.guardianapis.com":
+            raise CriticismError("Only the Guardian public search index may resolve reviews.")
+        request = Request(url, headers={"Accept": "application/json"}, method="GET")
+        try:
+            with urlopen(request, timeout=20) as response:
+                payload = json.loads(response.read(cls.max_response_bytes).decode("utf-8"))
+        except HTTPError as exc:
+            raise CriticismError(f"Guardian search returned HTTP {exc.code}.") from exc
+        except (URLError, TimeoutError, UnicodeError, json.JSONDecodeError) as exc:
+            raise CriticismError(f"Guardian search failed: {exc}") from exc
+        if not isinstance(payload, dict):
+            raise CriticismError("Guardian search returned an invalid response.")
+        return payload
+
+    @classmethod
+    def _request_html(cls, url: str) -> tuple[str, str]:
+        cls._validate_article_url(url)
+        request = Request(
+            url,
+            headers={
+                "Accept": "text/html,application/xhtml+xml",
+                "Accept-Language": "en-GB,en;q=0.8",
+                "User-Agent": "Mozilla/5.0 FirstRoll/0.1 local-public-review-import",
+            },
+            method="GET",
+        )
+        try:
+            with urlopen(request, timeout=20) as response:
+                final_url = response.geturl()
+                cls._validate_article_url(final_url)
+                payload = response.read(cls.max_response_bytes + 1)
+                if len(payload) > cls.max_response_bytes:
+                    raise CriticismError("The Guardian returned an unexpectedly large page.")
+                charset = response.headers.get_content_charset() or "utf-8"
+                return final_url, payload.decode(charset, errors="replace")
+        except HTTPError as exc:
+            raise CriticismError(f"Guardian public web returned HTTP {exc.code}.") from exc
+        except (URLError, TimeoutError, UnicodeError) as exc:
+            raise CriticismError(f"Guardian public web request failed: {exc}") from exc
+
+    @staticmethod
+    def _validate_article_url(url: str) -> None:
+        parsed = urlparse(url)
+        if parsed.scheme != "https" or parsed.hostname not in {
+            "theguardian.com",
+            "www.theguardian.com",
+        }:
+            raise CriticismError("Only public HTTPS articles on theguardian.com may be imported.")
+
+
+class CrossrefResearchAdapter:
+    """Retrieve attributed scholarly abstracts from Crossref's public metadata API."""
+
+    api_base = "https://api.crossref.org/works"
+    max_response_bytes = 3_000_000
+
+    def __init__(
+        self,
+        transport: Callable[[str], dict[str, Any]] | None = None,
+    ) -> None:
+        self.transport = transport or self._request_json
+
+    def status(self) -> dict[str, Any]:
+        return {
+            "provider": "Crossref scholarship",
+            "state": "ready",
+            "configured": True,
+            "official": True,
+            "content_scope": "attributed scholarly abstracts from registered publications",
+        }
+
+    def fetch_reviews(
+        self,
+        film: dict[str, Any],
+        limit: int = 6,
+    ) -> tuple[str, str, list[ReviewSource]]:
+        title = str(film.get("title") or "").strip()
+        if not title:
+            raise CriticismError("The film record has no title for scholarly research.")
+        directors = film.get("credits", {}).get("directors") or film.get("directors") or []
+        director = str(directors[0]).strip() if directors else ""
+        query = " ".join(part for part in (f'"{title}"', director, "film cinema") if part)
+        url = f"{self.api_base}?{urlencode({'query.bibliographic': query, 'filter': 'has-abstract:true', 'rows': '24'})}"
+        payload = self.transport(url)
+        message = payload.get("message") if isinstance(payload, dict) else None
+        items = message.get("items") if isinstance(message, dict) else None
+        reviews = self._normalise_items(
+            items if isinstance(items, list) else [],
+            film,
+            max(1, min(limit, 8)),
+        )
+        if not reviews:
+            raise CriticismError(
+                "Crossref found no confidently matched scholarly abstracts for this film."
+            )
+        slug = re.sub(r"[^a-z0-9]+", "-", title.casefold()).strip("-")
+        return f"crossref:{slug}", title, reviews
+
+    @classmethod
+    def _normalise_items(
+        cls,
+        items: list[Any],
+        film: dict[str, Any],
+        limit: int,
+    ) -> list[ReviewSource]:
+        aliases = [
+            cls._normalise(str(value))
+            for value in (film.get("title"), film.get("original_title"))
+            if value
+        ]
+        directors = film.get("credits", {}).get("directors") or film.get("directors") or []
+        director_surnames = {
+            cls._normalise(str(director)).split()[-1]
+            for director in directors
+            if cls._normalise(str(director))
+        }
+        reviews: list[ReviewSource] = []
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            work_title = cls._first_text(item.get("title"))
+            abstract = LetterboxdApiAdapter._plain_text(str(item.get("abstract") or ""))
+            if len(abstract) < 80:
+                continue
+            normalised_title = cls._normalise(work_title)
+            normalised_body = cls._normalise(f"{work_title} {abstract}")
+            matched_alias = next((alias for alias in aliases if alias in normalised_body), "")
+            if not matched_alias:
+                continue
+            short_title = len(matched_alias.split()) <= 2
+            has_director = any(name in normalised_body for name in director_surnames)
+            has_film_context = any(
+                term in normalised_title.split()
+                for term in ("film", "cinema", "cinematic", "movie")
+            )
+            if short_title and director_surnames and not (has_director or has_film_context):
+                continue
+
+            doi = str(item.get("DOI") or "").strip()
+            source_url = f"https://doi.org/{quote_plus(doi, safe='/')}" if doi else str(item.get("URL") or "")
+            parsed = urlparse(source_url)
+            if parsed.scheme not in {"http", "https"} or not parsed.hostname:
+                continue
+            author = cls._authors(item.get("author"))
+            venue = cls._first_text(item.get("container-title")) or str(item.get("publisher") or "Scholarly publication")
+            year = cls._published_year(item.get("published"))
+            work_type = str(item.get("type") or "research work").replace("-", " ")
+            label = " · ".join(part for part in (work_type.title(), venue, year) if part)
+            identifier = doi or source_url
+            reviews.append(
+                ReviewSource(
+                    source_id=f"S{len(reviews) + 1}",
+                    provider="Crossref scholarship",
+                    review_id=identifier,
+                    title=work_title or f"Research on {film.get('title') or 'the film'}",
+                    summary=abstract[:6000],
+                    rating_label=label or None,
+                    author=author or venue,
+                    url=source_url,
+                    language=str(item.get("language") or "und"),
+                )
+            )
+            if len(reviews) >= limit:
+                break
+        return reviews
+
+    @staticmethod
+    def _normalise(value: str) -> str:
+        value = unicodedata.normalize("NFKD", value).encode("ascii", "ignore").decode()
+        return re.sub(r"[^a-z0-9]+", " ", value.casefold()).strip()
+
+    @staticmethod
+    def _first_text(value: Any) -> str:
+        if isinstance(value, list):
+            return str(value[0]).strip() if value else ""
+        return str(value or "").strip()
+
+    @staticmethod
+    def _authors(value: Any) -> str:
+        if not isinstance(value, list):
+            return ""
+        names = []
+        for author in value[:4]:
+            if not isinstance(author, dict):
+                continue
+            name = " ".join(
+                part for part in (str(author.get("given") or "").strip(), str(author.get("family") or "").strip()) if part
+            )
+            if name:
+                names.append(name)
+        return ", ".join(names)
+
+    @staticmethod
+    def _published_year(value: Any) -> str:
+        if not isinstance(value, dict):
+            return ""
+        parts = value.get("date-parts")
+        if not isinstance(parts, list) or not parts or not isinstance(parts[0], list) or not parts[0]:
+            return ""
+        return str(parts[0][0])
+
+    @classmethod
+    def _request_json(cls, url: str) -> dict[str, Any]:
+        parsed = urlparse(url)
+        if parsed.scheme != "https" or parsed.hostname != "api.crossref.org":
+            raise CriticismError("Only Crossref's public HTTPS metadata API may be queried.")
+        request = Request(
+            url,
+            headers={
+                "Accept": "application/json",
+                "User-Agent": "FirstRoll/0.1 (local film-research client)",
+            },
+            method="GET",
+        )
+        try:
+            with urlopen(request, timeout=20) as response:
+                payload = response.read(cls.max_response_bytes + 1)
+                if len(payload) > cls.max_response_bytes:
+                    raise CriticismError("Crossref returned an unexpectedly large response.")
+                value = json.loads(payload.decode("utf-8"))
+        except HTTPError as exc:
+            raise CriticismError(f"Crossref returned HTTP {exc.code}.") from exc
+        except (URLError, TimeoutError, UnicodeError, json.JSONDecodeError) as exc:
+            raise CriticismError(f"Crossref research failed: {exc}") from exc
+        if not isinstance(value, dict):
+            raise CriticismError("Crossref returned an invalid response.")
+        return value
+
+
 class CriticismStore:
     """Private cache for attributed, structured criticism."""
 
@@ -720,6 +1417,7 @@ def build_bundle(
     *,
     provider: str = "Douban",
     notice: str | None = None,
+    claim_status: Literal["pending", "structured"] = "structured",
 ) -> CriticalResearchBundle:
     return CriticalResearchBundle(
         film_id=film_id,
@@ -729,6 +1427,7 @@ def build_bundle(
         fetched_at=datetime.now(timezone.utc).isoformat(),
         reviews=reviews,
         claims=claims,
+        claim_status=claim_status,
         notice=notice
         or (
             f"These are model-structured claims from attributed {provider} reviews. "

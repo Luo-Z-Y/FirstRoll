@@ -9,15 +9,20 @@ from pydantic import BaseModel, SecretStr
 from starlette.concurrency import run_in_threadpool
 
 from app.backend.criticism import (
+    CrossrefResearchAdapter,
+    CriticalResearchBundle,
     CriticismError,
     CriticismStore,
     DoubanMcpAdapter,
+    GuardianPublicWebAdapter,
     LetterboxdApiAdapter,
+    LetterboxdPublicWebAdapter,
+    ReviewSource,
     build_bundle,
 )
 from app.backend.discovery import DiscoveryService
 from app.backend.evidence import EvidencePacket
-from app.backend.library import LocalLibraryCatalogue
+from app.backend.library import MAX_DOCUMENT_BYTES, SUPPORTED_SUFFIXES, LocalLibraryCatalogue
 from app.backend.library_index import LocalLibraryIndex
 from app.backend.settings import CONNECTORS, LocalSettingsStore
 from app.backend.study_service import DeepSeekStudyService, StudyGenerationError
@@ -34,7 +39,10 @@ library_catalogue = LocalLibraryCatalogue()
 library_index = LocalLibraryIndex()
 study_service = DeepSeekStudyService(settings_store)
 douban_adapter = DoubanMcpAdapter(settings_store)
+guardian_web_adapter = GuardianPublicWebAdapter()
+crossref_research_adapter = CrossrefResearchAdapter()
 letterboxd_adapter = LetterboxdApiAdapter(settings_store)
+letterboxd_web_adapter = LetterboxdPublicWebAdapter()
 criticism_store = CriticismStore()
 web_directory = Path(__file__).resolve().parents[1] / "web"
 app.mount("/assets", StaticFiles(directory=web_directory), name="web-assets")
@@ -49,6 +57,47 @@ class FilmStudyRequest(BaseModel):
     question: str | None = None
 
 
+CRITICISM_PROVIDERS = {
+    "crossref": "Crossref scholarship",
+    "douban": "Douban",
+    "letterboxd": "Letterboxd",
+    "letterboxd-web": "Letterboxd public web",
+    "guardian-web": "The Guardian public web",
+}
+
+
+def cache_raw_criticism(
+    film_id: str,
+    provider_film_id: str,
+    provider_film_title: str,
+    reviews: list[ReviewSource],
+    provider: str,
+) -> CriticalResearchBundle:
+    existing = criticism_store.load(film_id, provider)
+    same_sources = bool(existing) and [review.review_id for review in existing.reviews] == [
+        review.review_id for review in reviews
+    ]
+    claims = existing.claims if existing and same_sources else []
+    has_preserved_claims = bool(claims)
+    bundle = build_bundle(
+        film_id,
+        provider_film_id,
+        provider_film_title,
+        reviews,
+        claims,
+        provider=provider,
+        claim_status="structured" if has_preserved_claims else "pending",
+        notice=(
+            "Attributed reviews were refreshed and cached locally. Previously validated "
+            "claims remain visible while DeepSeek prepares a replacement."
+            if has_preserved_claims
+            else "Attributed reviews were fetched and cached locally. DeepSeek structuring is pending."
+        ),
+    )
+    criticism_store.save(bundle)
+    return bundle
+
+
 def require_local_settings_request(request: Request) -> None:
     client_host = request.client.host if request.client else ""
     if client_host not in {"127.0.0.1", "::1", "testclient"}:
@@ -61,6 +110,24 @@ def public_connector(connector_id: str) -> dict:
         for connector in settings_store.public_connectors()
         if connector["id"] == connector_id
     )
+
+
+def public_library_settings() -> dict:
+    catalogue = library_catalogue.public_catalogue()
+    index = library_index.status()
+    catalogue["index"] = index
+    catalogue["supported_formats"] = sorted(
+        suffix.lstrip(".").upper() for suffix in SUPPORTED_SUFFIXES
+    )
+    catalogue["max_upload_mb"] = MAX_DOCUMENT_BYTES // (1024 * 1024)
+    catalogue["indexable_document_count"] = sum(
+        document["format"] == "PDF" for document in catalogue["documents"]
+    )
+    catalogue["index_needs_rebuild"] = (
+        index.get("document_count") != catalogue["indexable_document_count"]
+        or (catalogue["indexable_document_count"] > 0 and index.get("state") != "ready")
+    )
+    return catalogue
 
 
 @app.get("/api/health")
@@ -94,6 +161,56 @@ def get_settings(request: Request) -> dict:
             "secrets_returned": False,
         },
     }
+
+
+@app.get("/api/settings/library")
+def get_settings_library(request: Request) -> dict:
+    require_local_settings_request(request)
+    return public_library_settings()
+
+
+@app.post("/api/settings/library")
+async def add_settings_library_document(
+    request: Request,
+    document: UploadFile = File(...),
+) -> dict:
+    require_local_settings_request(request)
+    try:
+        added = await run_in_threadpool(
+            library_catalogue.add_document,
+            document.filename or "",
+            document.file,
+        )
+    except (OSError, RuntimeError, ValueError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    finally:
+        await document.close()
+    return {"document": added, "library": public_library_settings()}
+
+
+@app.delete("/api/settings/library/{document_id}")
+def remove_settings_library_document(document_id: str, request: Request) -> dict:
+    require_local_settings_request(request)
+    try:
+        removed = library_catalogue.remove_document(document_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except (OSError, RuntimeError) as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+    return {"document": removed, "library": public_library_settings()}
+
+
+@app.post("/api/settings/library/rebuild")
+async def rebuild_settings_library_index(request: Request) -> dict:
+    require_local_settings_request(request)
+    try:
+        await run_in_threadpool(library_index.build, library_catalogue)
+    except (ImportError, OSError, RuntimeError, ValueError) as exc:
+        raise HTTPException(
+            status_code=500,
+            detail="The private search index could not be rebuilt. Check the backend log.",
+        ) from exc
+    return public_library_settings()
 
 
 @app.put("/api/settings/connectors/{connector_id}")
@@ -177,6 +294,10 @@ def contract() -> dict:
             "GET /settings",
             "GET /api/settings",
             "PUT /api/settings/connectors/{connector_id}",
+            "GET /api/settings/library",
+            "POST /api/settings/library",
+            "DELETE /api/settings/library/{document_id}",
+            "POST /api/settings/library/rebuild",
             "GET /api/discovery/status",
             "GET /api/discovery/search",
             "GET /api/discovery/films/{film_id}",
@@ -290,13 +411,18 @@ async def research_douban_criticism(film_id: str) -> dict:
         detail = discovery_service.detail(film_id)
         film = detail["film"]
         provider_id, provider_title, reviews = await douban_adapter.fetch_reviews(film)
-        claims = await run_in_threadpool(study_service.structure_reviews, film, reviews)
-        bundle = build_bundle(film_id, provider_id, provider_title, reviews, claims)
-        await run_in_threadpool(criticism_store.save, bundle)
+        bundle = await run_in_threadpool(
+            cache_raw_criticism,
+            film_id,
+            provider_id,
+            provider_title,
+            reviews,
+            "Douban",
+        )
         return {"critical_research": bundle.model_dump()}
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
-    except (CriticismError, StudyGenerationError) as exc:
+    except CriticismError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
 
@@ -308,20 +434,127 @@ async def research_letterboxd_criticism(film_id: str) -> dict:
         provider_id, provider_title, reviews = await run_in_threadpool(
             letterboxd_adapter.fetch_reviews, film
         )
-        claims = await run_in_threadpool(study_service.structure_reviews, film, reviews)
-        bundle = build_bundle(
+        bundle = await run_in_threadpool(
+            cache_raw_criticism,
             film_id,
             provider_id,
             provider_title,
             reviews,
-            claims,
-            provider="Letterboxd",
+            "Letterboxd",
         )
-        await run_in_threadpool(criticism_store.save, bundle)
         return {"critical_research": bundle.model_dump()}
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
-    except (CriticismError, StudyGenerationError) as exc:
+    except CriticismError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+
+@app.post("/api/discovery/films/{film_id:path}/criticism/letterboxd-web")
+async def research_letterboxd_web_criticism(film_id: str, request: Request) -> dict:
+    require_local_settings_request(request)
+    try:
+        detail = discovery_service.detail(film_id)
+        film = detail["film"]
+        provider_id, provider_title, reviews = await run_in_threadpool(
+            letterboxd_web_adapter.fetch_reviews, film
+        )
+        bundle = await run_in_threadpool(
+            cache_raw_criticism,
+            film_id,
+            provider_id,
+            provider_title,
+            reviews,
+            "Letterboxd public web",
+        )
+        return {"critical_research": bundle.model_dump()}
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except CriticismError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+
+@app.post("/api/discovery/films/{film_id:path}/criticism/guardian-web")
+async def research_guardian_web_criticism(film_id: str, request: Request) -> dict:
+    require_local_settings_request(request)
+    try:
+        detail = discovery_service.detail(film_id)
+        film = detail["film"]
+        provider_id, provider_title, reviews = await run_in_threadpool(
+            guardian_web_adapter.fetch_reviews, film
+        )
+        bundle = await run_in_threadpool(
+            cache_raw_criticism,
+            film_id,
+            provider_id,
+            provider_title,
+            reviews,
+            "The Guardian public web",
+        )
+        return {"critical_research": bundle.model_dump()}
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except CriticismError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+
+@app.post("/api/discovery/films/{film_id:path}/criticism/crossref")
+async def research_crossref_criticism(film_id: str) -> dict:
+    try:
+        detail = discovery_service.detail(film_id)
+        film = detail["film"]
+        provider_id, provider_title, reviews = await run_in_threadpool(
+            crossref_research_adapter.fetch_reviews, film
+        )
+        bundle = await run_in_threadpool(
+            cache_raw_criticism,
+            film_id,
+            provider_id,
+            provider_title,
+            reviews,
+            "Crossref scholarship",
+        )
+        return {"critical_research": bundle.model_dump()}
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except CriticismError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+
+@app.post("/api/discovery/films/{film_id:path}/criticism/{provider}/structure")
+async def structure_cached_criticism(film_id: str, provider: str, request: Request) -> dict:
+    require_local_settings_request(request)
+    provider_name = CRITICISM_PROVIDERS.get(provider)
+    if not provider_name:
+        raise HTTPException(status_code=404, detail="Unknown criticism provider.")
+    try:
+        detail = discovery_service.detail(film_id)
+        bundle = criticism_store.load(film_id, provider_name)
+        if bundle is None or not bundle.reviews:
+            raise HTTPException(
+                status_code=409,
+                detail="Fetch and cache attributed reviews before structuring them.",
+            )
+        claims = await run_in_threadpool(
+            study_service.structure_reviews,
+            detail["film"],
+            bundle.reviews,
+        )
+        structured = bundle.model_copy(
+            update={
+                "claims": claims,
+                "claim_status": "structured",
+                "notice": (
+                    f"DeepSeek structured {len(claims)} claims from attributed "
+                    f"{provider_name} reviews. They remain secondary criticism, not verified "
+                    "film observations or creator statements."
+                ),
+            }
+        )
+        await run_in_threadpool(criticism_store.save, structured)
+        return {"critical_research": structured.model_dump()}
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except StudyGenerationError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
 

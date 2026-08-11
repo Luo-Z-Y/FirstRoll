@@ -74,6 +74,27 @@ def test_wikidata_search_matches_title_year_and_director_without_api_key() -> No
     assert result["results"][0]["directors"] == ["Example Director"]
 
 
+def test_search_uses_portrait_wikipedia_image_when_wikidata_has_no_poster() -> None:
+    service = DiscoveryService(
+        request_json=fake_wikidata,
+        wikipedia_summary=lambda _: {
+            "originalimage": {
+                "source": "https://upload.wikimedia.org/wikipedia/en/a/ab/Example.jpg",
+                "width": 265,
+                "height": 376,
+            },
+            "content_urls": {
+                "desktop": {"page": "https://en.wikipedia.org/wiki/Example_Film"}
+            },
+        },
+    )
+
+    result = service.search("Example Film", year=2024)
+
+    assert result["results"][0]["poster_url"].endswith("/Example.jpg")
+    assert result["results"][0]["poster_source"]["name"] == "Wikipedia article image"
+
+
 def test_wikidata_detail_keeps_intention_claims_out_of_identity_metadata() -> None:
     service = DiscoveryService(
         request_json=fake_wikidata,

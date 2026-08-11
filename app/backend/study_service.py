@@ -307,6 +307,22 @@ class DeepSeekStudyService:
         if not reviews:
             return []
         key = self._api_key()
+        claims: list[CriticalClaim] = []
+        for offset in range(0, len(reviews), 3):
+            batch = reviews[offset : offset + 3]
+            batch_claims = self._structure_review_batch(film, batch, key)
+            for claim in batch_claims:
+                claims.append(
+                    claim.model_copy(update={"claim_id": f"C{len(claims) + 1}"})
+                )
+        return claims
+
+    def _structure_review_batch(
+        self,
+        film: dict[str, Any],
+        reviews: list[ReviewSource],
+        key: str,
+    ) -> list[CriticalClaim]:
         payload = {
             "model": self.model,
             "messages": [
@@ -324,7 +340,7 @@ class DeepSeekStudyService:
                             },
                             ensure_ascii=False,
                         )
-                        + "\n\nDOUBAN REVIEW SUMMARIES\n"
+                        + "\n\nATTRIBUTED REVIEW TEXT\n"
                         + json.dumps(
                             [review.model_dump() for review in reviews],
                             ensure_ascii=False,
@@ -336,34 +352,58 @@ class DeepSeekStudyService:
             "thinking": {"type": "disabled"},
             "response_format": {"type": "json_object"},
             "temperature": 0,
-            "max_tokens": 2400,
+            "max_tokens": 2600,
         }
-        response = self._transport(DEEPSEEK_CHAT_URL, payload, key)
-        try:
-            content = response["choices"][0]["message"]["content"]
-            parsed = self._parse_json(content)
-            claims = CriticalClaimPayload.model_validate(parsed).claims
-        except ValidationError as exc:
-            locations = [
-                ".".join(str(part) for part in error["loc"])
-                for error in exc.errors(include_url=False)[:5]
-            ]
+        last_error: Exception | None = None
+        claims: list[CriticalClaim] = []
+        for attempt in range(2):
+            request_payload = payload
+            if attempt:
+                request_payload = {
+                    **payload,
+                    "messages": payload["messages"]
+                    + [
+                        {
+                            "role": "system",
+                            "content": (
+                                "The previous response was invalid. Return one compact JSON "
+                                "object matching the required schema exactly. Do not use Markdown."
+                            ),
+                        }
+                    ],
+                }
+            response = self._transport(DEEPSEEK_CHAT_URL, request_payload, key)
+            try:
+                content = response["choices"][0]["message"]["content"]
+                parsed = self._parse_json(content)
+                claims = CriticalClaimPayload.model_validate(parsed).claims
+                source_ids = {review.source_id for review in reviews}
+                if any(claim.source_id not in source_ids for claim in claims):
+                    raise ValueError("The response cited an unknown criticism source.")
+                last_error = None
+                break
+            except (
+                KeyError,
+                IndexError,
+                TypeError,
+                ValueError,
+                json.JSONDecodeError,
+                ValidationError,
+            ) as exc:
+                last_error = exc
+        if last_error is not None:
+            if isinstance(last_error, ValidationError):
+                locations = [
+                    ".".join(str(part) for part in error["loc"])
+                    for error in last_error.errors(include_url=False)[:5]
+                ]
+                raise StudyGenerationError(
+                    "DeepSeek criticism did not match the evidence schema after one repair at: "
+                    + ", ".join(locations)
+                ) from last_error
             raise StudyGenerationError(
-                "DeepSeek criticism did not match the evidence schema at: "
-                + ", ".join(locations)
-            ) from exc
-        except (KeyError, IndexError, TypeError, json.JSONDecodeError) as exc:
-            raise StudyGenerationError(
-                "DeepSeek returned invalid structured criticism."
-            ) from exc
-        source_ids = {review.source_id for review in reviews}
-        seen_claims: set[str] = set()
-        for claim in claims:
-            if claim.source_id not in source_ids:
-                raise StudyGenerationError("DeepSeek cited an unknown criticism source.")
-            if claim.claim_id in seen_claims:
-                raise StudyGenerationError("DeepSeek returned duplicate criticism claim IDs.")
-            seen_claims.add(claim.claim_id)
+                "DeepSeek returned invalid structured criticism after one repair attempt."
+            ) from last_error
         return claims
 
     def _api_key(self) -> str:
@@ -465,7 +505,7 @@ Return only a complete JSON object in exactly the same schema as the draft. Addr
 
     @staticmethod
     def _criticism_system_prompt() -> str:
-        return """You are a strict evidence-extraction editor. Convert supplied Douban review summaries into structured critical claims. Output valid JSON only.
+        return """You are a strict evidence-extraction editor. Convert supplied attributed review text into structured critical claims. Output valid JSON only.
 
 Rules:
 1. Use only statements actually present in each summary. Do not add facts from memory.
