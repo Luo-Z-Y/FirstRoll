@@ -75,6 +75,28 @@ Acceptance evidence:
 - frontend JavaScript syntax and repository whitespace checks pass;
 - browser checks confirm clean initial, search-results and narrow-width layouts.
 
+### 11 August 2026 — Douban translated-title identity repair
+
+Delivered:
+
+1. Reproduced the apparent MCP failure for *Memoria* and traced the nested task-group error
+   to FirstRoll's film identity guard, not to Douban review availability.
+2. Prefer Wikidata's IMDb identifier for Douban film search, with exact-year validation of
+   the unique provider result.
+3. Retained the stricter title/year scorer when no stable external identifier is available
+   or the provider returns ambiguous candidates.
+4. Flatten nested MCP exception groups so future failures expose the actionable underlying
+   diagnostic.
+5. Added regression coverage for translated-title acceptance, same-year ambiguity and
+   task-group error unwrapping.
+
+Acceptance evidence:
+
+- live *Memoria* check resolves Douban subject `30137576` and retrieves eight attributed
+  long-form reviews;
+- scoped criticism tests: 23 passed;
+- scoped Ruff checks pass.
+
 ### 11 August 2026 — Source documentation and Letterboxd identity repair
 
 Delivered:

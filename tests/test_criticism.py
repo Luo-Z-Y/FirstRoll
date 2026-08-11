@@ -94,6 +94,43 @@ def test_douban_match_does_not_choose_near_title_from_wrong_year() -> None:
     assert DoubanMcpAdapter._choose_match(film, candidates)["id"] == "1291557"
 
 
+def test_douban_match_accepts_one_exact_year_result_with_translated_title() -> None:
+    film = {"title": "Memoria", "original_title": "記憶", "year": 2021}
+    candidates = [
+        {
+            "id": "30137576",
+            "title": "记忆",
+            "publish_date": "2021",
+            "subtitle": "哥伦比亚 / 阿彼察邦·韦拉斯哈古",
+        }
+    ]
+
+    assert DoubanMcpAdapter._choose_match(film, candidates)["id"] == "30137576"
+
+
+def test_douban_match_rejects_ambiguous_translated_same_year_results() -> None:
+    film = {"title": "Memoria", "original_title": "記憶", "year": 2021}
+    candidates = [
+        {"id": "1", "title": "记忆", "publish_date": "2021", "subtitle": ""},
+        {"id": "2", "title": "记录记忆", "publish_date": "2021", "subtitle": ""},
+    ]
+
+    try:
+        DoubanMcpAdapter._choose_match(film, candidates)
+    except CriticismError as exc:
+        assert "confident film identity match" in str(exc)
+    else:
+        raise AssertionError("Ambiguous translated results should not be accepted")
+
+
+def test_douban_unwraps_useful_error_from_task_group() -> None:
+    root = CriticismError("Douban did not return a confident film identity match.")
+    wrapped = ExceptionGroup("unhandled errors in a TaskGroup", [ExceptionGroup("nested", [root])])
+
+    assert DoubanMcpAdapter._nested_criticism_error(wrapped) is root
+    assert DoubanMcpAdapter._mcp_exception_detail(wrapped) == str(root)
+
+
 def test_letterboxd_official_api_reviews_are_normalised() -> None:
     calls: list[tuple[str, str, dict[str, str], bytes | None]] = []
 

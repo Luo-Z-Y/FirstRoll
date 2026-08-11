@@ -245,14 +245,19 @@ discovery and metadata channel; the named author and publication remain the actu
 ### Douban: optional local MCP
 
 The Douban adapter starts the separately installed MCP server over stdio and calls only
-`search-movie` and `list-movie-reviews`. It prefers a title-and-year match and refuses a weak
-identity match rather than silently selecting the first result.
+`search-movie` and `list-movie-reviews`. When Wikidata supplies an IMDb ID, FirstRoll uses
+that stable identifier as the Douban search query and validates the returned release year.
+This avoids literal-string failures across English, Traditional Chinese and Simplified
+Chinese titles. Without an IMDb ID it falls back to title-and-year scoring, and refuses a
+weak or ambiguous identity match rather than silently selecting the first result.
 
 The connector returns Markdown tables, so FirstRoll reconstructs logical rows when long
 Chinese summaries contain line breaks and repairs unescaped pipe characters without losing
 the final review ID. Each accepted row receives a stable Douban review URL and language
 label. Authentication blocks, empty tables, missing columns and schema drift produce
 different diagnostics; an empty response is not treated as proof that no reviews exist.
+MCP task-group wrappers are flattened so the interface reports the underlying matching or
+connector error instead of Python's generic `unhandled errors in a TaskGroup` message.
 
 ### Letterboxd: public pages and verified identity
 

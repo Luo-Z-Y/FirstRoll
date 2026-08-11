@@ -120,7 +120,9 @@ class DoubanMcpAdapter:
                     await session.initialize()
                     tools = await session.list_tools()
         except Exception as exc:
-            raise CriticismError(f"Douban MCP failed to initialise: {exc}") from exc
+            raise CriticismError(
+                f"Douban MCP failed to initialise: {self._mcp_exception_detail(exc)}"
+            ) from exc
         names = [tool.name for tool in tools.tools]
         required = {"search-movie", "list-movie-reviews"}
         if not required.issubset(names):
@@ -143,6 +145,16 @@ class DoubanMcpAdapter:
         title = str(film.get("title") or "").strip()
         if not title:
             raise CriticismError("The film record has no title for Douban matching.")
+        external_ids = film.get("external_ids")
+        imdb_id = (
+            str(external_ids.get("imdb") or "").strip()
+            if isinstance(external_ids, dict)
+            else ""
+        )
+        # Douban's search accepts IMDb identifiers. Prefer that stable identity key
+        # because English, Traditional Chinese and Simplified Chinese titles often
+        # cannot be compared reliably as strings.
+        search_query = imdb_id or title
         environment = {"PATH": os.getenv("PATH", "")}
         cookie = self.settings.effective_secret("douban")
         if cookie:
@@ -157,7 +169,11 @@ class DoubanMcpAdapter:
             async with stdio_client(parameters) as (read, write):
                 async with ClientSession(read, write) as session:
                     await session.initialize()
-                    search_text = await self._call_text(session, "search-movie", {"q": title})
+                    search_text = await self._call_text(
+                        session,
+                        "search-movie",
+                        {"q": search_query},
+                    )
                     candidates = self._markdown_table(search_text)
                     match = self._choose_match(film, candidates)
                     review_text = await self._call_text(
@@ -168,7 +184,12 @@ class DoubanMcpAdapter:
         except CriticismError:
             raise
         except Exception as exc:
-            raise CriticismError(f"Douban MCP failed: {exc}") from exc
+            nested = self._nested_criticism_error(exc)
+            if nested is not None:
+                raise CriticismError(str(nested)) from exc
+            raise CriticismError(
+                f"Douban MCP failed: {self._mcp_exception_detail(exc)}"
+            ) from exc
         rows = self._markdown_table(review_text)[:limit]
         reviews = [
             ReviewSource(
@@ -388,6 +409,38 @@ class DoubanMcpAdapter:
         return redacted if len(redacted) <= limit else f"{redacted[: limit - 1].rstrip()}…"
 
     @staticmethod
+    def _nested_criticism_error(exc: BaseException) -> CriticismError | None:
+        """Recover a useful adapter error hidden by an AnyIO ExceptionGroup."""
+        if isinstance(exc, CriticismError):
+            return exc
+        for child in getattr(exc, "exceptions", ()):
+            nested = DoubanMcpAdapter._nested_criticism_error(child)
+            if nested is not None:
+                return nested
+        return None
+
+    @staticmethod
+    def _mcp_exception_detail(exc: BaseException) -> str:
+        """Flatten task-group wrappers while keeping provider diagnostics concise."""
+        leaves: list[str] = []
+
+        def collect(error: BaseException) -> None:
+            children = getattr(error, "exceptions", ())
+            if children:
+                for child in children:
+                    collect(child)
+                return
+            message = re.sub(r"\s+", " ", str(error)).strip()
+            if message:
+                leaves.append(message)
+            elif type(error).__name__:
+                leaves.append(type(error).__name__)
+
+        collect(exc)
+        detail = "; ".join(dict.fromkeys(leaves)) or type(exc).__name__
+        return DoubanMcpAdapter._safe_response_preview(detail, limit=240)
+
+    @staticmethod
     def _choose_match(film: dict[str, Any], candidates: list[dict[str, str]]) -> dict[str, str]:
         if not candidates:
             raise CriticismError("Douban returned no film matches.")
@@ -400,6 +453,12 @@ class DoubanMcpAdapter:
             if target_year and candidate.get("publish_date") == target_year
         ]
         eligible = year_matches or candidates
+
+        # A stable external-ID search can return a single translated-title row.
+        # The exact release year is enough to accept that unique provider result;
+        # ambiguous same-year candidates still pass through the stricter scorer.
+        if len(candidates) == 1 and year_matches and candidates[0].get("id"):
+            return candidates[0]
 
         def score(candidate: dict[str, str]) -> float:
             title = candidate.get("title", "").casefold()
