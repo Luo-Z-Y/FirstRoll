@@ -1,5 +1,26 @@
 # FirstRoll Project Progress
 
+### 13 August 2026 — Typed video classification
+
+Delivered:
+
+1. Added one content type to every YouTube and Bilibili result: full film, interview,
+   video essay/review, lecture, trailer, scene/extract, behind the scenes or other.
+2. Treated a complete feature as one **Full film** category without rights subcategories.
+3. Added official YouTube duration lookup plus Bilibili search-record duration parsing and
+   bounded public-page metadata fallback.
+4. Added a second compact Bilibili query for complete films and cross-provider ordering that
+   surfaces full films first.
+5. Made textual content markers override duration so long interviews and ceremonies are not
+   misclassified as films.
+
+Acceptance evidence:
+
+- a live *Memoria* search classifies the complete film, Cannes press conference, video essays,
+  scene extracts and festival ceremony separately;
+- six focused classification and provider tests pass;
+- scoped Ruff, JavaScript syntax and repository whitespace checks pass.
+
 ### 13 August 2026 — Film viewing resources
 
 Delivered:
@@ -42,12 +63,12 @@ Status vocabulary:
 **Release stage:** local working prototype
 
 **Primary development URL:** `http://127.0.0.1:8000`
-**Automated verification:** 50 tests passing
+**Automated verification:** 53 tests passing
 
 | Area | Status | Current evidence |
 |---|---|---|
 | Film discovery | Complete | Wikidata search by title, year and director; Wikipedia context and source links |
-| Public video resources | Complete | Film-matched Bilibili embeds plus optional official YouTube Data API search |
+| Public video resources | Complete | Film-matched Bilibili and optional YouTube embeds, typed by content form with full films surfaced first |
 | Product navigation | Complete | Discover and Analyse modes; Study consolidated into Discover |
 | Local settings | Complete | Write-only connector credentials plus local add, remove and index controls for the private library |
 | Private library catalogue | Complete | Seven existing film-study PDFs retained; managed uploads and non-destructive removal; paths and content withheld from public APIs |

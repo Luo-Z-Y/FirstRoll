@@ -538,6 +538,10 @@ function filmVideoCardMarkup(video) {
   const sourceUrl = safeHttpUrl(video.url);
   if (!embedUrl || !sourceUrl) return "";
   const relevance = String(video.relevance || "title").replaceAll("_", " + ");
+  const category = videoCategoryLabel(video.category);
+  const duration = Number.isFinite(Number(video.duration_seconds))
+    ? ` · ${formatTime(Number(video.duration_seconds))}`
+    : "";
   return `<article class="film-video-card">
     <div class="film-video-frame">
       <iframe
@@ -549,12 +553,27 @@ function filmVideoCardMarkup(video) {
         allowfullscreen></iframe>
     </div>
     <div class="film-video-copy">
-      <span>${escapeHtml(video.platform || "Video")} · ${escapeHtml(relevance)}</span>
+      <span>${escapeHtml(category)} · ${escapeHtml(video.platform || "Video")}${escapeHtml(duration)}</span>
       <h4>${escapeHtml(video.title || "Untitled video")}</h4>
+      <small>Matched by ${escapeHtml(relevance)}</small>
       ${video.creator ? `<p>${escapeHtml(video.creator)}</p>` : ""}
       <a href="${escapeHtml(sourceUrl)}" target="_blank" rel="noopener noreferrer">Open at source ↗</a>
     </div>
   </article>`;
+}
+
+function videoCategoryLabel(value) {
+  const labels = {
+    full_film: "Full film",
+    interview: "Interview",
+    video_essay: "Video essay / review",
+    lecture: "Lecture",
+    trailer: "Trailer",
+    scene_extract: "Scene / extract",
+    behind_the_scenes: "Behind the scenes",
+    other: "Other",
+  };
+  return labels[value] || labels.other;
 }
 
 async function selectCriticismSource(button) {

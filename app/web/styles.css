@@ -633,6 +633,7 @@ button {
 .film-video-copy { padding: 15px 16px 17px; }
 .film-video-copy > span { color: var(--red-dark); font: 0.54rem "IBM Plex Mono", monospace; text-transform: uppercase; }
 .film-video-copy h4 { margin: 8px 0 7px; font-size: 0.82rem; line-height: 1.4; }
+.film-video-copy small { display: block; margin-bottom: 9px; color: var(--ink-soft); font: 0.54rem "IBM Plex Mono", monospace; text-transform: uppercase; }
 .film-video-copy p { margin: 0 0 10px; color: var(--ink-soft); font-size: 0.67rem; }
 .film-video-copy a { color: var(--red-dark); font-size: 0.62rem; font-weight: 700; }
 .video-source-boundary { margin: 15px 0 0; color: var(--ink-soft); font-size: 0.64rem; line-height: 1.55; }

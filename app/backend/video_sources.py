@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import gzip
 import html
 import json
 import re
@@ -32,6 +33,17 @@ class FilmVideo(BaseModel):
     embed_url: str
     thumbnail_url: str | None = None
     published_at: str | None = None
+    duration_seconds: int | None = Field(default=None, ge=0)
+    category: Literal[
+        "full_film",
+        "interview",
+        "video_essay",
+        "lecture",
+        "trailer",
+        "scene_extract",
+        "behind_the_scenes",
+        "other",
+    ]
     relevance: Literal["title", "director", "title_and_director"]
 
 
@@ -46,10 +58,23 @@ class FilmVideoBundle(BaseModel):
     notice: str
 
 
+VIDEO_CATEGORY_PRIORITY = {
+    "full_film": 0,
+    "interview": 1,
+    "video_essay": 2,
+    "lecture": 3,
+    "behind_the_scenes": 4,
+    "trailer": 5,
+    "scene_extract": 6,
+    "other": 7,
+}
+
+
 class YouTubeVideoAdapter:
     """Official YouTube Data API search limited to embeddable public videos."""
 
     api_url = "https://www.googleapis.com/youtube/v3/search"
+    videos_api_url = "https://www.googleapis.com/youtube/v3/videos"
     max_response_bytes = 2_000_000
 
     def __init__(
@@ -89,7 +114,7 @@ class YouTubeVideoAdapter:
         url = f"{self.api_url}?{urlencode({'part': 'snippet', 'q': query, 'type': 'video', 'maxResults': str(max(1, min(limit * 2, 20))), 'videoEmbeddable': 'true', 'videoSyndicated': 'true', 'safeSearch': 'moderate', 'relevanceLanguage': 'en', 'key': key})}"
         payload = self.transport(url)
         items = payload.get("items") if isinstance(payload, dict) else []
-        results: list[FilmVideo] = []
+        candidates: list[tuple[str, dict[str, Any], str]] = []
         for item in items if isinstance(items, list) else []:
             if not isinstance(item, dict):
                 continue
@@ -103,8 +128,18 @@ class YouTubeVideoAdapter:
             relevance = _video_relevance(film, f"{title} {description}")
             if relevance is None:
                 continue
+            candidates.append((video_id, snippet, relevance))
+        durations = self._video_durations(
+            [video_id for video_id, _, _ in candidates],
+            key,
+        )
+        results: list[FilmVideo] = []
+        for video_id, snippet, relevance in candidates:
+            title = html.unescape(str(snippet.get("title") or "")).strip()
+            description = html.unescape(str(snippet.get("description") or "")).strip()
             thumbnails = snippet.get("thumbnails")
             thumbnail = _youtube_thumbnail(thumbnails)
+            duration_seconds = durations.get(video_id)
             results.append(
                 FilmVideo(
                     platform="YouTube",
@@ -116,12 +151,32 @@ class YouTubeVideoAdapter:
                     embed_url=f"https://www.youtube-nocookie.com/embed/{video_id}",
                     thumbnail_url=thumbnail,
                     published_at=str(snippet.get("publishedAt") or "").strip() or None,
+                    duration_seconds=duration_seconds,
+                    category=_video_category(title, description, duration_seconds),
                     relevance=relevance,
                 )
             )
             if len(results) >= limit:
                 break
         return results
+
+    def _video_durations(self, video_ids: list[str], key: str) -> dict[str, int]:
+        if not video_ids:
+            return {}
+        url = f"{self.videos_api_url}?{urlencode({'part': 'contentDetails', 'id': ','.join(video_ids), 'key': key})}"
+        payload = self.transport(url)
+        items = payload.get("items") if isinstance(payload, dict) else []
+        durations: dict[str, int] = {}
+        for item in items if isinstance(items, list) else []:
+            if not isinstance(item, dict):
+                continue
+            video_id = str(item.get("id") or "")
+            details = item.get("contentDetails")
+            duration = str(details.get("duration") or "") if isinstance(details, dict) else ""
+            seconds = _iso8601_duration_seconds(duration)
+            if video_id and seconds is not None:
+                durations[video_id] = seconds
+        return durations
 
     @classmethod
     def _request_json(cls, url: str) -> dict[str, Any]:
@@ -157,8 +212,13 @@ class BilibiliPublicVideoAdapter:
         r'"(?P<picture>(?:\\.|[^"\\])*)"'
     )
 
-    def __init__(self, transport: Callable[[str], str] | None = None) -> None:
+    def __init__(
+        self,
+        transport: Callable[[str], str] | None = None,
+        detail_transport: Callable[[str], str] | None = None,
+    ) -> None:
         self.transport = transport or self._request_html
+        self.detail_transport = detail_transport or self._request_video_html
 
     def status(self) -> dict[str, Any]:
         return {
@@ -170,40 +230,73 @@ class BilibiliPublicVideoAdapter:
         }
 
     def search(self, film: dict[str, Any], limit: int = 6) -> list[FilmVideo]:
-        query = _bilibili_video_query(film)
-        body = self.transport(f"{self.search_url}?{urlencode({'keyword': query})}")
         results: list[FilmVideo] = []
         seen: set[str] = set()
-        for match in self._result_pattern.finditer(body):
-            video_id = match.group("bvid")
-            if video_id in seen:
-                continue
-            title = _decode_javascript_string(match.group("title"))
-            description = _decode_javascript_string(match.group("description"))
-            relevance = _video_relevance(film, f"{title} {description}")
-            if relevance is None:
-                continue
-            picture = _decode_javascript_string(match.group("picture"))
-            if picture.startswith("//"):
-                picture = f"https:{picture}"
-            if not _safe_bilibili_image(picture):
-                picture = ""
-            seen.add(video_id)
-            results.append(
-                FilmVideo(
-                    platform="Bilibili",
-                    video_id=video_id,
-                    title=re.sub(r"<[^>]+>", "", title).strip(),
-                    description=re.sub(r"<[^>]+>", "", description).strip()[:500],
-                    url=f"https://www.bilibili.com/video/{video_id}/",
-                    embed_url=f"https://player.bilibili.com/player.html?bvid={video_id}&autoplay=0",
-                    thumbnail_url=picture or None,
-                    relevance=relevance,
+        detail_requests = 0
+        queries = (_bilibili_video_query(film), _bilibili_full_film_query(film))
+        for query in queries:
+            body = self.transport(f"{self.search_url}?{urlencode({'keyword': query})}")
+            matches = list(self._result_pattern.finditer(body))
+            for index, match in enumerate(matches):
+                video_id = match.group("bvid")
+                if video_id in seen:
+                    continue
+                title = _decode_javascript_string(match.group("title"))
+                description = _decode_javascript_string(match.group("description"))
+                tail_end = matches[index + 1].start() if index + 1 < len(matches) else match.end() + 900
+                duration_seconds, tags = _bilibili_tail_metadata(body[match.end() : tail_end])
+                if (
+                    duration_seconds is None
+                    and detail_requests < 3
+                    and _possible_full_film_candidate(film, f"{title} {description} {tags}")
+                ):
+                    detail_requests += 1
+                    try:
+                        detail_body = self.detail_transport(
+                            f"https://www.bilibili.com/video/{video_id}/"
+                        )
+                        duration_seconds = _bilibili_detail_duration(detail_body)
+                    except VideoSourceError:
+                        pass
+                relevance = _video_relevance(film, f"{title} {description} {tags}")
+                if relevance is None and _long_film_candidate(
+                    film,
+                    f"{title} {description} {tags}",
+                    duration_seconds,
+                ):
+                    relevance = "title"
+                if relevance is None:
+                    continue
+                picture = _decode_javascript_string(match.group("picture"))
+                if picture.startswith("//"):
+                    picture = f"https:{picture}"
+                if not _safe_bilibili_image(picture):
+                    picture = ""
+                clean_title = re.sub(r"<[^>]+>", "", title).strip()
+                clean_description = re.sub(r"<[^>]+>", "", description).strip()
+                seen.add(video_id)
+                results.append(
+                    FilmVideo(
+                        platform="Bilibili",
+                        video_id=video_id,
+                        title=clean_title,
+                        description=clean_description[:500],
+                        url=f"https://www.bilibili.com/video/{video_id}/",
+                        embed_url=f"https://player.bilibili.com/player.html?bvid={video_id}&autoplay=0",
+                        thumbnail_url=picture or None,
+                        duration_seconds=duration_seconds,
+                        category=_video_category(
+                            clean_title,
+                            f"{clean_description} {tags}",
+                            duration_seconds,
+                        ),
+                        relevance=relevance,
+                    )
                 )
-            )
-            if len(results) >= limit:
-                break
-        return results
+        return sorted(
+            results,
+            key=lambda video: VIDEO_CATEGORY_PRIORITY[video.category],
+        )[:limit]
 
     @classmethod
     def _request_html(cls, url: str) -> str:
@@ -227,12 +320,49 @@ class BilibiliPublicVideoAdapter:
                 payload = response.read(cls.max_response_bytes + 1)
                 if len(payload) > cls.max_response_bytes:
                     raise VideoSourceError("Bilibili returned an unexpectedly large page.")
+                if response.headers.get("Content-Encoding", "").casefold() == "gzip":
+                    payload = gzip.decompress(payload)
+                    if len(payload) > cls.max_response_bytes:
+                        raise VideoSourceError("Bilibili returned an unexpectedly large page.")
                 charset = response.headers.get_content_charset() or "utf-8"
                 return payload.decode(charset, errors="replace")
         except HTTPError as exc:
             raise VideoSourceError(f"Bilibili public search returned HTTP {exc.code}.") from exc
-        except (URLError, TimeoutError, UnicodeError) as exc:
+        except (URLError, TimeoutError, UnicodeError, OSError) as exc:
             raise VideoSourceError(f"Bilibili public search failed: {exc}") from exc
+
+    @classmethod
+    def _request_video_html(cls, url: str) -> str:
+        parsed = urlparse(url)
+        if parsed.scheme != "https" or parsed.hostname != "www.bilibili.com":
+            raise VideoSourceError("Only public HTTPS video pages on Bilibili may be queried.")
+        request = Request(
+            url,
+            headers={
+                "Accept": "text/html,application/xhtml+xml",
+                "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.7",
+                "User-Agent": "Mozilla/5.0 FirstRoll/0.1 local-film-study",
+            },
+            method="GET",
+        )
+        try:
+            with urlopen(request, timeout=20) as response:
+                final = urlparse(response.geturl())
+                if final.scheme != "https" or final.hostname != "www.bilibili.com":
+                    raise VideoSourceError("Bilibili redirected outside its public video host.")
+                payload = response.read(cls.max_response_bytes + 1)
+                if len(payload) > cls.max_response_bytes:
+                    raise VideoSourceError("Bilibili returned an unexpectedly large video page.")
+                if response.headers.get("Content-Encoding", "").casefold() == "gzip":
+                    payload = gzip.decompress(payload)
+                    if len(payload) > cls.max_response_bytes:
+                        raise VideoSourceError("Bilibili returned an unexpectedly large video page.")
+                charset = response.headers.get_content_charset() or "utf-8"
+                return payload.decode(charset, errors="replace")
+        except HTTPError as exc:
+            raise VideoSourceError(f"Bilibili video page returned HTTP {exc.code}.") from exc
+        except (URLError, TimeoutError, UnicodeError, OSError) as exc:
+            raise VideoSourceError(f"Bilibili video-page request failed: {exc}") from exc
 
 
 class FilmVideoService:
@@ -270,7 +400,10 @@ class FilmVideoService:
             film_id=film_id,
             query=_film_video_query(film),
             fetched_at=datetime.now(timezone.utc).isoformat(),
-            videos=videos[:12],
+            videos=sorted(
+                videos,
+                key=lambda video: VIDEO_CATEGORY_PRIORITY[video.category],
+            )[:12],
             providers=providers,
             notice=(
                 "Public videos selected by film-title and director relevance. "
@@ -296,6 +429,16 @@ def _bilibili_video_query(film: dict[str, Any]) -> str:
         for part in (title, original_title, year, "电影", "影评", "访谈")
         if part
     )
+
+
+def _bilibili_full_film_query(film: dict[str, Any]) -> str:
+    title = str(film.get("title") or "").strip()
+    original_title = str(film.get("original_title") or "").strip()
+    year = str(film.get("year") or "").strip()
+    # Bilibili search performs better when this query stays compact. Prefer the
+    # original title because it often bridges Traditional and Simplified Chinese.
+    query_title = original_title or title
+    return " ".join(part for part in (query_title, year, "电影", "完整版") if part)
 
 
 def _normalise(value: str) -> str:
@@ -393,3 +536,132 @@ def _safe_bilibili_image(value: str) -> bool:
     return parsed.scheme == "https" and bool(
         parsed.hostname and parsed.hostname.endswith(".hdslb.com")
     )
+
+
+def _clock_duration_seconds(value: str) -> int | None:
+    parts = value.split(":")
+    if len(parts) not in {2, 3} or not all(part.isdigit() for part in parts):
+        return None
+    numbers = [int(part) for part in parts]
+    if len(numbers) == 2:
+        return numbers[0] * 60 + numbers[1]
+    return numbers[0] * 3600 + numbers[1] * 60 + numbers[2]
+
+
+def _iso8601_duration_seconds(value: str) -> int | None:
+    match = re.fullmatch(
+        r"PT(?:(?P<hours>\d+)H)?(?:(?P<minutes>\d+)M)?(?:(?P<seconds>\d+)S)?",
+        value,
+    )
+    if not match:
+        return None
+    return (
+        int(match.group("hours") or 0) * 3600
+        + int(match.group("minutes") or 0) * 60
+        + int(match.group("seconds") or 0)
+    )
+
+
+def _bilibili_tail_metadata(value: str) -> tuple[int | None, str]:
+    duration_match = re.search(r'"(\d{1,2}:\d{2}(?::\d{2})?)"', value)
+    if duration_match is None:
+        return None, ""
+    quoted = re.findall(r'"((?:\\.|[^"\\])*)"', value[: duration_match.start()])
+    tags = _decode_javascript_string(quoted[-1]) if quoted else ""
+    return _clock_duration_seconds(duration_match.group(1)), tags
+
+
+def _video_category(title: str, description: str, duration_seconds: int | None) -> str:
+    text = _normalise(f"{title} {description}")
+    markers = {
+        "behind_the_scenes": ("behind the scenes", "making of", "幕后", "花絮", "制作特辑"),
+        "interview": (
+            "interview",
+            "q a",
+            "conversation",
+            "press conference",
+            "映后",
+            "访谈",
+            "对谈",
+            "专访",
+            "记者会",
+            "发布会",
+        ),
+        "lecture": ("lecture", "masterclass", "keynote", "讲座", "大师课"),
+        "trailer": ("trailer", "teaser", "preview", "预告"),
+        "video_essay": (
+            "video essay",
+            "analysis",
+            "review",
+            "explained",
+            "critique",
+            "影评",
+            "解析",
+            "精讲",
+            "漫谈",
+            "看完",
+            "盘点",
+            "深度",
+            "哲思",
+            "解说",
+            "推荐",
+        ),
+        "scene_extract": ("scene", "clip", "excerpt", "sequence", "片段", "节选", "cut"),
+        "other": ("award ceremony", "颁奖典礼"),
+    }
+    for category, terms in markers.items():
+        if any(term in text for term in terms):
+            return category
+    explicit_full_film = any(
+        term in text
+        for term in ("full film", "full movie", "complete film", "完整版", "全片", "正片")
+    )
+    if explicit_full_film or (duration_seconds is not None and duration_seconds >= 45 * 60):
+        return "full_film"
+    return "other"
+
+
+def _long_film_candidate(
+    film: dict[str, Any],
+    text: str,
+    duration_seconds: int | None,
+) -> bool:
+    if duration_seconds is None or duration_seconds < 45 * 60:
+        return False
+    body = _normalise(text)
+    year = str(film.get("year") or "").strip()
+    return bool(
+        year
+        and year in body
+        and (
+            any(term in body for term in ("film", "movie", "电影", "影片", "作品"))
+            or _possible_full_film_candidate(film, text)
+        )
+    )
+
+
+def _possible_full_film_candidate(film: dict[str, Any], text: str) -> bool:
+    body = _normalise(text)
+    year = str(film.get("year") or "").strip()
+    if not year or year not in body:
+        return False
+    exclusion_markers = (
+        "trailer",
+        "interview",
+        "review",
+        "预告",
+        "访谈",
+        "影评",
+        "解析",
+        "片段",
+        "解说",
+        "盘点",
+        "游戏",
+        "音乐",
+    )
+    return not any(marker in body for marker in exclusion_markers)
+
+
+def _bilibili_detail_duration(value: str) -> int | None:
+    match = re.search(r'"duration"\s*:\s*(\d+)', value)
+    return int(match.group(1)) if match else None

@@ -380,15 +380,28 @@ year and director, then embeds only results that pass local relevance checks.
 YouTube uses the official Data API v3. When `YOUTUBE_API_KEY` is configured, FirstRoll calls
 `youtube/v3/search` with `type=video`, `videoEmbeddable=true`, `videoSyndicated=true` and
 moderate SafeSearch. It validates the 11-character video ID, retains channel attribution and
-uses the privacy-enhanced `youtube-nocookie.com` player. The API key remains in the local
-write-only settings store and is never sent to the browser.
+uses the privacy-enhanced `youtube-nocookie.com` player. A second bounded
+`youtube/v3/videos?part=contentDetails` request supplies ISO 8601 durations for classification.
+The API key remains in the local write-only settings store and is never sent to the browser.
 
 Bilibili's anonymous JSON search endpoint currently applies HTTP 412 risk control to this
 kind of local client, so FirstRoll does not depend on it. Instead, the local adapter reads the
 public server-rendered search page, extracts bounded `BV` records and embeds them through
-`player.bilibili.com`. Its query adds the original title, release year and Chinese film-study
-terms. Short or ambiguous titles must also match the release year plus film context, or the
-director; this prevents a title such as *Memoria* from selecting unrelated games and music.
+`player.bilibili.com`. It issues one study-oriented query and one compact full-film query. The
+adapter reads visible clock durations and tags from the search record; for at most three
+plausible candidates without a duration, it reads the duration from the public video page.
+Gzip responses are decompressed before parsing. Short or ambiguous titles must also match the
+release year plus film context, or the director; this prevents a title such as *Memoria* from
+selecting unrelated games and music.
+
+Every accepted result receives exactly one local content type: `full_film`, `interview`,
+`video_essay`, `lecture`, `trailer`, `scene_extract`, `behind_the_scenes` or `other`. Explicit
+title and description markers take precedence, so a long press conference is still an
+interview and a long festival ceremony remains other. Only after those exclusions does an
+explicit complete-film marker or a duration of at least 45 minutes produce `full_film`.
+FirstRoll intentionally treats a complete feature as one category; it does not infer or display
+rights classifications. Results are ordered by study value across both providers, with full
+films first, and the interface shows the type and duration on each card.
 
 Both adapters enforce HTTPS host allowlists, 20-second timeouts, response-size limits, safe
 embed URL patterns and a maximum of six results per platform. The interface preserves the
