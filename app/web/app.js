@@ -430,10 +430,22 @@ function buildClosetCollections(primary, directorWorks, relevant, categories, di
   const castFilms = categories.sharedCast || [];
   const countryFilms = categories.sameCountry || [];
   const recommended = categories.recommended || relevant;
+  const directorAndRelated = uniqueFilms([
+    ...directorFilms,
+    ...relevant,
+    ...castFilms,
+    ...countryFilms,
+    ...recommended,
+  ]).slice(0, 15);
   const castLabel = (categories.labels?.cast || []).slice(0, 2).join(" · ");
   const countryLabel = (categories.labels?.countries || []).slice(0, 2).join(" · ");
   return [
-    { wall: "back", shelf: "lower", label: `${director} · complete director row`, films: directorFilms },
+    {
+      wall: "back",
+      shelf: "lower",
+      label: `${director} · director & related`,
+      films: directorAndRelated,
+    },
     { wall: "left", shelf: "lower", label: castLabel ? `Shared cast · ${castLabel}` : "Shared cast", films: castFilms },
     { wall: "left", shelf: "upper", label: "Genre & metadata affinities", films: recommended },
     { wall: "right", shelf: "lower", label: countryLabel ? `Produced in · ${countryLabel}` : "Production country", films: countryFilms },

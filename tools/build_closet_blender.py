@@ -18,6 +18,16 @@ import bpy
 
 ROOT = Path(__file__).resolve().parents[1]
 OUTPUT = ROOT / "app" / "web" / "models" / "firstroll-closet.glb"
+ROOM_HALF_WIDTH = 1.8
+ROOM_HALF_DEPTH = 4.6
+ROOM_WIDTH = ROOM_HALF_WIDTH * 2
+ROOM_DEPTH = ROOM_HALF_DEPTH * 2
+BACK_WALL_Y = 4.52
+SIDE_WALL_X = 1.7
+BACK_SHELF_Y = 4.04
+BACK_CASE_Y = 3.77
+SIDE_SHELF_X = 1.42
+SIDE_CASE_X = 1.0
 random.seed(817)
 
 
@@ -44,6 +54,9 @@ def material(
     shader.inputs["Base Color"].default_value = colour
     shader.inputs["Metallic"].default_value = metallic
     shader.inputs["Roughness"].default_value = roughness
+    shader.inputs["Alpha"].default_value = colour[3]
+    if colour[3] < 1.0 and hasattr(mat, "surface_render_method"):
+        mat.surface_render_method = "DITHERED"
     if emission:
         emission_input = shader.inputs.get("Emission Color") or shader.inputs.get("Emission")
         if emission_input:
@@ -51,6 +64,48 @@ def material(
         strength_input = shader.inputs.get("Emission Strength")
         if strength_input:
             strength_input.default_value = emission_strength
+    return mat
+
+
+def textured_material(
+    name: str,
+    base: tuple[float, float, float],
+    texture_kind: str,
+    *,
+    roughness: float,
+    size: int = 160,
+) -> bpy.types.Material:
+    """Create and pack a small deterministic colour texture into the exported GLB."""
+    mat = material(name, (*base, 1.0), roughness=roughness)
+    image = bpy.data.images.new(f"{name} texture", width=size, height=size, alpha=False)
+    rng = random.Random(f"firstroll-{name}")
+    pixels: list[float] = []
+    for y in range(size):
+        for x in range(size):
+            if texture_kind == "wood":
+                grain = (
+                    math.sin(x * 0.22 + math.sin(y * 0.075) * 2.4) * 0.065
+                    + math.sin(x * 0.055 + y * 0.014) * 0.035
+                    + rng.uniform(-0.025, 0.025)
+                )
+                value = 1.0 + grain
+            elif texture_kind == "carpet":
+                fleck = rng.uniform(-0.12, 0.12)
+                value = 1.0 + fleck
+            else:
+                mottling = (
+                    math.sin(x * 0.048) * math.sin(y * 0.063) * 0.035
+                    + rng.uniform(-0.025, 0.025)
+                )
+                value = 1.0 + mottling
+            pixels.extend((*[max(0.0, min(1.0, channel * value)) for channel in base], 1.0))
+    image.pixels = pixels
+    image.pack()
+    texture = mat.node_tree.nodes.new("ShaderNodeTexImage")
+    texture.image = image
+    texture.interpolation = "Linear"
+    shader = mat.node_tree.nodes.get("Principled BSDF")
+    mat.node_tree.links.new(texture.outputs["Color"], shader.inputs["Base Color"])
     return mat
 
 
@@ -82,65 +137,75 @@ def add_case(
     dimensions: tuple[float, float, float],
     mat: bpy.types.Material,
     *,
+    shell_material: bpy.types.Material,
     rotation_z: float = 0.0,
 ) -> None:
-    case = box(
-        name,
+    insert = box(
+        f"{name} paper insert",
         location,
-        dimensions,
+        (dimensions[0] * 0.82, dimensions[1] * 0.86, dimensions[2] * 0.91),
         mat,
-        bevel=0.012,
+        bevel=0.007,
         rotation=(0.0, 0.0, rotation_z),
     )
-    case["firstroll_ambient_case"] = True
+    insert["firstroll_ambient_case"] = True
+    shell = box(
+        f"{name} clear shell",
+        location,
+        dimensions,
+        shell_material,
+        bevel=0.014,
+        rotation=(0.0, 0.0, rotation_z),
+    )
+    shell["firstroll_ambient_case"] = True
 
 
 def build_shell(materials: dict[str, bpy.types.Material]) -> None:
-    box("Floor slab", (0.0, 0.0, -0.12), (12.4, 15.4, 0.24), materials["structure"], bevel=0.04)
-    box("Archive carpet", (0.0, -0.05, 0.015), (11.55, 14.55, 0.03), materials["carpet"], bevel=0.03)
-    box("Back wall", (0.0, 7.52, 2.35), (12.4, 0.22, 4.7), materials["wall"], bevel=0.02)
-    box("Left wall", (-6.1, 0.0, 2.35), (0.22, 15.2, 4.7), materials["wall"], bevel=0.02)
-    box("Right wall", (6.1, 0.0, 2.35), (0.22, 15.2, 4.7), materials["wall"], bevel=0.02)
+    box("Floor slab", (0.0, 0.0, -0.12), (ROOM_WIDTH, ROOM_DEPTH, 0.24), materials["structure"], bevel=0.04)
+    box("Archive carpet", (0.0, -0.05, 0.015), (3.18, 8.72, 0.03), materials["carpet"], bevel=0.03)
+    box("Back wall", (0.0, BACK_WALL_Y, 2.35), (ROOM_WIDTH, 0.22, 4.7), materials["wall"], bevel=0.02)
+    box("Left wall", (-SIDE_WALL_X, 0.0, 2.35), (0.22, ROOM_DEPTH, 4.7), materials["wall"], bevel=0.02)
+    box("Right wall", (SIDE_WALL_X, 0.0, 2.35), (0.22, ROOM_DEPTH, 4.7), materials["wall"], bevel=0.02)
 
     # A substantial entrance frame makes walking in and out spatially legible.
-    for x in (-5.88, 5.88):
-        box("Entrance jamb", (x, -7.32, 2.38), (0.34, 0.46, 4.76), materials["structure"], bevel=0.035)
-    box("Entrance lintel", (0.0, -7.32, 4.58), (11.9, 0.46, 0.36), materials["structure"], bevel=0.035)
+    for x in (-1.58, 1.58):
+        box("Entrance jamb", (x, -4.32, 2.38), (0.34, 0.46, 4.76), materials["structure"], bevel=0.035)
+    box("Entrance lintel", (0.0, -4.32, 4.58), (3.5, 0.46, 0.36), materials["structure"], bevel=0.035)
 
     # Ceiling ribs and warm recessed light boxes evoke a small physical archive.
-    for y in (-5.6, -2.8, 0.0, 2.8, 5.6):
-        box("Ceiling rib", (0.0, y, 4.61), (12.0, 0.11, 0.16), materials["structure"], bevel=0.02)
-    for y in (-4.2, 0.0, 4.2):
-        box("Ceiling light trim", (0.0, y, 4.54), (4.55, 0.9, 0.10), materials["metal"], bevel=0.04)
-        box("Ceiling light diffuser", (0.0, y, 4.48), (4.28, 0.67, 0.045), materials["light"], bevel=0.04)
+    for y in (-3.45, -1.72, 0.0, 1.72, 3.45):
+        box("Ceiling rib", (0.0, y, 4.61), (3.42, 0.11, 0.16), materials["structure"], bevel=0.02)
+    for y in (-2.8, 0.0, 2.8):
+        box("Ceiling light trim", (0.0, y, 4.54), (2.42, 0.76, 0.10), materials["metal"], bevel=0.04)
+        box("Ceiling light diffuser", (0.0, y, 4.48), (2.22, 0.56, 0.045), materials["light"], bevel=0.04)
 
 
 def build_back_shelves(materials: dict[str, bpy.types.Material]) -> None:
-    shelf_y = 7.04
     shelf_levels = (0.25, 1.08, 1.91, 2.74, 3.57, 4.40)
     for index, level in enumerate(shelf_levels):
-        box(f"Back shelf {index + 1}", (0.0, shelf_y, level), (11.55, 0.72, 0.10), materials["wood"], bevel=0.018)
-        box(f"Back shelf brass rail {index + 1}", (0.0, 6.66, level + 0.025), (11.55, 0.045, 0.10), materials["brass"], bevel=0.012)
-    for x in (-5.72, -3.82, -1.91, 0.0, 1.91, 3.82, 5.72):
-        box("Back shelf upright", (x, 7.28, 2.33), (0.09, 0.18, 4.47), materials["metal"], bevel=0.018)
+        box(f"Back shelf {index + 1}", (0.0, BACK_SHELF_Y, level), (3.15, 0.72, 0.10), materials["wood"], bevel=0.018)
+        box(f"Back shelf brass rail {index + 1}", (0.0, 3.66, level + 0.025), (3.15, 0.045, 0.10), materials["brass"], bevel=0.012)
+    for x in (-1.56, 0.0, 1.56):
+        box("Back shelf upright", (x, 4.28, 2.33), (0.09, 0.18, 4.47), materials["metal"], bevel=0.018)
 
     # Leave the second row clear: the browser inserts the selected director's live filmography there.
     palette = materials["case_palette"]
     for shelf_index, base_z in enumerate(shelf_levels[:-1]):
         if shelf_index == 1:
             continue
-        x = -5.55
+        x = -1.46
         case_index = 0
-        while x < 5.48:
-            width = random.uniform(0.115, 0.175)
+        while x < 1.44:
+            width = random.uniform(0.16, 0.22)
             height = random.uniform(0.48, 0.68)
             depth = random.uniform(0.26, 0.37)
             lean = random.choice((0.0, 0.0, 0.0, random.uniform(-0.035, 0.035)))
             add_case(
                 f"Back ambient case {shelf_index}-{case_index}",
-                (x + width / 2, 6.77, base_z + 0.07 + height / 2),
+                (x + width / 2, BACK_CASE_Y, base_z + 0.07 + height / 2),
                 (width, depth, height),
                 random.choice(palette),
+                shell_material=materials["case_shell"],
                 rotation_z=lean,
             )
             x += width + random.uniform(0.012, 0.035)
@@ -149,31 +214,34 @@ def build_back_shelves(materials: dict[str, bpy.types.Material]) -> None:
 
 def build_side_shelves(side: str, materials: dict[str, bpy.types.Material]) -> None:
     sign = -1.0 if side == "left" else 1.0
-    shelf_x = sign * 5.72
+    shelf_x = sign * SIDE_SHELF_X
     shelf_levels = (0.25, 1.08, 1.91, 2.74, 3.57, 4.40)
     for index, level in enumerate(shelf_levels):
-        box(f"{side.title()} shelf {index + 1}", (shelf_x, -0.05, level), (0.72, 14.20, 0.10), materials["wood"], bevel=0.018)
+        box(f"{side.title()} shelf {index + 1}", (shelf_x, -0.05, level), (0.72, 8.52, 0.10), materials["wood"], bevel=0.018)
         rail_x = shelf_x - sign * 0.38
-        box(f"{side.title()} shelf brass rail {index + 1}", (rail_x, -0.05, level + 0.025), (0.045, 14.2, 0.10), materials["brass"], bevel=0.012)
-    for y in (-6.95, -4.65, -2.35, -0.05, 2.25, 4.55, 6.85):
-        box(f"{side.title()} shelf upright", (sign * 5.97, y, 2.33), (0.18, 0.09, 4.47), materials["metal"], bevel=0.018)
+        box(f"{side.title()} shelf brass rail {index + 1}", (rail_x, -0.05, level + 0.025), (0.045, 8.52, 0.10), materials["brass"], bevel=0.012)
+    for y in (-4.18, -2.78, -1.39, 0.0, 1.39, 2.78, 4.18):
+        box(f"{side.title()} shelf upright", (sign * 1.67, y, 2.33), (0.18, 0.09, 4.47), materials["metal"], bevel=0.018)
 
     palette = materials["case_palette"]
     for shelf_index, base_z in enumerate(shelf_levels[:-1]):
         # Two rows on each side stay open for live relationship collections.
         if shelf_index in (1, 3):
             continue
-        y = -6.85
+        # Keep the doorway end of the aisle clear so the camera enters through a
+        # calm threshold instead of intersecting foreground cases.
+        y = -2.35
         case_index = 0
-        while y < 6.72:
-            width = random.uniform(0.115, 0.175)
+        while y < 4.02:
+            width = random.uniform(0.16, 0.22)
             height = random.uniform(0.48, 0.68)
             depth = random.uniform(0.26, 0.37)
             add_case(
                 f"{side.title()} ambient case {shelf_index}-{case_index}",
-                (sign * 5.48, y + width / 2, base_z + 0.07 + height / 2),
+                (sign * SIDE_CASE_X, y + width / 2, base_z + 0.07 + height / 2),
                 (depth, width, height),
                 random.choice(palette),
+                shell_material=materials["case_shell"],
                 rotation_z=random.choice((0.0, 0.0, random.uniform(-0.03, 0.03))),
             )
             y += width + random.uniform(0.012, 0.035)
@@ -182,11 +250,11 @@ def build_side_shelves(side: str, materials: dict[str, bpy.types.Material]) -> N
 
 def build_details(materials: dict[str, bpy.types.Material]) -> None:
     # Low plinths and labelled brass strips add the small-scale construction detail missing from CSS.
-    for x in (-5.92, 5.92):
-        box("Side plinth", (x, -0.05, 0.16), (0.20, 14.4, 0.32), materials["structure"], bevel=0.025)
-    box("Back plinth", (0.0, 7.35, 0.16), (11.8, 0.18, 0.32), materials["structure"], bevel=0.025)
-    for x in (-4.9, 4.9):
-        box("Floor guide", (x, -0.2, 0.04), (0.025, 13.6, 0.018), materials["brass"], bevel=0.008)
+    for x in (-1.68, 1.68):
+        box("Side plinth", (x, -0.05, 0.16), (0.20, 8.7, 0.32), materials["structure"], bevel=0.025)
+    box("Back plinth", (0.0, 4.35, 0.16), (3.34, 0.18, 0.32), materials["structure"], bevel=0.025)
+    for x in (-1.22, 1.22):
+        box("Floor guide", (x, -0.2, 0.04), (0.025, 7.9, 0.018), materials["brass"], bevel=0.008)
 
 
 def main() -> None:
@@ -194,10 +262,11 @@ def main() -> None:
     materials: dict[str, bpy.types.Material | list[bpy.types.Material]] = {
         "structure": material("Blackened steel", (0.035, 0.039, 0.035, 1.0), metallic=0.72, roughness=0.28),
         "metal": material("Shelf steel", (0.12, 0.13, 0.12, 1.0), metallic=0.82, roughness=0.24),
-        "wall": material("Charcoal wall", (0.082, 0.079, 0.068, 1.0), roughness=0.82),
-        "wood": material("Smoked oak", (0.17, 0.115, 0.065, 1.0), roughness=0.46),
+        "wall": textured_material("Charcoal wall", (0.065, 0.058, 0.047), "plaster", roughness=0.86),
+        "wood": textured_material("Smoked oak", (0.16, 0.092, 0.045), "wood", roughness=0.52),
         "brass": material("Aged brass", (0.42, 0.29, 0.11, 1.0), metallic=0.78, roughness=0.34),
-        "carpet": material("Archive carpet", (0.105, 0.10, 0.086, 1.0), roughness=0.94),
+        "carpet": textured_material("Archive carpet", (0.095, 0.078, 0.061), "carpet", roughness=0.96),
+        "case_shell": material("Clear jewel case", (0.82, 0.84, 0.80, 0.24), roughness=0.16),
         "light": material(
             "Warm diffuser",
             (0.95, 0.88, 0.68, 1.0),
@@ -207,12 +276,14 @@ def main() -> None:
         ),
     }
     materials["case_palette"] = [
-        material("Case oxblood", (0.31, 0.055, 0.038, 1.0), roughness=0.32),
-        material("Case bottle green", (0.055, 0.16, 0.10, 1.0), roughness=0.34),
-        material("Case burnt orange", (0.48, 0.17, 0.045, 1.0), roughness=0.34),
-        material("Case slate", (0.07, 0.11, 0.17, 1.0), roughness=0.30),
-        material("Case parchment", (0.48, 0.40, 0.25, 1.0), roughness=0.48),
-        material("Case plum", (0.22, 0.08, 0.22, 1.0), roughness=0.36),
+        material("Insert oxblood", (0.255, 0.066, 0.045, 1.0), roughness=0.58),
+        material("Insert bottle green", (0.062, 0.132, 0.087, 1.0), roughness=0.58),
+        material("Insert tobacco", (0.34, 0.145, 0.056, 1.0), roughness=0.60),
+        material("Insert slate", (0.085, 0.108, 0.132, 1.0), roughness=0.56),
+        material("Insert parchment", (0.46, 0.395, 0.277, 1.0), roughness=0.68),
+        material("Insert plum", (0.185, 0.085, 0.155, 1.0), roughness=0.60),
+        material("Insert ivory", (0.62, 0.58, 0.49, 1.0), roughness=0.72),
+        material("Insert charcoal", (0.11, 0.105, 0.092, 1.0), roughness=0.66),
     ]
 
     build_shell(materials)

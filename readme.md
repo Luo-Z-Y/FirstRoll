@@ -36,7 +36,9 @@ The original GPL-3.0 licence and contributor attribution remain applicable. See
 - Read an attributed Wikipedia overview and poster after Wikidata resolves the film.
 - Walk through a real Blender-built GLB film closet rendered locally with Three.js: drag to look,
   scroll or use W/S to walk, strafe with A/D, browse labelled director and relationship shelves,
-  then hover a transparent jewel case to pull it out and select it as the new edition.
+  then hover a transparent jewel case to pull it out and select it as the new edition. Each curated
+  bay is deliberately compact at 10–15 cases; sparse source results receive neutral archive fillers
+  without pretending those placeholders are related or selectable films.
 - Compare attributed Douban and Letterboxd community scores and review up to three prominent
   Wikidata awards when those sources provide them.
 - Retrieve matched scholarly abstracts and DOI links through Crossref.

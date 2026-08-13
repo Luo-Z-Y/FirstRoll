@@ -23,3 +23,14 @@ def test_webgl_runtime_is_local_and_loaded_by_the_discovery_page() -> None:
     assert "firstroll-closet.glb" in runtime
     assert "firstroll:select-film" in runtime
     assert (WEB / "vendor" / "three" / "LICENSE").is_file()
+
+
+def test_compact_closet_caps_rows_and_fills_sparse_director_results() -> None:
+    app = (WEB / "app.js").read_text(encoding="utf-8")
+    runtime = (WEB / "closet3d.js").read_text(encoding="utf-8")
+
+    assert ".slice(0, 15)" in app
+    assert "director & related" in app
+    assert 'collection.wall === "back" ? 12 : 10' in runtime
+    assert "placeholder: true" in runtime
+    assert "selectableCase: !film.placeholder" in runtime

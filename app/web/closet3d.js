@@ -1,9 +1,9 @@
 import * as THREE from "three";
 import { GLTFLoader } from "./vendor/three/addons/loaders/GLTFLoader.js";
 
-const MODEL_URL = "/assets/models/firstroll-closet.glb?v=20260813-1";
-const CASE_TONES = ["#7a3027", "#304839", "#a65c2b", "#33404d", "#9c8969", "#563e57"];
-const CAMERA_BOUNDS = { minX: -4.85, maxX: 4.85, minZ: -5.95, maxZ: 6.25 };
+const MODEL_URL = "/assets/models/firstroll-closet.glb?v=20260814-4";
+const CASE_TONES = ["#632d28", "#304138", "#87512f", "#35404a", "#897c64", "#4d3d4d"];
+const CAMERA_BOUNDS = { minX: -0.82, maxX: 0.82, minZ: -3.28, maxZ: 3.82 };
 
 let activeViewer = null;
 
@@ -57,15 +57,15 @@ class FirstRollClosetViewer {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.06;
+    this.renderer.toneMappingExposure = 0.94;
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0x070806);
-    this.scene.fog = new THREE.FogExp2(0x090a08, 0.026);
-    this.camera = new THREE.PerspectiveCamera(61, 1, 0.05, 40);
-    this.camera.position.set(0, 1.68, 5.75);
+    this.scene.background = new THREE.Color(0x080705);
+    this.scene.fog = new THREE.FogExp2(0x0b0907, 0.018);
+    this.camera = new THREE.PerspectiveCamera(55, 1, 0.05, 28);
+    this.camera.position.set(0, 1.65, 3.48);
     this.updateCameraRotation();
     this.addLighting();
     this.bindEvents();
@@ -89,6 +89,7 @@ class FirstRollClosetViewer {
       });
       this.scene.add(this.model);
       this.addLiveCollections();
+      this.root.dataset.liveCaseCount = String(this.filmCases.length);
       this.root.classList.add("is-ready");
       if (this.loading) this.loading.remove();
     } catch (error) {
@@ -98,25 +99,25 @@ class FirstRollClosetViewer {
   }
 
   addLighting() {
-    this.scene.add(new THREE.HemisphereLight(0xf1e7cf, 0x151815, 1.55));
-    this.scene.add(new THREE.AmbientLight(0x8f8b79, 0.62));
+    this.scene.add(new THREE.HemisphereLight(0xeadfc8, 0x15110d, 0.78));
+    this.scene.add(new THREE.AmbientLight(0x806f58, 0.28));
 
     const lightPositions = [
-      [0, 4.2, 3.7],
-      [0, 4.2, -0.2],
-      [0, 4.2, -4.1],
+      [0, 4.12, 2.65],
+      [0, 4.12, 0],
+      [0, 4.12, -2.65],
     ];
     lightPositions.forEach(([x, y, z], index) => {
-      const light = new THREE.PointLight(0xffdfaa, index === 1 ? 36 : 28, 10.5, 1.7);
+      const light = new THREE.PointLight(0xffd59c, index === 1 ? 16 : 12, 7.5, 1.9);
       light.position.set(x, y, z);
       light.castShadow = index === 1;
       light.shadow.mapSize.set(1024, 1024);
       light.shadow.bias = -0.0008;
       this.scene.add(light);
     });
-    const entrance = new THREE.SpotLight(0xe8d5b5, 45, 14, Math.PI / 4.4, 0.72, 1.5);
-    entrance.position.set(0, 3.65, 6.5);
-    entrance.target.position.set(0, 1.2, -2.2);
+    const entrance = new THREE.SpotLight(0xe4c79c, 18, 9, Math.PI / 4.8, 0.78, 1.6);
+    entrance.position.set(0, 3.55, 4.1);
+    entrance.target.position.set(0, 1.25, -1.3);
     this.scene.add(entrance, entrance.target);
   }
 
@@ -130,24 +131,34 @@ class FirstRollClosetViewer {
   }
 
   addFilmRow(collection) {
-    const films = collection.films.slice(0, collection.wall === "back" ? 34 : 30);
+    const films = collection.films.slice(0, 15);
+    const minimumCases = collection.wall === "back" ? 12 : 10;
+    while (films.length < minimumCases) {
+      films.push({
+        id: null,
+        placeholder: true,
+        title: "FirstRoll Archive",
+        year: String(films.length + 1).padStart(2, "0"),
+      });
+    }
     const baseY = collection.shelf === "upper" ? 3.10 : 1.44;
-    const available = collection.wall === "back" ? 10.45 : 12.05;
+    const available = collection.wall === "back" ? 2.72 : 3.12;
     const gap = films.length > 20 ? 0.025 : 0.045;
-    const width = Math.max(0.13, Math.min(0.23, (available - gap * Math.max(0, films.length - 1)) / films.length));
+    const width = Math.max(0.145, Math.min(0.21, (available - gap * Math.max(0, films.length - 1)) / films.length));
     const span = films.length * width + Math.max(0, films.length - 1) * gap;
 
     films.forEach((film, index) => {
       let position;
       let rotationY = 0;
       let pullDirection;
-      const offset = -span / 2 + width / 2 + index * (width + gap);
+      const rowCentre = collection.wall === "back" ? 0 : -1.45;
+      const offset = rowCentre - span / 2 + width / 2 + index * (width + gap);
       if (collection.wall === "back") {
-        position = new THREE.Vector3(offset, baseY, -6.62);
+        position = new THREE.Vector3(offset, baseY, -3.62);
         pullDirection = new THREE.Vector3(0, 0, 1);
       } else {
         const side = collection.wall === "left" ? -1 : 1;
-        position = new THREE.Vector3(side * 5.27, baseY, offset);
+        position = new THREE.Vector3(side * 0.79, baseY, offset);
         rotationY = side < 0 ? Math.PI / 2 : -Math.PI / 2;
         pullDirection = new THREE.Vector3(-side, 0, 0);
       }
@@ -169,7 +180,7 @@ class FirstRollClosetViewer {
       pullDirection,
       hoverAmount: 0,
       targetHover: 0,
-      selectableCase: true,
+      selectableCase: !film.placeholder,
     };
 
     const height = 0.64;
@@ -189,10 +200,10 @@ class FirstRollClosetViewer {
       color: 0xf2f0e8,
       roughness: 0.12,
       metalness: 0.0,
-      transmission: 0.42,
+      transmission: 0.28,
       thickness: 0.035,
       transparent: true,
-      opacity: 0.42,
+      opacity: 0.3,
       clearcoat: 0.9,
       clearcoatRoughness: 0.16,
     });
@@ -250,7 +261,7 @@ class FirstRollClosetViewer {
     context.textBaseline = "middle";
     context.fillStyle = "#fff8e8";
     context.font = "700 72px sans-serif";
-    const title = String(film.title || "Untitled").toUpperCase();
+    const title = String(film.placeholder ? "FIRSTROLL" : film.title || "Untitled").toUpperCase();
     context.fillText(title, 35, -8, 690);
     context.font = "500 40px monospace";
     context.fillStyle = "rgba(255,248,232,.82)";
@@ -289,15 +300,15 @@ class FirstRollClosetViewer {
     const texture = new THREE.CanvasTexture(canvas);
     texture.colorSpace = THREE.SRGBColorSpace;
     const plaque = new THREE.Mesh(
-      new THREE.PlaneGeometry(collection.wall === "back" ? 3.5 : 3.1, 0.44),
+      new THREE.PlaneGeometry(collection.wall === "back" ? 2.55 : 2.4, 0.28),
       new THREE.MeshStandardMaterial({ map: texture, roughness: 0.5, metalness: 0.2 }),
     );
-    const y = collection.shelf === "upper" ? 2.80 : 1.13;
+    const y = collection.shelf === "upper" ? 2.58 : 0.88;
     if (collection.wall === "back") {
-      plaque.position.set(0, y, -6.58);
+      plaque.position.set(0, y, -3.39);
     } else {
       const side = collection.wall === "left" ? -1 : 1;
-      plaque.position.set(side * 5.23, y, 0);
+      plaque.position.set(side * 0.56, y, 0);
       plaque.rotation.y = side < 0 ? Math.PI / 2 : -Math.PI / 2;
     }
     this.scene.add(plaque);
@@ -436,7 +447,7 @@ class FirstRollClosetViewer {
   }
 
   reset() {
-    this.camera.position.set(0, 1.68, 5.75);
+    this.camera.position.set(0, 1.65, 3.48);
     this.yaw = 0;
     this.pitch = -0.015;
     this.updateCameraRotation();
@@ -484,7 +495,7 @@ class FirstRollClosetViewer {
       depthTrack.style.width = `${Math.round(progress * 100)}%`;
     }
     if (coordinate) {
-      const zone = this.camera.position.z > 4.6 ? "ENTRANCE" : this.camera.position.z < -3.8 ? "BACK WALL" : "MID-ROOM";
+      const zone = this.camera.position.z > 2.75 ? "ENTRANCE" : this.camera.position.z < -2.15 ? "BACK WALL" : "MID-ROOM";
       const gaze = Math.sin(this.yaw) < -0.42 ? "LEFT AISLE" : Math.sin(this.yaw) > 0.42 ? "RIGHT AISLE" : "DIRECTOR WALL";
       coordinate.textContent = `${zone} · ${gaze}`;
     }
