@@ -1,3 +1,4 @@
+import asyncio
 import os
 import tempfile
 from pathlib import Path
@@ -55,6 +56,7 @@ youtube_video_adapter = YouTubeVideoAdapter(settings_store)
 bilibili_video_adapter = BilibiliPublicVideoAdapter()
 video_store = FilmVideoStore()
 video_service = FilmVideoService(youtube_video_adapter, bilibili_video_adapter, video_store)
+reception_cache: dict[str, dict] = {}
 web_directory = Path(__file__).resolve().parents[1] / "web"
 app.mount("/assets", StaticFiles(directory=web_directory), name="web-assets")
 
@@ -139,6 +141,28 @@ def public_library_settings() -> dict:
         or (catalogue["indexable_document_count"] > 0 and index.get("state") != "ready")
     )
     return catalogue
+
+
+def reception_summary(scores: list[dict]) -> dict:
+    available = {
+        str(score.get("provider") or "").casefold(): score
+        for score in scores
+        if isinstance(score.get("normalised"), (int, float))
+    }
+    douban = available.get("douban")
+    letterboxd = available.get("letterboxd")
+    aggregate = None
+    if douban and letterboxd:
+        aggregate = {
+            "score": round(
+                float(douban["normalised"]) * 0.5
+                + float(letterboxd["normalised"]) * 0.5,
+                1,
+            ),
+            "scale": 100,
+            "method": "50% Douban · 50% Letterboxd",
+        }
+    return {"aggregate": aggregate, "scores": list(available.values())}
 
 
 @app.get("/api/health")
@@ -314,6 +338,8 @@ def contract() -> dict:
             "GET /api/discovery/status",
             "GET /api/discovery/search",
             "GET /api/discovery/films/{film_id}",
+            "GET /api/discovery/films/{film_id}/related",
+            "GET /api/discovery/films/{film_id}/reception",
             "POST /api/discovery/films/{film_id}/videos",
             "POST /api/discovery/films/{film_id}/study",
             "POST /api/discovery/films/{film_id}/criticism/douban",
@@ -360,6 +386,49 @@ def discovery_search(
         return discovery_service.search(q, year=year, director=director)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.get("/api/discovery/films/{film_id:path}/reception")
+async def discovery_film_reception(film_id: str) -> dict:
+    if cached := reception_cache.get(film_id):
+        return cached
+
+    try:
+        film = discovery_service.detail(film_id)["film"]
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    async def douban_score() -> dict | None:
+        if not douban_adapter.status().get("installed"):
+            return None
+        try:
+            return await douban_adapter.fetch_score(film)
+        except CriticismError:
+            return None
+
+    async def letterboxd_score() -> dict | None:
+        try:
+            return await run_in_threadpool(letterboxd_web_adapter.fetch_score, film)
+        except CriticismError:
+            return None
+
+    results = await asyncio.gather(douban_score(), letterboxd_score())
+    summary = reception_summary([score for score in results if score])
+    summary["awards"] = film.get("awards", [])[:3]
+    if summary["scores"] or summary["awards"]:
+        reception_cache[film_id] = summary
+    return summary
+
+
+@app.get("/api/discovery/films/{film_id:path}/related")
+def discovery_film_related(
+    film_id: str,
+    limit: int = Query(default=12, ge=1, le=18),
+) -> dict:
+    try:
+        return discovery_service.related(film_id, limit=limit)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
 @app.get("/api/discovery/films/{film_id:path}")

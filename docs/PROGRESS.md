@@ -1,5 +1,48 @@
 # FirstRoll Project Progress
 
+### 13 August 2026 — Draggable walk-in film closet
+
+Delivered:
+
+1. Replaced the flat related-title shelves with a panoramic three-wall archive room modelled on
+   the physical browsing experience of the Criterion Closet.
+2. Distributed same-director and nearby works across labelled aisles while retaining poster-art
+   jewel cases and explicit selection controls among non-interactive archive filler cases.
+3. Added mouse and touch dragging, native trackpad scrolling, arrow-key navigation, a live aisle
+   indicator and a re-centre control.
+4. Prevented a completed drag from accidentally selecting the case beneath the pointer and kept
+   deliberate case selection connected to the main edition display.
+5. Added responsive framing, reduced-motion compatibility and horizontal-page-overflow guards.
+
+Acceptance evidence:
+
+- live *In the Mood for Love* validation populated 13 selectable cases across three walls with
+  155 decorative archive cases;
+- a real pointer drag moved from the centre to the Director aisle without changing the selected
+  film, while arrow-key navigation moved the same viewport independently;
+- selecting *Ashes of Time* from the closet changed the main edition title, cover and dossier
+  target;
+- desktop, dark-theme and compact viewport checks show no page-level horizontal overflow;
+- 72 automated tests, JavaScript syntax and repository whitespace checks pass.
+
+### 13 August 2026 — Dossier reception and awards
+
+Delivered:
+
+1. Added attributed Douban and Letterboxd platform scores to the dossier opening panel.
+2. Normalised both providers to 100 and added a combined score weighted 50% per source only
+   when both ratings are available.
+3. Added up to three prominent Wikidata awards with linked names and concise introductions.
+4. Omitted missing ratings and awards rather than rendering disabled or empty controls.
+
+Acceptance evidence:
+
+- live *Parasite* validation displays Douban 8.8/10, Letterboxd 4.5/5 and a 89.2/100
+  equal-weight aggregate;
+- the same dossier displays the Palme d'Or and two Academy Awards with source-linked context;
+- browser checks confirm desktop and compact layouts without overflow or console errors;
+- 69 automated tests, JavaScript syntax and repository whitespace checks pass.
+
 ### 13 August 2026 — Exact-title Bilibili full-film discovery
 
 Delivered:
@@ -81,6 +124,22 @@ Acceptance evidence:
 - the dossier visibly links both Wikidata and the Wikipedia infobox as crew sources;
 - 57 automated tests pass, including infobox reconciliation and evidence-packet coverage.
 
+### 13 August 2026 — Minimal interface copy
+
+Delivered:
+
+1. Removed decorative header and footer copy from the public interface.
+2. Removed repeated section labels, readiness text, connector descriptions and instructional
+   empty states across discovery, analysis and Settings.
+3. Retained action labels, error messages, source attribution, privacy boundaries and live status
+   only where they affect a decision or explain system state.
+
+Acceptance evidence:
+
+- browser checks confirm the simplified public and Settings pages in wide and compact layouts;
+- no footer chrome, normal-operation readiness copy or horizontal overflow remains;
+- 55 automated tests, JavaScript syntax and repository whitespace checks pass.
+
 ### 13 August 2026 — Stable cumulative video discovery
 
 Delivered:
@@ -125,6 +184,25 @@ Acceptance evidence:
 - six focused classification and provider tests pass;
 - scoped Ruff, JavaScript syntax and repository whitespace checks pass.
 
+### 13 August 2026 — Persistent dark mode
+
+Delivered:
+
+1. Added an accessible light/dark toggle to the main interface and local Settings.
+2. Used the operating-system preference for first load and saved explicit choices locally.
+3. Added a dark palette for surfaces, typography, controls, evidence panels and the animated logo.
+4. Kept the selected theme consistent while navigating between discovery and Settings.
+5. Refined the switch and button system with restrained depth, rounded controls, tactile press
+   feedback and spring-like motion while retaining FirstRoll's editorial identity.
+
+Acceptance evidence:
+
+- frontend JavaScript syntax and repository whitespace checks pass;
+- browser checks confirm both themes, navigation persistence and narrow-width layouts;
+- toggle labels and pressed state remain synchronised with the active theme;
+- the animated thumb passes through an intermediate position before settling, and reduced-motion
+  preferences suppress non-essential transitions.
+
 ### 13 August 2026 — Film viewing resources
 
 Delivered:
@@ -167,13 +245,14 @@ Status vocabulary:
 **Release stage:** local working prototype
 
 **Primary development URL:** `http://127.0.0.1:8000`
-**Automated verification:** 64 tests passing
+**Automated verification:** 72 tests passing
 
 | Area | Status | Current evidence |
 |---|---|---|
-| Film discovery | Complete | Wikidata identity search plus attributed Wikipedia overview, poster and reconciled crew enrichment |
+| Film discovery | Complete | Wikidata identity search, attributed dossier enrichment and a draggable three-wall related-film closet |
 | Public video resources | Complete | Persistent cumulative catalogue; typed tabs; bounded uploader-description and public YouTube-caption extraction |
 | Product navigation | Complete | Discover and Analyse modes; Study consolidated into Discover |
+| Theme support | Complete | System-aware light/dark themes with a locally persisted accessible toggle |
 | Local settings | Complete | Write-only connector credentials plus local add, remove and index controls for the private library |
 | Private library catalogue | Complete | Seven existing film-study PDFs retained; managed uploads and non-destructive removal; paths and content withheld from public APIs |
 | PDF ingestion | Complete | Token-aware page chunks, overlap, section hints, language and stable IDs |
@@ -285,7 +364,7 @@ Acceptance evidence:
 Delivered:
 
 1. Replaced the framed reel symbol with a minimal black-and-white film-roll mark.
-2. Animated the film strip to extend from the roll, pause and retract.
+2. Animated the film strip once from its short resting tab to its fully extended state.
 3. Applied the same identity to the discovery and local Settings headers.
 4. Added a compact SVG favicon and a static reduced-motion state.
 5. Slimmed the cylinder and left a short film tab visible in the resting state.

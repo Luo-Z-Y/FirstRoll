@@ -34,6 +34,10 @@ The original GPL-3.0 licence and contributor attribution remain applicable. See
 
 - Search by title, year and director through key-free Wikidata.
 - Read an attributed Wikipedia overview and poster after Wikidata resolves the film.
+- Explore a draggable three-wall film closet containing the director's other films and nearby
+  works; pull a case from any shelf to make it the selected edition.
+- Compare attributed Douban and Letterboxd community scores and review up to three prominent
+  Wikidata awards when those sources provide them.
 - Retrieve matched scholarly abstracts and DOI links through Crossref.
 - Browse a private local library without publishing books or file paths.
 - Retrieve page-cited theory through hybrid SQLite FTS5 and local multilingual vectors.
@@ -650,6 +654,8 @@ never returned to the browser or committed to Git.
 | `POST /api/settings/library/rebuild` | Rebuild the private search index locally |
 | `GET /api/discovery/status` | Discovery and private-index status |
 | `GET /api/discovery/search` | Film identity search |
+| `GET /api/discovery/films/{film_id}/related` | Same-director and nearby films for the interactive closet |
+| `GET /api/discovery/films/{film_id}/reception` | Attributed platform ratings, equal-weight aggregate and prominent awards |
 | `GET /api/discovery/films/{film_id}` | Full film dossier |
 | `POST /api/discovery/films/{film_id}/videos` | Find and merge relevant public YouTube and Bilibili videos into the private catalogue |
 | `POST /api/discovery/films/{film_id}/criticism/crossref` | Retrieve and cache matched scholarly abstracts |

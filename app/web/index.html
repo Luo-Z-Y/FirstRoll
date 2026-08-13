@@ -4,15 +4,25 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description" content="FirstRoll helps filmmakers discover films and analyse clips." />
+  <meta name="color-scheme" content="light dark" />
   <title>FirstRoll — Film discovery and analysis</title>
+  <script>
+    (() => {
+      let storedTheme = null;
+      try { storedTheme = window.localStorage.getItem("firstroll.theme"); } catch (_) {}
+      const theme = storedTheme === "light" || storedTheme === "dark"
+        ? storedTheme
+        : window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+      document.documentElement.dataset.theme = theme;
+    })();
+  </script>
   <link rel="icon" href="/assets/favicon.svg?v=20260811-2" type="image/svg+xml" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/assets/styles.css?v=20260813-1" />
+  <link rel="stylesheet" href="/assets/styles.css?v=20260813-14" />
 </head>
 <body data-api-base="">
-  <div class="grain" aria-hidden="true"></div>
   <div class="app-shell">
     <header class="site-header">
       <button class="brand" type="button" data-product-view="discovery" aria-label="FirstRoll home">
@@ -24,7 +34,7 @@
           </defs>
           <g clip-path="url(#brand-strip-reveal)">
             <path fill="currentColor" d="M20 5h49v22H20z" />
-            <path fill="#fff" d="M24 8h5v3h-5zm8 0h5v3h-5zm8 0h5v3h-5zm8 0h5v3h-5zm8 0h5v3h-5zm8 0h3v3h-3zM24 21h5v3h-5zm8 0h5v3h-5zm8 0h5v3h-5zm8 0h5v3h-5zm8 0h5v3h-5zm8 0h3v3h-3zM23 13h43v6H23z" />
+            <path fill="var(--logo-cutout)" d="M24 8h5v3h-5zm8 0h5v3h-5zm8 0h5v3h-5zm8 0h5v3h-5zm8 0h5v3h-5zm8 0h3v3h-3zM24 21h5v3h-5zm8 0h5v3h-5zm8 0h5v3h-5zm8 0h5v3h-5zm8 0h5v3h-5zm8 0h3v3h-3zM23 13h43v6H23z" />
             <path stroke="currentColor" d="M34 13v6m11-6v6m11-6v6" />
           </g>
           <path fill="currentColor" d="M15.5 2C9.8 2 6 5.3 6 9.5v13C6 26.7 9.8 30 15.5 30s9.5-3.3 9.5-7.5v-13C25 5.3 21.2 2 15.5 2Z" />
@@ -38,10 +48,17 @@
       </nav>
 
       <div class="header-tools">
-        <div class="header-note">
-          <span class="signal-dot" aria-hidden="true"></span>
-          Evidence-led film research
-        </div>
+        <button id="themeToggle" class="theme-toggle" type="button" aria-label="Switch to dark mode" title="Switch to dark mode">
+          <span class="theme-toggle-thumb" aria-hidden="true">
+            <svg class="theme-icon theme-icon-sun" viewBox="0 0 24 24" focusable="false">
+              <circle cx="12" cy="12" r="3.5" fill="none" stroke="currentColor" stroke-width="1.8" />
+              <path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M18.7 5.3l-1.4 1.4M6.7 17.3l-1.4 1.4" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.8" />
+            </svg>
+            <svg class="theme-icon theme-icon-moon" viewBox="0 0 24 24" focusable="false">
+              <path d="M19.2 15.1A7.8 7.8 0 0 1 8.9 4.8 7.8 7.8 0 1 0 19.2 15.1Z" fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="1.8" />
+            </svg>
+          </span>
+        </button>
         <a class="settings-link" href="/settings">Settings</a>
       </div>
     </header>
@@ -50,7 +67,6 @@
       <section id="product-discovery" class="product-view active">
         <div class="discovery-hero">
           <div class="hero-copy">
-            <p class="eyebrow">Discover</p>
             <h1>Find a film.<br /><em>Study it.</em></h1>
           </div>
         </div>
@@ -75,19 +91,17 @@
 
         <div class="search-support">
           <div id="recentSearches" class="recent-searches" aria-label="Recent searches"></div>
-          <p id="discoveryConnection" class="connection-state">Checking research sources…</p>
+          <p id="discoveryConnection" class="connection-state hidden" aria-live="polite"></p>
         </div>
 
         <section id="discoveryResultsSection" class="results-section hidden" aria-live="polite">
           <div class="section-heading">
             <div>
-              <p class="eyebrow">Identity matches</p>
               <h2 id="resultsTitle">Search results</h2>
             </div>
             <p id="resultsMeta" class="section-meta"></p>
           </div>
-          <div id="sourceStatus" class="source-status"></div>
-          <div id="discoveryResults" class="film-grid"></div>
+          <div id="discoveryResults" class="film-archive"></div>
         </section>
 
         <section id="filmDetail" class="film-detail hidden" aria-live="polite"></section>
@@ -96,22 +110,20 @@
       <section id="product-analyse" class="product-view">
         <div class="analyse-intro">
           <div>
-            <p class="eyebrow">Analyse</p>
             <h1>Measure a clip.<br /><em>Scene by scene.</em></h1>
           </div>
-          <p id="analyseContext">Import a private clip to inspect scenes, shots, colour and objects.</p>
+          <p id="analyseContext" class="hidden"></p>
         </div>
 
         <div class="workspace">
           <aside class="control-panel card">
-            <div class="panel-kicker">Private clip workspace</div>
             <h2>Import &amp; process</h2>
 
             <label class="file-drop" for="videoFile">
               <input id="videoFile" type="file" accept="video/*" />
               <span class="file-icon" aria-hidden="true">＋</span>
               <span class="file-title" id="fileTitle">Choose a film clip</span>
-              <span class="file-meta" id="fileMeta">Your source remains on this device until analysis begins</span>
+              <span class="file-meta" id="fileMeta"></span>
             </label>
 
             <div class="control-group">
@@ -155,7 +167,7 @@
             </div>
 
             <div class="status-wrap">
-              <p id="statusText">Waiting for a video clip…</p>
+              <p id="statusText"></p>
               <div class="progress-track" aria-hidden="true"><div id="progressBar" class="progress-bar"></div></div>
             </div>
             <video id="previewVideo" controls playsinline muted></video>
@@ -170,19 +182,19 @@
             </nav>
 
             <section id="view-overview" class="view active" aria-live="polite">
-              <div id="overviewPlaceholder" class="placeholder">Import a clip to generate metadata and scene-level evidence.</div>
+              <div id="overviewPlaceholder" class="placeholder">No analysis yet.</div>
               <div id="overviewContent" class="hidden"></div>
             </section>
             <section id="view-shotdata" class="view">
-              <div id="shotdataPlaceholder" class="placeholder">Run analysis to see shot and scene metrics.</div>
+              <div id="shotdataPlaceholder" class="placeholder">No analysis yet.</div>
               <div id="shotdataContent" class="hidden"></div>
             </section>
             <section id="view-color" class="view">
-              <div id="colorPlaceholder" class="placeholder">Run analysis to render scene-level colour wheels.</div>
+              <div id="colorPlaceholder" class="placeholder">No analysis yet.</div>
               <div id="colorContent" class="hidden"></div>
             </section>
             <section id="view-objects" class="view">
-              <div id="objectsPlaceholder" class="placeholder">Run analysis to inspect notable props per scene.</div>
+              <div id="objectsPlaceholder" class="placeholder">No analysis yet.</div>
               <div id="objectsContent" class="hidden"></div>
               <div id="llmDraftWrap" class="hidden">
                 <button id="generateLlmDraftBtn" class="ghost-btn inline">Generate interpretation brief</button>
@@ -194,15 +206,10 @@
       </section>
     </main>
 
-    <footer class="site-footer">
-      <span>FirstRoll</span>
-      <p>Discover. Analyse.</p>
-      <small>Local research workspace</small>
-    </footer>
   </div>
 
   <video id="analysisVideo" preload="metadata" class="hidden-asset"></video>
   <canvas id="analysisCanvas" width="160" height="90" class="hidden-asset"></canvas>
-  <script src="/assets/app.js?v=20260813-1"></script>
+  <script src="/assets/app.js?v=20260813-14"></script>
 </body>
 </html>

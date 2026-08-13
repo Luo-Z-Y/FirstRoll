@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import html
 import json
 import re
 from dataclasses import dataclass
@@ -13,10 +14,12 @@ from urllib.request import Request, urlopen
 
 
 WIKIDATA_API = "https://www.wikidata.org/w/api.php"
+WIKIDATA_SPARQL = "https://query.wikidata.org/sparql"
 WIKIDATA_ENTITY_URL = "https://www.wikidata.org/wiki"
 WIKIMEDIA_FILE_URL = "https://commons.wikimedia.org/wiki/Special:Redirect/file"
 WIKIPEDIA_SUMMARY_URL = "https://en.wikipedia.org/api/rest_v1/page/summary"
 WIKIPEDIA_API = "https://en.wikipedia.org/w/api.php"
+LETTERBOXD_WEB = "https://letterboxd.com"
 
 
 class DiscoveryProviderError(RuntimeError):
@@ -133,6 +136,8 @@ DEMO_FILMS: tuple[dict[str, Any], ...] = (
 
 JsonRequest = Callable[[dict[str, Any]], dict[str, Any]]
 WikipediaRequest = Callable[[str], dict[str, Any]]
+SparqlRequest = Callable[[str], dict[str, Any]]
+PosterRequest = Callable[[str], dict[str, Any] | None]
 
 
 def _clean_infobox_text(value: str, preserve_lines: bool = False) -> str:
@@ -260,6 +265,8 @@ class DiscoveryService:
         request_json: JsonRequest | None = None,
         wikipedia_summary: WikipediaRequest | None = None,
         wikipedia_infobox: WikipediaRequest | None = None,
+        sparql_json: SparqlRequest | None = None,
+        poster_request: PosterRequest | None = None,
     ) -> None:
         self._request_json = request_json or self._wikidata_request
         self._wikipedia_summary = wikipedia_summary or (
@@ -267,6 +274,12 @@ class DiscoveryService:
         )
         self._wikipedia_infobox = wikipedia_infobox or (
             self._wikipedia_infobox_request if request_json is None else None
+        )
+        self._sparql_json = sparql_json or (
+            self._wikidata_sparql_request if request_json is None else None
+        )
+        self._poster_request = poster_request or (
+            self._letterboxd_poster_request if request_json is None else None
         )
         self._detail_cache: dict[str, dict[str, Any]] = {}
 
@@ -337,11 +350,69 @@ class DiscoveryService:
             except DiscoveryProviderError as exc:
                 raise LookupError(str(exc)) from exc
 
+        public_detail = dict(detail)
+        public_detail.pop("_director_ids", None)
         return {
-            "film": self._enrich_detail(dict(detail)),
+            "film": self._enrich_detail(public_detail),
             "mode": "live",
             "sources": [self._wikidata_status().as_dict(), self._wikipedia_status().as_dict()],
         }
+
+    def related(self, film_id: str, limit: int = 12) -> dict[str, Any]:
+        """Return verified films by the primary director for the discovery closet."""
+        limit = max(1, min(limit, 18))
+        if film_id.startswith("demo:"):
+            return self._demo_related(film_id, limit)
+
+        qid = film_id.removeprefix("wikidata:")
+        if not self._valid_qid(qid):
+            raise LookupError("The film identifier is not recognised by the Wikidata adapter.")
+        if qid not in self._detail_cache:
+            self.detail(film_id)
+        film = self._detail_cache.get(qid) or {}
+        director_ids = film.get("_director_ids") or []
+        director_names = film.get("directors") or []
+        director = director_names[0] if director_names else None
+        response = {
+            "film_id": film_id,
+            "director": director,
+            "same_director": [],
+            "state": "ready",
+        }
+        if not director_ids or self._sparql_json is None:
+            response["state"] = "unavailable"
+            return response
+
+        director_id = director_ids[0]
+        query = f"""
+SELECT DISTINCT ?film WHERE {{
+  ?film wdt:P57 wd:{director_id} .
+  FILTER(?film != wd:{qid})
+}}
+LIMIT {limit * 3}
+""".strip()
+        try:
+            payload = self._sparql_json(query)
+            candidate_ids = self._sparql_entity_ids(payload, "film")
+            entities = self._get_entities(candidate_ids[:50])
+        except (DiscoveryProviderError, KeyError, TypeError, ValueError):
+            response["state"] = "unavailable"
+            return response
+
+        related: list[dict[str, Any]] = []
+        for candidate_id in candidate_ids:
+            entity = entities.get(candidate_id)
+            if not entity or not self._looks_like_film(entity):
+                continue
+            candidate = self._normalise_entity(entity)
+            self._detail_cache[candidate_id] = candidate
+            self._enrich_poster(candidate)
+            summary = self._public_live_summary(candidate)
+            summary["relation"] = "same_director"
+            related.append(summary)
+        related.sort(key=lambda item: (item.get("year") is None, -(item.get("year") or 0)))
+        response["same_director"] = related[:limit]
+        return response
 
     def _search_wikidata(
         self,
@@ -394,8 +465,8 @@ class DiscoveryService:
             self._detail_cache[qid] = film
             results.append(film)
         results.sort(key=lambda film: film["match_score"], reverse=True)
-        for film in results[:8]:
-            self._enrich_poster(film)
+        for index, film in enumerate(results[:8]):
+            self._enrich_poster(film, external_fallback=index == 0)
         return [self._public_live_summary(film) for film in results]
 
     def _get_entities(self, qids: list[str]) -> dict[str, dict[str, Any]]:
@@ -418,11 +489,20 @@ class DiscoveryService:
         related_ids: set[str] = set()
         for entity in entities.values():
             claims = entity.get("claims", {})
-            for property_id in ("P57", "P58", "P162", "P344", "P1040", "P136", "P495"):
+            for property_id in (
+                "P57", "P58", "P162", "P344", "P1040", "P136", "P495", "P166"
+            ):
                 related_ids.update(self._entity_ids(claims, property_id))
         labels = self._get_labels(sorted(related_ids))
+        award_ids = {
+            award_id
+            for entity in entities.values()
+            for award_id in self._entity_ids(entity.get("claims", {}), "P166")
+        }
+        award_descriptions = self._get_descriptions(sorted(award_ids))
         for entity in entities.values():
             entity["_related_labels"] = labels
+            entity["_related_descriptions"] = award_descriptions
         return entities
 
     def _get_labels(self, qids: list[str]) -> dict[str, str]:
@@ -446,10 +526,32 @@ class DiscoveryService:
                     labels[qid] = label
         return labels
 
+    def _get_descriptions(self, qids: list[str]) -> dict[str, str]:
+        if not qids:
+            return {}
+        descriptions: dict[str, str] = {}
+        for offset in range(0, len(qids), 50):
+            payload = self._request_json(
+                {
+                    "action": "wbgetentities",
+                    "ids": "|".join(qids[offset : offset + 50]),
+                    "props": "descriptions",
+                    "languages": "en",
+                    "languagefallback": 1,
+                    "format": "json",
+                }
+            )
+            for qid, entity in payload.get("entities", {}).items():
+                description = self._best_text(entity.get("descriptions", {}))
+                if description:
+                    descriptions[qid] = description
+        return descriptions
+
     def _normalise_entity(self, entity: dict[str, Any]) -> dict[str, Any]:
         qid = entity.get("id", "")
         claims = entity.get("claims", {})
         labels = entity.get("_related_labels", {})
+        descriptions = entity.get("_related_descriptions", {})
         title = self._best_text(entity.get("labels", {})) or qid
         original_title = self._original_title(entity.get("labels", {}), title)
         alternative_titles = self._alternative_titles(entity.get("labels", {}), title)
@@ -463,6 +565,7 @@ class DiscoveryService:
         image_name = self._string_value(claims, "P18")
         imdb_id = self._string_value(claims, "P345")
         wikipedia_title = entity.get("sitelinks", {}).get("enwiki", {}).get("title")
+        awards = self._significant_awards(claims, labels, descriptions)
         return {
             "id": f"wikidata:{qid}",
             "provider_id": qid,
@@ -512,6 +615,7 @@ class DiscoveryService:
                 }
             ],
             "external_ids": {"imdb": imdb_id} if imdb_id else {},
+            "awards": awards,
             "reviews": [],
             "source": {
                 "name": "Wikidata",
@@ -524,7 +628,58 @@ class DiscoveryService:
                 "intentions or critical interpretation."
             ),
             "_wikipedia_title": wikipedia_title,
+            "_director_ids": self._entity_ids(claims, "P57"),
         }
+
+    @classmethod
+    def _significant_awards(
+        cls,
+        claims: dict[str, Any],
+        labels: dict[str, str],
+        descriptions: dict[str, str],
+        limit: int = 3,
+    ) -> list[dict[str, str]]:
+        awards: list[dict[str, str]] = []
+        for qid in cls._entity_ids(claims, "P166"):
+            name = labels.get(qid)
+            if not name:
+                continue
+            awards.append(
+                {
+                    "id": qid,
+                    "name": name,
+                    "description": descriptions.get(qid) or cls._award_introduction(name),
+                    "url": f"{WIKIDATA_ENTITY_URL}/{qid}",
+                }
+            )
+        awards.sort(key=lambda award: cls._award_significance(award["name"]), reverse=True)
+        return awards[:limit]
+
+    @staticmethod
+    def _award_significance(name: str) -> int:
+        folded = name.casefold()
+        tiers = (
+            (100, ("academy award", "palme d'or", "golden lion", "golden bear")),
+            (90, ("grand prix", "bafta", "golden globe", "césar", "cesar")),
+            (80, ("best picture", "best film", "best director", "jury prize")),
+            (70, ("film festival", "international film", "critics'", "critics award")),
+        )
+        return next((score for score, terms in tiers if any(term in folded for term in terms)), 50)
+
+    @staticmethod
+    def _award_introduction(name: str) -> str:
+        folded = name.casefold()
+        if "palme d'or" in folded:
+            return "The highest prize awarded in the Cannes Film Festival competition."
+        if "academy award" in folded:
+            return "An Academy of Motion Picture Arts and Sciences film honour."
+        if "golden lion" in folded:
+            return "The top competition prize at the Venice International Film Festival."
+        if "golden bear" in folded:
+            return "The highest prize in the Berlin International Film Festival competition."
+        if "bafta" in folded:
+            return "A film honour presented by the British Academy of Film and Television Arts."
+        return f"A film honour recorded for the film: {name}."
 
     def _enrich_detail(self, film: dict[str, Any]) -> dict[str, Any]:
         wikipedia_title = film.pop("_wikipedia_title", None)
@@ -556,6 +711,8 @@ class DiscoveryService:
             except DiscoveryProviderError:
                 infobox = {}
             self._apply_wikipedia_infobox(film, infobox, wikipedia_url)
+        if not film.get("poster_url"):
+            self._enrich_letterboxd_poster(film)
 
         title = str(film.get("title") or "this film")
         directors = film.get("directors") or []
@@ -658,21 +815,49 @@ class DiscoveryService:
             )
             film["crew_sources"] = sources
 
-    def _enrich_poster(self, film: dict[str, Any]) -> None:
-        if film.get("poster_url") or not self._wikipedia_summary:
+    def _enrich_poster(
+        self,
+        film: dict[str, Any],
+        *,
+        external_fallback: bool = False,
+    ) -> None:
+        if film.get("poster_url"):
             return
         wikipedia_title = film.get("_wikipedia_title")
-        if not wikipedia_title:
+        if wikipedia_title and self._wikipedia_summary:
+            wikipedia_url = (
+                f"https://en.wikipedia.org/wiki/"
+                f"{quote(str(wikipedia_title).replace(' ', '_'))}"
+            )
+            try:
+                summary = self._wikipedia_summary(str(wikipedia_title))
+            except DiscoveryProviderError:
+                summary = {}
+            self._apply_wikipedia_image(film, summary, wikipedia_url)
+        if external_fallback and not film.get("poster_url"):
+            self._enrich_letterboxd_poster(film)
+
+    def _enrich_letterboxd_poster(self, film: dict[str, Any]) -> None:
+        imdb_id = str(film.get("external_ids", {}).get("imdb") or "").strip()
+        if film.get("poster_url") or not self._poster_request or not imdb_id:
             return
-        wikipedia_url = (
-            f"https://en.wikipedia.org/wiki/"
-            f"{quote(str(wikipedia_title).replace(' ', '_'))}"
-        )
         try:
-            summary = self._wikipedia_summary(str(wikipedia_title))
+            poster = self._poster_request(imdb_id)
         except DiscoveryProviderError:
             return
-        self._apply_wikipedia_image(film, summary, wikipedia_url)
+        if not poster:
+            return
+        source = str(poster.get("image") or "").strip()
+        if not source.startswith("https://a.ltrbxd.com/resized/film-poster/"):
+            return
+        film["poster_url"] = source
+        runtime = poster.get("runtime_minutes")
+        if film.get("runtime_minutes") is None and isinstance(runtime, int) and runtime > 0:
+            film["runtime_minutes"] = runtime
+        film["poster_source"] = {
+            "name": "Letterboxd public film page",
+            "url": poster.get("url") or f"{LETTERBOXD_WEB}/imdb/{quote(imdb_id)}/",
+        }
 
     @staticmethod
     def _apply_wikipedia_image(
@@ -780,6 +965,33 @@ class DiscoveryService:
             "sources": [self._demo_status().as_dict()],
         }
 
+    def _demo_related(self, film_id: str, limit: int) -> dict[str, Any]:
+        film = next((item for item in DEMO_FILMS if item["id"] == film_id), None)
+        if not film:
+            raise LookupError("Film not found in the offline catalogue.")
+        directors = set(film.get("directors") or [])
+        genres = set(film.get("genres") or [])
+        same_director = [
+            {**self._public_demo_summary(item), "relation": "same_director"}
+            for item in DEMO_FILMS
+            if item["id"] != film_id and directors.intersection(item.get("directors") or [])
+        ][:limit]
+        same_director_ids = {item["id"] for item in same_director}
+        relevant = [
+            {**self._public_demo_summary(item), "relation": "shared_genre"}
+            for item in DEMO_FILMS
+            if item["id"] != film_id
+            and item["id"] not in same_director_ids
+            and genres.intersection(item.get("genres") or [])
+        ][:limit]
+        return {
+            "film_id": film_id,
+            "director": next(iter(directors), None),
+            "same_director": same_director,
+            "relevant": relevant,
+            "state": "offline",
+        }
+
     def _wikidata_request(self, params: dict[str, Any]) -> dict[str, Any]:
         url = f"{WIKIDATA_API}?{urlencode(params)}"
         request = Request(
@@ -796,6 +1008,26 @@ class DiscoveryService:
             raise DiscoveryProviderError(f"Wikidata returned HTTP {exc.code}.") from exc
         except (URLError, TimeoutError, json.JSONDecodeError) as exc:
             raise DiscoveryProviderError("Wikidata could not be reached.") from exc
+
+    @staticmethod
+    def _wikidata_sparql_request(query: str) -> dict[str, Any]:
+        url = f"{WIKIDATA_SPARQL}?{urlencode({'query': query, 'format': 'json'})}"
+        request = Request(
+            url,
+            headers={
+                "Accept": "application/sparql-results+json",
+                "User-Agent": "FirstRoll/0.1 (https://github.com/Luo-Z-Y/FirstRoll)",
+            },
+        )
+        try:
+            with urlopen(request, timeout=12) as response:
+                return json.loads(response.read().decode("utf-8"))
+        except HTTPError as exc:
+            raise DiscoveryProviderError(
+                f"Wikidata Query Service returned HTTP {exc.code}."
+            ) from exc
+        except (URLError, TimeoutError, json.JSONDecodeError) as exc:
+            raise DiscoveryProviderError("Wikidata Query Service could not be reached.") from exc
 
     @staticmethod
     def _wikipedia_request(title: str) -> dict[str, Any]:
@@ -846,6 +1078,63 @@ class DiscoveryService:
             raise DiscoveryProviderError("Wikipedia could not be reached.") from exc
 
     @staticmethod
+    def _letterboxd_poster_request(imdb_id: str) -> dict[str, Any] | None:
+        if not re.fullmatch(r"tt\d+", imdb_id):
+            return None
+        request = Request(
+            f"{LETTERBOXD_WEB}/imdb/{quote(imdb_id)}/",
+            headers={
+                "Accept": "text/html",
+                "User-Agent": "FirstRoll/0.1 (https://github.com/Luo-Z-Y/FirstRoll)",
+            },
+        )
+        try:
+            with urlopen(request, timeout=8) as response:
+                page_url = response.geturl()
+                page = response.read().decode("utf-8", errors="replace")
+        except HTTPError as exc:
+            if exc.code == 404:
+                return None
+            raise DiscoveryProviderError(f"Letterboxd returned HTTP {exc.code}.") from exc
+        except (URLError, TimeoutError) as exc:
+            raise DiscoveryProviderError("Letterboxd could not be reached.") from exc
+        return DiscoveryService._parse_letterboxd_poster(page, page_url)
+
+    @staticmethod
+    def _parse_letterboxd_poster(page: str, page_url: str) -> dict[str, Any] | None:
+        scripts = re.findall(
+            r"<script[^>]+type=[\"']application/ld\+json[\"'][^>]*>(.*?)</script>",
+            page,
+            flags=re.IGNORECASE | re.DOTALL,
+        )
+        for script in scripts:
+            raw = html.unescape(script).strip()
+            raw = re.sub(r"^/\*.*?\*/\s*", "", raw, flags=re.DOTALL)
+            raw = re.sub(r"\s*/\*.*?\*/$", "", raw, flags=re.DOTALL)
+            try:
+                payload = json.loads(raw)
+            except json.JSONDecodeError:
+                continue
+            if not isinstance(payload, dict) or payload.get("@type") != "Movie":
+                continue
+            image = str(payload.get("image") or "").strip()
+            if image.startswith("https://a.ltrbxd.com/resized/film-poster/"):
+                result: dict[str, Any] = {
+                    "image": image,
+                    "url": str(payload.get("url") or page_url),
+                }
+                duration = re.fullmatch(
+                    r"PT(?:(\d+)H)?(?:(\d+)M)?",
+                    str(payload.get("duration") or ""),
+                )
+                if duration:
+                    result["runtime_minutes"] = (
+                        int(duration.group(1) or 0) * 60 + int(duration.group(2) or 0)
+                    )
+                return result
+        return None
+
+    @staticmethod
     def _looks_like_film(entity: dict[str, Any]) -> bool:
         description = DiscoveryService._best_text(entity.get("descriptions", {})).casefold()
         return any(term in description for term in ("film", "movie", "motion picture"))
@@ -864,6 +1153,19 @@ class DiscoveryService:
         for claim in claims.get(property_id, []):
             value = claim.get("mainsnak", {}).get("datavalue", {}).get("value")
             qid = value.get("id") if isinstance(value, dict) else None
+            if DiscoveryService._valid_qid(qid) and qid not in values:
+                values.append(qid)
+        return values
+
+    @staticmethod
+    def _sparql_entity_ids(payload: dict[str, Any], variable: str) -> list[str]:
+        values: list[str] = []
+        bindings = payload.get("results", {}).get("bindings", [])
+        if not isinstance(bindings, list):
+            return values
+        for binding in bindings:
+            raw = binding.get(variable, {}).get("value") if isinstance(binding, dict) else None
+            qid = str(raw or "").rsplit("/", 1)[-1]
             if DiscoveryService._valid_qid(qid) and qid not in values:
                 values.append(qid)
         return values
@@ -959,6 +1261,7 @@ class DiscoveryService:
                 "original_title",
                 "alternative_titles",
                 "year",
+                "runtime_minutes",
                 "directors",
                 "overview",
                 "poster_url",
@@ -977,6 +1280,7 @@ class DiscoveryService:
             "title": film["title"],
             "original_title": film["original_title"],
             "year": film["year"],
+            "runtime_minutes": film["runtime_minutes"],
             "directors": film["directors"],
             "overview": film["overview"],
             "poster_url": film["poster_url"],

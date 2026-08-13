@@ -4,7 +4,18 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="robots" content="noindex,nofollow" />
+  <meta name="color-scheme" content="light dark" />
   <title>FirstRoll — Local Settings</title>
+  <script>
+    (() => {
+      let storedTheme = null;
+      try { storedTheme = window.localStorage.getItem("firstroll.theme"); } catch (_) {}
+      const theme = storedTheme === "light" || storedTheme === "dark"
+        ? storedTheme
+        : window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+      document.documentElement.dataset.theme = theme;
+    })();
+  </script>
   <link rel="icon" href="/assets/favicon.svg?v=20260811-2" type="image/svg+xml" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -19,6 +30,43 @@
       --red-dark: #79271f;
       --olive: #777b49;
       --line: rgba(23, 24, 19, 0.18);
+      --grid-line: rgba(104, 81, 55, .035);
+      --grid-line-soft: rgba(104, 81, 55, .025);
+      --panel: rgba(250, 246, 238, .76);
+      --planned: rgba(23, 24, 19, .045);
+      --on-red: #faf6ee;
+      --logo-cutout: #fff;
+      --control-fill: rgba(255, 255, 255, .42);
+      --control-fill-hover: rgba(255, 255, 255, .68);
+      --control-shadow: 0 1px 2px rgba(38, 30, 20, .08), 0 5px 14px rgba(38, 30, 20, .06);
+      --control-shadow-hover: 0 2px 4px rgba(38, 30, 20, .1), 0 8px 22px rgba(38, 30, 20, .1);
+      --toggle-track: rgba(23, 24, 19, .14);
+      --toggle-thumb: #fffdf8;
+      --ease-fluid: cubic-bezier(.22, 1, .36, 1);
+      --ease-spring: cubic-bezier(.34, 1.56, .64, 1);
+      color-scheme: light;
+    }
+    html[data-theme="dark"] {
+      color-scheme: dark;
+      --ink: #f2ede3;
+      --soft: #b7b2a8;
+      --paper: #10110f;
+      --light: #1b1d18;
+      --red: #df6d58;
+      --red-dark: #f09580;
+      --olive: #a1a76c;
+      --line: rgba(242, 237, 227, .16);
+      --grid-line: rgba(244, 237, 223, .035);
+      --grid-line-soft: rgba(244, 237, 223, .022);
+      --panel: rgba(27, 29, 24, .82);
+      --planned: rgba(255, 255, 255, .045);
+      --logo-cutout: #10110f;
+      --control-fill: rgba(255, 255, 255, .075);
+      --control-fill-hover: rgba(255, 255, 255, .12);
+      --control-shadow: 0 1px 2px rgba(0, 0, 0, .25), 0 6px 18px rgba(0, 0, 0, .18);
+      --control-shadow-hover: 0 2px 4px rgba(0, 0, 0, .3), 0 10px 25px rgba(0, 0, 0, .24);
+      --toggle-track: rgba(223, 109, 88, .5);
+      --toggle-thumb: #f7f3ea;
     }
     * { box-sizing: border-box; }
     body {
@@ -26,13 +74,17 @@
       margin: 0;
       color: var(--ink);
       background:
-        linear-gradient(rgba(104, 81, 55, 0.035) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(104, 81, 55, 0.025) 1px, transparent 1px),
+        linear-gradient(var(--grid-line) 1px, transparent 1px),
+        linear-gradient(90deg, var(--grid-line-soft) 1px, transparent 1px),
         var(--paper);
       background-size: 28px 28px;
       font-family: "DM Sans", sans-serif;
+      transition: color 180ms ease, background-color 180ms ease;
     }
     button, input { font: inherit; }
+    button { color: inherit; -webkit-tap-highlight-color: transparent; transition: color 220ms var(--ease-fluid), background-color 220ms var(--ease-fluid), border-color 220ms var(--ease-fluid), box-shadow 260ms var(--ease-fluid), opacity 220ms var(--ease-fluid), transform 320ms var(--ease-spring); }
+    button:not(:disabled):active { transform: scale(.97); transition-duration: 90ms; }
+    button:focus-visible, a:focus-visible { outline: 3px solid rgba(185, 65, 46, .28); outline-offset: 3px; }
     .shell { max-width: 1240px; margin: 0 auto; padding: 0 32px 60px; }
     header {
       min-height: 84px;
@@ -43,76 +95,88 @@
     }
     .brand { display: flex; align-items: center; gap: 10px; font-family: "Bebas Neue", sans-serif; font-size: 1.5rem; letter-spacing: .06em; }
     .brand-mark { width: 49px; height: 25px; flex: 0 0 auto; overflow: visible; color: var(--ink); }
-    .brand-strip-reveal { width: 15px; animation: brand-strip-roll 4.8s cubic-bezier(.65, 0, .35, 1) infinite; }
+    .brand-strip-reveal { width: 15px; animation: brand-strip-roll 1.8s cubic-bezier(.65, 0, .35, 1) forwards; }
     @keyframes brand-strip-roll {
-      0%, 12%, 100% { width: 15px; }
-      42%, 68% { width: 48px; }
-      88% { width: 15px; }
+      0%, 15% { width: 15px; }
+      100% { width: 48px; }
     }
+    .header-actions { display: flex; align-items: center; gap: 10px; }
+    .theme-toggle { position: relative; width: 54px; height: 30px; border: 1px solid var(--line); border-radius: 999px; padding: 3px; color: var(--ink); background: var(--toggle-track); box-shadow: inset 0 1px 2px rgba(17,18,15,.12), 0 1px 1px rgba(255,255,255,.18); cursor: pointer; transition: background-color 420ms var(--ease-fluid), border-color 320ms var(--ease-fluid), box-shadow 320ms var(--ease-fluid), transform 320ms var(--ease-spring); }
+    .theme-toggle:hover, .theme-toggle:focus-visible { border-color: rgba(185,65,46,.46); box-shadow: inset 0 1px 2px rgba(17,18,15,.1), 0 0 0 4px rgba(185,65,46,.09); }
+    .theme-toggle-thumb { position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; display: grid; place-items: center; border-radius: 50%; color: #8e6a2c; background: var(--toggle-thumb); box-shadow: 0 1px 2px rgba(17,18,15,.18), 0 3px 8px rgba(17,18,15,.16); transform: translateX(0); transition: transform 520ms var(--ease-spring), color 300ms var(--ease-fluid), box-shadow 320ms var(--ease-fluid); }
+    .theme-toggle:hover .theme-toggle-thumb { box-shadow: 0 2px 4px rgba(17,18,15,.2), 0 5px 12px rgba(17,18,15,.2); }
+    .theme-icon { grid-area: 1 / 1; width: 14px; height: 14px; transition: opacity 260ms var(--ease-fluid), transform 420ms var(--ease-spring); }
+    .theme-icon-moon { opacity: 0; transform: rotate(-35deg) scale(.55); }
+    html[data-theme="dark"] .theme-toggle-thumb { color: #37394c; transform: translateX(26px); }
+    html[data-theme="dark"] .theme-icon-sun { opacity: 0; transform: rotate(45deg) scale(.55); }
+    html[data-theme="dark"] .theme-icon-moon { opacity: 1; transform: rotate(0) scale(1); }
     @media (prefers-reduced-motion: reduce) {
       .brand-strip-reveal { width: 48px; animation: none; }
+      *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; }
     }
-    .back { color: var(--ink); font-size: .75rem; font-weight: 700; text-decoration: none; }
-    .back:hover { color: var(--red); }
-    .hero { padding: 58px 0 42px; display: grid; grid-template-columns: 1fr 340px; align-items: end; gap: 50px; }
-    .eyebrow { margin: 0; color: var(--red); font: 500 .66rem "IBM Plex Mono", monospace; letter-spacing: .13em; text-transform: uppercase; }
+    .back { padding: 8px 12px; border: 1px solid var(--line); border-radius: 10px; color: var(--ink); background: var(--control-fill); box-shadow: var(--control-shadow), inset 0 1px rgba(255,255,255,.22); font-size: .75rem; font-weight: 700; text-decoration: none; transition: color 220ms var(--ease-fluid), border-color 220ms var(--ease-fluid), background-color 220ms var(--ease-fluid), box-shadow 260ms var(--ease-fluid), transform 320ms var(--ease-spring); }
+    .back:hover { color: var(--red); border-color: rgba(185,65,46,.38); background: var(--control-fill-hover); box-shadow: var(--control-shadow-hover); transform: translateY(-1px); }
+    .back:active { transform: scale(.97); transition-duration: 90ms; }
+    .hero { padding: 58px 0 42px; }
     h1 { margin: 17px 0 0; font: 400 clamp(4rem, 8vw, 7.5rem)/.82 "Bebas Neue", sans-serif; text-transform: uppercase; }
     h1 em { color: var(--red); font-style: normal; }
-    .hero-copy { margin: 0; color: var(--soft); line-height: 1.65; }
     .privacy {
+      width: fit-content;
       margin-bottom: 28px;
-      display: grid;
-      grid-template-columns: auto 1fr auto;
+      display: inline-flex;
       align-items: center;
-      gap: 16px;
-      padding: 16px 18px;
+      gap: 11px;
+      padding: 10px 14px;
       border: 1px solid rgba(119, 123, 73, .38);
       background: rgba(119, 123, 73, .08);
     }
     .privacy-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--olive); box-shadow: 0 0 0 5px rgba(119, 123, 73, .13); }
-    .privacy strong { display: block; margin-bottom: 2px; font-size: .8rem; }
-    .privacy span { color: var(--soft); font-size: .7rem; }
-    .privacy code { font: .65rem "IBM Plex Mono", monospace; }
+    .privacy strong { font-size: .74rem; }
     .section-head { display: flex; justify-content: space-between; align-items: end; gap: 20px; margin: 42px 0 17px; }
     h2 { margin: 7px 0 0; font: 400 2.6rem "Bebas Neue", sans-serif; text-transform: uppercase; }
     .section-head > span { color: var(--soft); font: .65rem "IBM Plex Mono", monospace; text-transform: uppercase; }
     .connector-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
     .connector {
       position: relative;
-      min-height: 270px;
+      min-height: 230px;
       padding: 23px;
       border: 1px solid var(--line);
-      background: rgba(250, 246, 238, .76);
+      background: var(--panel);
     }
     .connector.available { box-shadow: inset 0 3px var(--red); }
     .connector-top { display: flex; justify-content: space-between; gap: 15px; }
     .connector h3 { margin: 0 0 8px; font: 400 2rem "Bebas Neue", sans-serif; letter-spacing: .02em; text-transform: uppercase; }
-    .connector-description { min-height: 36px; margin: 0; color: var(--soft); font-size: .76rem; line-height: 1.5; }
     .badge { height: fit-content; padding: 5px 7px; border: 1px solid var(--line); font: .58rem "IBM Plex Mono", monospace; text-transform: uppercase; }
     .badge.ready { color: #4e5829; border-color: rgba(119,123,73,.4); background: rgba(119,123,73,.1); }
+    html[data-theme="dark"] .badge.ready { color: #c6d5a5; }
     .badge.planned { color: var(--soft); }
     .credential-state { min-height: 42px; margin: 18px 0 12px; display: flex; align-items: center; justify-content: space-between; gap: 10px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); font: .64rem "IBM Plex Mono", monospace; }
     .credential-state strong { text-transform: uppercase; letter-spacing: .06em; }
     .credential-state span { color: var(--soft); }
     .secret-row { display: grid; grid-template-columns: 1fr auto; }
     .credential-fields { display: grid; gap: 8px; }
-    .secret-row input { min-width: 0; border: 1px solid var(--ink); border-right: 0; padding: 11px 12px; background: var(--light); outline: 0; }
+    .secret-row input { min-width: 0; border: 1px solid var(--line); border-right: 0; border-radius: 10px 0 0 10px; padding: 11px 12px; background: var(--light); outline: 0; transition: border-color 220ms var(--ease-fluid), box-shadow 220ms var(--ease-fluid); }
     .secret-row input:focus { box-shadow: inset 0 -3px var(--red); }
-    .reveal { border: 1px solid var(--ink); padding: 0 12px; background: transparent; cursor: pointer; font-size: .68rem; font-weight: 700; }
+    .reveal { border: 1px solid var(--line); border-radius: 0 10px 10px 0; padding: 0 12px; background: var(--control-fill); cursor: pointer; font-size: .68rem; font-weight: 700; }
+    .reveal:hover:not(:disabled) { color: var(--red); background: var(--control-fill-hover); }
     .actions { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 10px; }
-    .actions button, .docs { border: 1px solid var(--ink); padding: 8px 12px; background: transparent; color: var(--ink); font-size: .68rem; font-weight: 700; text-decoration: none; cursor: pointer; }
-    .actions .save { color: var(--light); border-color: var(--red); background: var(--red); }
+    .actions button, .docs { border: 1px solid var(--line); border-radius: 9px; padding: 8px 12px; background: var(--control-fill); box-shadow: var(--control-shadow); color: var(--ink); font-size: .68rem; font-weight: 700; text-decoration: none; cursor: pointer; transition: color 220ms var(--ease-fluid), background-color 220ms var(--ease-fluid), border-color 220ms var(--ease-fluid), box-shadow 260ms var(--ease-fluid), transform 320ms var(--ease-spring); }
+    .actions button:hover:not(:disabled), .docs:hover { color: var(--red); border-color: rgba(185,65,46,.4); background: var(--control-fill-hover); box-shadow: var(--control-shadow-hover); transform: translateY(-1px); }
+    .actions .save { color: var(--on-red); border-color: var(--red); background: var(--red); box-shadow: 0 6px 16px rgba(121,39,31,.2); }
+    .actions .save:hover:not(:disabled) { color: var(--on-red); border-color: var(--red-dark); background: var(--red-dark); box-shadow: 0 9px 22px rgba(121,39,31,.28); }
     .actions button:disabled { opacity: .35; cursor: not-allowed; }
-    .connector-message { min-height: 18px; margin: 11px 0 0; color: var(--soft); font-size: .67rem; }
+    .connector-message { min-height: 0; margin: 0; color: var(--soft); font-size: .67rem; }
+    .connector-message:not(:empty) { margin-top: 11px; }
     .connector-message.error { color: var(--red-dark); }
-    .planned-panel { margin-top: 15px; padding: 13px; background: rgba(23,24,19,.045); color: var(--soft); font-size: .7rem; line-height: 1.5; }
-    .library-panel { border: 1px solid var(--line); background: rgba(250, 246, 238, .76); }
-    .library-toolbar { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 18px; align-items: end; padding: 22px; border-bottom: 1px solid var(--line); }
-    .library-toolbar p { margin: 7px 0 0; color: var(--soft); font-size: .74rem; line-height: 1.5; }
-    .library-upload { display: grid; grid-template-columns: minmax(220px, 1fr) auto; }
-    .library-upload input { min-width: 0; padding: 9px 11px; border: 1px solid var(--ink); background: var(--light); font-size: .7rem; }
-    .library-button { border: 1px solid var(--ink); padding: 9px 13px; background: transparent; color: var(--ink); font-size: .68rem; font-weight: 700; cursor: pointer; }
-    .library-button.primary { color: var(--light); border-color: var(--red); background: var(--red); }
+    .planned-panel { margin-top: 15px; padding: 13px; background: var(--planned); color: var(--soft); font-size: .7rem; line-height: 1.5; }
+    .library-panel { border: 1px solid var(--line); background: var(--panel); }
+    .library-toolbar { padding: 22px; border-bottom: 1px solid var(--line); }
+    .library-upload { max-width: 720px; display: grid; grid-template-columns: minmax(220px, 1fr) auto; }
+    .library-upload input { min-width: 0; padding: 9px 11px; border: 1px solid var(--line); border-radius: 10px 0 0 10px; background: var(--light); font-size: .7rem; }
+    .library-button { border: 1px solid var(--line); border-radius: 9px; padding: 9px 13px; background: var(--control-fill); box-shadow: var(--control-shadow); color: var(--ink); font-size: .68rem; font-weight: 700; cursor: pointer; }
+    .library-button:hover:not(:disabled) { color: var(--red); border-color: rgba(185,65,46,.4); background: var(--control-fill-hover); box-shadow: var(--control-shadow-hover); transform: translateY(-1px); }
+    .library-button.primary { margin-left: -1px; border-radius: 0 10px 10px 0; color: var(--on-red); border-color: var(--red); background: var(--red); box-shadow: 0 6px 16px rgba(121,39,31,.2); }
+    .library-button.primary:hover:not(:disabled) { color: var(--on-red); border-color: var(--red-dark); background: var(--red-dark); box-shadow: 0 9px 22px rgba(121,39,31,.28); }
     .library-button:disabled { opacity: .35; cursor: not-allowed; }
     .library-status { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; padding: 13px 22px; border-bottom: 1px solid var(--line); color: var(--soft); font: .64rem "IBM Plex Mono", monospace; }
     .library-status strong { color: var(--ink); text-transform: uppercase; }
@@ -124,17 +188,14 @@
     .library-empty { padding: 34px 22px; color: var(--soft); text-align: center; font-size: .75rem; }
     .library-message { min-height: 20px; margin: 10px 0 0; color: var(--soft); font-size: .7rem; }
     .library-message.error { color: var(--red-dark); }
-    footer { margin-top: 55px; padding-top: 18px; display: flex; justify-content: space-between; border-top: 1px solid var(--line); color: var(--soft); font: .62rem "IBM Plex Mono", monospace; text-transform: uppercase; }
     .loading { grid-column: 1 / -1; padding: 50px; border: 1px dashed var(--line); text-align: center; color: var(--soft); }
     @media (max-width: 780px) {
       .shell { padding: 0 15px 40px; }
       .hero { grid-template-columns: 1fr; }
-      .hero-copy { max-width: 560px; }
       .connector-grid { grid-template-columns: 1fr; }
-      .privacy { grid-template-columns: auto 1fr; }
-      .privacy code { grid-column: 2; }
       .library-toolbar { grid-template-columns: 1fr; }
       .library-upload { grid-template-columns: 1fr; gap: 8px; }
+      .library-upload input, .library-button.primary { margin-left: 0; border-radius: 10px; }
     }
   </style>
 </head>
@@ -150,34 +211,44 @@
           </defs>
           <g clip-path="url(#brand-strip-reveal-settings)">
             <path fill="currentColor" d="M20 5h49v22H20z" />
-            <path fill="#fff" d="M24 8h5v3h-5zm8 0h5v3h-5zm8 0h5v3h-5zm8 0h5v3h-5zm8 0h5v3h-5zm8 0h3v3h-3zM24 21h5v3h-5zm8 0h5v3h-5zm8 0h5v3h-5zm8 0h5v3h-5zm8 0h5v3h-5zm8 0h3v3h-3zM23 13h43v6H23z" />
+            <path fill="var(--logo-cutout)" d="M24 8h5v3h-5zm8 0h5v3h-5zm8 0h5v3h-5zm8 0h5v3h-5zm8 0h5v3h-5zm8 0h3v3h-3zM24 21h5v3h-5zm8 0h5v3h-5zm8 0h5v3h-5zm8 0h5v3h-5zm8 0h5v3h-5zm8 0h3v3h-3zM23 13h43v6H23z" />
             <path stroke="currentColor" d="M34 13v6m11-6v6m11-6v6" />
           </g>
           <path fill="currentColor" d="M15.5 2C9.8 2 6 5.3 6 9.5v13C6 26.7 9.8 30 15.5 30s9.5-3.3 9.5-7.5v-13C25 5.3 21.2 2 15.5 2Z" />
         </svg>
-        <span>FirstRoll Settings</span>
+        <span>FirstRoll</span>
       </div>
-      <a class="back" href="/">← Return to discovery</a>
+      <div class="header-actions">
+        <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Switch to dark mode" title="Switch to dark mode">
+          <span class="theme-toggle-thumb" aria-hidden="true">
+            <svg class="theme-icon theme-icon-sun" viewBox="0 0 24 24" focusable="false">
+              <circle cx="12" cy="12" r="3.5" fill="none" stroke="currentColor" stroke-width="1.8" />
+              <path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M18.7 5.3l-1.4 1.4M6.7 17.3l-1.4 1.4" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.8" />
+            </svg>
+            <svg class="theme-icon theme-icon-moon" viewBox="0 0 24 24" focusable="false">
+              <path d="M19.2 15.1A7.8 7.8 0 0 1 8.9 4.8 7.8 7.8 0 1 0 19.2 15.1Z" fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="1.8" />
+            </svg>
+          </span>
+        </button>
+        <a class="back" href="/">← Back</a>
+      </div>
     </header>
 
     <main>
       <section class="hero">
         <div>
-          <p class="eyebrow">Private configuration</p>
           <h1>Local<br /><em>settings.</em></h1>
         </div>
-        <p class="hero-copy">Models, research sources and study books.</p>
       </section>
 
       <aside class="privacy">
         <span class="privacy-dot" aria-hidden="true"></span>
-        <div><strong>Local only</strong><span>Credentials are never returned to the browser.</span></div>
-        <code>.firstroll/settings.json · Git ignored</code>
+        <strong>Local only</strong>
       </aside>
 
       <section>
         <div class="section-head">
-          <div><p class="eyebrow">Connector registry</p><h2>Models and sources</h2></div>
+          <h2>Models and sources</h2>
           <span id="summary">Loading local configuration…</span>
         </div>
         <div id="connectors" class="connector-grid"><div class="loading">Reading FirstRoll settings…</div></div>
@@ -185,15 +256,11 @@
 
       <section>
         <div class="section-head">
-          <div><p class="eyebrow">Private evidence</p><h2>Study library</h2></div>
+          <h2>Study library</h2>
           <span id="library-summary">Loading private catalogue…</span>
         </div>
         <div class="library-panel">
           <div class="library-toolbar">
-            <div>
-              <strong>Add a local book</strong>
-              <p>Add private study files. PDFs can be indexed for Deep Study.</p>
-            </div>
             <form id="library-upload" class="library-upload">
               <input id="library-file" type="file" name="document" accept=".pdf,.epub,.md,.txt" required aria-label="Choose a study document" />
               <button class="library-button primary" type="submit">Add to library</button>
@@ -209,7 +276,6 @@
       </section>
     </main>
 
-    <footer><span>FirstRoll local console</span><span>Secrets remain on this machine</span></footer>
   </div>
 
   <script>
@@ -222,12 +288,35 @@
     const libraryUpload = document.getElementById("library-upload");
     const libraryFile = document.getElementById("library-file");
     const libraryRebuild = document.getElementById("library-rebuild");
+    const themeToggle = document.getElementById("theme-toggle");
+
+    themeToggle.addEventListener("click", toggleTheme);
+    syncThemeToggle();
 
     loadSettings();
     loadLibrary();
 
     libraryUpload.addEventListener("submit", addLibraryDocument);
     libraryRebuild.addEventListener("click", rebuildLibraryIndex);
+
+    function toggleTheme() {
+      const nextTheme = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+      document.documentElement.dataset.theme = nextTheme;
+      try {
+        window.localStorage.setItem("firstroll.theme", nextTheme);
+      } catch (_) {
+        // Theme switching remains available when local browser storage is disabled.
+      }
+      syncThemeToggle();
+    }
+
+    function syncThemeToggle() {
+      const dark = document.documentElement.dataset.theme === "dark";
+      const label = dark ? "Switch to light mode" : "Switch to dark mode";
+      themeToggle.setAttribute("aria-label", label);
+      themeToggle.title = label;
+      themeToggle.setAttribute("aria-pressed", String(dark));
+    }
 
     async function loadSettings() {
       try {
@@ -256,7 +345,6 @@
       const environmentManaged = credentials.length > 0 && credentials.every((credential) => credential.source === "environment");
       const localCredential = credentials.some((credential) => credential.source === "local_store");
       const environmentKeys = credentials.filter((credential) => credential.source === "environment").map((credential) => credential.environment_key);
-      const conciseDescription = String(connector.description || "").split(". ")[0];
       const stateLabel = connector.configured
         ? `Configured ${connector.credential_hint || ""} · ${connector.credential_source.replaceAll("_", " ")}`
         : credentials.some((credential) => credential.configured) ? "Partially configured" : "Not configured";
@@ -268,7 +356,7 @@
       return `
         <article class="connector ${available ? "available" : "planned"}" data-connector="${escapeHtml(connector.id)}">
           <div class="connector-top">
-            <div><h3>${escapeHtml(connector.name)}</h3><p class="connector-description">${escapeHtml(conciseDescription)}</p></div>
+            <h3>${escapeHtml(connector.name)}</h3>
             <span class="badge ${available ? "ready" : "planned"}">${available ? "Available" : "Planned"}</span>
           </div>
           <div class="credential-state"><strong>${escapeHtml(connector.credential_label)}</strong><span>${escapeHtml(stateLabel)}</span></div>
@@ -282,7 +370,6 @@
             </div>
             ${environmentKeys.length ? `<div class="planned-panel">Environment-managed fields: <code>${escapeHtml(environmentKeys.join(", "))}</code>.</div>` : ""}
           ` : `
-            <div class="planned-panel">Not yet available.</div>
             <div class="actions"><a class="docs" href="${escapeHtml(connector.documentation_url)}" target="_blank" rel="noopener noreferrer">Review source ↗</a></div>
           `}
           <p class="connector-message" aria-live="polite"></p>

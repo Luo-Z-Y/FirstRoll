@@ -216,6 +216,63 @@ class DoubanMcpAdapter:
             )
         return match["id"], match.get("title") or title, reviews
 
+    async def fetch_score(self, film: dict[str, Any]) -> dict[str, Any]:
+        """Return the matched film's Douban community score without loading reviews."""
+        if not self.server_path.is_file():
+            raise CriticismError("Douban MCP is not installed.")
+        title = str(film.get("title") or "").strip()
+        if not title:
+            raise CriticismError("The film record has no title for Douban matching.")
+        external_ids = film.get("external_ids") or {}
+        search_query = str(external_ids.get("imdb") or title).strip()
+        environment = {"PATH": os.getenv("PATH", "")}
+        cookie = self.settings.effective_secret("douban")
+        if cookie:
+            environment["COOKIE"] = cookie
+        parameters = StdioServerParameters(
+            command="node",
+            args=[str(self.server_path)],
+            env=environment,
+            cwd=self.server_path.parent.parent,
+        )
+        try:
+            async with stdio_client(parameters) as (read, write):
+                async with ClientSession(read, write) as session:
+                    await session.initialize()
+                    search_text = await self._call_text(
+                        session,
+                        "search-movie",
+                        {"q": search_query},
+                    )
+        except CriticismError:
+            raise
+        except Exception as exc:
+            raise CriticismError(
+                f"Douban MCP failed: {self._mcp_exception_detail(exc)}"
+            ) from exc
+        match = self._choose_match(film, self._markdown_table(search_text))
+        score, votes = self._parse_platform_rating(match.get("rating"))
+        if score is None:
+            raise CriticismError("Douban returned no film rating for this title.")
+        return {
+            "provider": "Douban",
+            "score": score,
+            "scale": 10,
+            "normalised": round(score * 10, 1),
+            "votes": votes,
+            "url": f"https://movie.douban.com/subject/{match['id']}/",
+        }
+
+    @staticmethod
+    def _parse_platform_rating(value: Any) -> tuple[float | None, int | None]:
+        match = re.search(r"(\d+(?:\.\d+)?)\s*(?:\((\d+)\s*人\))?", str(value or ""))
+        if not match:
+            return None, None
+        score = float(match.group(1))
+        if not 0 < score <= 10:
+            return None, None
+        return score, int(match.group(2)) if match.group(2) else None
+
     @staticmethod
     async def _call_text(
         session: ClientSession,
@@ -779,6 +836,66 @@ class LetterboxdPublicWebAdapter:
                 "Letterboxd's public pages contained no usable attributed review text."
             )
         return film_slug, title, reviews
+
+    def fetch_score(self, film: dict[str, Any]) -> dict[str, Any]:
+        """Return Letterboxd's aggregate member rating from the matched public film page."""
+        film_url, film_html = self._resolve_film_page(film)
+        score, votes = self._aggregate_rating(film_html)
+        if score is None:
+            raise CriticismError("Letterboxd returned no aggregate film rating.")
+        return {
+            "provider": "Letterboxd",
+            "score": score,
+            "scale": 5,
+            "normalised": round(score * 20, 1),
+            "votes": votes,
+            "url": film_url,
+        }
+
+    @classmethod
+    def _aggregate_rating(cls, body: str) -> tuple[float | None, int | None]:
+        scripts = re.findall(
+            r'<script[^>]+type=["\']application/ld\+json["\'][^>]*>(.*?)</script>',
+            body,
+            flags=re.IGNORECASE | re.DOTALL,
+        )
+        for script in scripts:
+            try:
+                payload = json.loads(html.unescape(script).strip())
+            except (json.JSONDecodeError, TypeError):
+                continue
+            for node in cls._json_nodes(payload):
+                aggregate = node.get("aggregateRating") if isinstance(node, dict) else None
+                if not isinstance(aggregate, dict):
+                    continue
+                try:
+                    score = float(aggregate.get("ratingValue"))
+                except (TypeError, ValueError):
+                    continue
+                try:
+                    votes = int(str(aggregate.get("ratingCount") or "").replace(",", ""))
+                except ValueError:
+                    votes = None
+                if 0 < score <= 5:
+                    return score, votes
+        fallback = re.search(
+            r'([0-5](?:\.\d+)?)\s+(?:out of 5|average rating)',
+            html.unescape(body),
+            flags=re.IGNORECASE,
+        )
+        return (float(fallback.group(1)), None) if fallback else (None, None)
+
+    @classmethod
+    def _json_nodes(cls, value: Any) -> list[dict[str, Any]]:
+        nodes: list[dict[str, Any]] = []
+        if isinstance(value, dict):
+            nodes.append(value)
+            for child in value.values():
+                nodes.extend(cls._json_nodes(child))
+        elif isinstance(value, list):
+            for child in value:
+                nodes.extend(cls._json_nodes(child))
+        return nodes
 
     def _resolve_film_page(self, film: dict[str, Any]) -> tuple[str, str]:
         title = str(film.get("title") or "").strip()

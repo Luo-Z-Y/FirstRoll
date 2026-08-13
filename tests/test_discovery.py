@@ -34,6 +34,25 @@ def fake_wikidata(params: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def fake_wikidata_with_related(params: dict[str, Any]) -> dict[str, Any]:
+    if params.get("action") == "wbgetentities" and params.get("ids") == "Q101":
+        return {
+            "entities": {
+                "Q101": {
+                    "id": "Q101",
+                    "labels": {"en": {"value": "Earlier Example"}},
+                    "descriptions": {"en": {"value": "2020 drama film"}},
+                    "claims": {
+                        "P57": [claim_entity("Q200")],
+                        "P577": [claim_time("+2020-02-01T00:00:00Z")],
+                        "P136": [claim_entity("Q300")],
+                    },
+                }
+            }
+        }
+    return fake_wikidata(params)
+
+
 def claim_entity(qid: str) -> dict[str, Any]:
     return {"mainsnak": {"datavalue": {"value": {"id": qid}}}}
 
@@ -72,6 +91,29 @@ def test_wikidata_search_matches_title_year_and_director_without_api_key() -> No
     assert result["result_count"] == 1
     assert result["results"][0]["id"] == "wikidata:Q100"
     assert result["results"][0]["directors"] == ["Example Director"]
+    assert result["results"][0]["runtime_minutes"] == 101
+
+
+def test_related_films_are_resolved_from_the_verified_director_identity() -> None:
+    service = DiscoveryService(
+        request_json=fake_wikidata_with_related,
+        sparql_json=lambda _: {
+            "results": {
+                "bindings": [
+                    {"film": {"value": "http://www.wikidata.org/entity/Q101"}},
+                ]
+            }
+        },
+    )
+    service.search("Example Film")
+
+    result = service.related("wikidata:Q100")
+
+    assert result["director"] == "Example Director"
+    assert result["state"] == "ready"
+    assert [film["title"] for film in result["same_director"]] == ["Earlier Example"]
+    assert result["same_director"][0]["relation"] == "same_director"
+    assert "_director_ids" not in service.detail("wikidata:Q100")["film"]
 
 
 def test_search_uses_portrait_wikipedia_image_when_wikidata_has_no_poster() -> None:
@@ -95,6 +137,63 @@ def test_search_uses_portrait_wikipedia_image_when_wikidata_has_no_poster() -> N
     assert result["results"][0]["poster_source"]["name"] == "Wikipedia article image"
 
 
+def test_search_falls_back_to_public_letterboxd_poster_by_imdb_identity() -> None:
+    service = DiscoveryService(
+        request_json=fake_wikidata,
+        wikipedia_summary=lambda _: {
+            "originalimage": {
+                "source": "https://upload.wikimedia.org/example-landscape.jpg",
+                "width": 1200,
+                "height": 675,
+            }
+        },
+        poster_request=lambda imdb_id: {
+            "image": (
+                "https://a.ltrbxd.com/resized/film-poster/1/2/3/"
+                "123-example-film-0-600-0-900-crop.jpg"
+            ),
+            "url": f"https://letterboxd.com/imdb/{imdb_id}/",
+            "runtime_minutes": 157,
+        },
+    )
+
+    result = service.search("Example Film", year=2024)
+
+    poster = result["results"][0]
+    assert "/resized/film-poster/" in poster["poster_url"]
+    assert poster["poster_source"]["name"] == "Letterboxd public film page"
+    assert poster["runtime_minutes"] == 101  # Wikidata remains authoritative when supplied.
+
+    missing_runtime = {
+        "poster_url": None,
+        "runtime_minutes": None,
+        "external_ids": {"imdb": "tt1234567"},
+    }
+    service._enrich_letterboxd_poster(missing_runtime)
+    assert missing_runtime["runtime_minutes"] == 157
+
+
+def test_letterboxd_poster_parser_uses_movie_json_ld_image() -> None:
+    page = """
+    <script type="application/ld+json">
+      {"@type":"Movie","name":"Example Film",
+       "image":"https://a.ltrbxd.com/resized/film-poster/1/example.jpg",
+       "url":"https://letterboxd.com/film/example-film/","duration":"PT2H37M"}
+    </script>
+    """
+
+    result = DiscoveryService._parse_letterboxd_poster(
+        page,
+        "https://letterboxd.com/imdb/tt1234567/",
+    )
+
+    assert result == {
+        "image": "https://a.ltrbxd.com/resized/film-poster/1/example.jpg",
+        "url": "https://letterboxd.com/film/example-film/",
+        "runtime_minutes": 157,
+    }
+
+
 def test_wikidata_detail_keeps_intention_claims_out_of_identity_metadata() -> None:
     service = DiscoveryService(
         request_json=fake_wikidata,
@@ -116,6 +215,32 @@ def test_wikidata_detail_keeps_intention_claims_out_of_identity_metadata() -> No
     assert len(result["film"]["research_links"]) >= 4
     assert len(result["film"]["study_questions"]) >= 3
     assert "not creator intentions" in result["film"]["evidence_notice"].casefold()
+
+
+def test_significant_awards_prioritise_major_prizes_and_limit_to_three() -> None:
+    claims = {
+        "P166": [
+            claim_entity("Q1"),
+            claim_entity("Q2"),
+            claim_entity("Q3"),
+            claim_entity("Q4"),
+        ]
+    }
+    labels = {
+        "Q1": "Regional audience mention",
+        "Q2": "Palme d'Or",
+        "Q3": "Academy Award for Best Picture",
+        "Q4": "International Film Festival jury prize",
+    }
+
+    awards = DiscoveryService._significant_awards(claims, labels, {})
+
+    assert [award["name"] for award in awards] == [
+        "Palme d'Or",
+        "Academy Award for Best Picture",
+        "International Film Festival jury prize",
+    ]
+    assert "Cannes" in awards[0]["description"]
 
 
 def test_wikipedia_infobox_completes_missing_crew_with_field_provenance() -> None:

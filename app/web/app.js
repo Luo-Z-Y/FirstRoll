@@ -6,6 +6,8 @@ const state = {
   discovery: {
     results: [],
     selectedFilm: null,
+    archive: null,
+    archiveSelectionId: null,
     mode: "unknown",
     activeCriticismProvider: null,
     recentSearches: [],
@@ -21,7 +23,9 @@ const CRITICISM_SOURCES = [
 ];
 
 const RECENT_SEARCHES_KEY = "firstroll.recent-searches";
+const THEME_STORAGE_KEY = "firstroll.theme";
 const MAX_RECENT_SEARCHES = 5;
+let closetDrag = null;
 
 const refs = {
   productViews: {
@@ -30,6 +34,7 @@ const refs = {
   },
   productNav: Array.from(document.querySelectorAll(".nav-link[data-product-view]")),
   productViewTriggers: Array.from(document.querySelectorAll("[data-product-view]")),
+  themeToggle: document.getElementById("themeToggle"),
   discoveryForm: document.getElementById("discoveryForm"),
   filmTitle: document.getElementById("filmTitle"),
   filmYear: document.getElementById("filmYear"),
@@ -40,7 +45,6 @@ const refs = {
   discoveryResults: document.getElementById("discoveryResults"),
   resultsTitle: document.getElementById("resultsTitle"),
   resultsMeta: document.getElementById("resultsMeta"),
-  sourceStatus: document.getElementById("sourceStatus"),
   filmDetail: document.getElementById("filmDetail"),
   analyseContext: document.getElementById("analyseContext"),
   recentSearches: document.getElementById("recentSearches"),
@@ -91,11 +95,18 @@ const refs = {
 setup();
 
 function setup() {
+  refs.themeToggle.addEventListener("click", toggleTheme);
+  syncThemeToggle();
   refs.productViewTriggers.forEach((trigger) => {
     trigger.addEventListener("click", () => setProductView(trigger.dataset.productView));
   });
   refs.discoveryForm.addEventListener("submit", onDiscoverySearch);
   refs.discoveryResults.addEventListener("click", onFilmResultClick);
+  refs.discoveryResults.addEventListener("pointerdown", onClosetPointerDown);
+  refs.discoveryResults.addEventListener("pointermove", onClosetPointerMove);
+  refs.discoveryResults.addEventListener("pointerup", onClosetPointerUp);
+  refs.discoveryResults.addEventListener("pointercancel", onClosetPointerUp);
+  refs.discoveryResults.addEventListener("keydown", onClosetKeyDown);
   refs.filmDetail.addEventListener("click", onFilmDetailClick);
   refs.recentSearches.addEventListener("click", onRecentSearchClick);
   state.discovery.recentSearches = readRecentSearches();
@@ -124,6 +135,25 @@ function setup() {
 
   setFeatureButtonsEnabled(false);
   loadDiscoveryStatus();
+}
+
+function toggleTheme() {
+  const nextTheme = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+  document.documentElement.dataset.theme = nextTheme;
+  try {
+    window.localStorage.setItem(THEME_STORAGE_KEY, nextTheme);
+  } catch (_) {
+    // Theme switching remains available when local browser storage is disabled.
+  }
+  syncThemeToggle();
+}
+
+function syncThemeToggle() {
+  const dark = document.documentElement.dataset.theme === "dark";
+  const label = dark ? "Switch to light mode" : "Switch to dark mode";
+  refs.themeToggle.setAttribute("aria-label", label);
+  refs.themeToggle.title = label;
+  refs.themeToggle.setAttribute("aria-pressed", String(dark));
 }
 
 function setProductView(viewKey) {
@@ -156,12 +186,11 @@ async function loadDiscoveryStatus() {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
     state.discovery.mode = data.mode || "unknown";
-    const primary = data.sources?.[0];
-    refs.discoveryConnection.textContent = primary
-      ? `${primary.name} / ${primary.state}`
-      : "Discovery source ready";
+    refs.discoveryConnection.textContent = "";
+    refs.discoveryConnection.classList.add("hidden");
   } catch (_) {
-    refs.discoveryConnection.textContent = "Start the FirstRoll backend to search";
+    refs.discoveryConnection.textContent = "Search unavailable";
+    refs.discoveryConnection.classList.remove("hidden");
   }
 }
 
@@ -185,9 +214,10 @@ async function onDiscoverySearch(event) {
   refs.discoveryResultsSection.classList.remove("hidden");
   refs.filmDetail.classList.add("hidden");
   refs.discoveryResults.innerHTML = fetchProgressMarkup("Matching title, year and filmmaker identity…");
+  state.discovery.archive = null;
+  state.discovery.archiveSelectionId = null;
   refs.resultsTitle.textContent = `Finding “${title}”`;
   refs.resultsMeta.textContent = "";
-  refs.sourceStatus.innerHTML = "";
 
   try {
     const res = await fetch(`${discoveryApiBase()}/api/discovery/search?${params.toString()}`);
@@ -267,12 +297,8 @@ function onRecentSearchClick(event) {
 function renderDiscoveryResults(data) {
   const films = Array.isArray(data.results) ? data.results : [];
   const query = data.query || {};
-  refs.resultsTitle.textContent = films.length === 1 ? "One precise match" : `${films.length} identity matches`;
+  refs.resultsTitle.textContent = films.length ? "Pulled from the closet" : "Nothing on this shelf";
   refs.resultsMeta.textContent = [query.title, query.year, query.director].filter(Boolean).join(" / ");
-  refs.sourceStatus.innerHTML = (data.sources || [])
-    .map((source) => `<span class="source-pill ${escapeHtml(source.state || "")}" title="${escapeHtml(source.message || "")}">${escapeHtml(source.name || "Source")} · ${escapeHtml(source.state || "unknown")}</span>`)
-    .join("");
-
   if (!films.length) {
     refs.discoveryResults.innerHTML = `
       <div class="no-results">
@@ -281,41 +307,289 @@ function renderDiscoveryResults(data) {
     return;
   }
 
-  refs.discoveryResults.innerHTML = films.map((film, index) => filmCard(film, index)).join("");
+  const primary = films[0];
+  const nearby = films.slice(1);
+  renderFilmArchive(primary, [], nearby, true);
+  loadRelatedFilms(primary, nearby);
 }
 
-function filmCard(film, index) {
-  const title = escapeHtml(film.title || "Untitled");
-  const originalTitle = film.original_title && film.original_title !== film.title
-    ? escapeHtml(film.original_title)
-    : "&nbsp;";
-  const poster = `<span class="poster-title">${title}</span>${film.poster_url
-    ? `<img src="${escapeHtml(film.poster_url)}" alt="Poster for ${title}" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()" />`
-    : ""}`;
-  const director = (film.directors || []).join(", ") || "Director not supplied";
-  return `
-    <article class="film-card" style="animation-delay:${Math.min(index * 45, 180)}ms">
-      <div class="film-poster">
-        ${poster}
+async function loadRelatedFilms(primary, nearby) {
+  try {
+    const res = await fetch(
+      `${discoveryApiBase()}/api/discovery/films/${encodeURIComponent(primary.id)}/related?limit=12`,
+    );
+    if (!res.ok) throw new Error(await readApiError(res));
+    const data = await res.json();
+    if (state.discovery.archiveSelectionId !== primary.id) return;
+    const directorWorks = uniqueFilms(data.same_director || [], [primary]);
+    const relevant = uniqueFilms([...(data.relevant || []), ...nearby], [primary, ...directorWorks]);
+    renderFilmArchive(primary, directorWorks, relevant, false, data.director);
+  } catch (_) {
+    if (state.discovery.archiveSelectionId !== primary.id) return;
+    renderFilmArchive(primary, [], uniqueFilms(nearby, [primary]), false);
+  }
+}
+
+function uniqueFilms(films, excluded = []) {
+  const seen = new Set(excluded.map((film) => film.id));
+  return films.filter((film) => {
+    if (!film?.id || seen.has(film.id)) return false;
+    seen.add(film.id);
+    return true;
+  });
+}
+
+function renderFilmArchive(primary, directorWorks, relevant, loading, directorName = null) {
+  const director = directorName || (primary.directors || [])[0] || "this director";
+  const duration = formatFilmDuration(primary.runtime_minutes);
+  state.discovery.archiveSelectionId = primary.id;
+  state.discovery.archive = { primary, directorWorks, relevant };
+  refs.discoveryResults.innerHTML = `
+    <div class="archive-pullout">
+      <div class="archive-pullout-label"><span>Selected edition</span><small>FirstRoll Collection</small></div>
+      ${criterionCaseMarkup(primary)}
+      <div class="archive-pullout-copy">
+        <p>${escapeHtml((primary.directors || []).join(", ") || "Director not supplied")}</p>
+        <h3>${escapeHtml(primary.title || "Untitled")}</h3>
+        <div>
+          <span>${escapeHtml(primary.year || "Year unknown")}${duration ? ` · ${escapeHtml(duration)}` : ""}</span>
+          ${primary.original_title && primary.original_title !== primary.title ? `<span>${escapeHtml(primary.original_title)}</span>` : ""}
+        </div>
+        <button type="button" data-film-id="${escapeHtml(primary.id)}">
+          Open film dossier <span aria-hidden="true">↗</span>
+        </button>
       </div>
-      <div class="film-card-body">
-        <h3>${title}</h3>
-        <p class="original-title">${originalTitle}</p>
-        <div class="film-identity">
-          <span>${escapeHtml(film.year || "Year unknown")}</span>
-          <span class="film-director">${escapeHtml(director)}</span>
+    </div>
+    <aside class="film-closet" aria-label="Related film closet">
+      <div class="closet-header">
+        <span>FirstRoll closet</span>
+        <small>Drag to browse · select a case to pull it out</small>
+      </div>
+      ${closetRoomMarkup(directorWorks, relevant, director, loading)}
+    </aside>`;
+  initialiseClosetViewport();
+}
+
+function formatFilmDuration(minutes) {
+  const total = Number(minutes);
+  if (!Number.isFinite(total) || total <= 0) return "";
+  const hours = Math.floor(total / 60);
+  const remainder = Math.round(total % 60);
+  if (!hours) return `${remainder} min`;
+  return remainder ? `${hours}h ${remainder}m` : `${hours}h`;
+}
+
+function criterionCaseMarkup(film) {
+  const title = escapeHtml(film.title || "Untitled");
+  const catalogueNumber = String(film.provider_id || film.id || "FR")
+    .replace(/[^a-z0-9]/gi, "")
+    .slice(-8);
+  return `
+    <div class="criterion-object" aria-label="${title} selected archive edition">
+      <div class="criterion-disc" aria-hidden="true">
+        <i></i><b>FIRSTROLL</b><small>${escapeHtml(film.year || "FILM")}</small>
+      </div>
+      <div class="criterion-case">
+        <div class="criterion-cover">
+          <span class="criterion-series">The FirstRoll Collection</span>
+          ${film.poster_url
+            ? `<img src="${escapeHtml(film.poster_url)}" alt="Poster for ${title}" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()" />`
+            : ""}
+          <span class="criterion-number">FR-${escapeHtml(catalogueNumber || "0001")}</span>
         </div>
       </div>
-      <button class="film-card-button" type="button" data-film-id="${escapeHtml(film.id)}">
-        <span>Open film dossier</span><span aria-hidden="true">↗</span>
-      </button>
-    </article>`;
+    </div>`;
+}
+
+function closetRoomMarkup(directorWorks, relevant, director, loading) {
+  const leftFilms = directorWorks.filter((_, index) => index % 2 === 1);
+  const backFilms = directorWorks.filter((_, index) => index % 2 === 0);
+  return `
+    <div class="closet-viewport" data-closet-viewport tabindex="0" aria-label="Panoramic film closet. Drag, scroll, or use the arrow keys to browse.">
+      <div class="closet-world">
+        <div class="closet-ceiling" aria-hidden="true"><i></i><i></i><i></i></div>
+        ${closetWallMarkup("left", "Director index", leftFilms, "director", loading, 11)}
+        ${closetWallMarkup("back", `More by ${director}`, backFilms, "director", loading, 29)}
+        ${closetWallMarkup("right", "Nearby & relevant", relevant, "relevant", false, 47)}
+        <div class="closet-floor" aria-hidden="true"><span>FIRSTROLL FILM ARCHIVE · AISLES A—C</span></div>
+      </div>
+    </div>
+    <div class="closet-hud">
+      <div class="closet-radar" aria-hidden="true"><i></i><span></span></div>
+      <span class="closet-coordinate">AISLE B · CENTRE</span>
+      <button type="button" data-centre-closet aria-label="Return to the centre of the closet">Re-centre</button>
+    </div>`;
+}
+
+function closetWallMarkup(position, label, films, kind, loading, seed) {
+  const rows = Array.from({ length: 4 }, () => []);
+  films.forEach((film, index) => rows[index % rows.length].push(film));
+  const status = loading && !films.length
+    ? `<span class="closet-scan">Scanning this aisle…</span>`
+    : "";
+  return `
+    <section class="closet-wall closet-wall-${position}" aria-label="${escapeHtml(label)}">
+      <header><span>${escapeHtml(label)}</span><small>${films.length || "—"} filed</small></header>
+      ${status}
+      <div class="closet-wall-shelves">
+        ${rows.map((row, rowIndex) => `
+          <div class="closet-room-shelf">
+            <div class="closet-case-row">
+              ${closetRowMarkup(row, kind, seed + rowIndex * 13)}
+            </div>
+            <span class="closet-shelf-code">${position.slice(0, 1).toUpperCase()}${rowIndex + 1}</span>
+          </div>`).join("")}
+      </div>
+    </section>`;
+}
+
+function closetRowMarkup(films, kind, seed) {
+  const slots = 14;
+  const filmSlots = new Map();
+  films.forEach((film, index) => {
+    filmSlots.set(Math.min(2 + index * 4, slots - 2), film);
+  });
+  return Array.from({ length: slots }, (_, slot) => {
+    const film = filmSlots.get(slot);
+    if (film) return filmSpineMarkup(film, seed + slot, kind);
+    const tone = ((seed + slot * 3) % 6) + 1;
+    const size = ((seed + slot * 5) % 4) + 1;
+    return `<span class="closet-filler tone-${tone} filler-size-${size}" aria-hidden="true"><i></i></span>`;
+  }).join("");
+}
+
+function filmSpineMarkup(film, index, kind) {
+  const title = escapeHtml(film.title || "Untitled");
+  const tone = (index % 6) + 1;
+  return `
+    <button class="film-spine tone-${tone}" type="button" data-select-film-id="${escapeHtml(film.id)}" title="Select ${title}">
+      <span class="spine-art" aria-hidden="true">
+        ${film.poster_url
+          ? `<img src="${escapeHtml(film.poster_url)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()" />`
+          : ""}
+      </span>
+      <span class="spine-mark" aria-hidden="true">FR</span>
+      <strong>${title}</strong>
+      <small>${escapeHtml(film.year || (kind === "director" ? "Film" : "Related"))}</small>
+    </button>`;
 }
 
 async function onFilmResultClick(event) {
+  const viewport = event.target.closest("[data-closet-viewport]");
+  if (viewport?.dataset.dragMoved === "true") return;
+  const centreButton = event.target.closest("[data-centre-closet]");
+  if (centreButton) {
+    centreCloset(centreButton.closest(".film-closet")?.querySelector("[data-closet-viewport]"), true);
+    return;
+  }
+  const selection = event.target.closest("[data-select-film-id]");
+  if (selection) {
+    selectArchiveFilm(selection.dataset.selectFilmId);
+    return;
+  }
   const button = event.target.closest("[data-film-id]");
   if (!button) return;
   await loadFilmDetail(button.dataset.filmId);
+}
+
+function initialiseClosetViewport() {
+  window.requestAnimationFrame(() => {
+    const viewport = refs.discoveryResults.querySelector("[data-closet-viewport]");
+    if (!viewport) return;
+    viewport.addEventListener("scroll", () => updateClosetRadar(viewport), { passive: true });
+    centreCloset(viewport, false);
+  });
+}
+
+function centreCloset(viewport, smooth) {
+  if (!viewport) return;
+  viewport.scrollTo({
+    left: Math.max(0, (viewport.scrollWidth - viewport.clientWidth) / 2),
+    top: Math.max(0, (viewport.scrollHeight - viewport.clientHeight) / 2),
+    behavior: smooth ? "smooth" : "auto",
+  });
+  updateClosetRadar(viewport);
+}
+
+function onClosetPointerDown(event) {
+  const viewport = event.target.closest("[data-closet-viewport]");
+  if (!viewport || event.button !== 0) return;
+  closetDrag = {
+    viewport,
+    pointerId: event.pointerId,
+    startX: event.clientX,
+    startY: event.clientY,
+    scrollLeft: viewport.scrollLeft,
+    scrollTop: viewport.scrollTop,
+    moved: false,
+  };
+  viewport.setPointerCapture(event.pointerId);
+  viewport.classList.add("is-dragging");
+}
+
+function onClosetPointerMove(event) {
+  if (!closetDrag || event.pointerId !== closetDrag.pointerId) return;
+  const deltaX = event.clientX - closetDrag.startX;
+  const deltaY = event.clientY - closetDrag.startY;
+  if (Math.hypot(deltaX, deltaY) > 5) closetDrag.moved = true;
+  if (!closetDrag.moved) return;
+  event.preventDefault();
+  closetDrag.viewport.scrollLeft = closetDrag.scrollLeft - deltaX;
+  closetDrag.viewport.scrollTop = closetDrag.scrollTop - deltaY;
+}
+
+function onClosetPointerUp(event) {
+  if (!closetDrag || event.pointerId !== closetDrag.pointerId) return;
+  const { viewport, moved } = closetDrag;
+  viewport.classList.remove("is-dragging");
+  if (viewport.hasPointerCapture(event.pointerId)) viewport.releasePointerCapture(event.pointerId);
+  if (moved) {
+    viewport.dataset.dragMoved = "true";
+    window.setTimeout(() => delete viewport.dataset.dragMoved, 160);
+  }
+  closetDrag = null;
+}
+
+function onClosetKeyDown(event) {
+  const viewport = event.target.closest("[data-closet-viewport]");
+  if (!viewport) return;
+  const movement = {
+    ArrowLeft: [-180, 0],
+    ArrowRight: [180, 0],
+    ArrowUp: [0, -120],
+    ArrowDown: [0, 120],
+  }[event.key];
+  if (!movement) return;
+  event.preventDefault();
+  viewport.scrollBy({ left: movement[0], top: movement[1], behavior: "smooth" });
+}
+
+function updateClosetRadar(viewport) {
+  const closet = viewport.closest(".film-closet");
+  const dot = closet?.querySelector(".closet-radar span");
+  const coordinate = closet?.querySelector(".closet-coordinate");
+  if (!dot || !coordinate) return;
+  const xRange = Math.max(1, viewport.scrollWidth - viewport.clientWidth);
+  const yRange = Math.max(1, viewport.scrollHeight - viewport.clientHeight);
+  const x = viewport.scrollLeft / xRange;
+  const y = viewport.scrollTop / yRange;
+  dot.style.left = `${8 + x * 84}%`;
+  dot.style.top = `${14 + y * 72}%`;
+  const aisle = x < 0.34 ? "A · DIRECTOR" : x > 0.66 ? "C · RELATED" : "B · CENTRE";
+  coordinate.textContent = `AISLE ${aisle}`;
+}
+
+function selectArchiveFilm(filmId) {
+  const archive = state.discovery.archive;
+  if (!archive || archive.primary.id === filmId) return;
+  const available = [archive.primary, ...archive.directorWorks, ...archive.relevant];
+  const selected = available.find((film) => film.id === filmId);
+  if (!selected) return;
+  const remaining = uniqueFilms(available, [selected]);
+  state.discovery.selectedFilm = null;
+  refs.filmDetail.classList.add("hidden");
+  renderFilmArchive(selected, [], remaining, true);
+  loadRelatedFilms(selected, remaining);
 }
 
 async function loadFilmDetail(filmId) {
@@ -331,6 +605,7 @@ async function loadFilmDetail(filmId) {
       data.film.critical_research?.bundles || {},
     );
     renderFilmDetail(data.film);
+    loadFilmReception(data.film);
   } catch (err) {
     refs.filmDetail.innerHTML = `<button class="detail-close" type="button" data-detail-close aria-label="Close">×</button><div class="no-results">${escapeHtml(err.message)}</div>`;
   }
@@ -370,11 +645,10 @@ function renderFilmDetail(film) {
     letterboxd: Boolean(letterboxdStatus.configured),
   };
   const videoBundle = film.video_sources?.bundle || null;
-  const youtubeConfigured = Boolean(film.video_sources?.providers?.youtube?.configured);
 
   refs.filmDetail.innerHTML = `
-    <button class="detail-close" type="button" data-detail-close aria-label="Close film dossier">×</button>
     <div class="detail-hero">
+      <button class="detail-close" type="button" data-detail-close aria-label="Close film dossier">×</button>
       ${backdrop}
       <div class="detail-copy">
         <p class="eyebrow">Study dossier / ${escapeHtml(film.year || "Undated")}</p>
@@ -386,6 +660,7 @@ function renderFilmDetail(film) {
           <button class="detail-action primary" type="button" data-analyse-film>Analyse a clip</button>
           ${sourceUrl ? `<a class="detail-action" href="${escapeHtml(sourceUrl)}" target="_blank" rel="noopener noreferrer">View source ↗</a>` : ""}
         </div>
+        ${filmReceptionMarkup(film.awards || [])}
       </div>
       <aside class="detail-facts">
         ${detailFact("Director", directors)}
@@ -400,22 +675,18 @@ function renderFilmDetail(film) {
     </div>
     <section class="film-videos">
       <div class="film-videos-head">
-        <div><span>Public viewing resources</span><h3>Watch &amp; study</h3></div>
+        <h3>Watch &amp; study</h3>
         <button type="button" data-load-film-videos>${videoBundle ? "Find more videos" : "Find relevant videos"}</button>
       </div>
       <div data-film-videos-output>
         ${videoBundle
           ? filmVideosMarkup(videoBundle)
-          : `<p class="module-empty">Find interviews, essays, lectures and other public videos matched to this film.${youtubeConfigured ? "" : " Add a YouTube API key in Settings to include YouTube."}</p>`}
+          : ""}
       </div>
     </section>
-    <div class="evidence-banner">
-      <strong>Evidence boundary</strong>
-      <span>${escapeHtml(film.evidence_notice || "Discovery metadata does not establish the filmmakers’ intentions.")}</span>
-    </div>
     <section class="critical-perspectives">
       <div class="critical-head">
-        <div><span>Attributed secondary evidence</span><h3>Critical perspectives</h3></div>
+        <h3>Critical perspectives</h3>
         ${criticismSourceTabsMarkup(
           criticalBundles,
           activeCriticismProvider,
@@ -423,21 +694,18 @@ function renderFilmDetail(film) {
         )}
       </div>
       <div data-critical-output>
-        ${activeCriticalBundle ? criticalResearchMarkup(activeCriticalBundle) : `<p class="module-empty">Choose a source to load its criticism.</p>`}
+        ${activeCriticalBundle ? criticalResearchMarkup(activeCriticalBundle) : ""}
       </div>
     </section>
     <section class="deep-study">
       <div class="deep-study-head">
-        <div><span>Grounded synthesis</span><h3>Deep Study</h3></div>
-        <small>DeepSeek · film record + cited books</small>
+        <h3>Deep Study</h3>
       </div>
       <div class="study-prompt-row">
         <textarea data-study-question rows="2" maxlength="500" aria-label="Optional focus for Deep Study" placeholder="Optional focus — for example: spatial hierarchy, cutting rhythm, or point of view"></textarea>
         <button type="button" data-generate-study>Generate study</button>
       </div>
-      <div class="deep-study-output" data-study-output>
-        <p>Build a film-specific argument from the verified record and your cited reading passages.</p>
-      </div>
+      <div class="deep-study-output" data-study-output></div>
     </section>
     ${reviews.length ? `<div class="reviews-section"><h3>Perspectives</h3><div class="review-grid">${reviews.map(reviewCard).join("")}</div></div>` : ""}`;
 }
@@ -455,6 +723,65 @@ function displayCrew(values) {
 
 function detailFact(label, value) {
   return `<div class="detail-fact"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`;
+}
+
+function filmReceptionMarkup(awards) {
+  const items = Array.isArray(awards) ? awards.slice(0, 3) : [];
+  return `<section class="detail-reception" data-film-reception>
+    <div class="reception-scores" data-reception-scores aria-live="polite">
+      <h3>Reception</h3>
+      <div class="reception-loading" role="status" aria-label="Loading ratings"><i></i><i></i><i></i></div>
+    </div>
+    <div class="reception-awards" data-reception-awards>
+      ${items.length ? `<h3>Awards</h3><div>${items.map(awardMarkup).join("")}</div>` : ""}
+    </div>
+  </section>`;
+}
+
+function awardMarkup(award) {
+  const url = safeHttpUrl(award.url);
+  const name = escapeHtml(award.name || "Film award");
+  const title = url
+    ? `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${name} ↗</a>`
+    : `<strong>${name}</strong>`;
+  return `<article>${title}<p>${escapeHtml(award.description || "")}</p></article>`;
+}
+
+async function loadFilmReception(film) {
+  const section = refs.filmDetail.querySelector("[data-film-reception]");
+  const output = refs.filmDetail.querySelector("[data-reception-scores]");
+  if (!section || !output || !film?.id) return;
+  try {
+    const response = await fetch(
+      `${discoveryApiBase()}/api/discovery/films/${encodeURIComponent(film.id)}/reception`,
+    );
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const reception = await response.json();
+    const scores = Array.isArray(reception.scores) ? reception.scores : [];
+    if (!scores.length) {
+      output.innerHTML = "";
+      if (!section.querySelector(".reception-awards article")) section.classList.add("hidden");
+      return;
+    }
+    section.classList.remove("hidden");
+    const aggregate = reception.aggregate;
+    output.innerHTML = `<h3>Reception</h3><div class="score-grid">
+      ${aggregate ? `<article class="score-card aggregate"><span>Combined</span><strong>${escapeHtml(formatRating(aggregate.score))}</strong><small>/ 100 · ${escapeHtml(aggregate.method)}</small></article>` : ""}
+      ${scores.map((score) => `<article class="score-card"><span>${escapeHtml(score.provider)}</span><strong>${escapeHtml(formatRating(score.score))}</strong><small>/ ${escapeHtml(score.scale)}${score.votes ? ` · ${escapeHtml(formatCompactCount(score.votes))} ratings` : ""}</small></article>`).join("")}
+    </div>`;
+  } catch (_) {
+    output.innerHTML = "";
+    if (!section.querySelector(".reception-awards article")) section.classList.add("hidden");
+  }
+}
+
+function formatRating(value) {
+  const number = Number(value);
+  return Number.isInteger(number) ? String(number) : number.toFixed(1);
+}
+
+function formatCompactCount(value) {
+  return new Intl.NumberFormat("en-GB", { notation: "compact", maximumFractionDigits: 1 }).format(value);
 }
 
 function crewSourcesMarkup(sources) {
@@ -482,8 +809,9 @@ async function onFilmDetailClick(event) {
   if (event.target.closest("[data-analyse-film]")) {
     const film = state.discovery.selectedFilm;
     refs.analyseContext.textContent = film
-      ? `Analyse a clip from ${film.title}: scenes, shots, colour and objects.`
-      : "Import a private clip to inspect scenes, shots, colour and objects.";
+      ? `Selected: ${film.title}`
+      : "";
+    refs.analyseContext.classList.toggle("hidden", !film);
     setProductView("analyse");
     refs.videoFile.focus();
     return;
@@ -621,7 +949,7 @@ function videoCategoryLabel(value) {
   const labels = {
     full_film: "Full film",
     interview: "Interview",
-    video_essay: "Video essay / review",
+    video_essay: "Review",
     lecture: "Lecture",
     trailer: "Trailer",
     scene_extract: "Scene / extract",
@@ -785,12 +1113,16 @@ function firstLoadedCriticismRoute(bundles) {
 }
 
 function criticismSourceTabsMarkup(bundles, activeProvider, availability) {
+  const visibleSources = CRITICISM_SOURCES.filter(
+    (source) => Boolean(criticismBundleForRoute(bundles, source.route))
+      || availability[source.route] === true,
+  );
+  if (!visibleSources.length) return "";
   return `<div class="critical-provider-actions" role="tablist" aria-label="Criticism sources">
-    ${CRITICISM_SOURCES.map((source) => {
+    ${visibleSources.map((source) => {
       const loaded = Boolean(criticismBundleForRoute(bundles, source.route));
       const active = source.route === activeProvider;
-      const available = loaded || availability[source.route] !== false;
-      return `<button type="button" role="tab" class="${active ? "is-active" : ""} ${loaded ? "is-loaded" : ""}" aria-selected="${active}" data-criticism-source="${escapeHtml(source.route)}" ${available ? "" : "disabled"}>${escapeHtml(source.label)}</button>`;
+      return `<button type="button" role="tab" class="${active ? "is-active" : ""} ${loaded ? "is-loaded" : ""}" aria-selected="${active}" data-criticism-source="${escapeHtml(source.route)}">${escapeHtml(source.label)}</button>`;
     }).join("")}
   </div>`;
 }

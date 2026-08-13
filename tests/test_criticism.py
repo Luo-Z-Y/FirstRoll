@@ -40,6 +40,21 @@ def test_douban_markdown_is_normalised_with_stable_review_urls() -> None:
     assert DoubanMcpAdapter._language(rows[0]["summary"]) == "zh"
 
 
+def test_douban_platform_rating_is_normalised_to_ten() -> None:
+    assert DoubanMcpAdapter._parse_platform_rating("8.7 (24567人)") == (8.7, 24567)
+    assert DoubanMcpAdapter._parse_platform_rating("0 (0人)") == (None, None)
+
+
+def test_letterboxd_aggregate_rating_is_read_from_public_json_ld() -> None:
+    body = """
+    <script type="application/ld+json">
+      {"@type":"Movie","aggregateRating":{"ratingValue":4.2,"ratingCount":"12,345"}}
+    </script>
+    """
+
+    assert LetterboxdPublicWebAdapter._aggregate_rating(body) == (4.2, 12345)
+
+
 def test_douban_multiline_review_rows_are_reconstructed() -> None:
     table = """| title | rating | summary | id |
 | ----- | ------ | ------- | --- |
