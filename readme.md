@@ -212,17 +212,25 @@ Wikidata is the first lookup because it offers key-free, CC0 structured metadata
 4. filters or ranks by title, release year and director; and
 5. retains the Wikidata QID as FirstRoll's canonical external identity.
 
-The entity claims supply release date, runtime, director, writer, cinematographer, genre,
-country, poster filename and IMDb ID when present. Related entity labels are fetched in
+The entity claims supply release date, runtime, director, writer, producer, cinematographer,
+editor, genre, country, poster filename and IMDb ID when present. Related entity labels are fetched in
 batches. The IMDb ID is especially useful for resolving the same film safely in other
 services. If Wikidata is unavailable, a small, explicitly labelled demo catalogue keeps the
 interface usable in degraded mode; it is never presented as a live match.
 
-### Wikipedia: overview and poster
+### Wikipedia: overview, poster and crew reconciliation
 
 Wikipedia enrichment happens only after Wikidata supplies an English Wikipedia sitelink.
 FirstRoll calls the Wikipedia REST summary endpoint, retains the article URL and CC BY-SA
 attribution, and keeps the overview separate from Wikidata's CC0 identity record.
+
+FirstRoll also requests the article's parsed `Infobox film` through the public MediaWiki API.
+A bounded standard-library parser reads only labelled infobox cells. Director, writer/screenplay,
+producer, cinematography and editor values are identity-normalised and merged with Wikidata;
+Wikipedia completes missing values and can corroborate existing ones without replacing the
+canonical film identity. A Wikipedia runtime fills a blank but never silently overrides an
+existing Wikidata runtime. The dossier links the field-level crew sources, and the reconciled
+credits plus provenance enter the Deep Study evidence packet.
 
 For posters, FirstRoll accepts only Wikimedia upload URLs returned by the article summary.
 It prefers the original image, falls back to the thumbnail, rejects invalid dimensions and

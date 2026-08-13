@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass
 from datetime import date
 from difflib import SequenceMatcher
+from html.parser import HTMLParser
 from typing import Any, Callable
 from urllib.error import HTTPError, URLError
 from urllib.parse import quote, quote_plus, urlencode
@@ -14,6 +16,7 @@ WIKIDATA_API = "https://www.wikidata.org/w/api.php"
 WIKIDATA_ENTITY_URL = "https://www.wikidata.org/wiki"
 WIKIMEDIA_FILE_URL = "https://commons.wikimedia.org/wiki/Special:Redirect/file"
 WIKIPEDIA_SUMMARY_URL = "https://en.wikipedia.org/api/rest_v1/page/summary"
+WIKIPEDIA_API = "https://en.wikipedia.org/w/api.php"
 
 
 class DiscoveryProviderError(RuntimeError):
@@ -132,6 +135,84 @@ JsonRequest = Callable[[dict[str, Any]], dict[str, Any]]
 WikipediaRequest = Callable[[str], dict[str, Any]]
 
 
+def _clean_infobox_text(value: str, preserve_lines: bool = False) -> str:
+    value = re.sub(r"\[[^\]]*\]", "", value)
+    if preserve_lines:
+        lines = [re.sub(r"\s+", " ", line).strip(" ,;\n") for line in value.splitlines()]
+        return "\n".join(line for line in lines if line)
+    return re.sub(r"\s+", " ", value).strip()
+
+
+def _infobox_people(value: str) -> list[str]:
+    people: list[str] = []
+    for item in re.split(r"\n+|\s*;\s*", value):
+        name = re.sub(r"^(?:and|with)\s+", "", item.strip(), flags=re.IGNORECASE)
+        if name and name not in people:
+            people.append(name)
+    return people
+
+
+def _infobox_runtime_minutes(value: str) -> int | None:
+    hours = re.search(r"(\d+)\s*(?:hours?|hrs?|h)\b", value, flags=re.IGNORECASE)
+    minutes = re.search(r"(\d+)\s*(?:minutes?|mins?|m)\b", value, flags=re.IGNORECASE)
+    if hours:
+        return int(hours.group(1)) * 60 + (int(minutes.group(1)) if minutes else 0)
+    return int(minutes.group(1)) if minutes else None
+
+
+class WikipediaInfoboxParser(HTMLParser):
+    """Extract labelled cells from the first Wikipedia infobox table."""
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.rows: dict[str, str] = {}
+        self._table_depth = 0
+        self._cell: str | None = None
+        self._label: list[str] = []
+        self._value: list[str] = []
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        attributes = dict(attrs)
+        classes = str(attributes.get("class") or "").split()
+        if tag == "table":
+            if self._table_depth:
+                self._table_depth += 1
+            elif "infobox" in classes:
+                self._table_depth = 1
+            return
+        if not self._table_depth:
+            return
+        if tag == "th" and "infobox-label" in classes:
+            self._cell = "label"
+            self._label = []
+        elif tag == "td" and "infobox-data" in classes:
+            self._cell = "value"
+            self._value = []
+        elif tag in {"br", "li"} and self._cell == "value":
+            self._value.append("\n")
+
+    def handle_endtag(self, tag: str) -> None:
+        if not self._table_depth:
+            return
+        if tag == "table":
+            self._table_depth -= 1
+            return
+        if tag == "th" and self._cell == "label":
+            self._cell = None
+        elif tag == "td" and self._cell == "value":
+            label = _clean_infobox_text("".join(self._label))
+            value = _clean_infobox_text("".join(self._value), preserve_lines=True)
+            if label and value:
+                self.rows[label.casefold()] = value
+            self._cell = None
+
+    def handle_data(self, data: str) -> None:
+        if self._cell == "label":
+            self._label.append(data)
+        elif self._cell == "value":
+            self._value.append(data)
+
+
 class DiscoveryService:
     """Key-free Wikidata discovery with a small explicit offline fallback."""
 
@@ -139,17 +220,21 @@ class DiscoveryService:
         self,
         request_json: JsonRequest | None = None,
         wikipedia_summary: WikipediaRequest | None = None,
+        wikipedia_infobox: WikipediaRequest | None = None,
     ) -> None:
         self._request_json = request_json or self._wikidata_request
         self._wikipedia_summary = wikipedia_summary or (
             self._wikipedia_request if request_json is None else None
+        )
+        self._wikipedia_infobox = wikipedia_infobox or (
+            self._wikipedia_infobox_request if request_json is None else None
         )
         self._detail_cache: dict[str, dict[str, Any]] = {}
 
     def status(self) -> dict[str, Any]:
         return {
             "mode": "live",
-            "sources": [self._wikidata_status().as_dict()],
+            "sources": [self._wikidata_status().as_dict(), self._wikipedia_status().as_dict()],
             "optional_sources": [
                 {
                     "name": "Douban MCP",
@@ -216,7 +301,7 @@ class DiscoveryService:
         return {
             "film": self._enrich_detail(dict(detail)),
             "mode": "live",
-            "sources": [self._wikidata_status().as_dict()],
+            "sources": [self._wikidata_status().as_dict(), self._wikipedia_status().as_dict()],
         }
 
     def _search_wikidata(
@@ -294,7 +379,7 @@ class DiscoveryService:
         related_ids: set[str] = set()
         for entity in entities.values():
             claims = entity.get("claims", {})
-            for property_id in ("P57", "P58", "P344", "P136", "P495"):
+            for property_id in ("P57", "P58", "P162", "P344", "P1040", "P136", "P495"):
                 related_ids.update(self._entity_ids(claims, property_id))
         labels = self._get_labels(sorted(related_ids))
         for entity in entities.values():
@@ -332,7 +417,9 @@ class DiscoveryService:
         description = self._best_text(entity.get("descriptions", {}))
         directors = self._labelled_claims(claims, "P57", labels)
         writers = self._labelled_claims(claims, "P58", labels)
+        producers = self._labelled_claims(claims, "P162", labels)
         cinematographers = self._labelled_claims(claims, "P344", labels)
+        editors = self._labelled_claims(claims, "P1040", labels)
         image_name = self._string_value(claims, "P18")
         imdb_id = self._string_value(claims, "P345")
         wikipedia_title = entity.get("sitelinks", {}).get("enwiki", {}).get("title")
@@ -361,8 +448,28 @@ class DiscoveryService:
             "credits": {
                 "directors": directors,
                 "writers": writers,
+                "producers": producers,
                 "cinematographers": cinematographers,
+                "editors": editors,
             },
+            "crew_sources": [
+                {
+                    "name": "Wikidata",
+                    "url": f"{WIKIDATA_ENTITY_URL}/{qid}",
+                    "licence": "CC0",
+                    "fields": [
+                        field
+                        for field, values in (
+                            ("directors", directors),
+                            ("writers", writers),
+                            ("producers", producers),
+                            ("cinematographers", cinematographers),
+                            ("editors", editors),
+                        )
+                        if values
+                    ],
+                }
+            ],
             "external_ids": {"imdb": imdb_id} if imdb_id else {},
             "reviews": [],
             "source": {
@@ -402,6 +509,12 @@ class DiscoveryService:
                 summary.get("content_urls", {}).get("desktop", {}).get("page")
                 or wikipedia_url
             )
+        if wikipedia_title and self._wikipedia_infobox:
+            try:
+                infobox = self._wikipedia_infobox(str(wikipedia_title))
+            except DiscoveryProviderError:
+                infobox = {}
+            self._apply_wikipedia_infobox(film, infobox, wikipedia_url)
 
         title = str(film.get("title") or "this film")
         directors = film.get("directors") or []
@@ -441,7 +554,68 @@ class DiscoveryService:
         )
         film["research_links"] = [link for link in links if link.get("url")]
         film["study_questions"] = self._study_questions(film)
+        film["evidence_notice"] = (
+            "Wikidata establishes film identity; attributed Wikidata claims and Wikipedia "
+            "infobox fields are reconciled for factual credits, not creator intentions or "
+            "critical interpretation."
+        )
         return film
+
+    @staticmethod
+    def _apply_wikipedia_infobox(
+        film: dict[str, Any],
+        payload: dict[str, Any],
+        wikipedia_url: str | None,
+    ) -> None:
+        source_html = payload.get("parse", {}).get("text")
+        if not isinstance(source_html, str) or not source_html:
+            return
+        parser = WikipediaInfoboxParser()
+        parser.feed(source_html)
+        mappings = {
+            "directors": ("directed by",),
+            "writers": ("written by", "screenplay by"),
+            "producers": ("produced by",),
+            "cinematographers": ("cinematography",),
+            "editors": ("edited by",),
+        }
+        credits = {
+            field: list(values)
+            for field, values in (film.get("credits") or {}).items()
+            if isinstance(values, list)
+        }
+        wikipedia_fields: list[str] = []
+        for field, labels in mappings.items():
+            values: list[str] = []
+            for label in labels:
+                values.extend(_infobox_people(parser.rows.get(label, "")))
+            if not values:
+                continue
+            current = credits.setdefault(field, [])
+            known = {DiscoveryService._normalise_identity(value) for value in current}
+            for value in values:
+                identity = DiscoveryService._normalise_identity(value)
+                if identity and identity not in known:
+                    current.append(value)
+                    known.add(identity)
+            wikipedia_fields.append(field)
+        runtime = _infobox_runtime_minutes(parser.rows.get("running time", ""))
+        if film.get("runtime_minutes") is None and runtime is not None:
+            film["runtime_minutes"] = runtime
+            wikipedia_fields.append("runtime_minutes")
+        film["credits"] = credits
+        film["directors"] = credits.get("directors") or film.get("directors") or []
+        if wikipedia_fields:
+            sources = list(film.get("crew_sources") or [])
+            sources.append(
+                {
+                    "name": "Wikipedia infobox",
+                    "url": wikipedia_url,
+                    "licence": "CC BY-SA",
+                    "fields": wikipedia_fields,
+                }
+            )
+            film["crew_sources"] = sources
 
     def _enrich_poster(self, film: dict[str, Any]) -> None:
         if film.get("poster_url") or not self._wikipedia_summary:
@@ -587,6 +761,34 @@ class DiscoveryService:
         url = f"{WIKIPEDIA_SUMMARY_URL}/{quote(title.replace(' ', '_'), safe='')}"
         request = Request(
             url,
+            headers={
+                "Accept": "application/json",
+                "User-Agent": "FirstRoll/0.1 (https://github.com/Luo-Z-Y/FirstRoll)",
+            },
+        )
+        try:
+            with urlopen(request, timeout=8) as response:
+                return json.loads(response.read().decode("utf-8"))
+        except HTTPError as exc:
+            if exc.code == 404:
+                return {}
+            raise DiscoveryProviderError(f"Wikipedia returned HTTP {exc.code}.") from exc
+        except (URLError, TimeoutError, json.JSONDecodeError) as exc:
+            raise DiscoveryProviderError("Wikipedia could not be reached.") from exc
+
+    @staticmethod
+    def _wikipedia_infobox_request(title: str) -> dict[str, Any]:
+        params = urlencode(
+            {
+                "action": "parse",
+                "page": title,
+                "prop": "text",
+                "format": "json",
+                "formatversion": "2",
+            }
+        )
+        request = Request(
+            f"{WIKIPEDIA_API}?{params}",
             headers={
                 "Accept": "application/json",
                 "User-Agent": "FirstRoll/0.1 (https://github.com/Luo-Z-Y/FirstRoll)",
@@ -752,6 +954,15 @@ class DiscoveryService:
             kind="open_film_identity_metadata",
             state="ready",
             message="Key-free title, year and director lookup. Internet connection required.",
+        )
+
+    @staticmethod
+    def _wikipedia_status() -> SourceStatus:
+        return SourceStatus(
+            name="Wikipedia",
+            kind="attributed_overview_and_crew_enrichment",
+            state="ready",
+            message="Article overview, poster and infobox crew fields after identity resolution.",
         )
 
     @staticmethod

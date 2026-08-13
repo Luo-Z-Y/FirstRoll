@@ -118,6 +118,40 @@ def test_wikidata_detail_keeps_intention_claims_out_of_identity_metadata() -> No
     assert "not creator intentions" in result["film"]["evidence_notice"].casefold()
 
 
+def test_wikipedia_infobox_completes_missing_crew_with_field_provenance() -> None:
+    infobox_html = """
+    <table class="infobox vevent"><tbody>
+      <tr><th class="infobox-label">Directed by</th><td class="infobox-data">Example Director</td></tr>
+      <tr><th class="infobox-label">Written by</th><td class="infobox-data">Example Writer</td></tr>
+      <tr><th class="infobox-label">Produced by</th><td class="infobox-data">Example Producer</td></tr>
+      <tr><th class="infobox-label">Cinematography</th><td class="infobox-data">Example DP</td></tr>
+      <tr><th class="infobox-label">Edited by</th><td class="infobox-data"><ul><li>Editor One</li><li>Editor Two</li></ul></td></tr>
+      <tr><th class="infobox-label">Running time</th><td class="infobox-data">2h 37m</td></tr>
+    </tbody></table>
+    """
+    service = DiscoveryService(
+        request_json=fake_wikidata,
+        wikipedia_summary=lambda _: {
+            "extract": "Example Film is a fictional film used for testing.",
+            "content_urls": {"desktop": {"page": "https://en.wikipedia.org/wiki/Example_Film"}},
+        },
+        wikipedia_infobox=lambda _: {"parse": {"text": infobox_html}},
+    )
+
+    result = service.detail("wikidata:Q100")
+    film = result["film"]
+
+    assert film["credits"]["directors"] == ["Example Director"]
+    assert film["credits"]["writers"] == ["Example Writer"]
+    assert film["credits"]["producers"] == ["Example Producer"]
+    assert film["credits"]["cinematographers"] == ["Example DP"]
+    assert film["credits"]["editors"] == ["Editor One", "Editor Two"]
+    assert film["runtime_minutes"] == 101  # Existing Wikidata value is not silently replaced.
+    assert film["crew_sources"][-1]["name"] == "Wikipedia infobox"
+    assert "cinematographers" in film["crew_sources"][-1]["fields"]
+    assert [source["name"] for source in result["sources"]] == ["Wikidata", "Wikipedia"]
+
+
 def test_offline_catalogue_is_used_when_wikidata_is_unavailable() -> None:
     service = DiscoveryService(request_json=unavailable)
 

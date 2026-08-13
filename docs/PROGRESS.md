@@ -1,5 +1,25 @@
 # FirstRoll Project Progress
 
+### 13 August 2026 — Multi-source crew reconciliation
+
+Delivered:
+
+1. Retained Wikidata as the canonical film identity while enriching factual credits from the
+   matched English Wikipedia film infobox.
+2. Added director, writer/screenplay, producer, cinematographer and editor extraction using a
+   bounded standard-library HTML parser.
+3. Merged identity-normalised names, filled only missing runtime values and retained field-level
+   Wikidata/Wikipedia provenance.
+4. Added producer and editor facts plus linked crew sources to the dossier.
+5. Included the expanded crew and provenance in the Deep Study evidence packet.
+
+Acceptance evidence:
+
+- live *We Are All Strangers* reconciliation returns Anthony Chen as director, writer and
+  producer; Teoh Gay Hian as cinematographer; Hoping Chen as editor; and a 157-minute runtime;
+- the dossier visibly links both Wikidata and the Wikipedia infobox as crew sources;
+- 57 automated tests pass, including infobox reconciliation and evidence-packet coverage.
+
 ### 13 August 2026 — Stable cumulative video discovery
 
 Delivered:
@@ -86,11 +106,11 @@ Status vocabulary:
 **Release stage:** local working prototype
 
 **Primary development URL:** `http://127.0.0.1:8000`
-**Automated verification:** 55 tests passing
+**Automated verification:** 57 tests passing
 
 | Area | Status | Current evidence |
 |---|---|---|
-| Film discovery | Complete | Wikidata search by title, year and director; Wikipedia context and source links |
+| Film discovery | Complete | Wikidata identity search plus attributed Wikipedia overview, poster and reconciled crew enrichment |
 | Public video resources | Complete | Persistent cumulative catalogue; focused Bilibili and optional YouTube retrieval; typed tabs with full films surfaced first |
 | Product navigation | Complete | Discover and Analyse modes; Study consolidated into Discover |
 | Local settings | Complete | Write-only connector credentials plus local add, remove and index controls for the private library |

@@ -60,13 +60,16 @@ class EvidencePacket(BaseModel):
             "year": film.get("year"),
             "directors": credits.get("directors") or film.get("directors") or [],
             "writers": credits.get("writers") or [],
+            "producers": credits.get("producers") or [],
             "cinematographers": credits.get("cinematographers") or [],
+            "editors": credits.get("editors") or [],
             "runtime_minutes": film.get("runtime_minutes"),
             "genres": film.get("genres") or [],
             "countries": film.get("countries") or [],
             "overview": film.get("overview"),
             "record_source": film.get("source"),
             "overview_source": film.get("overview_source"),
+            "crew_sources": film.get("crew_sources") or [],
         }
         items = []
         for index, passage in enumerate(retrieval.get("passages", []), start=1):

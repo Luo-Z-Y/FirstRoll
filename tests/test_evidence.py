@@ -25,6 +25,29 @@ def test_evidence_packet_types_theory_as_framework_not_observation() -> None:
     assert packet.retrieval["method"] == "hybrid_rrf"
 
 
+def test_evidence_packet_retains_reconciled_crew_and_provenance() -> None:
+    packet = EvidencePacket.from_retrieval(
+        {
+            "title": "Example",
+            "year": 2026,
+            "credits": {
+                "directors": ["Director"],
+                "writers": ["Writer"],
+                "producers": ["Producer"],
+                "cinematographers": ["Cinematographer"],
+                "editors": ["Editor"],
+            },
+            "crew_sources": [{"name": "Wikipedia infobox", "fields": ["editors"]}],
+        },
+        {"method": "hybrid_rrf", "passages": []},
+        None,
+    )
+
+    assert packet.film_record["producers"] == ["Producer"]
+    assert packet.film_record["editors"] == ["Editor"]
+    assert packet.film_record["crew_sources"][0]["name"] == "Wikipedia infobox"
+
+
 def test_quality_gate_rejects_generic_unobservable_prose() -> None:
     study = {
         "sections": [

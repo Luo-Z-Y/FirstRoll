@@ -599,6 +599,9 @@ button {
 }
 
 .evidence-banner strong { flex: 0 0 auto; font-family: "IBM Plex Mono", monospace; font-size: 0.64rem; text-transform: uppercase; letter-spacing: 0.07em; }
+.crew-provenance { padding-top: 14px; color: var(--muted-night); font: 0.56rem "IBM Plex Mono", monospace; text-transform: uppercase; }
+.crew-provenance p { margin: 6px 0 0; line-height: 1.6; }
+.crew-provenance a { color: #d88170; text-decoration: none; }
 
 .study-paths {
   display: grid;

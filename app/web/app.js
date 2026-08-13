@@ -341,7 +341,9 @@ async function loadFilmDetail(filmId) {
 function renderFilmDetail(film) {
   const directors = (film.credits?.directors || film.directors || []).join(", ") || "Not supplied";
   const writers = (film.credits?.writers || []).join(", ") || "Not supplied";
+  const producers = (film.credits?.producers || []).join(", ") || "Not supplied";
   const cinematographers = (film.credits?.cinematographers || []).join(", ") || "Not supplied";
+  const editors = (film.credits?.editors || []).join(", ") || "Not supplied";
   const genres = (film.genres || []).join(" · ") || "Not supplied";
   const backdrop = film.backdrop_url
     ? `<img class="detail-backdrop" src="${escapeHtml(film.backdrop_url)}" alt="" />`
@@ -390,9 +392,12 @@ function renderFilmDetail(film) {
       <aside class="detail-facts">
         ${detailFact("Director", directors)}
         ${detailFact("Written by", writers)}
+        ${detailFact("Produced by", producers)}
         ${detailFact("Cinematography", cinematographers)}
+        ${detailFact("Edited by", editors)}
         ${detailFact("Runtime", film.runtime_minutes ? `${film.runtime_minutes} minutes` : "Not supplied")}
         ${detailFact("Genres", genres)}
+        ${crewSourcesMarkup(film.crew_sources)}
       </aside>
     </div>
     <section class="film-videos">
@@ -441,6 +446,12 @@ function renderFilmDetail(film) {
 
 function detailFact(label, value) {
   return `<div class="detail-fact"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`;
+}
+
+function crewSourcesMarkup(sources) {
+  const usable = (Array.isArray(sources) ? sources : []).filter((source) => safeHttpUrl(source?.url));
+  if (!usable.length) return "";
+  return `<div class="crew-provenance"><span>Crew sources</span><p>${usable.map((source) => `<a href="${escapeHtml(safeHttpUrl(source.url))}" target="_blank" rel="noopener noreferrer">${escapeHtml(source.name || "Source")} ↗</a>`).join(" · ")}</p></div>`;
 }
 
 function reviewCard(review) {
