@@ -21,4 +21,4 @@ jobs:
       - name: Validate API contract endpoint imports
         run: python -c "import app.backend.main as m; print(m.app.title)"
       - name: Test film discovery
-        run: pytest -q tests/test_discovery.py tests/test_settings.py
+        run: python -m pytest -q tests/test_discovery.py tests/test_settings.py
