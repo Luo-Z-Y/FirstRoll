@@ -38,5 +38,9 @@ def test_compact_closet_caps_rows_and_fills_sparse_director_results() -> None:
     assert "placeholder: true" in runtime
     assert "selectableCase: !film.placeholder" in runtime
     assert "const gap = 0.06" in runtime
+    assert "const depth = 0.13" in runtime
+    assert "amount * 0.13" in runtime
+    assert "wireframe: true" not in runtime
     assert "while y < 3.18" in blender_builder
     assert "rotation_z=0.0" in blender_builder
+    assert "random.uniform(0.11, 0.15)" in blender_builder

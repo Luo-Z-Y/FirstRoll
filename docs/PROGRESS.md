@@ -16,6 +16,9 @@ Delivered:
    text cannot be covered by a disc case or shelf edge.
 6. Removed case collisions by deriving live-case width from a fixed 0.06-metre gap, keeping ambient
    cases upright with wider spacing and reserving an empty joint where side and rear shelves meet.
+7. Corrected the remaining oblique-view overlap by reducing case depth from 0.34 to 0.13 metres,
+   making Blender inserts paper-thin, removing the duplicate selection-outline mesh and replacing
+   hover scaling with a smaller forward-only pull.
 
 Acceptance evidence:
 
@@ -27,6 +30,8 @@ Acceptance evidence:
   horizontal overflow;
 - close rear-wall and angled-corner checks show separated case silhouettes, clear hover expansion and
   no side/rear collection intersection;
+- an exact *The Third Man* / Carol Reed close-up at the back-wall angle shows separate shallow cases,
+  and the hovered case remains clear of both neighbours without a duplicate outline;
 - 76 automated tests, JavaScript syntax and repository whitespace checks pass.
 
 ### 14 August 2026 — Blender WebGL film closet

@@ -138,12 +138,18 @@ def add_case(
     mat: bpy.types.Material,
     *,
     shell_material: bpy.types.Material,
+    sideways: bool = False,
     rotation_z: float = 0.0,
 ) -> None:
+    insert_dimensions = (
+        dimensions[0] * (0.35 if sideways else 0.82),
+        dimensions[1] * (0.86 if sideways else 0.35),
+        dimensions[2] * 0.91,
+    )
     insert = box(
         f"{name} paper insert",
         location,
-        (dimensions[0] * 0.82, dimensions[1] * 0.86, dimensions[2] * 0.91),
+        insert_dimensions,
         mat,
         bevel=0.007,
         rotation=(0.0, 0.0, rotation_z),
@@ -198,7 +204,7 @@ def build_back_shelves(materials: dict[str, bpy.types.Material]) -> None:
         while x < 1.44:
             width = random.uniform(0.16, 0.22)
             height = random.uniform(0.48, 0.68)
-            depth = random.uniform(0.26, 0.37)
+            depth = random.uniform(0.11, 0.15)
             add_case(
                 f"Back ambient case {shelf_index}-{case_index}",
                 (x + width / 2, BACK_CASE_Y, base_z + 0.07 + height / 2),
@@ -236,13 +242,14 @@ def build_side_shelves(side: str, materials: dict[str, bpy.types.Material]) -> N
         while y < 3.18:
             width = random.uniform(0.16, 0.22)
             height = random.uniform(0.48, 0.68)
-            depth = random.uniform(0.26, 0.37)
+            depth = random.uniform(0.11, 0.15)
             add_case(
                 f"{side.title()} ambient case {shelf_index}-{case_index}",
                 (sign * SIDE_CASE_X, y + width / 2, base_z + 0.07 + height / 2),
                 (depth, width, height),
                 random.choice(palette),
                 shell_material=materials["case_shell"],
+                sideways=True,
                 rotation_z=0.0,
             )
             y += width + random.uniform(0.028, 0.052)
@@ -267,7 +274,7 @@ def main() -> None:
         "wood": textured_material("Smoked oak", (0.16, 0.092, 0.045), "wood", roughness=0.52),
         "brass": material("Aged brass", (0.42, 0.29, 0.11, 1.0), metallic=0.78, roughness=0.34),
         "carpet": textured_material("Archive carpet", (0.095, 0.078, 0.061), "carpet", roughness=0.96),
-        "case_shell": material("Clear jewel case", (0.82, 0.84, 0.80, 0.24), roughness=0.16),
+        "case_shell": material("Clear jewel case", (0.82, 0.84, 0.80, 0.16), roughness=0.16),
         "light": material(
             "Warm diffuser",
             (0.95, 0.88, 0.68, 1.0),

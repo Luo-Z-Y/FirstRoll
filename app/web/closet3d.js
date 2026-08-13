@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { GLTFLoader } from "./vendor/three/addons/loaders/GLTFLoader.js";
 
-const MODEL_URL = "/assets/models/firstroll-closet.glb?v=20260814-5";
+const MODEL_URL = "/assets/models/firstroll-closet.glb?v=20260814-6";
 const CASE_TONES = ["#632d28", "#304138", "#87512f", "#35404a", "#897c64", "#4d3d4d"];
 const CAMERA_BOUNDS = { minX: -0.82, maxX: 0.82, minZ: -3.28, maxZ: 3.82 };
 
@@ -187,7 +187,7 @@ class FirstRollClosetViewer {
     };
 
     const height = 0.64;
-    const depth = 0.34;
+    const depth = 0.13;
     const insertTexture = this.createSpineTexture(film, index);
     const insertMaterial = new THREE.MeshStandardMaterial({
       map: insertTexture,
@@ -203,10 +203,10 @@ class FirstRollClosetViewer {
       color: 0xf2f0e8,
       roughness: 0.12,
       metalness: 0.0,
-      transmission: 0.28,
+      transmission: 0.16,
       thickness: 0.035,
       transparent: true,
-      opacity: 0.3,
+      opacity: 0.22,
       clearcoat: 0.9,
       clearcoatRoughness: 0.16,
     });
@@ -227,14 +227,6 @@ class FirstRollClosetViewer {
     hinge.userData.caseOwner = group;
     group.add(hinge);
 
-    if (film.id === this.payload.primaryId) {
-      const marker = new THREE.Mesh(
-        new THREE.BoxGeometry(width + 0.035, height + 0.035, depth + 0.035),
-        new THREE.MeshBasicMaterial({ color: 0xd76d57, wireframe: true, transparent: true, opacity: 0.72 }),
-      );
-      marker.userData.caseOwner = group;
-      group.add(marker);
-    }
     return group;
   }
 
@@ -479,8 +471,8 @@ class FirstRollClosetViewer {
         ? data.targetHover
         : THREE.MathUtils.damp(data.hoverAmount, data.targetHover, 13, delta);
       data.hoverAmount = amount;
-      filmCase.position.copy(data.basePosition).addScaledVector(data.pullDirection, amount * 0.27);
-      filmCase.scale.setScalar(1 + amount * 0.055);
+      filmCase.position.copy(data.basePosition).addScaledVector(data.pullDirection, amount * 0.13);
+      filmCase.scale.setScalar(1);
     });
   }
 
