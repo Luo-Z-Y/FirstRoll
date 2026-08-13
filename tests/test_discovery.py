@@ -12,6 +12,7 @@ def fake_wikidata(params: dict[str, Any]) -> dict[str, Any]:
                 "Q200": {"id": "Q200", "labels": {"en": {"value": "Example Director"}}},
                 "Q300": {"id": "Q300", "labels": {"en": {"value": "Drama"}}},
                 "Q400": {"id": "Q400", "labels": {"en": {"value": "Singapore"}}},
+                "Q500": {"id": "Q500", "labels": {"en": {"value": "Example Actor"}}},
             }
         }
     return {
@@ -26,6 +27,7 @@ def fake_wikidata(params: dict[str, Any]) -> dict[str, Any]:
                     "P577": [claim_time("+2024-05-01T00:00:00Z")],
                     "P136": [claim_entity("Q300")],
                     "P495": [claim_entity("Q400")],
+                    "P161": [claim_entity("Q500")],
                     "P2047": [claim_quantity("101")],
                     "P345": [claim_string("tt1234567")],
                 },
@@ -35,19 +37,28 @@ def fake_wikidata(params: dict[str, Any]) -> dict[str, Any]:
 
 
 def fake_wikidata_with_related(params: dict[str, Any]) -> dict[str, Any]:
-    if params.get("action") == "wbgetentities" and params.get("ids") == "Q101":
+    requested_ids = set(str(params.get("ids") or "").split("|"))
+    related_ids = requested_ids.intersection({"Q101", "Q102", "Q103", "Q104"})
+    if params.get("action") == "wbgetentities" and related_ids and params.get("props") != "labels":
+        definitions = {
+            "Q101": ("Earlier Example", {"P57": [claim_entity("Q200")]}),
+            "Q102": ("Actor Reunion", {"P161": [claim_entity("Q500")]}),
+            "Q103": ("Singapore Story", {"P495": [claim_entity("Q400")]}),
+            "Q104": ("Another Drama", {"P136": [claim_entity("Q300")]}),
+        }
         return {
             "entities": {
-                "Q101": {
-                    "id": "Q101",
-                    "labels": {"en": {"value": "Earlier Example"}},
+                qid: {
+                    "id": qid,
+                    "labels": {"en": {"value": definitions[qid][0]}},
                     "descriptions": {"en": {"value": "2020 drama film"}},
                     "claims": {
-                        "P57": [claim_entity("Q200")],
-                        "P577": [claim_time("+2020-02-01T00:00:00Z")],
+                        **definitions[qid][1],
+                        "P577": [claim_time(f"+20{20 + int(qid[-1]):02d}-02-01T00:00:00Z")],
                         "P136": [claim_entity("Q300")],
                     },
                 }
+                for qid in related_ids
             }
         }
     return fake_wikidata(params)
@@ -114,6 +125,42 @@ def test_related_films_are_resolved_from_the_verified_director_identity() -> Non
     assert [film["title"] for film in result["same_director"]] == ["Earlier Example"]
     assert result["same_director"][0]["relation"] == "same_director"
     assert "_director_ids" not in service.detail("wikidata:Q100")["film"]
+
+
+def test_related_films_are_grouped_by_cast_country_and_genre() -> None:
+    service = DiscoveryService(
+        request_json=fake_wikidata_with_related,
+        sparql_json=lambda _: {
+            "results": {
+                "bindings": [
+                    sparql_relation("Q101", "same_director", "Q200"),
+                    sparql_relation("Q102", "shared_cast", "Q500"),
+                    sparql_relation("Q103", "same_country", "Q400"),
+                    sparql_relation("Q104", "shared_genre", "Q300"),
+                ]
+            }
+        },
+    )
+    service.search("Example Film")
+
+    result = service.related("wikidata:Q100")
+
+    assert [film["title"] for film in result["same_director"]] == ["Earlier Example"]
+    assert result["shared_cast"][0]["relation_label"] == "Example Actor"
+    assert result["same_country"][0]["relation_label"] == "Singapore"
+    assert result["recommended"][0]["relation"] == "shared_genre"
+    assert result["category_labels"] == {
+        "cast": ["Example Actor"],
+        "countries": ["Singapore"],
+    }
+
+
+def sparql_relation(film: str, relation: str, shared: str) -> dict[str, dict[str, str]]:
+    return {
+        "film": {"value": f"http://www.wikidata.org/entity/{film}"},
+        "relation": {"value": relation},
+        "shared": {"value": f"http://www.wikidata.org/entity/{shared}"},
+    }
 
 
 def test_search_uses_portrait_wikipedia_image_when_wikidata_has_no_poster() -> None:

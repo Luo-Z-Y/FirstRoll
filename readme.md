@@ -34,8 +34,9 @@ The original GPL-3.0 licence and contributor attribution remain applicable. See
 
 - Search by title, year and director through key-free Wikidata.
 - Read an attributed Wikipedia overview and poster after Wikidata resolves the film.
-- Explore a draggable three-wall film closet containing the director's other films and nearby
-  works; pull a case from any shelf to make it the selected edition.
+- Explore a draggable three-wall film closet with the director's available filmography on one
+  labelled front row and related shelves grouped by shared cast, production country and genre;
+  pull a case from any shelf to make it the selected edition.
 - Compare attributed Douban and Letterboxd community scores and review up to three prominent
   Wikidata awards when those sources provide them.
 - Retrieve matched scholarly abstracts and DOI links through Crossref.

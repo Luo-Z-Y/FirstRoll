@@ -351,7 +351,8 @@ class DiscoveryService:
                 raise LookupError(str(exc)) from exc
 
         public_detail = dict(detail)
-        public_detail.pop("_director_ids", None)
+        for internal_key in ("_director_ids", "_cast_ids", "_country_ids", "_genre_ids"):
+            public_detail.pop(internal_key, None)
         return {
             "film": self._enrich_detail(public_detail),
             "mode": "live",
@@ -359,7 +360,7 @@ class DiscoveryService:
         }
 
     def related(self, film_id: str, limit: int = 12) -> dict[str, Any]:
-        """Return verified films by the primary director for the discovery closet."""
+        """Return films related by director, cast, country and genre for the closet."""
         limit = max(1, min(limit, 18))
         if film_id.startswith("demo:"):
             return self._demo_related(film_id, limit)
@@ -371,12 +372,24 @@ class DiscoveryService:
             self.detail(film_id)
         film = self._detail_cache.get(qid) or {}
         director_ids = film.get("_director_ids") or []
+        cast_ids = (film.get("_cast_ids") or [])[:3]
+        country_ids = (film.get("_country_ids") or [])[:3]
+        genre_ids = (film.get("_genre_ids") or [])[:2]
         director_names = film.get("directors") or []
+        cast_names = film.get("cast") or []
+        country_names = film.get("countries") or []
         director = director_names[0] if director_names else None
         response = {
             "film_id": film_id,
             "director": director,
             "same_director": [],
+            "shared_cast": [],
+            "same_country": [],
+            "recommended": [],
+            "category_labels": {
+                "cast": cast_names[:3],
+                "countries": country_names[:3],
+            },
             "state": "ready",
         }
         if not director_ids or self._sparql_json is None:
@@ -384,34 +397,118 @@ class DiscoveryService:
             return response
 
         director_id = director_ids[0]
+        unions = [f"""{{
+  {{ SELECT DISTINCT ?film WHERE {{ ?film wdt:P57 wd:{director_id} . }} LIMIT 48 }}
+  BIND(4 AS ?rank)
+  BIND(\"same_director\" AS ?relation)
+  BIND(wd:{director_id} AS ?shared)
+}}"""]
+        if cast_ids:
+            unions.append(f"""{{
+  {{ SELECT DISTINCT ?film ?shared WHERE {{
+    VALUES ?shared {{ {' '.join(f'wd:{value}' for value in cast_ids)} }}
+    ?film wdt:P161 ?shared .
+  }} LIMIT 30 }}
+  BIND(3 AS ?rank)
+  BIND(\"shared_cast\" AS ?relation)
+}}""")
+        if country_ids:
+            unions.append(f"""{{
+  {{ SELECT DISTINCT ?film ?shared WHERE {{
+    VALUES ?shared {{ {' '.join(f'wd:{value}' for value in country_ids)} }}
+    ?film wdt:P495 ?shared .
+  }} LIMIT 30 }}
+  BIND(2 AS ?rank)
+  BIND(\"same_country\" AS ?relation)
+}}""")
+        if genre_ids:
+            unions.append(f"""{{
+  {{ SELECT DISTINCT ?film ?shared WHERE {{
+    VALUES ?shared {{ {' '.join(f'wd:{value}' for value in genre_ids)} }}
+    ?film wdt:P136 ?shared .
+  }} LIMIT 30 }}
+  BIND(1 AS ?rank)
+  BIND(\"shared_genre\" AS ?relation)
+}}""")
         query = f"""
-SELECT DISTINCT ?film WHERE {{
-  ?film wdt:P57 wd:{director_id} .
+SELECT DISTINCT ?film ?relation ?shared ?rank ?date WHERE {{
+  {' UNION '.join(unions)}
   FILTER(?film != wd:{qid})
+  OPTIONAL {{ ?film wdt:P577 ?date }}
 }}
-LIMIT {limit * 3}
+ORDER BY DESC(?rank) DESC(?date)
+LIMIT 138
 """.strip()
         try:
             payload = self._sparql_json(query)
             candidate_ids = self._sparql_entity_ids(payload, "film")
-            entities = self._get_entities(candidate_ids[:50])
+            entities = self._get_entities(candidate_ids[:138])
         except (DiscoveryProviderError, KeyError, TypeError, ValueError):
             response["state"] = "unavailable"
             return response
 
-        related: list[dict[str, Any]] = []
+        relations: dict[str, list[tuple[str, str | None]]] = {}
+        for binding in payload.get("results", {}).get("bindings", []):
+            if not isinstance(binding, dict):
+                continue
+            raw_film = binding.get("film", {}).get("value")
+            candidate_id = str(raw_film or "").rsplit("/", 1)[-1]
+            if not self._valid_qid(candidate_id):
+                continue
+            relation = str(binding.get("relation", {}).get("value") or "same_director")
+            raw_shared = binding.get("shared", {}).get("value")
+            shared_id = str(raw_shared or "").rsplit("/", 1)[-1]
+            relations.setdefault(candidate_id, []).append(
+                (relation, shared_id if self._valid_qid(shared_id) else None)
+            )
+
+        labels_by_id = {
+            **dict(zip(cast_ids, cast_names, strict=False)),
+            **dict(zip(country_ids, country_names, strict=False)),
+        }
+        groups: dict[str, list[dict[str, Any]]] = {
+            "same_director": [],
+            "shared_cast": [],
+            "same_country": [],
+            "recommended": [],
+        }
+        assigned_by_group: dict[str, set[str]] = {name: set() for name in groups}
         for candidate_id in candidate_ids:
             entity = entities.get(candidate_id)
             if not entity or not self._looks_like_film(entity):
                 continue
+            candidate_relations = list(relations.get(candidate_id, [("same_director", None)]))
+            claims = entity.get("claims", {})
+            candidate_country_ids = self._entity_ids(claims, "P495")
+            candidate_genre_ids = self._entity_ids(claims, "P136")
+            if shared_country := next(
+                (value for value in country_ids if value in candidate_country_ids),
+                None,
+            ):
+                candidate_relations.append(("same_country", shared_country))
+            if shared_genre := next(
+                (value for value in genre_ids if value in candidate_genre_ids),
+                None,
+            ):
+                candidate_relations.append(("shared_genre", shared_genre))
             candidate = self._normalise_entity(entity)
             self._detail_cache[candidate_id] = candidate
             self._enrich_poster(candidate)
             summary = self._public_live_summary(candidate)
-            summary["relation"] = "same_director"
-            related.append(summary)
-        related.sort(key=lambda item: (item.get("year") is None, -(item.get("year") or 0)))
-        response["same_director"] = related[:limit]
+            for relation, shared_id in candidate_relations:
+                group = "recommended" if relation == "shared_genre" else relation
+                if group not in groups or candidate_id in assigned_by_group[group]:
+                    continue
+                if group != "same_director" and len(groups[group]) >= limit:
+                    continue
+                related_summary = dict(summary)
+                related_summary["relation"] = relation
+                related_summary["relation_label"] = labels_by_id.get(shared_id or "")
+                groups[group].append(related_summary)
+                assigned_by_group[group].add(candidate_id)
+        for films in groups.values():
+            films.sort(key=lambda item: (item.get("year") is None, -(item.get("year") or 0)))
+        response.update(groups)
         return response
 
     def _search_wikidata(
@@ -472,25 +569,28 @@ LIMIT {limit * 3}
     def _get_entities(self, qids: list[str]) -> dict[str, dict[str, Any]]:
         if not qids:
             return {}
-        payload = self._request_json(
-            {
-                "action": "wbgetentities",
-                "ids": "|".join(qids[:50]),
-                "props": "labels|descriptions|claims|sitelinks",
-                "languages": "en|zh|zh-hans|zh-hant|ja|ko|fr|de|it|es",
-                "languagefallback": 1,
-                "format": "json",
-            }
-        )
-        entities = payload.get("entities", {})
-        if not isinstance(entities, dict):
-            raise DiscoveryProviderError("Wikidata returned an unexpected response.")
+        entities: dict[str, dict[str, Any]] = {}
+        for offset in range(0, len(qids), 50):
+            payload = self._request_json(
+                {
+                    "action": "wbgetentities",
+                    "ids": "|".join(qids[offset : offset + 50]),
+                    "props": "labels|descriptions|claims|sitelinks",
+                    "languages": "en|zh|zh-hans|zh-hant|ja|ko|fr|de|it|es",
+                    "languagefallback": 1,
+                    "format": "json",
+                }
+            )
+            batch = payload.get("entities", {})
+            if not isinstance(batch, dict):
+                raise DiscoveryProviderError("Wikidata returned an unexpected response.")
+            entities.update(batch)
 
         related_ids: set[str] = set()
         for entity in entities.values():
             claims = entity.get("claims", {})
             for property_id in (
-                "P57", "P58", "P162", "P344", "P1040", "P136", "P495", "P166"
+                "P57", "P58", "P161", "P162", "P344", "P1040", "P136", "P495", "P166"
             ):
                 related_ids.update(self._entity_ids(claims, property_id))
         labels = self._get_labels(sorted(related_ids))
@@ -562,6 +662,7 @@ LIMIT {limit * 3}
         producers = self._labelled_claims(claims, "P162", labels)
         cinematographers = self._labelled_claims(claims, "P344", labels)
         editors = self._labelled_claims(claims, "P1040", labels)
+        cast = self._labelled_claims(claims, "P161", labels)
         image_name = self._string_value(claims, "P18")
         imdb_id = self._string_value(claims, "P345")
         wikipedia_title = entity.get("sitelinks", {}).get("enwiki", {}).get("title")
@@ -583,6 +684,7 @@ LIMIT {limit * 3}
             "runtime_minutes": self._runtime_minutes(claims),
             "genres": self._labelled_claims(claims, "P136", labels),
             "countries": self._labelled_claims(claims, "P495", labels),
+            "cast": cast,
             "poster_url": (
                 f"{WIKIMEDIA_FILE_URL}/{quote(image_name)}?width=500"
                 if image_name
@@ -595,6 +697,7 @@ LIMIT {limit * 3}
                 "producers": producers,
                 "cinematographers": cinematographers,
                 "editors": editors,
+                "cast": cast,
             },
             "crew_sources": [
                 {
@@ -629,6 +732,9 @@ LIMIT {limit * 3}
             ),
             "_wikipedia_title": wikipedia_title,
             "_director_ids": self._entity_ids(claims, "P57"),
+            "_cast_ids": self._entity_ids(claims, "P161"),
+            "_country_ids": self._entity_ids(claims, "P495"),
+            "_genre_ids": self._entity_ids(claims, "P136"),
         }
 
     @classmethod
@@ -988,7 +1094,14 @@ LIMIT {limit * 3}
             "film_id": film_id,
             "director": next(iter(directors), None),
             "same_director": same_director,
+            "shared_cast": [],
+            "same_country": relevant,
+            "recommended": relevant,
             "relevant": relevant,
+            "category_labels": {
+                "cast": [],
+                "countries": (film.get("countries") or [])[:3],
+            },
             "state": "offline",
         }
 

@@ -322,8 +322,18 @@ async function loadRelatedFilms(primary, nearby) {
     const data = await res.json();
     if (state.discovery.archiveSelectionId !== primary.id) return;
     const directorWorks = uniqueFilms(data.same_director || [], [primary]);
-    const relevant = uniqueFilms([...(data.relevant || []), ...nearby], [primary, ...directorWorks]);
-    renderFilmArchive(primary, directorWorks, relevant, false, data.director);
+    const sharedCast = uniqueFilms(data.shared_cast || [], [primary]);
+    const sameCountry = uniqueFilms(data.same_country || [], [primary]);
+    const recommended = uniqueFilms(
+      [...(data.recommended || []), ...(data.relevant || []), ...nearby],
+      [primary],
+    );
+    renderFilmArchive(primary, directorWorks, recommended, false, data.director, {
+      sharedCast,
+      sameCountry,
+      recommended,
+      labels: data.category_labels || {},
+    });
   } catch (_) {
     if (state.discovery.archiveSelectionId !== primary.id) return;
     renderFilmArchive(primary, [], uniqueFilms(nearby, [primary]), false);
@@ -339,11 +349,18 @@ function uniqueFilms(films, excluded = []) {
   });
 }
 
-function renderFilmArchive(primary, directorWorks, relevant, loading, directorName = null) {
+function renderFilmArchive(
+  primary,
+  directorWorks,
+  relevant,
+  loading,
+  directorName = null,
+  categories = {},
+) {
   const director = directorName || (primary.directors || [])[0] || "this director";
   const duration = formatFilmDuration(primary.runtime_minutes);
   state.discovery.archiveSelectionId = primary.id;
-  state.discovery.archive = { primary, directorWorks, relevant };
+  state.discovery.archive = { primary, directorWorks, relevant, categories };
   refs.discoveryResults.innerHTML = `
     <div class="archive-pullout">
       <div class="archive-pullout-label"><span>Selected edition</span><small>FirstRoll Collection</small></div>
@@ -365,7 +382,7 @@ function renderFilmArchive(primary, directorWorks, relevant, loading, directorNa
         <span>FirstRoll closet</span>
         <small>Drag to browse · select a case to pull it out</small>
       </div>
-      ${closetRoomMarkup(directorWorks, relevant, director, loading)}
+      ${closetRoomMarkup(primary, directorWorks, relevant, categories, director, loading)}
     </aside>`;
   initialiseClosetViewport();
 }
@@ -401,16 +418,26 @@ function criterionCaseMarkup(film) {
     </div>`;
 }
 
-function closetRoomMarkup(directorWorks, relevant, director, loading) {
-  const leftFilms = directorWorks.filter((_, index) => index % 2 === 1);
-  const backFilms = directorWorks.filter((_, index) => index % 2 === 0);
+function closetRoomMarkup(primary, directorWorks, relevant, categories, director, loading) {
+  const directorFilms = uniqueFilms([primary, ...directorWorks]);
+  const castFilms = categories.sharedCast || [];
+  const countryFilms = categories.sameCountry || [];
+  const recommended = categories.recommended || relevant;
+  const castLabel = (categories.labels?.cast || []).slice(0, 2).join(" · ");
+  const countryLabel = (categories.labels?.countries || []).slice(0, 2).join(" · ");
   return `
     <div class="closet-viewport" data-closet-viewport tabindex="0" aria-label="Panoramic film closet. Drag, scroll, or use the arrow keys to browse.">
       <div class="closet-world">
         <div class="closet-ceiling" aria-hidden="true"><i></i><i></i><i></i></div>
-        ${closetWallMarkup("left", "Director index", leftFilms, "director", loading, 11)}
-        ${closetWallMarkup("back", `More by ${director}`, backFilms, "director", loading, 29)}
-        ${closetWallMarkup("right", "Nearby & relevant", relevant, "relevant", false, 47)}
+        ${closetCategoryWallMarkup("left", [
+          { label: castLabel ? `Shared cast · ${castLabel}` : "Shared cast", films: castFilms, kind: "cast" },
+          { label: "Genre & metadata affinities", films: recommended, kind: "recommended" },
+        ], 11)}
+        ${closetDirectorWallMarkup(director, directorFilms, loading)}
+        ${closetCategoryWallMarkup("right", [
+          { label: countryLabel ? `Produced in · ${countryLabel}` : "Production country", films: countryFilms, kind: "country" },
+          { label: "Nearby titles", films: relevant, kind: "recommended" },
+        ], 47)}
         <div class="closet-floor" aria-hidden="true"><span>FIRSTROLL FILM ARCHIVE · AISLES A—C</span></div>
       </div>
     </div>
@@ -421,24 +448,41 @@ function closetRoomMarkup(directorWorks, relevant, director, loading) {
     </div>`;
 }
 
-function closetWallMarkup(position, label, films, kind, loading, seed) {
-  const rows = Array.from({ length: 4 }, () => []);
-  films.forEach((film, index) => rows[index % rows.length].push(film));
+function closetDirectorWallMarkup(director, films, loading) {
   const status = loading && !films.length
     ? `<span class="closet-scan">Scanning this aisle…</span>`
     : "";
   return `
-    <section class="closet-wall closet-wall-${position}" aria-label="${escapeHtml(label)}">
-      <header><span>${escapeHtml(label)}</span><small>${films.length || "—"} filed</small></header>
+    <section class="closet-wall closet-wall-back closet-wall-front" aria-label="Complete ${escapeHtml(director)} director shelf">
+      <header><span>Director collection</span><small>${films.length || "—"} films</small></header>
       ${status}
       <div class="closet-wall-shelves">
-        ${rows.map((row, rowIndex) => `
-          <div class="closet-room-shelf">
-            <div class="closet-case-row">
-              ${closetRowMarkup(row, kind, seed + rowIndex * 13)}
-            </div>
-            <span class="closet-shelf-code">${position.slice(0, 1).toUpperCase()}${rowIndex + 1}</span>
-          </div>`).join("")}
+        <div class="closet-room-shelf closet-filler-shelf"><div class="closet-case-row">${closetRowMarkup([], "archive", 29)}</div></div>
+        <div class="closet-room-shelf closet-director-shelf">
+          <div class="closet-case-row closet-director-row">${films.map((film, index) => filmSpineMarkup(film, 43 + index, "director")).join("")}</div>
+          <span class="closet-row-label"><strong>${escapeHtml(director)}</strong><small>Complete director index · chronological shelf</small></span>
+        </div>
+        <div class="closet-room-shelf closet-filler-shelf"><div class="closet-case-row">${closetRowMarkup([], "archive", 71)}</div></div>
+        <div class="closet-room-shelf closet-filler-shelf"><div class="closet-case-row">${closetRowMarkup([], "archive", 89)}</div></div>
+      </div>
+    </section>`;
+}
+
+function closetCategoryWallMarkup(position, categories, seed) {
+  const rows = categories.flatMap((category) => [category, category]).slice(0, 4);
+  return `
+    <section class="closet-wall closet-wall-${position}" aria-label="Related film categories">
+      <header><span>${position === "left" ? "People & affinity" : "Place & context"}</span><small>Related works</small></header>
+      <div class="closet-wall-shelves">
+        ${rows.map((category, rowIndex) => {
+          const films = rowIndex % 2 === 0
+            ? category.films.filter((_, index) => index % 2 === 0)
+            : category.films.filter((_, index) => index % 2 === 1);
+          return `<div class="closet-room-shelf closet-category-shelf">
+            <div class="closet-case-row">${closetRowMarkup(films, category.kind, seed + rowIndex * 17)}</div>
+            <span class="closet-row-label"><strong>${escapeHtml(category.label)}</strong><small>${category.films.length || "No verified titles yet"}</small></span>
+          </div>`;
+        }).join("")}
       </div>
     </section>`;
 }
@@ -582,7 +626,14 @@ function updateClosetRadar(viewport) {
 function selectArchiveFilm(filmId) {
   const archive = state.discovery.archive;
   if (!archive || archive.primary.id === filmId) return;
-  const available = [archive.primary, ...archive.directorWorks, ...archive.relevant];
+  const available = uniqueFilms([
+    archive.primary,
+    ...archive.directorWorks,
+    ...(archive.categories?.sharedCast || []),
+    ...(archive.categories?.sameCountry || []),
+    ...(archive.categories?.recommended || []),
+    ...archive.relevant,
+  ]);
   const selected = available.find((film) => film.id === filmId);
   if (!selected) return;
   const remaining = uniqueFilms(available, [selected]);

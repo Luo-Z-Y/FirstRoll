@@ -6,24 +6,26 @@ Delivered:
 
 1. Replaced the flat related-title shelves with a panoramic three-wall archive room modelled on
    the physical browsing experience of the Criterion Closet.
-2. Distributed same-director and nearby works across labelled aisles while retaining poster-art
-   jewel cases and explicit selection controls among non-interactive archive filler cases.
-3. Added mouse and touch dragging, native trackpad scrolling, arrow-key navigation, a live aisle
+2. Placed the director's complete available filmography on one uninterrupted, physically labelled
+   front row while retaining poster-art jewel cases among non-interactive archive filler cases.
+3. Added verified relationship shelves for shared cast, production country and genre/metadata
+   affinity, with the matched actor and country names printed on physical shelf labels.
+4. Added mouse and touch dragging, native trackpad scrolling, arrow-key navigation, a live aisle
    indicator and a re-centre control.
-4. Prevented a completed drag from accidentally selecting the case beneath the pointer and kept
+5. Prevented a completed drag from accidentally selecting the case beneath the pointer and kept
    deliberate case selection connected to the main edition display.
-5. Added responsive framing, reduced-motion compatibility and horizontal-page-overflow guards.
+6. Added responsive framing, reduced-motion compatibility and horizontal-page-overflow guards.
 
 Acceptance evidence:
 
-- live *In the Mood for Love* validation populated 13 selectable cases across three walls with
-  155 decorative archive cases;
+- live *In the Mood for Love* validation populated 19 films on the Wong Kar-wai row, 10 shared-cast
+  matches, 12 production-country matches and 12 metadata-affinity recommendations;
 - a real pointer drag moved from the centre to the Director aisle without changing the selected
   film, while arrow-key navigation moved the same viewport independently;
 - selecting *Ashes of Time* from the closet changed the main edition title, cover and dossier
   target;
 - desktop, dark-theme and compact viewport checks show no page-level horizontal overflow;
-- 72 automated tests, JavaScript syntax and repository whitespace checks pass.
+- 73 automated tests, JavaScript syntax and repository whitespace checks pass.
 
 ### 13 August 2026 — Dossier reception and awards
 
@@ -245,7 +247,7 @@ Status vocabulary:
 **Release stage:** local working prototype
 
 **Primary development URL:** `http://127.0.0.1:8000`
-**Automated verification:** 72 tests passing
+**Automated verification:** 73 tests passing
 
 | Area | Status | Current evidence |
 |---|---|---|
