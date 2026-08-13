@@ -34,9 +34,9 @@ The original GPL-3.0 licence and contributor attribution remain applicable. See
 
 - Search by title, year and director through key-free Wikidata.
 - Read an attributed Wikipedia overview and poster after Wikidata resolves the film.
-- Walk through a CSS 3D film closet using vertical drag, mouse wheel, W/S or visible walk controls;
-  turn sideways with horizontal drag, browse the director's labelled front row and relationship
-  shelves, then pull a case to make it the selected edition.
+- Walk through a real Blender-built GLB film closet rendered locally with Three.js: drag to look,
+  scroll or use W/S to walk, strafe with A/D, browse labelled director and relationship shelves,
+  then hover a transparent jewel case to pull it out and select it as the new edition.
 - Compare attributed Douban and Letterboxd community scores and review up to three prominent
   Wikidata awards when those sources provide them.
 - Retrieve matched scholarly abstracts and DOI links through Crossref.
@@ -100,8 +100,8 @@ the bold second line inside each component names its specialised technology.
 flowchart TB
     MAKER(["Filmmaker"])
 
-    subgraph L1["1 · LOCAL WEB INTERFACE — HTML5 · CSS3 · VANILLA JAVASCRIPT"]
-        UI["Discover · Deep Study · Analyse<br/><b>Responsive browser UI</b>"]
+    subgraph L1["1 · LOCAL WEB INTERFACE — HTML5 · CSS3 · VANILLA JAVASCRIPT · WEBGL"]
+        UI["Discover · 3D closet · Deep Study · Analyse<br/><b>Three.js · Blender GLB · responsive browser UI</b>"]
     end
 
     subgraph INPUTS["INPUTS"]
@@ -178,7 +178,7 @@ in Deep Study.
 
 | Layer | Primary stack |
 |---|---|
-| Web interface | HTML5, CSS3, vanilla JavaScript |
+| Web interface | HTML5, CSS3, vanilla JavaScript, Three.js WebGL and a Blender-authored GLB |
 | API and orchestration | Python 3.11, FastAPI, Uvicorn, Pydantic |
 | Private retrieval | PyPDF, SQLite FTS5, Sentence Transformers, NumPy |
 | Clip analysis | OpenCV, FFmpeg, TransNetV2, TensorFlow and Torchvision |
@@ -692,14 +692,19 @@ FirstRoll/
 │   │   └── study_service.py     # DeepSeek synthesis and quality gate
 │   └── web/
 │       ├── app.js
+│       ├── closet3d.js           # Three.js walk camera and live selectable cases
 │       ├── index.html
-│       └── styles.css
+│       ├── models/                # web-ready Blender GLB room shell
+│       ├── styles.css
+│       └── vendor/three/          # pinned local Three.js runtime and licence
 ├── docs/
 │   ├── DATA_SOURCES.md
 │   ├── LOCAL_SETUP.md
 │   ├── PROGRESS.md
 │   └── RELEASE.md
 ├── tests/
+├── tools/
+│   └── build_closet_blender.py    # deterministic Blender asset generator
 ├── .env.example
 ├── pyproject.toml
 └── uv.lock
@@ -730,7 +735,15 @@ Run scoped lint and frontend checks:
 uv run ruff check app/backend/library_index.py app/backend/evidence.py \
   app/backend/study_service.py app/backend/main.py tests
 node --check app/web/app.js
+node --check app/web/closet3d.js
 git diff --check
+```
+
+The checked-in GLB is ready to serve and does not require Blender at runtime. To regenerate
+the room asset after changing its geometry or materials, install Blender 5.2 or newer and run:
+
+```bash
+blender --background --python tools/build_closet_blender.py
 ```
 
 The current verification baseline is recorded in [Project Progress](docs/PROGRESS.md).

@@ -20,7 +20,14 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/assets/styles.css?v=20260813-18" />
+  <link rel="stylesheet" href="/assets/styles.css?v=20260813-19" />
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "/assets/vendor/three/three.module.min.js?v=0.185.1"
+      }
+    }
+  </script>
 </head>
 <body data-api-base="">
   <div class="app-shell">
@@ -210,6 +217,7 @@
 
   <video id="analysisVideo" preload="metadata" class="hidden-asset"></video>
   <canvas id="analysisCanvas" width="160" height="90" class="hidden-asset"></canvas>
-  <script src="/assets/app.js?v=20260813-18"></script>
+  <script src="/assets/app.js?v=20260813-19"></script>
+  <script type="module" src="/assets/closet3d.js?v=20260813-1"></script>
 </body>
 </html>

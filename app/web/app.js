@@ -25,9 +25,6 @@ const CRITICISM_SOURCES = [
 const RECENT_SEARCHES_KEY = "firstroll.recent-searches";
 const THEME_STORAGE_KEY = "firstroll.theme";
 const MAX_RECENT_SEARCHES = 5;
-const CLOSET_MIN_DEPTH = -430;
-const CLOSET_MAX_DEPTH = 430;
-let closetDrag = null;
 
 const refs = {
   productViews: {
@@ -104,11 +101,9 @@ function setup() {
   });
   refs.discoveryForm.addEventListener("submit", onDiscoverySearch);
   refs.discoveryResults.addEventListener("click", onFilmResultClick);
-  refs.discoveryResults.addEventListener("pointerdown", onClosetPointerDown);
-  refs.discoveryResults.addEventListener("pointermove", onClosetPointerMove);
-  refs.discoveryResults.addEventListener("pointerup", onClosetPointerUp);
-  refs.discoveryResults.addEventListener("pointercancel", onClosetPointerUp);
-  refs.discoveryResults.addEventListener("keydown", onClosetKeyDown);
+  refs.discoveryResults.addEventListener("firstroll:select-film", (event) => {
+    selectArchiveFilm(event.detail?.filmId);
+  });
   refs.filmDetail.addEventListener("click", onFilmDetailClick);
   refs.recentSearches.addEventListener("click", onRecentSearchClick);
   state.discovery.recentSearches = readRecentSearches();
@@ -361,6 +356,13 @@ function renderFilmArchive(
 ) {
   const director = directorName || (primary.directors || [])[0] || "this director";
   const duration = formatFilmDuration(primary.runtime_minutes);
+  const closetCollections = buildClosetCollections(
+    primary,
+    directorWorks,
+    relevant,
+    categories,
+    director,
+  );
   state.discovery.archiveSelectionId = primary.id;
   state.discovery.archive = { primary, directorWorks, relevant, categories };
   refs.discoveryResults.innerHTML = `
@@ -382,11 +384,14 @@ function renderFilmArchive(
     <aside class="film-closet" aria-label="Related film closet">
       <div class="closet-header">
         <span>FirstRoll closet</span>
-        <small>Drag to browse · select a case to pull it out</small>
+        <small>Blender archive · drag to look · W A S D to walk · select a case to pull it out</small>
       </div>
-      ${closetRoomMarkup(primary, directorWorks, relevant, categories, director, loading)}
+      ${closetRoomMarkup(loading)}
     </aside>`;
-  initialiseClosetViewport();
+  initialiseClosetViewport({
+    primaryId: primary.id,
+    collections: closetCollections,
+  });
 }
 
 function formatFilmDuration(minutes) {
@@ -420,126 +425,53 @@ function criterionCaseMarkup(film) {
     </div>`;
 }
 
-function closetRoomMarkup(primary, directorWorks, relevant, categories, director, loading) {
+function buildClosetCollections(primary, directorWorks, relevant, categories, director) {
   const directorFilms = uniqueFilms([primary, ...directorWorks]);
   const castFilms = categories.sharedCast || [];
   const countryFilms = categories.sameCountry || [];
   const recommended = categories.recommended || relevant;
   const castLabel = (categories.labels?.cast || []).slice(0, 2).join(" · ");
   const countryLabel = (categories.labels?.countries || []).slice(0, 2).join(" · ");
+  return [
+    { wall: "back", shelf: "lower", label: `${director} · complete director row`, films: directorFilms },
+    { wall: "left", shelf: "lower", label: castLabel ? `Shared cast · ${castLabel}` : "Shared cast", films: castFilms },
+    { wall: "left", shelf: "upper", label: "Genre & metadata affinities", films: recommended },
+    { wall: "right", shelf: "lower", label: countryLabel ? `Produced in · ${countryLabel}` : "Production country", films: countryFilms },
+    { wall: "right", shelf: "upper", label: "Nearby & relevant works", films: relevant },
+  ];
+}
+
+function closetRoomMarkup(loading) {
   return `
-    <div class="closet-viewport" data-closet-viewport tabindex="0" aria-label="Three-dimensional film closet. Drag sideways to turn. Drag vertically, use the mouse wheel, or press W and S to walk.">
-      <div class="closet-scene">
-        <div class="closet-world">
-          <div class="closet-doorframe" aria-hidden="true"><i></i><i></i><b></b></div>
-          <div class="closet-ceiling" aria-hidden="true"><i></i><i></i><i></i></div>
-          ${closetCategoryWallMarkup("left", [
-            { label: castLabel ? `Shared cast · ${castLabel}` : "Shared cast", films: castFilms, kind: "cast" },
-            { label: "Genre & metadata affinities", films: recommended, kind: "recommended" },
-          ], 11)}
-          ${closetDirectorWallMarkup(director, directorFilms, loading)}
-          ${closetCategoryWallMarkup("right", [
-            { label: countryLabel ? `Produced in · ${countryLabel}` : "Production country", films: countryFilms, kind: "country" },
-            { label: "Nearby titles", films: relevant, kind: "recommended" },
-          ], 47)}
-          <div class="closet-floor" aria-hidden="true"><span>FIRSTROLL FILM ARCHIVE · AISLES A—C</span></div>
-        </div>
+    <div class="closet-viewport closet-webgl" data-closet-viewport tabindex="0" aria-label="Interactive Blender film closet. Drag to look around, scroll or press W and S to walk, use A and D to move sideways, and select a case to pull it out.">
+      <canvas data-closet-canvas aria-hidden="true"></canvas>
+      <div class="closet-model-loading" data-closet-loading role="status">
+        <span></span><strong>${loading ? "Indexing the collection" : "Opening the 3D archive"}</strong><small>0%</small>
       </div>
+      <span class="closet-reticle" aria-hidden="true"></span>
+      <p class="closet-help"><span>Drag</span> look around <span>Scroll / W S</span> walk <span>A D</span> move sideways</p>
     </div>
     <div class="closet-hud">
       <div class="closet-radar" aria-hidden="true"><i></i><span></span></div>
-      <span class="closet-coordinate">AISLE B · MID-ROOM</span>
+      <span class="closet-coordinate">ENTRANCE · DIRECTOR WALL</span>
       <div class="closet-walk-controls" role="group" aria-label="Walk through the closet">
-        <button type="button" data-walk-closet="-120" aria-label="Walk away from the shelves">Walk out</button>
+        <button type="button" data-walk-closet="-1.15" aria-label="Walk away from the shelves">Walk out</button>
         <span class="closet-depth-track" aria-hidden="true"><i></i></span>
-        <button type="button" data-walk-closet="120" aria-label="Walk towards the shelves">Walk in</button>
+        <button type="button" data-walk-closet="1.15" aria-label="Walk towards the shelves">Walk in</button>
       </div>
       <button type="button" data-centre-closet aria-label="Reset the closet view">Reset view</button>
     </div>`;
 }
 
-function closetDirectorWallMarkup(director, films, loading) {
-  const status = loading && !films.length
-    ? `<span class="closet-scan">Scanning this aisle…</span>`
-    : "";
-  return `
-    <section class="closet-wall closet-wall-back closet-wall-front" aria-label="Complete ${escapeHtml(director)} director shelf">
-      <header><span>Director collection</span><small>${films.length || "—"} films</small></header>
-      ${status}
-      <div class="closet-wall-shelves">
-        <div class="closet-room-shelf closet-filler-shelf"><div class="closet-case-row">${closetRowMarkup([], "archive", 29)}</div></div>
-        <div class="closet-room-shelf closet-director-shelf">
-          <div class="closet-case-row closet-director-row">${films.map((film, index) => filmSpineMarkup(film, 43 + index, "director")).join("")}</div>
-          <span class="closet-row-label"><strong>${escapeHtml(director)}</strong><small>Complete director index · chronological shelf</small></span>
-        </div>
-        <div class="closet-room-shelf closet-filler-shelf"><div class="closet-case-row">${closetRowMarkup([], "archive", 71)}</div></div>
-        <div class="closet-room-shelf closet-filler-shelf"><div class="closet-case-row">${closetRowMarkup([], "archive", 89)}</div></div>
-      </div>
-    </section>`;
-}
-
-function closetCategoryWallMarkup(position, categories, seed) {
-  const rows = categories.flatMap((category) => [category, category]).slice(0, 4);
-  return `
-    <section class="closet-wall closet-wall-${position}" aria-label="Related film categories">
-      <header><span>${position === "left" ? "People & affinity" : "Place & context"}</span><small>Related works</small></header>
-      <div class="closet-wall-shelves">
-        ${rows.map((category, rowIndex) => {
-          const films = rowIndex % 2 === 0
-            ? category.films.filter((_, index) => index % 2 === 0)
-            : category.films.filter((_, index) => index % 2 === 1);
-          return `<div class="closet-room-shelf closet-category-shelf">
-            <div class="closet-case-row">${closetRowMarkup(films, category.kind, seed + rowIndex * 17)}</div>
-            <span class="closet-row-label"><strong>${escapeHtml(category.label)}</strong><small>${category.films.length || "No verified titles yet"}</small></span>
-          </div>`;
-        }).join("")}
-      </div>
-    </section>`;
-}
-
-function closetRowMarkup(films, kind, seed) {
-  const slots = 14;
-  const filmSlots = new Map();
-  films.forEach((film, index) => {
-    filmSlots.set(Math.min(2 + index * 4, slots - 2), film);
-  });
-  return Array.from({ length: slots }, (_, slot) => {
-    const film = filmSlots.get(slot);
-    if (film) return filmSpineMarkup(film, seed + slot, kind);
-    const tone = ((seed + slot * 3) % 6) + 1;
-    const size = ((seed + slot * 5) % 4) + 1;
-    return `<span class="closet-filler tone-${tone} filler-size-${size}" aria-hidden="true"><i></i></span>`;
-  }).join("");
-}
-
-function filmSpineMarkup(film, index, kind) {
-  const title = escapeHtml(film.title || "Untitled");
-  const tone = (index % 6) + 1;
-  return `
-    <button class="film-spine tone-${tone}" type="button" data-select-film-id="${escapeHtml(film.id)}" title="Select ${title}">
-      <span class="spine-art" aria-hidden="true">
-        ${film.poster_url
-          ? `<img src="${escapeHtml(film.poster_url)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()" />`
-          : ""}
-      </span>
-      <span class="spine-mark" aria-hidden="true">FR</span>
-      <strong>${title}</strong>
-      <small>${escapeHtml(film.year || (kind === "director" ? "Film" : "Related"))}</small>
-    </button>`;
-}
-
 async function onFilmResultClick(event) {
-  const viewport = event.target.closest("[data-closet-viewport]");
-  if (viewport?.dataset.dragMoved === "true") return;
   const centreButton = event.target.closest("[data-centre-closet]");
   if (centreButton) {
-    centreCloset(centreButton.closest(".film-closet")?.querySelector("[data-closet-viewport]"), true);
+    window.FirstRollCloset?.reset();
     return;
   }
   const walkButton = event.target.closest("[data-walk-closet]");
   if (walkButton) {
-    const walkViewport = walkButton.closest(".film-closet")?.querySelector("[data-closet-viewport]");
-    setClosetDepth(walkViewport, closetDepth(walkViewport) + Number(walkButton.dataset.walkCloset));
+    window.FirstRollCloset?.walk(Number(walkButton.dataset.walkCloset));
     return;
   }
   const selection = event.target.closest("[data-select-film-id]");
@@ -552,140 +484,18 @@ async function onFilmResultClick(event) {
   await loadFilmDetail(button.dataset.filmId);
 }
 
-function initialiseClosetViewport() {
+function initialiseClosetViewport(payload) {
   window.requestAnimationFrame(() => {
-    const viewport = refs.discoveryResults.querySelector("[data-closet-viewport]");
-    if (!viewport) return;
-    viewport.addEventListener("scroll", () => updateClosetRadar(viewport), { passive: true });
-    viewport.addEventListener("wheel", onClosetWheel, { passive: false });
-    centreCloset(viewport, false);
+    const root = refs.discoveryResults.querySelector("[data-closet-viewport]");
+    if (!root) return;
+    const detail = { ...payload, root };
+    window.__firstRollClosetPayload = detail;
+    if (window.FirstRollCloset) {
+      window.FirstRollCloset.mount(detail);
+      return;
+    }
+    window.dispatchEvent(new CustomEvent("firstroll:mount-closet", { detail }));
   });
-}
-
-function centreCloset(viewport, smooth) {
-  if (!viewport) return;
-  viewport.scrollTo({
-    left: Math.max(0, (viewport.scrollWidth - viewport.clientWidth) / 2),
-    top: Math.max(0, (viewport.scrollHeight - viewport.clientHeight) / 2),
-    behavior: smooth ? "smooth" : "auto",
-  });
-  setClosetDepth(viewport, 0, smooth);
-  updateClosetRadar(viewport);
-}
-
-function closetDepth(viewport) {
-  return Number(viewport?.dataset.cameraDepth || 0);
-}
-
-function setClosetDepth(viewport, depth, smooth = true) {
-  if (!viewport) return;
-  const nextDepth = Math.max(CLOSET_MIN_DEPTH, Math.min(CLOSET_MAX_DEPTH, depth));
-  viewport.dataset.cameraDepth = String(Math.round(nextDepth));
-  viewport.classList.toggle("is-walking", smooth);
-  viewport.querySelector(".closet-world")?.style.setProperty("--camera-z", `${nextDepth}px`);
-  window.clearTimeout(viewport.walkTimer);
-  viewport.walkTimer = window.setTimeout(() => viewport.classList.remove("is-walking"), 360);
-  updateClosetRadar(viewport);
-}
-
-function onClosetWheel(event) {
-  const viewport = event.currentTarget;
-  if (Math.abs(event.deltaX) > Math.abs(event.deltaY)) return;
-  const currentDepth = closetDepth(viewport);
-  const nextDepth = Math.max(
-    CLOSET_MIN_DEPTH,
-    Math.min(CLOSET_MAX_DEPTH, currentDepth - event.deltaY * 0.7),
-  );
-  if (nextDepth === currentDepth) return;
-  event.preventDefault();
-  setClosetDepth(viewport, nextDepth);
-}
-
-function onClosetPointerDown(event) {
-  const viewport = event.target.closest("[data-closet-viewport]");
-  if (!viewport || event.button !== 0) return;
-  closetDrag = {
-    viewport,
-    pointerId: event.pointerId,
-    startX: event.clientX,
-    startY: event.clientY,
-    scrollLeft: viewport.scrollLeft,
-    depth: closetDepth(viewport),
-    axis: null,
-    moved: false,
-  };
-  viewport.setPointerCapture(event.pointerId);
-  viewport.classList.add("is-dragging");
-}
-
-function onClosetPointerMove(event) {
-  if (!closetDrag || event.pointerId !== closetDrag.pointerId) return;
-  const deltaX = event.clientX - closetDrag.startX;
-  const deltaY = event.clientY - closetDrag.startY;
-  if (Math.hypot(deltaX, deltaY) > 5) closetDrag.moved = true;
-  if (!closetDrag.moved) return;
-  event.preventDefault();
-  if (!closetDrag.axis) closetDrag.axis = Math.abs(deltaX) >= Math.abs(deltaY) ? "turn" : "walk";
-  if (closetDrag.axis === "turn") {
-    closetDrag.viewport.scrollLeft = closetDrag.scrollLeft - deltaX;
-  } else {
-    setClosetDepth(closetDrag.viewport, closetDrag.depth - deltaY * 2.2, false);
-  }
-}
-
-function onClosetPointerUp(event) {
-  if (!closetDrag || event.pointerId !== closetDrag.pointerId) return;
-  const { viewport, moved } = closetDrag;
-  viewport.classList.remove("is-dragging");
-  if (viewport.hasPointerCapture(event.pointerId)) viewport.releasePointerCapture(event.pointerId);
-  if (moved) {
-    viewport.dataset.dragMoved = "true";
-    window.setTimeout(() => delete viewport.dataset.dragMoved, 160);
-  }
-  closetDrag = null;
-}
-
-function onClosetKeyDown(event) {
-  const viewport = event.target.closest("[data-closet-viewport]");
-  if (!viewport) return;
-  if (["ArrowLeft", "ArrowRight", "a", "A", "d", "D"].includes(event.key)) {
-    event.preventDefault();
-    const direction = ["ArrowLeft", "a", "A"].includes(event.key) ? -1 : 1;
-    viewport.scrollBy({ left: direction * 180, behavior: "smooth" });
-    return;
-  }
-  if (["ArrowUp", "ArrowDown", "w", "W", "s", "S", "+", "-"].includes(event.key)) {
-    event.preventDefault();
-    const walkIn = ["ArrowUp", "w", "W", "+"].includes(event.key);
-    setClosetDepth(viewport, closetDepth(viewport) + (walkIn ? 110 : -110));
-    return;
-  }
-  if (event.key === "Home") {
-    event.preventDefault();
-    centreCloset(viewport, true);
-  }
-}
-
-function updateClosetRadar(viewport) {
-  const closet = viewport.closest(".film-closet");
-  const dot = closet?.querySelector(".closet-radar span");
-  const coordinate = closet?.querySelector(".closet-coordinate");
-  if (!dot || !coordinate) return;
-  const xRange = Math.max(1, viewport.scrollWidth - viewport.clientWidth);
-  const x = viewport.scrollLeft / xRange;
-  const depth = closetDepth(viewport);
-  const y = (depth - CLOSET_MIN_DEPTH) / (CLOSET_MAX_DEPTH - CLOSET_MIN_DEPTH);
-  dot.style.left = `${8 + x * 84}%`;
-  dot.style.top = `${86 - y * 72}%`;
-  viewport.querySelector(".closet-world")?.style.setProperty(
-    "--camera-yaw",
-    `${(0.5 - x) * 14}deg`,
-  );
-  const aisle = x < 0.34 ? "A · DIRECTOR" : x > 0.66 ? "C · RELATED" : "B · CENTRE";
-  const distance = depth < -150 ? "AT ENTRANCE" : depth > 190 ? "CLOSE SHELF" : "MID-ROOM";
-  coordinate.textContent = `AISLE ${aisle} · ${distance}`;
-  const depthTrack = closet?.querySelector(".closet-depth-track i");
-  if (depthTrack) depthTrack.style.width = `${Math.round(y * 100)}%`;
 }
 
 function selectArchiveFilm(filmId) {
