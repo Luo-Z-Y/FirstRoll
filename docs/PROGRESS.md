@@ -66,6 +66,9 @@ Delivered:
     typography for clear close-view reading. Removed the redundant in-scene control hint so it cannot
     cross the bottom shelf caption; hovering a case now exposes its full title, year and director in
     the shelf header without compressing the text onto a narrow spine.
+11. Wrapped live cases in their available film-poster artwork with a centre crop and translucent title
+    treatment. Poster requests are deduplicated, bounded by a six-second fallback and included in the
+    ready gate so artwork does not pop in after the shelf appears.
 
 Acceptance evidence:
 

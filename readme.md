@@ -42,7 +42,8 @@ The original GPL-3.0 licence and contributor attribution remain applicable. See
   discovery results; unresolved identifier-only records are omitted rather than displayed as fake or
   placeholder editions. The shelf remains behind its loading panel until related-film data, the GLB
   and the first complete frame are all ready. Hovering a case also replaces the shelf-header hint with
-  its full title, year and director for an uncompressed caption.
+  its full title, year and director for an uncompressed caption. Available poster artwork wraps each
+  case beneath the title treatment, with the designed colour spine retained when an image is missing.
 - Compare attributed Douban and Letterboxd community scores and review up to three prominent
   Wikidata awards when those sources provide them.
 - Retrieve matched scholarly abstracts and DOI links through Crossref.

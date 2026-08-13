@@ -21,6 +21,7 @@ class FirstRollClosetViewer {
     this.clock = new THREE.Clock();
     this.model = null;
     this.filmCases = [];
+    this.posterTextureCache = new Map();
     this.hoveredCase = null;
     this.drag = null;
     this.yaw = 0;
@@ -90,7 +91,9 @@ class FirstRollClosetViewer {
         if (object.material) object.material.envMapIntensity = 0.55;
       });
       this.scene.add(this.model);
-      this.addLiveCollections();
+      if (this.loading) this.loading.querySelector("strong").textContent = "Loading film artwork";
+      await this.addLiveCollections();
+      if (this.destroyed) return;
       this.root.dataset.liveCaseCount = String(this.filmCases.length);
       this.renderer.render(this.scene, this.camera);
       if (this.loading) {
@@ -137,16 +140,16 @@ class FirstRollClosetViewer {
     });
   }
 
-  addLiveCollections() {
+  async addLiveCollections() {
     const collections = this.payload.collections || [];
-    collections.forEach((collection) => {
+    await Promise.all(collections.map(async (collection) => {
       if (!collection.films?.length) return;
-      this.addFilmRow(collection);
+      await this.addFilmRow(collection);
       this.addShelfPlaque(collection);
-    });
+    }));
   }
 
-  addFilmRow(collection) {
+  async addFilmRow(collection) {
     const films = collection.films.filter((film) => film?.id && film?.title).slice(0, SHELF_ROW_SIZE);
     const shelfHeights = { bottom: 0.61, lower: 1.44, middle: 2.27, upper: 3.10, top: 3.93 };
     const baseY = shelfHeights[collection.shelf] || shelfHeights.lower;
@@ -158,7 +161,7 @@ class FirstRollClosetViewer {
     );
     const span = films.length * width + Math.max(0, films.length - 1) * gap;
 
-    films.forEach((film, index) => {
+    const filmCases = await Promise.all(films.map(async (film, index) => {
       let position;
       let rotationY = 0;
       let pullDirection;
@@ -173,13 +176,15 @@ class FirstRollClosetViewer {
         rotationY = side < 0 ? Math.PI / 2 : -Math.PI / 2;
         pullDirection = new THREE.Vector3(-side, 0, 0);
       }
-      const filmCase = this.createFilmCase(film, index, width, position, rotationY, pullDirection);
+      return this.createFilmCase(film, index, width, position, rotationY, pullDirection);
+    }));
+    filmCases.forEach((filmCase) => {
       this.scene.add(filmCase);
       this.filmCases.push(filmCase);
     });
   }
 
-  createFilmCase(film, index, width, position, rotationY, pullDirection) {
+  async createFilmCase(film, index, width, position, rotationY, pullDirection) {
     const group = new THREE.Group();
     group.name = `Selectable case — ${film.title || "Untitled"}`;
     group.position.copy(position);
@@ -196,14 +201,26 @@ class FirstRollClosetViewer {
 
     const height = 0.64;
     const depth = 0.13;
-    const insertTexture = this.createSpineTexture(film, index);
+    const posterTexture = await this.loadPosterTexture(film.poster_url);
+    if (posterTexture) {
+      const poster = new THREE.Mesh(
+        new THREE.PlaneGeometry(width * 0.82, height * 0.91),
+        new THREE.MeshStandardMaterial({ map: posterTexture, roughness: 0.62, metalness: 0.0 }),
+      );
+      poster.position.z = depth / 2 + 0.005;
+      poster.userData.caseOwner = group;
+      group.add(poster);
+    }
+    const insertTexture = this.createSpineTexture(film, index, Boolean(posterTexture));
     const insertMaterial = new THREE.MeshStandardMaterial({
       map: insertTexture,
       roughness: 0.58,
       metalness: 0.0,
+      transparent: Boolean(posterTexture),
+      depthWrite: !posterTexture,
     });
     const insert = new THREE.Mesh(new THREE.PlaneGeometry(width * 0.82, height * 0.91), insertMaterial);
-    insert.position.z = depth / 2 + 0.006;
+    insert.position.z = depth / 2 + 0.008;
     insert.userData.caseOwner = group;
     group.add(insert);
 
@@ -238,14 +255,48 @@ class FirstRollClosetViewer {
     return group;
   }
 
-  createSpineTexture(film, index) {
+  loadPosterTexture(url) {
+    if (!url) return Promise.resolve(null);
+    if (this.posterTextureCache.has(url)) return this.posterTextureCache.get(url);
+    const promise = new Promise((resolve) => {
+      let settled = false;
+      const finish = (texture) => {
+        if (settled) return;
+        settled = true;
+        window.clearTimeout(timeout);
+        if (texture) {
+          texture.colorSpace = THREE.SRGBColorSpace;
+          texture.anisotropy = Math.min(8, this.renderer.capabilities.getMaxAnisotropy());
+          texture.repeat.set(0.46, 1);
+          texture.offset.set(0.27, 0);
+        }
+        resolve(texture || null);
+      };
+      const timeout = window.setTimeout(() => finish(null), 6000);
+      new THREE.TextureLoader().setCrossOrigin("anonymous").load(url, finish, undefined, () => finish(null));
+    });
+    this.posterTextureCache.set(url, promise);
+    return promise;
+  }
+
+  createSpineTexture(film, index, hasPoster = false) {
     const canvas = document.createElement("canvas");
     canvas.width = 256;
     canvas.height = 1024;
     const context = canvas.getContext("2d");
     const tone = CASE_TONES[index % CASE_TONES.length];
-    context.fillStyle = tone;
-    context.fillRect(0, 0, canvas.width, canvas.height);
+    if (hasPoster) {
+      const veil = context.createLinearGradient(0, 0, canvas.width, 0);
+      veil.addColorStop(0, "rgba(8,6,5,.78)");
+      veil.addColorStop(0.22, "rgba(8,6,5,.30)");
+      veil.addColorStop(0.78, "rgba(8,6,5,.38)");
+      veil.addColorStop(1, "rgba(8,6,5,.82)");
+      context.fillStyle = veil;
+      context.fillRect(0, 0, canvas.width, canvas.height);
+    } else {
+      context.fillStyle = tone;
+      context.fillRect(0, 0, canvas.width, canvas.height);
+    }
     const gloss = context.createLinearGradient(0, 0, canvas.width, 0);
     gloss.addColorStop(0, "rgba(255,255,255,.34)");
     gloss.addColorStop(0.18, "rgba(255,255,255,.04)");

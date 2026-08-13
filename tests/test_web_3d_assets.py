@@ -62,6 +62,10 @@ def test_single_wall_shelf_uses_five_rows_of_real_films() -> None:
     assert "wireframe: true" not in runtime
     assert "firstroll_ambient_case" not in runtime
     assert "updateCaseCaption" in runtime
+    assert "loadPosterTexture" in runtime
+    assert 'textContent = "Loading film artwork"' in runtime
+    assert 'setCrossOrigin("anonymous")' in runtime
+    assert "texture.repeat.set(0.46, 1)" in runtime
     assert "All five rows remain empty in the asset" in blender_builder
     assert "firstroll_ambient_case" not in blender_builder
     assert 'build_side_shelves("left", materials)' not in blender_builder
