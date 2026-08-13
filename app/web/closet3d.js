@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { GLTFLoader } from "./vendor/three/addons/loaders/GLTFLoader.js";
 
-const MODEL_URL = "/assets/models/firstroll-closet.glb?v=20260814-6";
+const MODEL_URL = "/assets/models/firstroll-closet.glb?v=20260814-7";
 const CASE_TONES = ["#632d28", "#304138", "#87512f", "#35404a", "#897c64", "#4d3d4d"];
 const CAMERA_BOUNDS = { minX: -0.82, maxX: 0.82, minZ: -3.28, maxZ: 3.82 };
 
@@ -80,7 +80,7 @@ class FirstRollClosetViewer {
       });
       if (this.destroyed) return;
       this.model = gltf.scene;
-      this.model.name = "FirstRoll Blender closet";
+      this.model.name = "FirstRoll Blender shelf";
       this.model.traverse((object) => {
         if (!object.isMesh) return;
         object.receiveShadow = true;
@@ -93,7 +93,7 @@ class FirstRollClosetViewer {
       this.root.classList.add("is-ready");
       if (this.loading) this.loading.remove();
     } catch (error) {
-      console.error("FirstRoll closet model failed to load", error);
+      console.error("FirstRoll shelf model failed to load", error);
       this.showError("The 3D archive model could not be loaded.");
     }
   }
@@ -132,7 +132,7 @@ class FirstRollClosetViewer {
 
   addFilmRow(collection) {
     const films = collection.films.slice(0, 15);
-    const minimumCases = collection.wall === "back" ? 12 : 10;
+    const minimumCases = collection.shelf === "lower" ? 12 : 10;
     while (films.length < minimumCases) {
       films.push({
         id: null,
@@ -141,8 +141,9 @@ class FirstRollClosetViewer {
         year: String(films.length + 1).padStart(2, "0"),
       });
     }
-    const baseY = collection.shelf === "upper" ? 3.10 : 1.44;
-    const available = collection.wall === "back" ? 2.72 : 2.6;
+    const shelfHeights = { lower: 1.44, middle: 2.27, upper: 3.10 };
+    const baseY = shelfHeights[collection.shelf] || shelfHeights.lower;
+    const available = 2.72;
     const gap = 0.06;
     const width = Math.min(
       0.19,
@@ -154,7 +155,7 @@ class FirstRollClosetViewer {
       let position;
       let rotationY = 0;
       let pullDirection;
-      const rowCentre = collection.wall === "back" ? 0 : -1.05;
+      const rowCentre = 0;
       const offset = rowCentre - span / 2 + width / 2 + index * (width + gap);
       if (collection.wall === "back") {
         position = new THREE.Vector3(offset, baseY, -3.62);
@@ -295,10 +296,11 @@ class FirstRollClosetViewer {
     const texture = new THREE.CanvasTexture(canvas);
     texture.colorSpace = THREE.SRGBColorSpace;
     const plaque = new THREE.Mesh(
-      new THREE.PlaneGeometry(collection.wall === "back" ? 2.55 : 2.4, 0.28),
+      new THREE.PlaneGeometry(collection.wall === "back" ? 2.55 : 2.4, 0.10),
       new THREE.MeshStandardMaterial({ map: texture, roughness: 0.5, metalness: 0.2 }),
     );
-    const y = collection.shelf === "upper" ? 2.58 : 0.88;
+    const plaqueHeights = { lower: 1.08, middle: 1.91, upper: 2.74 };
+    const y = plaqueHeights[collection.shelf] || plaqueHeights.lower;
     if (collection.wall === "back") {
       plaque.position.set(0, y, -3.39);
     } else {
@@ -490,8 +492,8 @@ class FirstRollClosetViewer {
       depthTrack.style.width = `${Math.round(progress * 100)}%`;
     }
     if (coordinate) {
-      const zone = this.camera.position.z > 2.75 ? "ENTRANCE" : this.camera.position.z < -2.15 ? "BACK WALL" : "MID-ROOM";
-      const gaze = Math.sin(this.yaw) < -0.42 ? "LEFT AISLE" : Math.sin(this.yaw) > 0.42 ? "RIGHT AISLE" : "DIRECTOR WALL";
+      const zone = this.camera.position.z > 2.75 ? "DISTANT VIEW" : this.camera.position.z < -2.15 ? "CLOSE VIEW" : "MID VIEW";
+      const gaze = Math.abs(Math.sin(this.yaw)) > 0.42 ? "SHELF EDGE" : "FILM SHELF";
       coordinate.textContent = `${zone} · ${gaze}`;
     }
   }

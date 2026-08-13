@@ -25,7 +25,7 @@ def test_webgl_runtime_is_local_and_loaded_by_the_discovery_page() -> None:
     assert (WEB / "vendor" / "three" / "LICENSE").is_file()
 
 
-def test_compact_closet_caps_rows_and_fills_sparse_director_results() -> None:
+def test_single_wall_shelf_caps_rows_and_fills_sparse_director_results() -> None:
     app = (WEB / "app.js").read_text(encoding="utf-8")
     runtime = (WEB / "closet3d.js").read_text(encoding="utf-8")
     blender_builder = (ROOT / "tools" / "build_closet_blender.py").read_text(
@@ -33,14 +33,22 @@ def test_compact_closet_caps_rows_and_fills_sparse_director_results() -> None:
     )
 
     assert ".slice(0, 15)" in app
-    assert "director & related" in app
-    assert 'collection.wall === "back" ? 12 : 10' in runtime
+    assert "complete director row" in app
+    assert app.count('wall: "back"') == 3
+    assert 'wall: "left"' not in app
+    assert 'wall: "right"' not in app
+    assert 'collection.shelf === "lower" ? 12 : 10' in runtime
+    assert "middle: 2.27" in runtime
+    assert "middle: 1.91" in runtime
+    assert "2.4, 0.10" in runtime
     assert "placeholder: true" in runtime
     assert "selectableCase: !film.placeholder" in runtime
     assert "const gap = 0.06" in runtime
     assert "const depth = 0.13" in runtime
     assert "amount * 0.13" in runtime
     assert "wireframe: true" not in runtime
-    assert "while y < 3.18" in blender_builder
+    assert "if shelf_index in (1, 2, 3)" in blender_builder
+    assert 'build_side_shelves("left", materials)' not in blender_builder
+    assert 'build_side_shelves("right", materials)' not in blender_builder
     assert "rotation_z=0.0" in blender_builder
     assert "random.uniform(0.11, 0.15)" in blender_builder

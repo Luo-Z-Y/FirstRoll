@@ -1,9 +1,9 @@
-"""Build the FirstRoll walk-in archive as a web-ready Blender GLB.
+"""Build the FirstRoll single-wall film shelf as a web-ready Blender GLB.
 
 Run with:
     blender --background --python tools/build_closet_blender.py
 
-The room shell and ambient archive cases live in the GLB. Film-specific cases are
+The gallery shell and ambient archive cases live in the GLB. Film-specific cases are
 created in the browser so search results remain selectable and up to date.
 """
 
@@ -26,8 +26,6 @@ BACK_WALL_Y = 4.52
 SIDE_WALL_X = 1.7
 BACK_SHELF_Y = 4.04
 BACK_CASE_Y = 3.77
-SIDE_SHELF_X = 1.42
-SIDE_CASE_X = 1.0
 random.seed(817)
 
 
@@ -194,10 +192,10 @@ def build_back_shelves(materials: dict[str, bpy.types.Material]) -> None:
     for x in (-1.56, 0.0, 1.56):
         box("Back shelf upright", (x, 4.28, 2.33), (0.09, 0.18, 4.47), materials["metal"], bevel=0.018)
 
-    # Leave the second row clear: the browser inserts the selected director's live filmography there.
+    # Leave three distinct rows clear for live director, context and related-film cases.
     palette = materials["case_palette"]
     for shelf_index, base_z in enumerate(shelf_levels[:-1]):
-        if shelf_index == 1:
+        if shelf_index in (1, 2, 3):
             continue
         x = -1.46
         case_index = 0
@@ -214,45 +212,6 @@ def build_back_shelves(materials: dict[str, bpy.types.Material]) -> None:
                 rotation_z=0.0,
             )
             x += width + random.uniform(0.028, 0.052)
-            case_index += 1
-
-
-def build_side_shelves(side: str, materials: dict[str, bpy.types.Material]) -> None:
-    sign = -1.0 if side == "left" else 1.0
-    shelf_x = sign * SIDE_SHELF_X
-    shelf_levels = (0.25, 1.08, 1.91, 2.74, 3.57, 4.40)
-    for index, level in enumerate(shelf_levels):
-        box(f"{side.title()} shelf {index + 1}", (shelf_x, -0.05, level), (0.72, 8.52, 0.10), materials["wood"], bevel=0.018)
-        rail_x = shelf_x - sign * 0.38
-        box(f"{side.title()} shelf brass rail {index + 1}", (rail_x, -0.05, level + 0.025), (0.045, 8.52, 0.10), materials["brass"], bevel=0.012)
-    for y in (-4.18, -2.78, -1.39, 0.0, 1.39, 2.78, 4.18):
-        box(f"{side.title()} shelf upright", (sign * 1.67, y, 2.33), (0.18, 0.09, 4.47), materials["metal"], bevel=0.018)
-
-    palette = materials["case_palette"]
-    for shelf_index, base_z in enumerate(shelf_levels[:-1]):
-        # Two rows on each side stay open for live relationship collections.
-        if shelf_index in (1, 3):
-            continue
-        # Keep the doorway end of the aisle clear so the camera enters through a
-        # calm threshold instead of intersecting foreground cases.
-        y = -2.35
-        case_index = 0
-        # Stop before the back-wall cases so perpendicular collections meet at
-        # a clean empty corner rather than occupying the same volume.
-        while y < 3.18:
-            width = random.uniform(0.16, 0.22)
-            height = random.uniform(0.48, 0.68)
-            depth = random.uniform(0.11, 0.15)
-            add_case(
-                f"{side.title()} ambient case {shelf_index}-{case_index}",
-                (sign * SIDE_CASE_X, y + width / 2, base_z + 0.07 + height / 2),
-                (depth, width, height),
-                random.choice(palette),
-                shell_material=materials["case_shell"],
-                sideways=True,
-                rotation_z=0.0,
-            )
-            y += width + random.uniform(0.028, 0.052)
             case_index += 1
 
 
@@ -296,8 +255,9 @@ def main() -> None:
 
     build_shell(materials)
     build_back_shelves(materials)
-    build_side_shelves("left", materials)
-    build_side_shelves("right", materials)
+    # The live archive is intentionally a single shelf wall. Side walls remain
+    # quiet architectural surfaces, preventing perpendicular rows from crossing
+    # one another in perspective.
     build_details(materials)
 
     bpy.context.scene.unit_settings.system = "METRIC"
@@ -314,7 +274,7 @@ def main() -> None:
         export_materials="EXPORT",
         export_yup=True,
     )
-    print(f"FirstRoll closet exported to {OUTPUT}")
+    print(f"FirstRoll shelf exported to {OUTPUT}")
 
 
 if __name__ == "__main__":

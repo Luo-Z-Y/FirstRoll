@@ -34,8 +34,9 @@ The original GPL-3.0 licence and contributor attribution remain applicable. See
 
 - Search by title, year and director through key-free Wikidata.
 - Read an attributed Wikipedia overview and poster after Wikidata resolves the film.
-- Walk through a real Blender-built GLB film closet rendered locally with Three.js: drag to look,
-  scroll or use W/S to walk, strafe with A/D, browse labelled director and relationship shelves,
+- Explore a real Blender-built GLB film shelf rendered locally with Three.js: drag to look,
+  scroll or use W/S to move closer, strafe with A/D, browse separate director and relationship rows
+  on one wall,
   then hover a transparent jewel case to pull it out and select it as the new edition. Each curated
   bay is deliberately compact at 10–15 cases; sparse source results receive neutral archive fillers
   without pretending those placeholders are related or selectable films.
@@ -103,7 +104,7 @@ flowchart TB
     MAKER(["Filmmaker"])
 
     subgraph L1["1 · LOCAL WEB INTERFACE — HTML5 · CSS3 · VANILLA JAVASCRIPT · WEBGL"]
-        UI["Discover · 3D closet · Deep Study · Analyse<br/><b>Three.js · Blender GLB · responsive browser UI</b>"]
+        UI["Discover · 3D shelf · Deep Study · Analyse<br/><b>Three.js · Blender GLB · responsive browser UI</b>"]
     end
 
     subgraph INPUTS["INPUTS"]
@@ -657,7 +658,7 @@ never returned to the browser or committed to Git.
 | `POST /api/settings/library/rebuild` | Rebuild the private search index locally |
 | `GET /api/discovery/status` | Discovery and private-index status |
 | `GET /api/discovery/search` | Film identity search |
-| `GET /api/discovery/films/{film_id}/related` | Same-director and nearby films for the interactive closet |
+| `GET /api/discovery/films/{film_id}/related` | Same-director and nearby films for the interactive shelf |
 | `GET /api/discovery/films/{film_id}/reception` | Attributed platform ratings, equal-weight aggregate and prominent awards |
 | `GET /api/discovery/films/{film_id}` | Full film dossier |
 | `POST /api/discovery/films/{film_id}/videos` | Find and merge relevant public YouTube and Bilibili videos into the private catalogue |
@@ -694,7 +695,7 @@ FirstRoll/
 │   │   └── study_service.py     # DeepSeek synthesis and quality gate
 │   └── web/
 │       ├── app.js
-│       ├── closet3d.js           # Three.js walk camera and live selectable cases
+│       ├── closet3d.js           # Three.js shelf camera and live selectable cases
 │       ├── index.html
 │       ├── models/                # web-ready Blender GLB room shell
 │       ├── styles.css
@@ -706,7 +707,7 @@ FirstRoll/
 │   └── RELEASE.md
 ├── tests/
 ├── tools/
-│   └── build_closet_blender.py    # deterministic Blender asset generator
+│   └── build_closet_blender.py    # deterministic single-wall shelf generator
 ├── .env.example
 ├── pyproject.toml
 └── uv.lock

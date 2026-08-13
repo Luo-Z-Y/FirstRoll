@@ -294,7 +294,7 @@ function onRecentSearchClick(event) {
 function renderDiscoveryResults(data) {
   const films = Array.isArray(data.results) ? data.results : [];
   const query = data.query || {};
-  refs.resultsTitle.textContent = films.length ? "Pulled from the closet" : "Nothing on this shelf";
+  refs.resultsTitle.textContent = films.length ? "Pulled from the shelf" : "Nothing on this shelf";
   refs.resultsMeta.textContent = [query.title, query.year, query.director].filter(Boolean).join(" / ");
   if (!films.length) {
     refs.discoveryResults.innerHTML = `
@@ -356,7 +356,7 @@ function renderFilmArchive(
 ) {
   const director = directorName || (primary.directors || [])[0] || "this director";
   const duration = formatFilmDuration(primary.runtime_minutes);
-  const closetCollections = buildClosetCollections(
+  const shelfCollections = buildShelfCollections(
     primary,
     directorWorks,
     relevant,
@@ -381,16 +381,16 @@ function renderFilmArchive(
         </button>
       </div>
     </div>
-    <aside class="film-closet" aria-label="Related film closet">
+    <aside class="film-closet" aria-label="Related film shelf">
       <div class="closet-header">
-        <span>FirstRoll closet</span>
-        <small>Blender archive · drag to look · W A S D to walk · select a case to pull it out</small>
+        <span>FirstRoll shelf</span>
+        <small>Single-wall archive · drag to look · W A S D to move · select a case to pull it out</small>
       </div>
       ${closetRoomMarkup(loading)}
     </aside>`;
   initialiseClosetViewport({
     primaryId: primary.id,
-    collections: closetCollections,
+    collections: shelfCollections,
   });
 }
 
@@ -425,53 +425,51 @@ function criterionCaseMarkup(film) {
     </div>`;
 }
 
-function buildClosetCollections(primary, directorWorks, relevant, categories, director) {
+function buildShelfCollections(primary, directorWorks, relevant, categories, director) {
   const directorFilms = uniqueFilms([primary, ...directorWorks]);
   const castFilms = categories.sharedCast || [];
   const countryFilms = categories.sameCountry || [];
   const recommended = categories.recommended || relevant;
-  const directorAndRelated = uniqueFilms([
-    ...directorFilms,
-    ...relevant,
-    ...castFilms,
-    ...countryFilms,
-    ...recommended,
-  ]).slice(0, 15);
-  const castLabel = (categories.labels?.cast || []).slice(0, 2).join(" · ");
-  const countryLabel = (categories.labels?.countries || []).slice(0, 2).join(" · ");
+  const directorRow = directorFilms.slice(0, 15);
+  const peopleAndPlace = uniqueFilms(
+    [...castFilms, ...countryFilms],
+    directorRow,
+  ).slice(0, 15);
+  const nearby = uniqueFilms(
+    [...recommended, ...relevant],
+    [...directorRow, ...peopleAndPlace],
+  ).slice(0, 15);
   return [
     {
       wall: "back",
       shelf: "lower",
-      label: `${director} · director & related`,
-      films: directorAndRelated,
+      label: `${director} · complete director row`,
+      films: directorRow,
     },
-    { wall: "left", shelf: "lower", label: castLabel ? `Shared cast · ${castLabel}` : "Shared cast", films: castFilms },
-    { wall: "left", shelf: "upper", label: "Genre & metadata affinities", films: recommended },
-    { wall: "right", shelf: "lower", label: countryLabel ? `Produced in · ${countryLabel}` : "Production country", films: countryFilms },
-    { wall: "right", shelf: "upper", label: "Nearby & relevant works", films: relevant },
+    { wall: "back", shelf: "middle", label: "Shared cast & production context", films: peopleAndPlace },
+    { wall: "back", shelf: "upper", label: "Nearby & relevant works", films: nearby },
   ];
 }
 
 function closetRoomMarkup(loading) {
   return `
-    <div class="closet-viewport closet-webgl" data-closet-viewport tabindex="0" aria-label="Interactive Blender film closet. Drag to look around, scroll or press W and S to walk, use A and D to move sideways, and select a case to pull it out.">
+    <div class="closet-viewport closet-webgl" data-closet-viewport tabindex="0" aria-label="Interactive Blender film shelf. Drag to look around, scroll or press W and S to move closer or farther away, use A and D to move sideways, and select a case to pull it out.">
       <canvas data-closet-canvas aria-hidden="true"></canvas>
       <div class="closet-model-loading" data-closet-loading role="status">
         <span></span><strong>${loading ? "Indexing the collection" : "Opening the 3D archive"}</strong><small>0%</small>
       </div>
       <span class="closet-reticle" aria-hidden="true"></span>
-      <p class="closet-help"><span>Drag</span> look around <span>Scroll / W S</span> walk <span>A D</span> move sideways</p>
+      <p class="closet-help"><span>Drag</span> look around <span>Scroll / W S</span> move closer <span>A D</span> move sideways</p>
     </div>
     <div class="closet-hud">
       <div class="closet-radar" aria-hidden="true"><i></i><span></span></div>
-      <span class="closet-coordinate">ENTRANCE · DIRECTOR WALL</span>
-      <div class="closet-walk-controls" role="group" aria-label="Walk through the closet">
-        <button type="button" data-walk-closet="-1.15" aria-label="Walk away from the shelves">Walk out</button>
+      <span class="closet-coordinate">DISTANT VIEW · FILM SHELF</span>
+      <div class="closet-walk-controls" role="group" aria-label="Move towards or away from the shelf">
+        <button type="button" data-walk-closet="-1.15" aria-label="Move away from the shelf">Step back</button>
         <span class="closet-depth-track" aria-hidden="true"><i></i></span>
-        <button type="button" data-walk-closet="1.15" aria-label="Walk towards the shelves">Walk in</button>
+        <button type="button" data-walk-closet="1.15" aria-label="Move towards the shelf">Move closer</button>
       </div>
-      <button type="button" data-centre-closet aria-label="Reset the closet view">Reset view</button>
+      <button type="button" data-centre-closet aria-label="Reset the shelf view">Reset view</button>
     </div>`;
 }
 
