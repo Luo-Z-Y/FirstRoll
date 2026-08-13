@@ -34,12 +34,19 @@ def test_webgl_runtime_is_local_and_loaded_by_the_discovery_page() -> None:
 def test_single_wall_shelf_uses_five_rows_of_real_films() -> None:
     app = (WEB / "app.js").read_text(encoding="utf-8")
     runtime = (WEB / "closet3d.js").read_text(encoding="utf-8")
+    discovery = (ROOT / "app" / "backend" / "discovery.py").read_text(encoding="utf-8")
     blender_builder = (ROOT / "tools" / "build_closet_blender.py").read_text(
         encoding="utf-8"
     )
 
-    assert "const rowSize = 12" in app
+    assert "const rowSize = 10" in app
     assert "displayableFilms" in app
+    assert "related?limit=60" in app
+    assert "usedFilmIds" in app
+    assert "usedFilmEditions" in app
+    assert "shelfFilmIdentity" in app
+    assert "LIMIT 168" in discovery
+    assert "candidate_ids[:168]" in discovery
     assert "fetchRelatedFilmsWithRetry" in app
     assert "hydrateFilmShelf" in app
     assert "showFilmShelfError" in app
@@ -51,7 +58,7 @@ def test_single_wall_shelf_uses_five_rows_of_real_films() -> None:
     assert app.count('wall: "back"') == 5
     assert 'wall: "left"' not in app
     assert 'wall: "right"' not in app
-    assert "const SHELF_ROW_SIZE = 12" in runtime
+    assert "const SHELF_ROW_SIZE = 10" in runtime
     assert "placeholder: true" not in runtime
     assert "FirstRoll Archive" not in runtime
     assert "selectableCase: true" in runtime
@@ -67,6 +74,9 @@ def test_single_wall_shelf_uses_five_rows_of_real_films() -> None:
     assert "wireframe: true" not in runtime
     assert "firstroll_ambient_case" not in runtime
     assert "updateCaseCaption" in runtime
+    assert "uniqueFilmCount" in runtime
+    assert "canvas.height = 96" in runtime
+    assert "faceWidth / faceHeight" in runtime
     assert "loadPosterTexture" in runtime
     assert 'textContent = "Loading film artwork"' in runtime
     assert 'setCrossOrigin("anonymous")' in runtime

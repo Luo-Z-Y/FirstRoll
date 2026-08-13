@@ -695,8 +695,8 @@ html[data-theme="dark"] .theme-icon-moon { opacity: 1; transform: rotate(0) scal
   backdrop-filter: blur(12px);
   pointer-events: none;
 }
-.closet-header span { font: 1.4rem "Bebas Neue", sans-serif; letter-spacing: 0.08em; text-transform: uppercase; }
-.closet-header small { color: rgba(238, 231, 218, 0.58); font: 0.48rem "IBM Plex Mono", monospace; text-align: right; text-transform: uppercase; }
+.closet-header span { flex: 0 0 auto; font: 1.4rem "Bebas Neue", sans-serif; letter-spacing: 0.08em; text-transform: uppercase; }
+.closet-header small { min-width: 0; flex: 1 1 auto; overflow: hidden; color: rgba(238, 231, 218, 0.7); font: 0.52rem/1.45 "IBM Plex Mono", monospace; text-align: right; text-overflow: ellipsis; white-space: nowrap; }
 
 .closet-viewport {
   position: absolute;

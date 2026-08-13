@@ -423,7 +423,7 @@ async def discovery_film_reception(film_id: str) -> dict:
 @app.get("/api/discovery/films/{film_id:path}/related")
 def discovery_film_related(
     film_id: str,
-    limit: int = Query(default=12, ge=1, le=18),
+    limit: int = Query(default=12, ge=1, le=60),
 ) -> dict:
     try:
         return discovery_service.related(film_id, limit=limit)

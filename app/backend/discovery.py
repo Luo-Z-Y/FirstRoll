@@ -361,7 +361,7 @@ class DiscoveryService:
 
     def related(self, film_id: str, limit: int = 12) -> dict[str, Any]:
         """Return films related by director, cast, country and genre for the closet."""
-        limit = max(1, min(limit, 18))
+        limit = max(1, min(limit, 60))
         if film_id.startswith("demo:"):
             return self._demo_related(film_id, limit)
 
@@ -426,7 +426,7 @@ class DiscoveryService:
   {{ SELECT DISTINCT ?film ?shared WHERE {{
     VALUES ?shared {{ {' '.join(f'wd:{value}' for value in genre_ids)} }}
     ?film wdt:P136 ?shared .
-  }} LIMIT 30 }}
+  }} LIMIT 60 }}
   BIND(1 AS ?rank)
   BIND(\"shared_genre\" AS ?relation)
 }}""")
@@ -437,12 +437,12 @@ SELECT DISTINCT ?film ?relation ?shared ?rank ?date WHERE {{
   OPTIONAL {{ ?film wdt:P577 ?date }}
 }}
 ORDER BY DESC(?rank) DESC(?date)
-LIMIT 138
+LIMIT 168
 """.strip()
         try:
             payload = self._sparql_json(query)
             candidate_ids = self._sparql_entity_ids(payload, "film")
-            entities = self._get_entities(candidate_ids[:138])
+            entities = self._get_entities(candidate_ids[:168])
         except (DiscoveryProviderError, KeyError, TypeError, ValueError):
             response["state"] = "unavailable"
             return response

@@ -330,7 +330,7 @@ async function loadRelatedFilms(primary, nearby) {
     };
     const director = data.director || (primary.directors || [])[0] || "this director";
     const collections = buildShelfCollections(primary, directorWorks, recommended, categories, director);
-    if (collections.some((collection) => collection.films.length < 12)) {
+    if (collections.some((collection) => collection.films.length < 10)) {
       throw new Error("Not enough distinct verified films were returned to fill the shelf.");
     }
     state.discovery.archive = { primary, directorWorks, relevant: recommended, categories };
@@ -346,7 +346,7 @@ async function fetchRelatedFilmsWithRetry(filmId, attempts = 3) {
   for (let attempt = 0; attempt < attempts; attempt += 1) {
     try {
       const res = await fetch(
-        `${discoveryApiBase()}/api/discovery/films/${encodeURIComponent(filmId)}/related?limit=18`,
+        `${discoveryApiBase()}/api/discovery/films/${encodeURIComponent(filmId)}/related?limit=60`,
       );
       if (!res.ok) throw new Error(await readApiError(res));
       const data = await res.json();
@@ -472,8 +472,8 @@ function criterionCaseMarkup(film) {
 }
 
 function buildShelfCollections(primary, directorWorks, relevant, categories, director) {
-  const rowSize = 12;
-  const directorFilms = displayableFilms([primary, ...directorWorks]);
+  const rowSize = 10;
+  const directorFilms = displayableFilms(directorWorks);
   const castFilms = displayableFilms(categories.sharedCast || []);
   const countryFilms = displayableFilms(categories.sameCountry || []);
   const recommended = displayableFilms(categories.recommended || relevant);
@@ -485,19 +485,48 @@ function buildShelfCollections(primary, directorWorks, relevant, categories, dir
     ...recommended,
     ...nearby,
   ]);
-  const fillRow = (preferred) => displayableFilms([...preferred, ...realFilmPool]).slice(0, rowSize);
+  const usedFilmIds = new Set([primary.id]);
+  const usedFilmEditions = new Set([shelfFilmIdentity(primary)]);
+  const fillRow = (preferred) => {
+    const row = [];
+    for (const film of displayableFilms([...preferred, ...realFilmPool])) {
+      const identity = shelfFilmIdentity(film);
+      if (usedFilmIds.has(film.id) || usedFilmEditions.has(identity)) continue;
+      usedFilmIds.add(film.id);
+      usedFilmEditions.add(identity);
+      row.push(film);
+      if (row.length === rowSize) break;
+    }
+    return row;
+  };
+  // Allocate the most constrained categories first. Every row shares these ledgers, so a
+  // film can never reappear elsewhere on the same shelf when a preferred category runs short.
+  const directorRow = fillRow(directorFilms);
+  const castRow = fillRow(castFilms);
+  const countryRow = fillRow(countryFilms);
+  const recommendedRow = fillRow(recommended);
+  const nearbyRow = fillRow(nearby);
   return [
-    { wall: "back", shelf: "bottom", label: "Nearby & relevant works", films: fillRow(nearby) },
+    { wall: "back", shelf: "bottom", label: "Nearby & relevant works", films: nearbyRow },
     {
       wall: "back",
       shelf: "lower",
       label: `${director} & related works`,
-      films: fillRow(directorFilms),
+      films: directorRow,
     },
-    { wall: "back", shelf: "middle", label: "Shared cast & related works", films: fillRow(castFilms) },
-    { wall: "back", shelf: "upper", label: "Production country & related works", films: fillRow(countryFilms) },
-    { wall: "back", shelf: "top", label: "Genre & metadata affinities", films: fillRow(recommended) },
+    { wall: "back", shelf: "middle", label: "Shared cast & related works", films: castRow },
+    { wall: "back", shelf: "upper", label: "Production country & related works", films: countryRow },
+    { wall: "back", shelf: "top", label: "Genre & metadata affinities", films: recommendedRow },
   ];
+}
+
+function shelfFilmIdentity(film) {
+  const title = String(film?.title || film?.original_title || "")
+    .normalize("NFKC")
+    .toLocaleLowerCase("en-GB")
+    .replace(/[\p{P}\p{S}\s]+/gu, " ")
+    .trim();
+  return `${title}|${film?.year || "undated"}`;
 }
 
 function displayableFilms(films) {

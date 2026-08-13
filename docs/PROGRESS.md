@@ -70,9 +70,14 @@ Delivered:
     treatment. Poster requests are deduplicated, bounded by a six-second fallback and included in the
     ready gate so artwork does not pop in after the shelf appears.
 12. Removed the sparse-response fallback that could reveal one repeated case on every row. Related-film
-    retrieval now retries transient failures, requires twelve distinct verified records before reveal,
+    retrieval now retries transient failures, requires ten distinct verified records before reveal,
     reports a clear unavailable state instead of inventing fullness, and hydrates the existing archive
     in place so late data no longer causes an unexplained full-panel refresh.
+13. Replaced per-row pool reuse with a shelf-wide film and title/year ledger, preventing any edition
+    from appearing on more than one row. Expanded each relationship category to sixty candidates and
+    standardised the final rows at ten cases, so five complete rows can remain genuinely distinct while
+    respecting the requested 10–15-case width. Matched both spine and fascia texture aspect ratios to
+    their physical meshes so captions render at natural proportions.
 
 Acceptance evidence:
 
@@ -87,6 +92,10 @@ Acceptance evidence:
   spines and labels mounted clear of the cases;
 - loading-state validation confirmed that the shelf stays covered until its live cases and first full
   WebGL frame are ready;
+- shelf allocation regression checks confirm that row filling shares one ID and title/year ledger,
+  and 3D texture checks preserve the physical aspect ratio of spine and shelf captions;
+- a live *We Are All Strangers* audit rendered 50 cases across five full rows and reported 50 unique
+  title/year editions; close-view inspection confirmed naturally proportioned fascia and spine text;
 - 3D asset tests, the full automated suite, JavaScript syntax and repository whitespace checks pass.
 
 Operational note:

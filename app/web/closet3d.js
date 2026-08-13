@@ -4,7 +4,7 @@ import { GLTFLoader } from "./vendor/three/addons/loaders/GLTFLoader.js";
 const MODEL_URL = "/assets/models/firstroll-closet.glb?v=20260814-8";
 const CASE_TONES = ["#632d28", "#304138", "#87512f", "#35404a", "#897c64", "#4d3d4d"];
 const CAMERA_BOUNDS = { minX: -0.82, maxX: 0.82, minZ: -3.28, maxZ: 3.82 };
-const SHELF_ROW_SIZE = 12;
+const SHELF_ROW_SIZE = 10;
 
 let activeViewer = null;
 
@@ -142,6 +142,17 @@ class FirstRollClosetViewer {
 
   async addLiveCollections() {
     const collections = this.payload.collections || [];
+    const shelfFilms = collections.flatMap((collection) => collection.films || []);
+    const shelfEditions = shelfFilms.map((film) => {
+      const title = String(film.title || film.original_title || "")
+        .normalize("NFKC")
+        .toLocaleLowerCase("en-GB")
+        .replace(/[\p{P}\p{S}\s]+/gu, " ")
+        .trim();
+      return `${title}|${film.year || "undated"}`;
+    });
+    this.root.dataset.filmCount = String(shelfFilms.length);
+    this.root.dataset.uniqueFilmCount = String(new Set(shelfEditions).size);
     await Promise.all(collections.map(async (collection) => {
       if (!collection.films?.length) return;
       await this.addFilmRow(collection);
@@ -201,17 +212,24 @@ class FirstRollClosetViewer {
 
     const height = 0.64;
     const depth = 0.13;
+    const faceWidth = width * 0.82;
+    const faceHeight = height * 0.91;
     const posterTexture = await this.loadPosterTexture(film.poster_url);
     if (posterTexture) {
       const poster = new THREE.Mesh(
-        new THREE.PlaneGeometry(width * 0.82, height * 0.91),
+        new THREE.PlaneGeometry(faceWidth, faceHeight),
         new THREE.MeshStandardMaterial({ map: posterTexture, roughness: 0.62, metalness: 0.0 }),
       );
       poster.position.z = depth / 2 + 0.005;
       poster.userData.caseOwner = group;
       group.add(poster);
     }
-    const insertTexture = this.createSpineTexture(film, index, Boolean(posterTexture));
+    const insertTexture = this.createSpineTexture(
+      film,
+      index,
+      Boolean(posterTexture),
+      faceWidth / faceHeight,
+    );
     const insertMaterial = new THREE.MeshStandardMaterial({
       map: insertTexture,
       roughness: 0.58,
@@ -219,7 +237,7 @@ class FirstRollClosetViewer {
       transparent: Boolean(posterTexture),
       depthWrite: !posterTexture,
     });
-    const insert = new THREE.Mesh(new THREE.PlaneGeometry(width * 0.82, height * 0.91), insertMaterial);
+    const insert = new THREE.Mesh(new THREE.PlaneGeometry(faceWidth, faceHeight), insertMaterial);
     insert.position.z = depth / 2 + 0.008;
     insert.userData.caseOwner = group;
     group.add(insert);
@@ -279,10 +297,11 @@ class FirstRollClosetViewer {
     return promise;
   }
 
-  createSpineTexture(film, index, hasPoster = false) {
+  createSpineTexture(film, index, hasPoster = false, faceAspect = 0.25) {
     const canvas = document.createElement("canvas");
-    canvas.width = 256;
     canvas.height = 1024;
+    // Match the canvas to the physical insert so its lettering is not geometrically squeezed.
+    canvas.width = Math.round(canvas.height * faceAspect);
     const context = canvas.getContext("2d");
     const tone = CASE_TONES[index % CASE_TONES.length];
     if (hasPoster) {
@@ -340,27 +359,28 @@ class FirstRollClosetViewer {
   addShelfPlaque(collection) {
     const canvas = document.createElement("canvas");
     canvas.width = 2048;
-    canvas.height = 256;
+    // The texture and physical fascia share an aspect ratio, keeping captions natural.
+    canvas.height = 96;
     const context = canvas.getContext("2d");
     context.fillStyle = "#b69762";
     context.fillRect(0, 0, canvas.width, canvas.height);
     context.fillStyle = "rgba(255,249,226,.2)";
-    context.fillRect(0, 0, canvas.width, 24);
+    context.fillRect(0, 0, canvas.width, 8);
     context.strokeStyle = "#4a331a";
-    context.lineWidth = 12;
-    context.strokeRect(12, 12, canvas.width - 24, canvas.height - 24);
+    context.lineWidth = 4;
+    context.strokeRect(6, 6, canvas.width - 12, canvas.height - 12);
     context.fillStyle = "#17130e";
     context.textBaseline = "middle";
     const label = String(collection.label || "Film collection");
-    let labelSize = 82;
+    let labelSize = 52;
     do {
       context.font = `700 ${labelSize}px sans-serif`;
       labelSize -= 2;
-    } while (context.measureText(label).width > 1660 && labelSize > 58);
-    context.fillText(label, 72, 130);
+    } while (context.measureText(label).width > 1660 && labelSize > 36);
+    context.fillText(label, 56, 49);
     context.textAlign = "right";
-    context.font = "700 68px sans-serif";
-    context.fillText(String(collection.films.length), 1960, 130);
+    context.font = "700 44px sans-serif";
+    context.fillText(String(collection.films.length), 1980, 49);
     const texture = new THREE.CanvasTexture(canvas);
     texture.colorSpace = THREE.SRGBColorSpace;
     const plaque = new THREE.Mesh(

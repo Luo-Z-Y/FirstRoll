@@ -38,12 +38,14 @@ The original GPL-3.0 licence and contributor attribution remain applicable. See
   scroll or use W/S to move closer, strafe with A/D, browse separate director and relationship rows
   on one wall,
   then hover a transparent jewel case to pull it out and select it as the new edition. Each curated
-  row is deliberately compact at twelve cases. All five rows are populated from real Wikidata-backed
+  row is deliberately compact at ten cases. All five rows are populated from real Wikidata-backed
   discovery results; unresolved identifier-only records are omitted rather than displayed as fake or
   placeholder editions. The shelf remains behind its loading panel until related-film data, the GLB
   and the first complete frame are all ready. Hovering a case also replaces the shelf-header hint with
-  its full title, year and director for an uncompressed caption. Available poster artwork wraps each
-  case beneath the title treatment, with the designed colour spine retained when an image is missing.
+  its full title, year and director for an uncompressed caption. A shelf-wide allocation ledger keeps
+  every title/year edition unique across all five rows, while proportion-matched spine and fascia
+  textures keep their lettering at natural dimensions. Available poster artwork wraps each case
+  beneath the title treatment, with the designed colour spine retained when an image is missing.
   Sparse or transiently failed relationship responses stay behind the loading panel and retry instead
   of being misrepresented as a complete shelf; successful data hydrates the existing archive in place.
 - Compare attributed Douban and Letterboxd community scores and review up to three prominent
