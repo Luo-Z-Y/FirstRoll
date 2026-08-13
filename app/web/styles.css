@@ -495,20 +495,6 @@ button {
   text-transform: uppercase;
 }
 
-.match-stamp {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  z-index: 2;
-  padding: 5px 7px;
-  color: var(--cream);
-  background: rgba(17, 18, 15, 0.82);
-  font-family: "IBM Plex Mono", monospace;
-  font-size: 0.58rem;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-}
-
 .film-card-body { padding: 17px; }
 .film-card-body h3 { margin: 0 0 6px; font-size: 1rem; }
 .film-card-body .original-title { min-height: 18px; margin: 0 0 13px; color: var(--ink-soft); font-size: 0.74rem; }

@@ -292,13 +292,11 @@ function filmCard(film, index) {
   const poster = `<span class="poster-title">${title}</span>${film.poster_url
     ? `<img src="${escapeHtml(film.poster_url)}" alt="Poster for ${title}" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()" />`
     : ""}`;
-  const score = Number.isFinite(film.match_score) ? `${Math.round(film.match_score * 100)}% match` : "Identity match";
   const director = (film.directors || []).join(", ") || "Director not supplied";
   return `
     <article class="film-card" style="animation-delay:${Math.min(index * 45, 180)}ms">
       <div class="film-poster">
         ${poster}
-        <span class="match-stamp">${escapeHtml(score)}</span>
       </div>
       <div class="film-card-body">
         <h3>${title}</h3>
