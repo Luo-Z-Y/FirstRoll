@@ -21,6 +21,25 @@ def test_deepseek_is_available_for_local_key_storage() -> None:
         assert deepseek["configured"] is False
 
 
+def test_youtube_is_available_for_local_key_storage() -> None:
+    previous = os.environ.pop("YOUTUBE_API_KEY", None)
+    try:
+        with tempfile.TemporaryDirectory() as directory:
+            store = LocalSettingsStore(Path(directory) / "settings.json")
+            youtube = next(
+                connector
+                for connector in store.public_connectors()
+                if connector["id"] == "youtube"
+            )
+
+            assert youtube["state"] == "available"
+            assert youtube["environment_key"] == "YOUTUBE_API_KEY"
+            assert youtube["configured"] is False
+    finally:
+        if previous is not None:
+            os.environ["YOUTUBE_API_KEY"] = previous
+
+
 def test_local_settings_store_masks_and_clears_secrets() -> None:
     previous = os.environ.pop("DOUBAN_COOKIE", None)
     try:

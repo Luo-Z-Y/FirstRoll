@@ -1,5 +1,29 @@
 # FirstRoll Project Progress
 
+### 13 August 2026 — Film viewing resources
+
+Delivered:
+
+1. Added a **Watch & study** dossier section with local progress feedback and embedded
+   public-video cards.
+2. Added official YouTube Data API search with a write-only API-key entry in Settings and
+   privacy-enhanced YouTube embeds.
+3. Added key-free Bilibili retrieval through its server-rendered public search page after its
+   anonymous JSON endpoint returned HTTP 412 risk control.
+4. Added film-title, original-title, year, director and film-context relevance checks to
+   reject ambiguous namesakes, music and games.
+5. Restricted provider requests, redirects, thumbnails and embed URLs to known HTTPS hosts,
+   with timeouts, response limits and bounded result counts.
+6. Kept videos as attributed viewing resources rather than automatically treating their
+   contents as verified evidence or sending them to DeepSeek.
+
+Acceptance evidence:
+
+- live *Memoria* Bilibili check returns three film-specific results after rejecting unrelated
+  uses of the title;
+- targeted video, settings and discovery tests pass;
+- scoped Ruff, JavaScript syntax and repository whitespace checks pass.
+
 This file is the durable implementation ledger for FirstRoll. Update it whenever a
 milestone changes state, a meaningful feature is completed, or verification evidence
 changes.
@@ -13,16 +37,17 @@ Status vocabulary:
 
 ## Current Snapshot
 
-**Last updated:** 11 August 2026
+**Last updated:** 13 August 2026
 
 **Release stage:** local working prototype
 
 **Primary development URL:** `http://127.0.0.1:8000`
-**Automated verification:** 43 tests passing
+**Automated verification:** 50 tests passing
 
 | Area | Status | Current evidence |
 |---|---|---|
 | Film discovery | Complete | Wikidata search by title, year and director; Wikipedia context and source links |
+| Public video resources | Complete | Film-matched Bilibili embeds plus optional official YouTube Data API search |
 | Product navigation | Complete | Discover and Analyse modes; Study consolidated into Discover |
 | Local settings | Complete | Write-only connector credentials plus local add, remove and index controls for the private library |
 | Private library catalogue | Complete | Seven existing film-study PDFs retained; managed uploads and non-destructive removal; paths and content withheld from public APIs |

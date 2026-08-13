@@ -369,6 +369,8 @@ function renderFilmDetail(film) {
     "guardian-web": true,
     letterboxd: Boolean(letterboxdStatus.configured),
   };
+  const videoBundle = film.video_sources?.bundle || null;
+  const youtubeConfigured = Boolean(film.video_sources?.providers?.youtube?.configured);
 
   refs.filmDetail.innerHTML = `
     <button class="detail-close" type="button" data-detail-close aria-label="Close film dossier">×</button>
@@ -393,6 +395,17 @@ function renderFilmDetail(film) {
         ${detailFact("Genres", genres)}
       </aside>
     </div>
+    <section class="film-videos">
+      <div class="film-videos-head">
+        <div><span>Public viewing resources</span><h3>Watch &amp; study</h3></div>
+        <button type="button" data-load-film-videos>${videoBundle ? "Refresh videos" : "Find relevant videos"}</button>
+      </div>
+      <div data-film-videos-output>
+        ${videoBundle
+          ? filmVideosMarkup(videoBundle)
+          : `<p class="module-empty">Find interviews, essays, lectures and other public videos matched to this film.${youtubeConfigured ? "" : " Add a YouTube API key in Settings to include YouTube."}</p>`}
+      </div>
+    </section>
     <div class="evidence-banner">
       <strong>Evidence boundary</strong>
       <span>${escapeHtml(film.evidence_notice || "Discovery metadata does not establish the filmmakers’ intentions.")}</span>
@@ -460,6 +473,11 @@ async function onFilmDetailClick(event) {
     await generateDeepStudy(studyButton);
     return;
   }
+  const videoButton = event.target.closest("[data-load-film-videos]");
+  if (videoButton) {
+    await loadFilmVideos(videoButton);
+    return;
+  }
   const criticismSourceButton = event.target.closest("[data-criticism-source]");
   if (criticismSourceButton) {
     await selectCriticismSource(criticismSourceButton);
@@ -477,6 +495,66 @@ async function onFilmDetailClick(event) {
   if (structureButton) {
     await structureProviderCriticism(structureButton.dataset.structureCriticism, structureButton);
   }
+}
+
+async function loadFilmVideos(button) {
+  const film = state.discovery.selectedFilm;
+  const output = refs.filmDetail.querySelector("[data-film-videos-output]");
+  if (!film || !output) return;
+  const originalLabel = button.textContent;
+  button.disabled = true;
+  button.textContent = "Searching…";
+  output.innerHTML = fetchProgressMarkup("Matching public videos to the verified film identity…");
+  try {
+    const response = await fetch(
+      `${discoveryApiBase()}/api/discovery/films/${encodeURIComponent(film.id)}/videos`,
+      { method: "POST" },
+    );
+    if (!response.ok) throw new Error(await readApiError(response));
+    const data = await response.json();
+    film.video_sources = film.video_sources || {};
+    film.video_sources.bundle = data.video_sources;
+    output.innerHTML = filmVideosMarkup(data.video_sources);
+    button.textContent = "Refresh videos";
+  } catch (error) {
+    output.innerHTML = `<p class="video-source-error">Video search failed: ${escapeHtml(error.message)}</p>`;
+    button.textContent = originalLabel;
+  } finally {
+    button.disabled = false;
+  }
+}
+
+function filmVideosMarkup(bundle) {
+  const videos = Array.isArray(bundle?.videos) ? bundle.videos : [];
+  if (!videos.length) return `<p class="module-empty">No confidently matched videos were returned.</p>`;
+  return `<div class="film-video-grid">
+    ${videos.map(filmVideoCardMarkup).join("")}
+  </div>
+  <p class="video-source-boundary">${escapeHtml(bundle.notice || "Third-party videos are attributed but their claims are not verified by FirstRoll.")}</p>`;
+}
+
+function filmVideoCardMarkup(video) {
+  const embedUrl = safeVideoEmbedUrl(video.embed_url);
+  const sourceUrl = safeHttpUrl(video.url);
+  if (!embedUrl || !sourceUrl) return "";
+  const relevance = String(video.relevance || "title").replaceAll("_", " + ");
+  return `<article class="film-video-card">
+    <div class="film-video-frame">
+      <iframe
+        src="${escapeHtml(embedUrl)}"
+        title="${escapeHtml(video.title || `${video.platform} video`)}"
+        loading="lazy"
+        referrerpolicy="strict-origin-when-cross-origin"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+        allowfullscreen></iframe>
+    </div>
+    <div class="film-video-copy">
+      <span>${escapeHtml(video.platform || "Video")} · ${escapeHtml(relevance)}</span>
+      <h4>${escapeHtml(video.title || "Untitled video")}</h4>
+      ${video.creator ? `<p>${escapeHtml(video.creator)}</p>` : ""}
+      <a href="${escapeHtml(sourceUrl)}" target="_blank" rel="noopener noreferrer">Open at source ↗</a>
+    </div>
+  </article>`;
 }
 
 async function selectCriticismSource(button) {
@@ -772,6 +850,22 @@ function safeHttpUrl(value) {
   try {
     const url = new URL(value);
     return ["http:", "https:"].includes(url.protocol) ? url.toString() : null;
+  } catch (_) {
+    return null;
+  }
+}
+
+function safeVideoEmbedUrl(value) {
+  if (!value) return null;
+  try {
+    const url = new URL(value);
+    const isYouTube = url.protocol === "https:"
+      && url.hostname === "www.youtube-nocookie.com"
+      && /^\/embed\/[A-Za-z0-9_-]{11}$/.test(url.pathname);
+    const isBilibili = url.protocol === "https:"
+      && url.hostname === "player.bilibili.com"
+      && /^BV[A-Za-z0-9]{10}$/.test(url.searchParams.get("bvid") || "");
+    return isYouTube || isBilibili ? url.toString() : null;
   } catch (_) {
     return null;
   }

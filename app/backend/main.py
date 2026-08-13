@@ -26,6 +26,12 @@ from app.backend.library import MAX_DOCUMENT_BYTES, SUPPORTED_SUFFIXES, LocalLib
 from app.backend.library_index import LocalLibraryIndex
 from app.backend.settings import CONNECTORS, LocalSettingsStore
 from app.backend.study_service import DeepSeekStudyService, StudyGenerationError
+from app.backend.video_sources import (
+    BilibiliPublicVideoAdapter,
+    FilmVideoService,
+    VideoSourceError,
+    YouTubeVideoAdapter,
+)
 
 app = FastAPI(
     title="FirstRoll API",
@@ -44,6 +50,9 @@ crossref_research_adapter = CrossrefResearchAdapter()
 letterboxd_adapter = LetterboxdApiAdapter(settings_store)
 letterboxd_web_adapter = LetterboxdPublicWebAdapter()
 criticism_store = CriticismStore()
+youtube_video_adapter = YouTubeVideoAdapter(settings_store)
+bilibili_video_adapter = BilibiliPublicVideoAdapter()
+video_service = FilmVideoService(youtube_video_adapter, bilibili_video_adapter)
 web_directory = Path(__file__).resolve().parents[1] / "web"
 app.mount("/assets", StaticFiles(directory=web_directory), name="web-assets")
 
@@ -282,8 +291,10 @@ async def test_connector(connector_id: str, request: Request) -> dict:
             return await douban_adapter.test_connection()
         if connector_id == "letterboxd":
             return await run_in_threadpool(letterboxd_adapter.test_connection)
+        if connector_id == "youtube":
+            return await run_in_threadpool(youtube_video_adapter.test_connection)
         raise HTTPException(status_code=501, detail="This optional connector is not implemented yet.")
-    except (StudyGenerationError, CriticismError) as exc:
+    except (StudyGenerationError, CriticismError, VideoSourceError) as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
 
@@ -301,6 +312,7 @@ def contract() -> dict:
             "GET /api/discovery/status",
             "GET /api/discovery/search",
             "GET /api/discovery/films/{film_id}",
+            "POST /api/discovery/films/{film_id}/videos",
             "POST /api/discovery/films/{film_id}/study",
             "POST /api/discovery/films/{film_id}/criticism/douban",
             "POST /api/discovery/films/{film_id}/criticism/letterboxd",
@@ -365,9 +377,25 @@ def discovery_film(film_id: str) -> dict:
             },
             "bundle": cached_bundles[0].model_dump() if cached_bundles else None,
         }
+        result["film"]["video_sources"] = {
+            "providers": video_service.status(),
+            "bundle": None,
+        }
         return result
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@app.post("/api/discovery/films/{film_id:path}/videos")
+def discovery_film_videos(film_id: str) -> dict:
+    try:
+        film = discovery_service.detail(film_id)["film"]
+        bundle = video_service.search(film_id, film)
+        return {"video_sources": bundle.model_dump()}
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except VideoSourceError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
 
 
 @app.post("/api/discovery/films/{film_id:path}/study")

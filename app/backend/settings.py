@@ -60,6 +60,19 @@ CONNECTORS: dict[str, dict[str, Any]] = {
         "documentation_url": "https://api-docs.letterboxd.com/",
         "testable": True,
     },
+    "youtube": {
+        "name": "YouTube",
+        "secret_key": "youtube_api_key",
+        "environment_key": "YOUTUBE_API_KEY",
+        "state": "available",
+        "description": (
+            "Official YouTube Data API search for public, embeddable film videos. "
+            "Bilibili public search remains available without this key."
+        ),
+        "credential_label": "Data API key",
+        "documentation_url": "https://developers.google.com/youtube/v3/getting-started",
+        "testable": True,
+    },
     "nyt": {
         "name": "The New York Times",
         "secret_key": "nyt_api_key",

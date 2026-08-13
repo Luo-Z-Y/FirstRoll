@@ -39,6 +39,7 @@ The original GPL-3.0 licence and contributor attribution remain applicable. See
 - Retrieve page-cited theory through hybrid SQLite FTS5 and local multilingual vectors.
 - Use the study focus and attributed critic claims to plan retrieval.
 - Fuse lexical and semantic rankings, then reduce page, document and semantic duplicates.
+- Find and embed film-specific public videos from Bilibili and optional YouTube search.
 
 ### Critical perspectives
 
@@ -370,6 +371,30 @@ redirects are restricted to Guardian HTTPS hosts, use a 20-second timeout and re
 larger than 3 MB. Weak title matches, invalid JSON-LD and pages with no attributed body are
 not cached.
 
+### Public videos: YouTube and Bilibili
+
+The **Watch & study** section is a viewing-resource layer, not evidence automatically supplied
+to DeepSeek. It searches with the verified film title, original title where useful, release
+year and director, then embeds only results that pass local relevance checks.
+
+YouTube uses the official Data API v3. When `YOUTUBE_API_KEY` is configured, FirstRoll calls
+`youtube/v3/search` with `type=video`, `videoEmbeddable=true`, `videoSyndicated=true` and
+moderate SafeSearch. It validates the 11-character video ID, retains channel attribution and
+uses the privacy-enhanced `youtube-nocookie.com` player. The API key remains in the local
+write-only settings store and is never sent to the browser.
+
+Bilibili's anonymous JSON search endpoint currently applies HTTP 412 risk control to this
+kind of local client, so FirstRoll does not depend on it. Instead, the local adapter reads the
+public server-rendered search page, extracts bounded `BV` records and embeds them through
+`player.bilibili.com`. Its query adds the original title, release year and Chinese film-study
+terms. Short or ambiguous titles must also match the release year plus film context, or the
+director; this prevents a title such as *Memoria* from selecting unrelated games and music.
+
+Both adapters enforce HTTPS host allowlists, 20-second timeouts, response-size limits, safe
+embed URL patterns and a maximum of six results per platform. The interface preserves the
+platform and canonical source link. Third-party video claims remain unverified until a later
+transcript and evidence-extraction layer is implemented.
+
 ### Raw evidence, structuring and cache
 
 Each provider first returns a `CriticalResearchBundle` with raw attributed sources and a
@@ -419,6 +444,7 @@ Environment variables are also supported:
 DEEPSEEK_API_KEY=
 DEEPSEEK_MODEL=deepseek-v4-pro
 DOUBAN_COOKIE=
+YOUTUBE_API_KEY=
 FIRSTROLL_EMBEDDINGS=1
 FIRSTROLL_EMBEDDING_MODEL=sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
 FIRSTROLL_LIBRARY_PATH=
@@ -537,6 +563,7 @@ never returned to the browser or committed to Git.
 | `GET /api/discovery/status` | Discovery and private-index status |
 | `GET /api/discovery/search` | Film identity search |
 | `GET /api/discovery/films/{film_id}` | Full film dossier |
+| `POST /api/discovery/films/{film_id}/videos` | Retrieve relevant public YouTube and Bilibili videos |
 | `POST /api/discovery/films/{film_id}/criticism/crossref` | Retrieve and cache matched scholarly abstracts |
 | `POST /api/discovery/films/{film_id}/criticism/douban` | Retrieve and cache Douban criticism |
 | `POST /api/discovery/films/{film_id}/criticism/letterboxd-web` | Retrieve and cache public Letterboxd reviews locally |

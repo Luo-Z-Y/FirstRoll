@@ -620,6 +620,23 @@ button {
 .study-path p { margin: 0; color: var(--ink-soft); font-size: 0.78rem; line-height: 1.55; }
 
 .module-empty { color: var(--ink-soft); font-size: 0.7rem; }
+.film-videos { margin-top: 34px; padding: 26px; border: 1px solid var(--line); background: rgba(250, 246, 238, 0.62); }
+.film-videos-head { display: flex; align-items: end; justify-content: space-between; gap: 20px; margin-bottom: 20px; }
+.film-videos-head span { color: var(--red); font: 0.6rem "IBM Plex Mono", monospace; text-transform: uppercase; }
+.film-videos-head h3 { margin: 4px 0 0; font: 400 2.3rem "Bebas Neue", sans-serif; text-transform: uppercase; }
+.film-videos-head button { padding: 10px 14px; border: 1px solid var(--ink); color: var(--ink); background: transparent; font-size: 0.68rem; font-weight: 700; cursor: pointer; }
+.film-videos-head button:disabled { opacity: 0.5; cursor: wait; }
+.film-video-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-top: 1px solid var(--line); border-left: 1px solid var(--line); }
+.film-video-card { min-width: 0; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); background: var(--paper-light); }
+.film-video-frame { position: relative; aspect-ratio: 16 / 9; overflow: hidden; background: var(--ink); }
+.film-video-frame iframe { width: 100%; height: 100%; border: 0; }
+.film-video-copy { padding: 15px 16px 17px; }
+.film-video-copy > span { color: var(--red-dark); font: 0.54rem "IBM Plex Mono", monospace; text-transform: uppercase; }
+.film-video-copy h4 { margin: 8px 0 7px; font-size: 0.82rem; line-height: 1.4; }
+.film-video-copy p { margin: 0 0 10px; color: var(--ink-soft); font-size: 0.67rem; }
+.film-video-copy a { color: var(--red-dark); font-size: 0.62rem; font-weight: 700; }
+.video-source-boundary { margin: 15px 0 0; color: var(--ink-soft); font-size: 0.64rem; line-height: 1.55; }
+.video-source-error { margin: 0; color: var(--red-dark); font-size: 0.7rem; }
 .critical-perspectives { margin-top: 34px; padding: 26px; border: 1px solid var(--line); background: rgba(250, 246, 238, 0.62); }
 .critical-head { display: flex; justify-content: space-between; align-items: end; gap: 20px; }
 .critical-head span { color: var(--red); font: 0.6rem "IBM Plex Mono", monospace; text-transform: uppercase; }
@@ -864,6 +881,7 @@ th { color: var(--muted-night); font-family: "IBM Plex Mono", monospace; font-si
   .workspace { grid-template-columns: 1fr; }
   .study-section-list { grid-template-columns: 1fr; }
   .critical-grid, .critical-raw-grid { grid-template-columns: 1fr; }
+  .film-video-grid { grid-template-columns: 1fr; }
   .critical-raw-grid article { border-right: 0; }
   .analyse-intro { align-items: start; flex-direction: column; }
 }
@@ -880,6 +898,8 @@ th { color: var(--muted-night); font-family: "IBM Plex Mono", monospace; font-si
   .deep-study { padding: 20px; }
   .critical-perspectives { padding: 19px; }
   .critical-head { align-items: start; flex-direction: column; }
+  .film-videos { padding: 19px; }
+  .film-videos-head { align-items: start; flex-direction: column; }
   .critical-provider-actions { display: grid; width: 100%; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; border: 0; }
   .critical-provider-actions button, .critical-provider-actions button:last-child { min-width: 0; border: 1px solid var(--ink); }
   .critical-source-row { align-items: start; flex-direction: column; }
