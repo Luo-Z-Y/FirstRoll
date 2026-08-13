@@ -388,10 +388,14 @@ function renderFilmArchive(
       </div>
       ${closetRoomMarkup(loading)}
     </aside>`;
-  initialiseClosetViewport({
-    primaryId: primary.id,
-    collections: shelfCollections,
-  });
+  if (loading) {
+    window.FirstRollCloset?.unmount();
+  } else {
+    initialiseClosetViewport({
+      primaryId: primary.id,
+      collections: shelfCollections,
+    });
+  }
 }
 
 function formatFilmDuration(minutes) {

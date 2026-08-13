@@ -57,6 +57,9 @@ Delivered:
    the cross-wall perspective overlap that remained even after the cases were physically separated.
 8. Mounted each collection label on its own shelf fascia so labels no longer cover cases on the row
    below, including at the closest permitted camera position.
+9. Prevented partial shelf flashes: the viewer now waits for related-film indexing before mounting,
+   renders a complete hidden frame, waits for two browser paint frames and keeps the loading panel in
+   place until the canvas fade has finished.
 
 Acceptance evidence:
 
@@ -69,6 +72,8 @@ Acceptance evidence:
 - compact validation retained the live scene and produced no page-level horizontal overflow;
 - a populated close-view check for *In the Mood for Love* confirmed three parallel rows, unobstructed
   spines and labels mounted clear of the cases;
+- loading-state validation confirmed that the shelf stays covered until its live cases and first full
+  WebGL frame are ready;
 - 3D asset tests, the full automated suite, JavaScript syntax and repository whitespace checks pass.
 
 Operational note:

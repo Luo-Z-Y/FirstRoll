@@ -39,7 +39,8 @@ The original GPL-3.0 licence and contributor attribution remain applicable. See
   on one wall,
   then hover a transparent jewel case to pull it out and select it as the new edition. Each curated
   bay is deliberately compact at 10–15 cases; sparse source results receive neutral archive fillers
-  without pretending those placeholders are related or selectable films.
+  without pretending those placeholders are related or selectable films. The shelf remains behind
+  its loading panel until related-film data, the GLB and the first complete frame are all ready.
 - Compare attributed Douban and Letterboxd community scores and review up to three prominent
   Wikidata awards when those sources provide them.
 - Retrieve matched scholarly abstracts and DOI links through Crossref.

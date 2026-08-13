@@ -90,8 +90,16 @@ class FirstRollClosetViewer {
       this.scene.add(this.model);
       this.addLiveCollections();
       this.root.dataset.liveCaseCount = String(this.filmCases.length);
+      this.renderer.render(this.scene, this.camera);
+      if (this.loading) {
+        this.loading.querySelector("strong").textContent = "Shelf ready";
+        this.loading.querySelector("small").textContent = "100%";
+      }
+      await this.waitForShelfReveal();
+      if (this.destroyed) return;
       this.root.classList.add("is-ready");
-      if (this.loading) this.loading.remove();
+      await new Promise((resolve) => window.setTimeout(resolve, 540));
+      if (!this.destroyed && this.loading) this.loading.remove();
     } catch (error) {
       console.error("FirstRoll shelf model failed to load", error);
       this.showError("The 3D archive model could not be loaded.");
@@ -119,6 +127,12 @@ class FirstRollClosetViewer {
     entrance.position.set(0, 3.55, 4.1);
     entrance.target.position.set(0, 1.25, -1.3);
     this.scene.add(entrance, entrance.target);
+  }
+
+  waitForShelfReveal() {
+    return new Promise((resolve) => {
+      window.requestAnimationFrame(() => window.requestAnimationFrame(resolve));
+    });
   }
 
   addLiveCollections() {
@@ -557,6 +571,10 @@ function mount(payload) {
 
 window.FirstRollCloset = {
   mount,
+  unmount() {
+    activeViewer?.destroy();
+    activeViewer = null;
+  },
   walk(distance) {
     activeViewer?.walk(Number(distance) || 0);
   },

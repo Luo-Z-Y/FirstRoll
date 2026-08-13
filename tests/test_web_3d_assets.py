@@ -22,6 +22,12 @@ def test_webgl_runtime_is_local_and_loaded_by_the_discovery_page() -> None:
     assert 'from "three"' in runtime
     assert "firstroll-closet.glb" in runtime
     assert "firstroll:select-film" in runtime
+    assert "waitForShelfReveal" in runtime
+    assert 'textContent = "Shelf ready"' in runtime
+    assert "window.setTimeout(resolve, 540)" in runtime
+    assert "window.FirstRollCloset?.unmount()" in (WEB / "app.js").read_text(
+        encoding="utf-8"
+    )
     assert (WEB / "vendor" / "three" / "LICENSE").is_file()
 
 
