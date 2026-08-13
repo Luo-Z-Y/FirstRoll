@@ -69,6 +69,10 @@ Delivered:
 11. Wrapped live cases in their available film-poster artwork with a centre crop and translucent title
     treatment. Poster requests are deduplicated, bounded by a six-second fallback and included in the
     ready gate so artwork does not pop in after the shelf appears.
+12. Removed the sparse-response fallback that could reveal one repeated case on every row. Related-film
+    retrieval now retries transient failures, requires twelve distinct verified records before reveal,
+    reports a clear unavailable state instead of inventing fullness, and hydrates the existing archive
+    in place so late data no longer causes an unexplained full-panel refresh.
 
 Acceptance evidence:
 

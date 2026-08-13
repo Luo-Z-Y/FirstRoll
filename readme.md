@@ -44,6 +44,8 @@ The original GPL-3.0 licence and contributor attribution remain applicable. See
   and the first complete frame are all ready. Hovering a case also replaces the shelf-header hint with
   its full title, year and director for an uncompressed caption. Available poster artwork wraps each
   case beneath the title treatment, with the designed colour spine retained when an image is missing.
+  Sparse or transiently failed relationship responses stay behind the loading panel and retry instead
+  of being misrepresented as a complete shelf; successful data hydrates the existing archive in place.
 - Compare attributed Douban and Letterboxd community scores and review up to three prominent
   Wikidata awards when those sources provide them.
 - Retrieve matched scholarly abstracts and DOI links through Crossref.

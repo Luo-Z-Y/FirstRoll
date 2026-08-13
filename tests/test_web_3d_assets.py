@@ -40,6 +40,11 @@ def test_single_wall_shelf_uses_five_rows_of_real_films() -> None:
 
     assert "const rowSize = 12" in app
     assert "displayableFilms" in app
+    assert "fetchRelatedFilmsWithRetry" in app
+    assert "hydrateFilmShelf" in app
+    assert "showFilmShelfError" in app
+    assert "Not enough distinct verified films" in app
+    assert "renderFilmArchive(primary, [], uniqueFilms(nearby" not in app
     assert "!/^Q\\d+$/i.test(text)" in app
     assert "closet-help" not in app
     assert "data-closet-caption" in app

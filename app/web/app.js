@@ -312,11 +312,7 @@ function renderDiscoveryResults(data) {
 
 async function loadRelatedFilms(primary, nearby) {
   try {
-    const res = await fetch(
-      `${discoveryApiBase()}/api/discovery/films/${encodeURIComponent(primary.id)}/related?limit=18`,
-    );
-    if (!res.ok) throw new Error(await readApiError(res));
-    const data = await res.json();
+    const data = await fetchRelatedFilmsWithRetry(primary.id);
     if (state.discovery.archiveSelectionId !== primary.id) return;
     const directorWorks = uniqueFilms(data.same_director || [], [primary]);
     const sharedCast = uniqueFilms(data.shared_cast || [], [primary]);
@@ -325,17 +321,62 @@ async function loadRelatedFilms(primary, nearby) {
       [...(data.recommended || []), ...(data.relevant || []), ...nearby],
       [primary],
     );
-    renderFilmArchive(primary, directorWorks, recommended, false, data.director, {
+    const categories = {
       sharedCast,
       sameCountry,
       recommended,
       nearby: uniqueFilms(nearby, [primary]),
       labels: data.category_labels || {},
-    });
-  } catch (_) {
+    };
+    const director = data.director || (primary.directors || [])[0] || "this director";
+    const collections = buildShelfCollections(primary, directorWorks, recommended, categories, director);
+    if (collections.some((collection) => collection.films.length < 12)) {
+      throw new Error("Not enough distinct verified films were returned to fill the shelf.");
+    }
+    state.discovery.archive = { primary, directorWorks, relevant: recommended, categories };
+    hydrateFilmShelf(primary.id, collections);
+  } catch (error) {
     if (state.discovery.archiveSelectionId !== primary.id) return;
-    renderFilmArchive(primary, [], uniqueFilms(nearby, [primary]), false);
+    showFilmShelfError(error);
   }
+}
+
+async function fetchRelatedFilmsWithRetry(filmId, attempts = 3) {
+  let lastError = new Error("The related-film service did not respond.");
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    try {
+      const res = await fetch(
+        `${discoveryApiBase()}/api/discovery/films/${encodeURIComponent(filmId)}/related?limit=18`,
+      );
+      if (!res.ok) throw new Error(await readApiError(res));
+      const data = await res.json();
+      if (data.state === "unavailable") throw new Error("Verified related films are temporarily unavailable.");
+      return data;
+    } catch (error) {
+      lastError = error;
+      if (attempt < attempts - 1) {
+        const loading = refs.discoveryResults.querySelector("[data-closet-loading] strong");
+        if (loading) loading.textContent = `Retrying verified films (${attempt + 2}/${attempts})`;
+        await new Promise((resolve) => window.setTimeout(resolve, 500 * (attempt + 1)));
+      }
+    }
+  }
+  throw lastError;
+}
+
+function hydrateFilmShelf(primaryId, collections) {
+  if (state.discovery.archiveSelectionId !== primaryId) return;
+  initialiseClosetViewport({ primaryId, collections });
+}
+
+function showFilmShelfError(error) {
+  const root = refs.discoveryResults.querySelector("[data-closet-viewport]");
+  const loading = root?.querySelector("[data-closet-loading]");
+  if (!root || !loading) return;
+  root.classList.add("has-error");
+  loading.innerHTML = `
+    <strong>Full shelf unavailable</strong>
+    <small>${escapeHtml(error?.message || "Verified related films could not be loaded. Search again to retry.")}</small>`;
 }
 
 function uniqueFilms(films, excluded = []) {
