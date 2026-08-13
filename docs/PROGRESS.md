@@ -14,6 +14,8 @@ Delivered:
    then neutral non-selectable FirstRoll archive cases complete a minimum 12-case centre row.
 5. Moved thinner brass plaques below and in front of all case geometry so title, collection and count
    text cannot be covered by a disc case or shelf edge.
+6. Removed case collisions by deriving live-case width from a fixed 0.06-metre gap, keeping ambient
+   cases upright with wider spacing and reserving an empty joint where side and rear shelves meet.
 
 Acceptance evidence:
 
@@ -23,6 +25,8 @@ Acceptance evidence:
 - the compact model loads as a 4.1 MB self-contained GLB, down from 6.1 MB;
 - live browser validation confirms the rebuilt scene loads, reports 12 cases and has zero page-level
   horizontal overflow;
+- close rear-wall and angled-corner checks show separated case silhouettes, clear hover expansion and
+  no side/rear collection intersection;
 - 76 automated tests, JavaScript syntax and repository whitespace checks pass.
 
 ### 14 August 2026 — Blender WebGL film closet

@@ -28,9 +28,15 @@ def test_webgl_runtime_is_local_and_loaded_by_the_discovery_page() -> None:
 def test_compact_closet_caps_rows_and_fills_sparse_director_results() -> None:
     app = (WEB / "app.js").read_text(encoding="utf-8")
     runtime = (WEB / "closet3d.js").read_text(encoding="utf-8")
+    blender_builder = (ROOT / "tools" / "build_closet_blender.py").read_text(
+        encoding="utf-8"
+    )
 
     assert ".slice(0, 15)" in app
     assert "director & related" in app
     assert 'collection.wall === "back" ? 12 : 10' in runtime
     assert "placeholder: true" in runtime
     assert "selectableCase: !film.placeholder" in runtime
+    assert "const gap = 0.06" in runtime
+    assert "while y < 3.18" in blender_builder
+    assert "rotation_z=0.0" in blender_builder

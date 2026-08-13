@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { GLTFLoader } from "./vendor/three/addons/loaders/GLTFLoader.js";
 
-const MODEL_URL = "/assets/models/firstroll-closet.glb?v=20260814-4";
+const MODEL_URL = "/assets/models/firstroll-closet.glb?v=20260814-5";
 const CASE_TONES = ["#632d28", "#304138", "#87512f", "#35404a", "#897c64", "#4d3d4d"];
 const CAMERA_BOUNDS = { minX: -0.82, maxX: 0.82, minZ: -3.28, maxZ: 3.82 };
 
@@ -142,16 +142,19 @@ class FirstRollClosetViewer {
       });
     }
     const baseY = collection.shelf === "upper" ? 3.10 : 1.44;
-    const available = collection.wall === "back" ? 2.72 : 3.12;
-    const gap = films.length > 20 ? 0.025 : 0.045;
-    const width = Math.max(0.145, Math.min(0.21, (available - gap * Math.max(0, films.length - 1)) / films.length));
+    const available = collection.wall === "back" ? 2.72 : 2.6;
+    const gap = 0.06;
+    const width = Math.min(
+      0.19,
+      Math.max(0.1, (available - gap * Math.max(0, films.length - 1)) / films.length),
+    );
     const span = films.length * width + Math.max(0, films.length - 1) * gap;
 
     films.forEach((film, index) => {
       let position;
       let rotationY = 0;
       let pullDirection;
-      const rowCentre = collection.wall === "back" ? 0 : -1.45;
+      const rowCentre = collection.wall === "back" ? 0 : -1.05;
       const offset = rowCentre - span / 2 + width / 2 + index * (width + gap);
       if (collection.wall === "back") {
         position = new THREE.Vector3(offset, baseY, -3.62);

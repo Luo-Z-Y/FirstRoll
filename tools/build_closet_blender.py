@@ -199,16 +199,15 @@ def build_back_shelves(materials: dict[str, bpy.types.Material]) -> None:
             width = random.uniform(0.16, 0.22)
             height = random.uniform(0.48, 0.68)
             depth = random.uniform(0.26, 0.37)
-            lean = random.choice((0.0, 0.0, 0.0, random.uniform(-0.035, 0.035)))
             add_case(
                 f"Back ambient case {shelf_index}-{case_index}",
                 (x + width / 2, BACK_CASE_Y, base_z + 0.07 + height / 2),
                 (width, depth, height),
                 random.choice(palette),
                 shell_material=materials["case_shell"],
-                rotation_z=lean,
+                rotation_z=0.0,
             )
-            x += width + random.uniform(0.012, 0.035)
+            x += width + random.uniform(0.028, 0.052)
             case_index += 1
 
 
@@ -232,7 +231,9 @@ def build_side_shelves(side: str, materials: dict[str, bpy.types.Material]) -> N
         # calm threshold instead of intersecting foreground cases.
         y = -2.35
         case_index = 0
-        while y < 4.02:
+        # Stop before the back-wall cases so perpendicular collections meet at
+        # a clean empty corner rather than occupying the same volume.
+        while y < 3.18:
             width = random.uniform(0.16, 0.22)
             height = random.uniform(0.48, 0.68)
             depth = random.uniform(0.26, 0.37)
@@ -242,9 +243,9 @@ def build_side_shelves(side: str, materials: dict[str, bpy.types.Material]) -> N
                 (depth, width, height),
                 random.choice(palette),
                 shell_material=materials["case_shell"],
-                rotation_z=random.choice((0.0, 0.0, random.uniform(-0.03, 0.03))),
+                rotation_z=0.0,
             )
-            y += width + random.uniform(0.012, 0.035)
+            y += width + random.uniform(0.028, 0.052)
             case_index += 1
 
 
