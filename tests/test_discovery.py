@@ -152,6 +152,31 @@ def test_wikipedia_infobox_completes_missing_crew_with_field_provenance() -> Non
     assert [source["name"] for source in result["sources"]] == ["Wikidata", "Wikipedia"]
 
 
+def test_wikipedia_infobox_discards_css_and_malformed_crew_values() -> None:
+    infobox_html = """
+    <table class="infobox vevent"><tbody>
+      <tr><th class="infobox-label">Produced by</th><td class="infobox-data">
+        <style>.mw-parser-output .plainlist ol,.mw-parser-output .plainlist ul{line-height:inherit;list-style:none;margin:0;padding:0}</style>
+        <div class="plainlist"><ul><li>Kim Se-hun</li><li>Jenna Ku</li></ul></div>
+      </td></tr>
+      <tr><th class="infobox-label">Edited by</th><td class="infobox-data">
+        margin:0,padding:0{}.mw-parser-output
+      </td></tr>
+    </tbody></table>
+    """
+    service = DiscoveryService(
+        request_json=fake_wikidata,
+        wikipedia_summary=lambda _: {},
+        wikipedia_infobox=lambda _: {"parse": {"text": infobox_html}},
+    )
+
+    film = service.detail("wikidata:Q100")["film"]
+
+    assert film["credits"]["producers"] == ["Kim Se-hun", "Jenna Ku"]
+    assert film["credits"].get("editors", []) == []
+    assert all("mw-parser-output" not in name for name in film["credits"]["producers"])
+
+
 def test_offline_catalogue_is_used_when_wikidata_is_unavailable() -> None:
     service = DiscoveryService(request_json=unavailable)
 

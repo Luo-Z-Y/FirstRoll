@@ -233,6 +233,13 @@ canonical film identity. A Wikipedia runtime fills a blank but never silently ov
 existing Wikidata runtime. The dossier links the field-level crew sources, and the reconciled
 credits plus provenance enter the Deep Study evidence packet.
 
+Infobox values pass through two independent display guards. During parsing, FirstRoll ignores
+`style`, `script`, `template` and `noscript` nodes, then rejects tokens containing CSS selectors,
+declarations, markup delimiters, excessive punctuation or implausible lengths. The browser repeats
+the plausibility check before joining any crew list. This defence-in-depth boundary prevents
+MediaWiki helper CSS such as `.mw-parser-output` from appearing as a person's name even if cached
+or future provider markup bypasses the parser's structural assumptions.
+
 For posters, FirstRoll accepts only Wikimedia upload URLs returned by the article summary.
 It prefers the original image, falls back to the thumbnail, rejects invalid dimensions and
 avoids landscape images that are unlikely to be posters. Wikipedia prose establishes

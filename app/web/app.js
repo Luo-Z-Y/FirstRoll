@@ -339,11 +339,11 @@ async function loadFilmDetail(filmId) {
 }
 
 function renderFilmDetail(film) {
-  const directors = (film.credits?.directors || film.directors || []).join(", ") || "Not supplied";
-  const writers = (film.credits?.writers || []).join(", ") || "Not supplied";
-  const producers = (film.credits?.producers || []).join(", ") || "Not supplied";
-  const cinematographers = (film.credits?.cinematographers || []).join(", ") || "Not supplied";
-  const editors = (film.credits?.editors || []).join(", ") || "Not supplied";
+  const directors = displayCrew(film.credits?.directors || film.directors || []);
+  const writers = displayCrew(film.credits?.writers || []);
+  const producers = displayCrew(film.credits?.producers || []);
+  const cinematographers = displayCrew(film.credits?.cinematographers || []);
+  const editors = displayCrew(film.credits?.editors || []);
   const genres = (film.genres || []).join(" · ") || "Not supplied";
   const backdrop = film.backdrop_url
     ? `<img class="detail-backdrop" src="${escapeHtml(film.backdrop_url)}" alt="" />`
@@ -442,6 +442,17 @@ function renderFilmDetail(film) {
       </div>
     </section>
     ${reviews.length ? `<div class="reviews-section"><h3>Perspectives</h3><div class="review-grid">${reviews.map(reviewCard).join("")}</div></div>` : ""}`;
+}
+
+function displayCrew(values) {
+  const forbidden = /mw-parser-output|\.mw-|line-height|list-style|margin:|padding:|display:|font-size:|@media|!important|var\(|[{}<>]/i;
+  const names = (Array.isArray(values) ? values : [])
+    .filter((value) => typeof value === "string")
+    .map((value) => value.trim())
+    .filter((value) => value.length >= 2 && value.length <= 120)
+    .filter((value) => /\p{L}/u.test(value) && !forbidden.test(value))
+    .filter((value) => (value.match(/[,:;]/g) || []).length <= 2);
+  return [...new Set(names)].join(", ") || "Not supplied";
 }
 
 function detailFact(label, value) {

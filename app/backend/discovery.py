@@ -147,9 +147,36 @@ def _infobox_people(value: str) -> list[str]:
     people: list[str] = []
     for item in re.split(r"\n+|\s*;\s*", value):
         name = re.sub(r"^(?:and|with)\s+", "", item.strip(), flags=re.IGNORECASE)
-        if name and name not in people:
+        if _valid_credit_name(name) and name not in people:
             people.append(name)
     return people
+
+
+def _valid_credit_name(value: str) -> bool:
+    """Reject page machinery and malformed tokens before they become visible credits."""
+    if not 2 <= len(value) <= 120 or not any(character.isalpha() for character in value):
+        return False
+    lowered = value.casefold()
+    forbidden = (
+        ".mw-",
+        "mw-parser-output",
+        "line-height",
+        "list-style",
+        "margin:",
+        "padding:",
+        "display:",
+        "font-size:",
+        "@media",
+        "!important",
+        "var(",
+        "<style",
+        "<script",
+    )
+    if any(marker in lowered for marker in forbidden):
+        return False
+    if any(character in value for character in "{}<>"):
+        return False
+    return len(re.findall(r"[,:;]", value)) <= 2
 
 
 def _infobox_runtime_minutes(value: str) -> int | None:
@@ -170,6 +197,7 @@ class WikipediaInfoboxParser(HTMLParser):
         self._cell: str | None = None
         self._label: list[str] = []
         self._value: list[str] = []
+        self._ignored_depth = 0
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         attributes = dict(attrs)
@@ -182,6 +210,12 @@ class WikipediaInfoboxParser(HTMLParser):
             return
         if not self._table_depth:
             return
+        if self._ignored_depth:
+            self._ignored_depth += 1
+            return
+        if tag in {"style", "script", "template", "noscript"}:
+            self._ignored_depth = 1
+            return
         if tag == "th" and "infobox-label" in classes:
             self._cell = "label"
             self._label = []
@@ -193,6 +227,9 @@ class WikipediaInfoboxParser(HTMLParser):
 
     def handle_endtag(self, tag: str) -> None:
         if not self._table_depth:
+            return
+        if self._ignored_depth:
+            self._ignored_depth -= 1
             return
         if tag == "table":
             self._table_depth -= 1
@@ -207,6 +244,8 @@ class WikipediaInfoboxParser(HTMLParser):
             self._cell = None
 
     def handle_data(self, data: str) -> None:
+        if self._ignored_depth:
+            return
         if self._cell == "label":
             self._label.append(data)
         elif self._cell == "value":

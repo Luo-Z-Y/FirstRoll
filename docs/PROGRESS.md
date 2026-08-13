@@ -1,5 +1,22 @@
 # FirstRoll Project Progress
 
+### 13 August 2026 — Crew-value display validation
+
+Delivered:
+
+1. Prevented embedded MediaWiki style and script content from entering parsed infobox values.
+2. Added backend plausibility validation for crew names, rejecting CSS, markup machinery,
+   malformed punctuation and unreasonable lengths.
+3. Added an independent browser-side crew guard before values are joined and displayed.
+4. Added a regression fixture reproducing the leaked `.mw-parser-output` value while retaining
+   the legitimate producer names that follow it.
+
+Acceptance evidence:
+
+- the malformed CSS fixture yields only `Kim Se-hun` and `Jenna Ku`;
+- all 61 automated tests pass;
+- scoped Ruff, JavaScript syntax and repository whitespace checks pass.
+
 ### 13 August 2026 — Attributed review and video text in Deep Study
 
 Delivered:
@@ -128,7 +145,7 @@ Status vocabulary:
 **Release stage:** local working prototype
 
 **Primary development URL:** `http://127.0.0.1:8000`
-**Automated verification:** 60 tests passing
+**Automated verification:** 61 tests passing
 
 | Area | Status | Current evidence |
 |---|---|---|
