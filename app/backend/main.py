@@ -29,6 +29,7 @@ from app.backend.study_service import DeepSeekStudyService, StudyGenerationError
 from app.backend.video_sources import (
     BilibiliPublicVideoAdapter,
     FilmVideoService,
+    FilmVideoStore,
     VideoSourceError,
     YouTubeVideoAdapter,
 )
@@ -52,7 +53,8 @@ letterboxd_web_adapter = LetterboxdPublicWebAdapter()
 criticism_store = CriticismStore()
 youtube_video_adapter = YouTubeVideoAdapter(settings_store)
 bilibili_video_adapter = BilibiliPublicVideoAdapter()
-video_service = FilmVideoService(youtube_video_adapter, bilibili_video_adapter)
+video_store = FilmVideoStore()
+video_service = FilmVideoService(youtube_video_adapter, bilibili_video_adapter, video_store)
 web_directory = Path(__file__).resolve().parents[1] / "web"
 app.mount("/assets", StaticFiles(directory=web_directory), name="web-assets")
 
@@ -379,7 +381,11 @@ def discovery_film(film_id: str) -> dict:
         }
         result["film"]["video_sources"] = {
             "providers": video_service.status(),
-            "bundle": None,
+            "bundle": (
+                cached_video_bundle.model_dump()
+                if (cached_video_bundle := video_store.load(film_id))
+                else None
+            ),
         }
         return result
     except LookupError as exc:

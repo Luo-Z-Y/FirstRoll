@@ -3,10 +3,12 @@ from __future__ import annotations
 import gzip
 import html
 import json
+import os
 import re
 import unicodedata
 from datetime import datetime, timezone
 from difflib import SequenceMatcher
+from pathlib import Path
 from typing import Any, Callable, Literal
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode, urlparse
@@ -53,7 +55,7 @@ class FilmVideoBundle(BaseModel):
     film_id: str
     query: str
     fetched_at: str
-    videos: list[FilmVideo] = Field(default_factory=list, max_length=12)
+    videos: list[FilmVideo] = Field(default_factory=list, max_length=48)
     providers: list[str]
     notice: str
 
@@ -111,7 +113,7 @@ class YouTubeVideoAdapter:
         if not key:
             return []
         query = _film_video_query(film)
-        url = f"{self.api_url}?{urlencode({'part': 'snippet', 'q': query, 'type': 'video', 'maxResults': str(max(1, min(limit * 2, 20))), 'videoEmbeddable': 'true', 'videoSyndicated': 'true', 'safeSearch': 'moderate', 'relevanceLanguage': 'en', 'key': key})}"
+        url = f"{self.api_url}?{urlencode({'part': 'snippet', 'q': query, 'type': 'video', 'maxResults': str(max(1, min(limit * 2, 25))), 'videoEmbeddable': 'true', 'videoSyndicated': 'true', 'safeSearch': 'moderate', 'relevanceLanguage': 'en', 'key': key})}"
         payload = self.transport(url)
         items = payload.get("items") if isinstance(payload, dict) else []
         candidates: list[tuple[str, dict[str, Any], str]] = []
@@ -233,7 +235,7 @@ class BilibiliPublicVideoAdapter:
         results: list[FilmVideo] = []
         seen: set[str] = set()
         detail_requests = 0
-        queries = (_bilibili_video_query(film), _bilibili_full_film_query(film))
+        queries = _bilibili_video_queries(film)
         for query in queries:
             body = self.transport(f"{self.search_url}?{urlencode({'keyword': query})}")
             matches = list(self._result_pattern.finditer(body))
@@ -370,46 +372,83 @@ class FilmVideoService:
         self,
         youtube: YouTubeVideoAdapter,
         bilibili: BilibiliPublicVideoAdapter,
+        store: FilmVideoStore | None = None,
     ) -> None:
         self.youtube = youtube
         self.bilibili = bilibili
+        self.store = store or FilmVideoStore()
 
     def status(self) -> dict[str, Any]:
         return {"youtube": self.youtube.status(), "bilibili": self.bilibili.status()}
 
     def search(self, film_id: str, film: dict[str, Any]) -> FilmVideoBundle:
-        videos: list[FilmVideo] = []
+        existing = self.store.load(film_id)
+        fresh_videos: list[FilmVideo] = []
         providers: list[str] = []
         failures: list[str] = []
         for name, adapter in (("YouTube", self.youtube), ("Bilibili", self.bilibili)):
             try:
-                found = adapter.search(film, limit=6)
+                found = adapter.search(film, limit=12)
             except VideoSourceError as exc:
                 failures.append(f"{name}: {exc}")
                 continue
             if found:
                 providers.append(name)
-                videos.extend(found)
+                fresh_videos.extend(found)
+        videos = _merge_videos(existing.videos if existing else [], fresh_videos)
         if not videos:
             detail = f" Provider details: {'; '.join(failures)}" if failures else ""
             raise VideoSourceError(
                 "No confidently matched embeddable videos were found for this film."
                 f"{detail}"
             )
-        return FilmVideoBundle(
+        provider_names = list(existing.providers) if existing else []
+        provider_names.extend(name for name in providers if name not in provider_names)
+        added_count = len(videos) - len(existing.videos if existing else [])
+        bundle = FilmVideoBundle(
             film_id=film_id,
             query=_film_video_query(film),
             fetched_at=datetime.now(timezone.utc).isoformat(),
-            videos=sorted(
-                videos,
-                key=lambda video: VIDEO_CATEGORY_PRIORITY[video.category],
-            )[:12],
-            providers=providers,
+            videos=videos,
+            providers=provider_names,
             notice=(
-                "Public videos selected by film-title and director relevance. "
+                f"Local catalogue: {len(videos)} videos; {max(0, added_count)} added by this search. "
+                "Previously accepted results are retained and new matches are deduplicated. "
                 "FirstRoll does not verify every claim made in third-party videos."
             ),
         )
+        self.store.save(bundle)
+        return bundle
+
+
+class FilmVideoStore:
+    """Private persistent catalogue of accepted viewing resources."""
+
+    def __init__(self, directory: Path | None = None) -> None:
+        project_root = Path(__file__).resolve().parents[2]
+        self.directory = directory or project_root / ".firstroll" / "videos"
+
+    def save(self, bundle: FilmVideoBundle) -> None:
+        self.directory.mkdir(mode=0o700, parents=True, exist_ok=True)
+        path = self._path(bundle.film_id)
+        temporary = path.with_suffix(".tmp")
+        temporary.write_text(bundle.model_dump_json(indent=2), encoding="utf-8")
+        os.chmod(temporary, 0o600)
+        temporary.replace(path)
+        os.chmod(path, 0o600)
+
+    def load(self, film_id: str) -> FilmVideoBundle | None:
+        path = self._path(film_id)
+        if not path.is_file():
+            return None
+        try:
+            return FilmVideoBundle.model_validate_json(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            return None
+
+    def _path(self, film_id: str) -> Path:
+        safe = re.sub(r"[^a-zA-Z0-9_-]+", "-", film_id).strip("-") or "film"
+        return self.directory / f"{safe}.json"
 
 
 def _film_video_query(film: dict[str, Any]) -> str:
@@ -420,25 +459,37 @@ def _film_video_query(film: dict[str, Any]) -> str:
     return " ".join(part for part in (title, director, year, "film") if part)
 
 
-def _bilibili_video_query(film: dict[str, Any]) -> str:
+def _bilibili_video_queries(film: dict[str, Any]) -> tuple[str, ...]:
     title = str(film.get("title") or "").strip()
     original_title = str(film.get("original_title") or "").strip()
     year = str(film.get("year") or "").strip()
-    return " ".join(
-        part
-        for part in (title, original_title, year, "电影", "影评", "访谈")
-        if part
-    )
-
-
-def _bilibili_full_film_query(film: dict[str, Any]) -> str:
-    title = str(film.get("title") or "").strip()
-    original_title = str(film.get("original_title") or "").strip()
-    year = str(film.get("year") or "").strip()
-    # Bilibili search performs better when this query stays compact. Prefer the
-    # original title because it often bridges Traditional and Simplified Chinese.
     query_title = original_title or title
-    return " ".join(part for part in (query_title, year, "电影", "完整版") if part)
+    bases = [
+        " ".join(part for part in (title, original_title, year, "电影") if part),
+        " ".join(part for part in (query_title, year, "完整版") if part),
+        " ".join(part for part in (title, year, "影评 解析") if part),
+        " ".join(part for part in (title, year, "访谈 映后") if part),
+        " ".join(part for part in (title, year, "幕后 片段") if part),
+    ]
+    return tuple(dict.fromkeys(query for query in bases if query))
+
+
+def _merge_videos(
+    existing: list[FilmVideo],
+    fresh: list[FilmVideo],
+) -> list[FilmVideo]:
+    keys: list[tuple[str, str]] = []
+    videos_by_key: dict[tuple[str, str], FilmVideo] = {}
+    for video in [*existing, *fresh]:
+        key = (video.platform, video.video_id)
+        if key not in videos_by_key:
+            keys.append(key)
+        videos_by_key[key] = video
+    ordered = [videos_by_key[key] for key in keys]
+    return sorted(
+        ordered,
+        key=lambda video: VIDEO_CATEGORY_PRIORITY[video.category],
+    )[:48]
 
 
 def _normalise(value: str) -> str:

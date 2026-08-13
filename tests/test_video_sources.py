@@ -6,7 +6,9 @@ from pathlib import Path
 from app.backend.settings import LocalSettingsStore
 from app.backend.video_sources import (
     BilibiliPublicVideoAdapter,
+    FilmVideo,
     FilmVideoService,
+    FilmVideoStore,
     YouTubeVideoAdapter,
     _video_category,
 )
@@ -109,7 +111,10 @@ def test_video_service_survives_one_provider_failure() -> None:
         )
         bilibili = BilibiliPublicVideoAdapter(transport=lambda _: body)
 
-        bundle = FilmVideoService(youtube, bilibili).search("wikidata:Q67087116", FILM)
+        video_store = FilmVideoStore(Path(directory) / "videos")
+        bundle = FilmVideoService(youtube, bilibili, video_store).search(
+            "wikidata:Q67087116", FILM
+        )
 
         assert bundle.providers == ["Bilibili"]
         assert len(bundle.videos) == 1
@@ -158,3 +163,73 @@ def test_content_markers_override_long_duration() -> None:
     assert _video_category("Memoria 记者会", "Cannes 2021", 3600) == "interview"
     assert _video_category("2021年度十大佳片盘点", "电影最TOP", 3600) == "video_essay"
     assert _video_category("戛纳电影节颁奖典礼", "全记录", 7200) == "other"
+
+
+def _fixture_video(video_id: str, title: str) -> FilmVideo:
+    return FilmVideo(
+        platform="YouTube",
+        video_id=video_id,
+        title=title,
+        url=f"https://www.youtube.com/watch?v={video_id}",
+        embed_url=f"https://www.youtube-nocookie.com/embed/{video_id}",
+        category="video_essay",
+        relevance="title",
+    )
+
+
+def test_refresh_merges_new_results_into_private_catalogue() -> None:
+    class SequencedAdapter:
+        def __init__(self, batches: list[list[FilmVideo]]) -> None:
+            self.batches = batches
+            self.calls = 0
+
+        def search(self, film: dict, limit: int = 12) -> list[FilmVideo]:
+            batch = self.batches[min(self.calls, len(self.batches) - 1)]
+            self.calls += 1
+            return batch[:limit]
+
+        def status(self) -> dict:
+            return {"state": "ready"}
+
+    first = _fixture_video("abcdefghijk", "Memoria film essay")
+    second = _fixture_video("zyxwvutsrqp", "Memoria sound analysis")
+    youtube = SequencedAdapter([[first], [second]])
+    bilibili = SequencedAdapter([[], []])
+
+    with tempfile.TemporaryDirectory() as directory:
+        store = FilmVideoStore(Path(directory) / "videos")
+        service = FilmVideoService(youtube, bilibili, store)  # type: ignore[arg-type]
+
+        initial = service.search("wikidata:Q67087116", FILM)
+        expanded = service.search("wikidata:Q67087116", FILM)
+        cached = store.load("wikidata:Q67087116")
+
+        assert [video.video_id for video in initial.videos] == ["abcdefghijk"]
+        assert [video.video_id for video in expanded.videos] == [
+            "abcdefghijk",
+            "zyxwvutsrqp",
+        ]
+        assert cached == expanded
+        assert "1 added by this search" in expanded.notice
+
+
+def test_refresh_deduplicates_existing_platform_video_id() -> None:
+    video = _fixture_video("abcdefghijk", "Memoria film essay")
+
+    class FixedAdapter:
+        def search(self, film: dict, limit: int = 12) -> list[FilmVideo]:
+            return [video]
+
+        def status(self) -> dict:
+            return {"state": "ready"}
+
+    with tempfile.TemporaryDirectory() as directory:
+        store = FilmVideoStore(Path(directory) / "videos")
+        adapter = FixedAdapter()
+        service = FilmVideoService(adapter, adapter, store)  # type: ignore[arg-type]
+
+        service.search("wikidata:Q67087116", FILM)
+        refreshed = service.search("wikidata:Q67087116", FILM)
+
+        assert len(refreshed.videos) == 1
+        assert "0 added by this search" in refreshed.notice

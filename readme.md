@@ -387,7 +387,8 @@ The API key remains in the local write-only settings store and is never sent to 
 Bilibili's anonymous JSON search endpoint currently applies HTTP 412 risk control to this
 kind of local client, so FirstRoll does not depend on it. Instead, the local adapter reads the
 public server-rendered search page, extracts bounded `BV` records and embeds them through
-`player.bilibili.com`. It issues one study-oriented query and one compact full-film query. The
+`player.bilibili.com`. It issues focused queries for general film material, complete films,
+criticism/analysis, interviews/post-screening discussions and production material/extracts. The
 adapter reads visible clock durations and tags from the search record; for at most three
 plausible candidates without a duration, it reads the duration from the public video page.
 Gzip responses are decompressed before parsing. Short or ambiguous titles must also match the
@@ -405,8 +406,16 @@ films first, and the interface shows the type and duration on each card. The ret
 become local tabs—`All` plus only the types present in that result set. Switching a tab filters
 the existing cards in the browser and does not repeat either provider request.
 
+Accepted videos are persisted in the Git-ignored `.firstroll/videos` catalogue rather than
+being replaced by each provider response. **Find more videos** merges the new response with the
+existing film catalogue, deduplicating on `(platform, video_id)`. Existing items retain their
+relative order within a type, while genuinely new items are appended and the type priority is
+reapplied. The catalogue is capped at 48 items per film. This makes provider ranking changes
+non-destructive while still allowing repeated searches to discover additional material. A film
+dossier loads this private catalogue immediately after a browser refresh.
+
 Both adapters enforce HTTPS host allowlists, 20-second timeouts, response-size limits, safe
-embed URL patterns and a maximum of six results per platform. The interface preserves the
+embed URL patterns and a maximum of 12 new results per platform per search. The interface preserves the
 platform and canonical source link. Third-party video claims remain unverified until a later
 transcript and evidence-extraction layer is implemented.
 
@@ -578,7 +587,7 @@ never returned to the browser or committed to Git.
 | `GET /api/discovery/status` | Discovery and private-index status |
 | `GET /api/discovery/search` | Film identity search |
 | `GET /api/discovery/films/{film_id}` | Full film dossier |
-| `POST /api/discovery/films/{film_id}/videos` | Retrieve relevant public YouTube and Bilibili videos |
+| `POST /api/discovery/films/{film_id}/videos` | Find and merge relevant public YouTube and Bilibili videos into the private catalogue |
 | `POST /api/discovery/films/{film_id}/criticism/crossref` | Retrieve and cache matched scholarly abstracts |
 | `POST /api/discovery/films/{film_id}/criticism/douban` | Retrieve and cache Douban criticism |
 | `POST /api/discovery/films/{film_id}/criticism/letterboxd-web` | Retrieve and cache public Letterboxd reviews locally |

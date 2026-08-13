@@ -1,5 +1,24 @@
 # FirstRoll Project Progress
 
+### 13 August 2026 — Stable cumulative video discovery
+
+Delivered:
+
+1. Added a private `.firstroll/videos` catalogue that survives backend and browser refreshes.
+2. Changed **Refresh videos** to **Find more videos**: each search merges rather than replaces.
+3. Deduplicated by platform and provider video ID while preserving the relative order of
+   previously accepted videos within each content type.
+4. Expanded Bilibili retrieval into focused complete-film, criticism, interview, production
+   material and extract queries; increased the per-provider candidate allowance.
+5. Capped each film catalogue at 48 accepted items and returned the number added by each search.
+
+Acceptance evidence:
+
+- two live *Memoria* searches expanded the catalogue from 20 to 25 videos;
+- all 20 initial videos remained present in the same relative order;
+- the expanded result covered seven content types;
+- 55 automated tests pass, including cumulative merge and duplicate-ID regression tests.
+
 ### 13 August 2026 — Typed video classification
 
 Delivered:
@@ -67,12 +86,12 @@ Status vocabulary:
 **Release stage:** local working prototype
 
 **Primary development URL:** `http://127.0.0.1:8000`
-**Automated verification:** 53 tests passing
+**Automated verification:** 55 tests passing
 
 | Area | Status | Current evidence |
 |---|---|---|
 | Film discovery | Complete | Wikidata search by title, year and director; Wikipedia context and source links |
-| Public video resources | Complete | Film-matched Bilibili and optional YouTube embeds, typed by content form with full films surfaced first |
+| Public video resources | Complete | Persistent cumulative catalogue; focused Bilibili and optional YouTube retrieval; typed tabs with full films surfaced first |
 | Product navigation | Complete | Discover and Analyse modes; Study consolidated into Discover |
 | Local settings | Complete | Write-only connector credentials plus local add, remove and index controls for the private library |
 | Private library catalogue | Complete | Seven existing film-study PDFs retained; managed uploads and non-destructive removal; paths and content withheld from public APIs |

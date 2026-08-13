@@ -398,7 +398,7 @@ function renderFilmDetail(film) {
     <section class="film-videos">
       <div class="film-videos-head">
         <div><span>Public viewing resources</span><h3>Watch &amp; study</h3></div>
-        <button type="button" data-load-film-videos>${videoBundle ? "Refresh videos" : "Find relevant videos"}</button>
+        <button type="button" data-load-film-videos>${videoBundle ? "Find more videos" : "Find relevant videos"}</button>
       </div>
       <div data-film-videos-output>
         ${videoBundle
@@ -509,7 +509,7 @@ async function loadFilmVideos(button) {
   const originalLabel = button.textContent;
   button.disabled = true;
   button.textContent = "Searching…";
-  output.innerHTML = fetchProgressMarkup("Matching public videos to the verified film identity…");
+  output.innerHTML = fetchProgressMarkup(videoButtonProgressLabel(Boolean(film.video_sources?.bundle)));
   try {
     const response = await fetch(
       `${discoveryApiBase()}/api/discovery/films/${encodeURIComponent(film.id)}/videos`,
@@ -520,13 +520,19 @@ async function loadFilmVideos(button) {
     film.video_sources = film.video_sources || {};
     film.video_sources.bundle = data.video_sources;
     output.innerHTML = filmVideosMarkup(data.video_sources);
-    button.textContent = "Refresh videos";
+    button.textContent = "Find more videos";
   } catch (error) {
     output.innerHTML = `<p class="video-source-error">Video search failed: ${escapeHtml(error.message)}</p>`;
     button.textContent = originalLabel;
   } finally {
     button.disabled = false;
   }
+}
+
+function videoButtonProgressLabel(expanding) {
+  return expanding
+    ? "Searching for additional matches and merging them into the local catalogue…"
+    : "Matching public videos to the verified film identity…";
 }
 
 function filmVideosMarkup(bundle) {
