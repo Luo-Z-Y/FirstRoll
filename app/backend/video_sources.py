@@ -536,6 +536,7 @@ class FilmVideoService:
                 providers.append(name)
                 fresh_videos.extend(found)
         videos = _merge_videos(existing.videos if existing else [], fresh_videos)
+        videos = _revalidate_videos(film, videos)
         videos = self.text_extractor.enrich(videos)
         if not videos:
             detail = f" Provider details: {'; '.join(failures)}" if failures else ""
@@ -673,18 +674,28 @@ def _film_video_query(film: dict[str, Any]) -> str:
 
 
 def _bilibili_video_queries(film: dict[str, Any]) -> tuple[str, ...]:
-    title = str(film.get("title") or "").strip()
-    original_title = str(film.get("original_title") or "").strip()
+    titles = _film_titles(film)
+    title = titles[0] if titles else ""
     year = str(film.get("year") or "").strip()
-    query_title = original_title or title
+    provider_titles = _unique_titles(
+        [
+            *(film.get("alternative_titles") or []),
+            film.get("original_title"),
+            film.get("title"),
+        ]
+    )
+    cjk_titles = [value for value in provider_titles if re.search(r"[\u3400-\u9fff]", value)]
+    exact_titles = [*cjk_titles, *provider_titles]
+    primary = exact_titles[0] if exact_titles else title
     bases = [
-        " ".join(part for part in (title, original_title, year, "电影") if part),
-        " ".join(part for part in (query_title, year, "完整版") if part),
+        *exact_titles,
+        " ".join(part for part in (primary, "完整无删减") if part),
+        " ".join(part for part in (primary, "完整版") if part),
         " ".join(part for part in (title, year, "影评 解析") if part),
         " ".join(part for part in (title, year, "访谈 映后") if part),
         " ".join(part for part in (title, year, "幕后 片段") if part),
     ]
-    return tuple(dict.fromkeys(query for query in bases if query))
+    return tuple(dict.fromkeys(query for query in bases if query))[:10]
 
 
 def _merge_videos(
@@ -712,6 +723,29 @@ def _merge_videos(
     )[:48]
 
 
+def _revalidate_videos(film: dict[str, Any], videos: list[FilmVideo]) -> list[FilmVideo]:
+    """Apply current classification and identity rules to fresh and persisted results."""
+    accepted: list[FilmVideo] = []
+    for video in videos:
+        category = (
+            _video_category(video.title, video.description, video.duration_seconds)
+            if video.category == "full_film"
+            else video.category
+        )
+        video = video.model_copy(update={"category": category})
+        if (
+            video.platform == "Bilibili"
+            and category == "full_film"
+            and not _strong_film_title_match(film, f"{video.title} {video.description}")
+        ):
+            continue
+        accepted.append(video)
+    return sorted(
+        accepted,
+        key=lambda video: VIDEO_CATEGORY_PRIORITY[video.category],
+    )[:48]
+
+
 def _normalise(value: str) -> str:
     value = unicodedata.normalize("NFKD", html.unescape(value))
     value = "".join(character for character in value if not unicodedata.combining(character))
@@ -723,11 +757,7 @@ def _video_relevance(
     text: str,
 ) -> Literal["title", "director", "title_and_director"] | None:
     body = _normalise(text)
-    titles = [
-        _normalise(str(value))
-        for value in (film.get("title"), film.get("original_title"))
-        if value
-    ]
+    titles = [_normalise(value) for value in _film_titles(film)]
     directors = film.get("credits", {}).get("directors") or film.get("directors") or []
     director_names = [_normalise(str(value)) for value in directors if value]
     title_match = any(
@@ -864,6 +894,7 @@ def _video_category(title: str, description: str, duration_seconds: int | None) 
             "video essay",
             "analysis",
             "review",
+            "reaction",
             "explained",
             "critique",
             "影评",
@@ -885,7 +916,18 @@ def _video_category(title: str, description: str, duration_seconds: int | None) 
             return category
     explicit_full_film = any(
         term in text
-        for term in ("full film", "full movie", "complete film", "完整版", "全片", "正片")
+        for term in (
+            "full film",
+            "full movie",
+            "complete film",
+            "完整版",
+            "完整无删",
+            "完整无删减",
+            "无删减",
+            "未删减",
+            "全片",
+            "正片",
+        )
     )
     if explicit_full_film or (duration_seconds is not None and duration_seconds >= 45 * 60):
         return "full_film"
@@ -901,12 +943,19 @@ def _long_film_candidate(
         return False
     body = _normalise(text)
     year = str(film.get("year") or "").strip()
+    strong_title = _strong_film_title_match(film, text)
     return bool(
-        year
-        and year in body
+        strong_title
         and (
-            any(term in body for term in ("film", "movie", "电影", "影片", "作品"))
-            or _possible_full_film_candidate(film, text)
+            (
+                year
+                and year in body
+                and (
+                    any(term in body for term in ("film", "movie", "电影", "影片", "作品"))
+                    or _possible_full_film_candidate(film, text)
+                )
+            )
+            or _explicit_full_film_marker(body)
         )
     )
 
@@ -914,8 +963,6 @@ def _long_film_candidate(
 def _possible_full_film_candidate(film: dict[str, Any], text: str) -> bool:
     body = _normalise(text)
     year = str(film.get("year") or "").strip()
-    if not year or year not in body:
-        return False
     exclusion_markers = (
         "trailer",
         "interview",
@@ -930,7 +977,59 @@ def _possible_full_film_candidate(film: dict[str, Any], text: str) -> bool:
         "游戏",
         "音乐",
     )
-    return not any(marker in body for marker in exclusion_markers)
+    if any(marker in body for marker in exclusion_markers):
+        return False
+    return bool(
+        _strong_film_title_match(film, text)
+        and (
+            (year and year in body)
+            or _explicit_full_film_marker(body)
+        )
+    )
+
+
+def _film_titles(film: dict[str, Any]) -> list[str]:
+    raw = [film.get("title"), film.get("original_title"), *(film.get("alternative_titles") or [])]
+    return _unique_titles(raw)
+
+
+def _unique_titles(raw: list[Any]) -> list[str]:
+    titles: list[str] = []
+    seen: set[str] = set()
+    for value in raw:
+        title = str(value or "").strip()
+        identity = _normalise(title)
+        if title and identity and identity not in seen:
+            titles.append(title)
+            seen.add(identity)
+    return titles
+
+
+def _strong_film_title_match(film: dict[str, Any], text: str) -> bool:
+    body = _normalise(text)
+    return any(
+        (len(title) >= 4 or (len(title) >= 2 and re.search(r"[\u3400-\u9fff]", title)))
+        and title in body
+        for title in (_normalise(value) for value in _film_titles(film))
+    )
+
+
+def _explicit_full_film_marker(text: str) -> bool:
+    return any(
+        marker in text
+        for marker in (
+            "full film",
+            "full movie",
+            "complete film",
+            "完整版",
+            "完整无删",
+            "完整无删减",
+            "无删减",
+            "未删减",
+            "全片",
+            "正片",
+        )
+    )
 
 
 def _bilibili_detail_duration(value: str) -> int | None:

@@ -452,6 +452,7 @@ class DiscoveryService:
         labels = entity.get("_related_labels", {})
         title = self._best_text(entity.get("labels", {})) or qid
         original_title = self._original_title(entity.get("labels", {}), title)
+        alternative_titles = self._alternative_titles(entity.get("labels", {}), title)
         release_date = self._time_value(claims, "P577")
         description = self._best_text(entity.get("descriptions", {}))
         directors = self._labelled_claims(claims, "P57", labels)
@@ -467,6 +468,7 @@ class DiscoveryService:
             "provider_id": qid,
             "title": title,
             "original_title": original_title,
+            "alternative_titles": alternative_titles,
             "year": self._year(release_date),
             "release_date": release_date,
             "directors": directors,
@@ -894,6 +896,19 @@ class DiscoveryService:
         return title
 
     @staticmethod
+    def _alternative_titles(labels: dict[str, Any], title: str) -> list[str]:
+        """Retain multilingual identity labels for provider-specific exact-title searches."""
+        values: list[str] = []
+        seen = {DiscoveryService._normalise_identity(title)}
+        for language in ("zh-hans", "zh-hant", "zh", "ko", "ja", "en"):
+            value = str(labels.get(language, {}).get("value") or "").strip()
+            identity = DiscoveryService._normalise_identity(value)
+            if value and identity and identity not in seen:
+                values.append(value)
+                seen.add(identity)
+        return values
+
+    @staticmethod
     def _time_value(claims: dict[str, Any], property_id: str) -> str | None:
         for claim in claims.get(property_id, []):
             value = claim.get("mainsnak", {}).get("datavalue", {}).get("value")
@@ -942,6 +957,7 @@ class DiscoveryService:
                 "provider_id",
                 "title",
                 "original_title",
+                "alternative_titles",
                 "year",
                 "directors",
                 "overview",

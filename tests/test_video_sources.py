@@ -8,10 +8,12 @@ from app.backend.settings import LocalSettingsStore
 from app.backend.video_sources import (
     BilibiliPublicVideoAdapter,
     FilmVideo,
+    FilmVideoBundle,
     FilmVideoService,
     FilmVideoStore,
     PublicVideoTextExtractor,
     YouTubeVideoAdapter,
+    _bilibili_video_queries,
     _video_category,
 )
 
@@ -19,6 +21,7 @@ from app.backend.video_sources import (
 FILM = {
     "title": "Memoria",
     "original_title": "記憶",
+    "alternative_titles": ["记忆"],
     "year": 2021,
     "credits": {"directors": ["Apichatpong Weerasethakul"]},
 }
@@ -209,10 +212,69 @@ def test_missing_search_duration_uses_bounded_public_detail_metadata() -> None:
     assert videos[0].category == "full_film"
 
 
+def test_exact_localised_title_finds_full_film_despite_distribution_year_label() -> None:
+    film = {
+        "title": "The World of Love",
+        "original_title": "若問世界誰無傷",
+        "alternative_titles": ["世界的主人", "세계의 주인"],
+        "year": 2025,
+        "credits": {"directors": ["Yoon Ga-eun"]},
+    }
+    result_title = json.dumps(
+        "2026韩国青春电影【世界的主人】蓝光中字（完整无删）",
+        ensure_ascii=True,
+    )[1:-1]
+    body = (
+        '"http:\\u002F\\u002Fwww.bilibili.com\\u002Fvideo\\u002Fav99",'
+        f'"BV1iHZcBgEzm","{result_title}","蓝光中字",""'
+    )
+    queries: list[str] = []
+    details: list[str] = []
+
+    def search_transport(url: str) -> str:
+        queries.append(url)
+        return body if "%E4%B8%96%E7%95%8C%E7%9A%84%E4%B8%BB%E4%BA%BA" in url else ""
+
+    def detail_transport(url: str) -> str:
+        details.append(url)
+        return '<title>世界的主人</title><script>{"duration":10294}</script>'
+
+    videos = BilibiliPublicVideoAdapter(
+        transport=search_transport,
+        detail_transport=detail_transport,
+    ).search(film)
+
+    assert _bilibili_video_queries(film)[0] == "世界的主人"
+    assert details == ["https://www.bilibili.com/video/BV1iHZcBgEzm/"]
+    assert len(videos) == 1
+    assert videos[0].video_id == "BV1iHZcBgEzm"
+    assert videos[0].duration_seconds == 10294
+    assert videos[0].category == "full_film"
+
+
 def test_content_markers_override_long_duration() -> None:
     assert _video_category("Memoria 记者会", "Cannes 2021", 3600) == "interview"
     assert _video_category("2021年度十大佳片盘点", "电影最TOP", 3600) == "video_essay"
     assert _video_category("戛纳电影节颁奖典礼", "全记录", 7200) == "other"
+    assert _video_category("【闲聊Reaction】世界的主人", "", 7171) == "video_essay"
+
+
+def test_unrelated_long_result_cannot_pass_on_year_and_generic_context() -> None:
+    film = {
+        "title": "The World of Love",
+        "alternative_titles": ["世界的主人", "세계의 주인"],
+        "year": 2025,
+        "credits": {"directors": ["Yoon Ga-eun"]},
+    }
+    title = json.dumps("EBiDAN THE LIVE 2025【Day1-Day3】", ensure_ascii=True)[1:-1]
+    description = json.dumps("EBiDAN THE LIVE 2025 HOTEL NINE STAR", ensure_ascii=True)[1:-1]
+    body = (
+        '"http:\\u002F\\u002Fwww.bilibili.com\\u002Fvideo\\u002Fav77",'
+        f'"BV1j2YizYEFU","{title}","{description}","",77,'
+        '"电影","19:15:22"'
+    )
+
+    assert BilibiliPublicVideoAdapter(transport=lambda _: body).search(film) == []
 
 
 def _fixture_video(video_id: str, title: str) -> FilmVideo:
@@ -283,3 +345,59 @@ def test_refresh_deduplicates_existing_platform_video_id() -> None:
 
         assert len(refreshed.videos) == 1
         assert "0 added by this search" in refreshed.notice
+
+
+def test_refresh_revalidates_persisted_bilibili_full_film_cards() -> None:
+    class EmptyAdapter:
+        def search(self, film: dict, limit: int = 12) -> list[FilmVideo]:
+            return []
+
+        def status(self) -> dict:
+            return {"state": "ready"}
+
+    film = {
+        "title": "The World of Love",
+        "alternative_titles": ["世界的主人"],
+        "year": 2025,
+    }
+    unrelated = FilmVideo(
+        platform="Bilibili",
+        video_id="BV1j2YizYEFU",
+        title="EBiDAN THE LIVE 2025【Day1-Day3】",
+        description="EBiDAN HOTEL NINE STAR",
+        url="https://www.bilibili.com/video/BV1j2YizYEFU/",
+        embed_url="https://player.bilibili.com/player.html?bvid=BV1j2YizYEFU&autoplay=0",
+        duration_seconds=69322,
+        category="full_film",
+        relevance="title",
+    )
+    reaction = FilmVideo(
+        platform="Bilibili",
+        video_id="BV1UTodB5EVY",
+        title="【闲聊Reaction】世界的主人",
+        url="https://www.bilibili.com/video/BV1UTodB5EVY/",
+        embed_url="https://player.bilibili.com/player.html?bvid=BV1UTodB5EVY&autoplay=0",
+        duration_seconds=7171,
+        category="full_film",
+        relevance="title",
+    )
+
+    with tempfile.TemporaryDirectory() as directory:
+        store = FilmVideoStore(Path(directory) / "videos")
+        store.save(
+            FilmVideoBundle(
+                film_id="wikidata:Q135488622",
+                query="The World of Love",
+                fetched_at="2026-08-13T00:00:00+00:00",
+                videos=[unrelated, reaction],
+                providers=["Bilibili"],
+                notice="fixture",
+            )
+        )
+        adapter = EmptyAdapter()
+        refreshed = FilmVideoService(adapter, adapter, store).search(
+            "wikidata:Q135488622", film
+        )  # type: ignore[arg-type]
+
+    assert [video.video_id for video in refreshed.videos] == ["BV1UTodB5EVY"]
+    assert refreshed.videos[0].category == "video_essay"

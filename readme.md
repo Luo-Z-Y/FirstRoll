@@ -403,13 +403,31 @@ The API key remains in the local write-only settings store and is never sent to 
 Bilibili's anonymous JSON search endpoint currently applies HTTP 412 risk control to this
 kind of local client, so FirstRoll does not depend on it. Instead, the local adapter reads the
 public server-rendered search page, extracts bounded `BV` records and embeds them through
-`player.bilibili.com`. It issues focused queries for general film material, complete films,
-criticism/analysis, interviews/post-screening discussions and production material/extracts. The
-adapter reads visible clock durations and tags from the search record; for at most three
-plausible candidates without a duration, it reads the duration from the public video page.
+`player.bilibili.com`. Wikidata's English, Simplified Chinese, Traditional Chinese, Korean and
+Japanese labels are retained as film aliases. The adapter searches exact CJK aliases first—rather
+than beginning with one over-constrained title + year string—then issues complete-film,
+criticism/analysis, interview/post-screening and production-material queries. The adapter reads
+visible clock durations and tags from the search record; for at most three plausible candidates
+without a duration, it reads the duration from the public video page.
 Gzip responses are decompressed before parsing. Short or ambiguous titles must also match the
 release year plus film context, or the director; this prevents a title such as *Memoria* from
 selecting unrelated games and music.
+
+An exact multilingual title plus an explicit complete-film marker—such as `完整版`, `完整无删`,
+`无删减`, `未删减`, `全片` or `正片`—may trigger bounded detail validation even when the year in
+the upload title differs from Wikidata's canonical premiere year. This accommodates later
+distribution labels without accepting a merely similar title: the localised title must still be
+one of the film's attributed identity labels, the detail page must remain on Bilibili and the
+result must pass duration and content-type exclusions. For example, *The World of Love* (2025)
+retains the Simplified-Chinese label `世界的主人`; an exact search can therefore admit
+`BV1iHZcBgEzm`, whose upload title says 2026 and “完整无删”, after confirming its 10,294-second
+duration.
+
+The final catalogue boundary revalidates both fresh and persisted Full film cards. A long result
+must still contain a strong attributed film-title match; a year plus generic film metadata is not
+enough. Reaction markers override duration, so a two-hour reaction remains a video essay rather
+than a Full film. This removes stale false positives when matching rules improve without discarding
+legitimate previously discovered resources.
 
 Every accepted result receives exactly one local content type: `full_film`, `interview`,
 `video_essay`, `lecture`, `trailer`, `scene_extract`, `behind_the_scenes` or `other`. Explicit

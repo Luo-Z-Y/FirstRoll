@@ -1,5 +1,27 @@
 # FirstRoll Project Progress
 
+### 13 August 2026 — Exact-title Bilibili full-film discovery
+
+Delivered:
+
+1. Retained attributed multilingual Wikidata labels as provider-search aliases.
+2. Reordered Bilibili acquisition to search exact CJK titles before qualified topical queries.
+3. Expanded complete-film markers and allowed an exact alias plus explicit completeness language
+   to trigger bounded detail validation when an upload uses a later distribution year.
+4. Preserved year/director safeguards for weak or ambiguous matches and content-type exclusions
+   for interviews, criticism, trailers, clips, games and music.
+5. Added final revalidation for fresh and persisted Full film cards, rejecting unrelated long
+   results and reclassifying long reactions as video essays.
+
+Acceptance evidence:
+
+- a regression reproduces *The World of Love* (2025), exact alias `世界的主人`, upload year 2026,
+  BV ID `BV1iHZcBgEzm` and the public 10,294-second duration;
+- the supplied result is classified as `full_film` and placed under the Full film tab;
+- a live search returned `BV1iHZcBgEzm` as a 10,294-second Full film;
+- all 64 automated tests pass;
+- scoped Ruff and repository whitespace checks pass.
+
 ### 13 August 2026 — Crew-value display validation
 
 Delivered:
@@ -145,7 +167,7 @@ Status vocabulary:
 **Release stage:** local working prototype
 
 **Primary development URL:** `http://127.0.0.1:8000`
-**Automated verification:** 61 tests passing
+**Automated verification:** 64 tests passing
 
 | Area | Status | Current evidence |
 |---|---|---|
