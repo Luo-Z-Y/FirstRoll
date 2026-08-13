@@ -73,11 +73,7 @@ body {
   min-height: 100vh;
   margin: 0;
   color: var(--ink);
-  background:
-    linear-gradient(var(--grid-line) 1px, transparent 1px),
-    linear-gradient(90deg, var(--grid-line-soft) 1px, transparent 1px),
-    var(--paper);
-  background-size: 28px 28px;
+  background: var(--paper);
   font-family: "DM Sans", "Avenir Next", sans-serif;
   transition: color 180ms ease, background-color 180ms ease;
 }
@@ -356,10 +352,12 @@ html[data-theme="dark"] .theme-icon-moon { opacity: 1; transform: rotate(0) scal
 }
 
 .search-stage {
+  width: min(100%, 1120px);
   display: grid;
   grid-template-columns: minmax(280px, 2fr) minmax(120px, 0.55fr) minmax(220px, 1fr) auto;
+  margin: clamp(52px, 11vh, 116px) auto 0;
   border: 1px solid var(--ink);
-  border-radius: 18px;
+  border-radius: 14px;
   overflow: hidden;
   background: var(--paper-light);
   box-shadow: var(--shadow);
@@ -367,14 +365,14 @@ html[data-theme="dark"] .theme-icon-moon { opacity: 1; transform: rotate(0) scal
 
 .search-field {
   position: relative;
-  min-height: 86px;
-  padding: 17px 21px 12px;
+  min-height: 64px;
+  padding: 11px 16px 8px;
   border-right: 1px solid var(--line);
 }
 
 .search-field label {
   display: block;
-  margin-bottom: 5px;
+  margin-bottom: 3px;
   color: var(--ink-soft);
   font-family: "IBM Plex Mono", monospace;
   font-size: 0.62rem;
@@ -398,15 +396,15 @@ html[data-theme="dark"] .theme-icon-moon { opacity: 1; transform: rotate(0) scal
 }
 
 .search-submit {
-  min-width: 184px;
+  min-width: 160px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 20px;
-  margin: 7px;
+  margin: 5px;
   border: 1px solid rgba(121, 39, 31, 0.34);
-  border-radius: 13px;
-  padding: 0 21px;
+  border-radius: 10px;
+  padding: 0 17px;
   color: #fff7ed;
   background: var(--red);
   box-shadow: 0 1px 1px rgba(255, 255, 255, 0.18) inset, 0 6px 16px rgba(121, 39, 31, 0.2);
@@ -420,12 +418,14 @@ html[data-theme="dark"] .theme-icon-moon { opacity: 1; transform: rotate(0) scal
 .search-submit:disabled { opacity: 0.65; cursor: wait; }
 
 .search-support {
+  width: min(100%, 1120px);
   min-height: 72px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 22px;
-  padding: 15px 3px;
+  margin: 0 auto;
+  padding: 12px 3px;
 }
 
 .recent-searches {
