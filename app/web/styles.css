@@ -703,7 +703,8 @@ html[data-theme="dark"] .theme-icon-moon { opacity: 1; transform: rotate(0) scal
   inset: 7px;
   overflow: auto;
   outline: 0;
-  background: #090a08;
+  background:
+    radial-gradient(ellipse at 50% 52%, #25251f 0%, #0c0d0b 62%, #050605 100%);
   cursor: grab;
   scrollbar-width: none;
   overscroll-behavior: contain;
@@ -713,16 +714,34 @@ html[data-theme="dark"] .theme-icon-moon { opacity: 1; transform: rotate(0) scal
 .closet-viewport:focus-visible { box-shadow: inset 0 0 0 2px #d46753; }
 .closet-viewport.is-dragging { cursor: grabbing; user-select: none; }
 
-.closet-world {
+.closet-scene {
   position: relative;
   width: 1760px;
   height: 760px;
   overflow: hidden;
-  perspective: 1150px;
+  perspective: 1040px;
+  perspective-origin: 50% 52%;
   background:
     radial-gradient(circle at 50% 42%, rgba(255,244,210,0.17), transparent 35%),
     linear-gradient(#2c2c27, #11120f 69%);
 }
+
+.closet-world {
+  --camera-z: 0px;
+  --camera-yaw: 0deg;
+  position: absolute;
+  inset: 0;
+  width: 1760px;
+  height: 760px;
+  overflow: visible;
+  transform: translateZ(var(--camera-z)) rotateY(var(--camera-yaw));
+  transform-origin: 50% 52%;
+  transform-style: preserve-3d;
+  transition: transform 340ms cubic-bezier(.22, 1, .36, 1);
+  background: transparent;
+  pointer-events: none;
+}
+.closet-viewport.is-dragging .closet-world { transition: none; }
 .closet-world::after {
   position: absolute;
   z-index: 12;
@@ -730,6 +749,38 @@ html[data-theme="dark"] .theme-icon-moon { opacity: 1; transform: rotate(0) scal
   background: radial-gradient(ellipse at center, transparent 38%, rgba(0,0,0,0.5) 100%);
   content: "";
   pointer-events: none;
+  transform: translateZ(310px);
+}
+
+.closet-doorframe {
+  position: absolute;
+  z-index: 18;
+  inset: 9px 24px 6px;
+  transform: translateZ(285px);
+  transform-style: preserve-3d;
+  pointer-events: none;
+}
+.closet-doorframe i,
+.closet-doorframe b {
+  position: absolute;
+  display: block;
+  background:
+    linear-gradient(90deg, #11120f, #4b473e 44%, #1a1b17 72%, #080908);
+  box-shadow: 0 0 0 1px #666055, 0 12px 30px rgba(0,0,0,0.62);
+}
+.closet-doorframe i { top: 0; bottom: 0; width: 34px; }
+.closet-doorframe i:first-child { left: 0; }
+.closet-doorframe i:nth-child(2) { right: 0; transform: scaleX(-1); }
+.closet-doorframe b { top: 0; right: 0; left: 0; height: 31px; }
+.closet-doorframe::after {
+  position: absolute;
+  right: 28px;
+  bottom: 0;
+  left: 28px;
+  height: 18px;
+  background: linear-gradient(#5b554b, #171815 70%);
+  box-shadow: 0 -1px #8a8172, 0 -8px 18px rgba(0,0,0,0.42);
+  content: "";
 }
 
 .closet-ceiling {
@@ -744,6 +795,8 @@ html[data-theme="dark"] .theme-icon-moon { opacity: 1; transform: rotate(0) scal
     repeating-linear-gradient(90deg, transparent 0 218px, rgba(15,16,14,0.78) 220px 228px),
     linear-gradient(180deg, #ddd9ce, #8d8b83 75%, #34352f);
   clip-path: polygon(0 0, 100% 0, 82% 100%, 18% 100%);
+  transform: translateZ(-155px) rotateX(-13deg);
+  transform-origin: top center;
 }
 .closet-ceiling i {
   position: absolute;
@@ -771,11 +824,13 @@ html[data-theme="dark"] .theme-icon-moon { opacity: 1; transform: rotate(0) scal
     linear-gradient(90deg, rgba(255,255,255,0.05), transparent 12%, transparent 88%, rgba(0,0,0,0.28)),
     #292924;
   box-shadow: inset 0 0 0 1px #625d52, inset 18px 0 22px rgba(0,0,0,0.18), inset -18px 0 22px rgba(0,0,0,0.18), 0 18px 35px rgba(0,0,0,0.58);
+  backface-visibility: hidden;
   transform-style: preserve-3d;
+  pointer-events: auto;
 }
-.closet-wall-left { left: 42px; width: 540px; transform: rotateY(20deg); transform-origin: right center; }
-.closet-wall-back { left: 500px; width: 760px; transform: translateZ(-30px); }
-.closet-wall-right { left: 1178px; width: 540px; transform: rotateY(-20deg); transform-origin: left center; }
+.closet-wall-left { left: 68px; width: 650px; transform: translateZ(-80px) rotateY(58deg); transform-origin: right center; }
+.closet-wall-back { left: 500px; width: 760px; transform: translateZ(-330px); }
+.closet-wall-right { right: 68px; left: auto; width: 650px; transform: translateZ(-80px) rotateY(-58deg); transform-origin: left center; }
 .closet-wall::before,
 .closet-wall::after { position: absolute; z-index: 7; top: 37px; bottom: 0; width: 8px; background: linear-gradient(90deg, #10110e, #4a463d 45%, #161713); box-shadow: 2px 0 5px rgba(0,0,0,0.5); content: ""; pointer-events: none; }
 .closet-wall::before { left: 0; }
@@ -874,18 +929,20 @@ html[data-theme="dark"] .theme-icon-moon { opacity: 1; transform: rotate(0) scal
   right: 0;
   bottom: 0;
   left: 0;
-  height: 175px;
+  height: 290px;
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  padding-bottom: 22px;
+  padding-bottom: 54px;
   color: rgba(238,231,218,0.27);
   background:
     repeating-linear-gradient(93deg, transparent 0 115px, rgba(255,255,255,0.025) 116px, transparent 118px),
     linear-gradient(180deg, #373630, #171815);
-  clip-path: polygon(17% 0, 83% 0, 100% 100%, 0 100%);
+  clip-path: polygon(23% 0, 77% 0, 100% 100%, 0 100%);
   font: 0.48rem "IBM Plex Mono", monospace;
   letter-spacing: 0.15em;
+  transform: translateZ(35px) rotateX(58deg);
+  transform-origin: bottom center;
 }
 
 .film-spine {
@@ -1007,8 +1064,13 @@ html[data-theme="dark"] .theme-icon-moon { opacity: 1; transform: rotate(0) scal
 .closet-radar i { position: absolute; top: 7px; bottom: 7px; left: 50%; border-left: 1px solid rgba(238,231,218,0.18); }
 .closet-radar span { position: absolute; width: 6px; height: 6px; border-radius: 50%; background: #d46753; box-shadow: 0 0 8px #d46753; transform: translate(-50%, -50%); transition: left 80ms linear, top 80ms linear; }
 .closet-coordinate { padding: 5px 7px; color: rgba(238,231,218,0.72); background: rgba(8,9,7,0.82); font: 0.43rem "IBM Plex Mono", monospace; letter-spacing: 0.08em; }
-.closet-hud button { margin-left: auto; border: 1px solid rgba(238,231,218,0.34); padding: 7px 9px; color: #eee7da; background: rgba(8,9,7,0.82); font: 0.45rem "IBM Plex Mono", monospace; text-transform: uppercase; cursor: pointer; pointer-events: auto; }
+.closet-hud button { border: 1px solid rgba(238,231,218,0.34); padding: 7px 9px; color: #eee7da; background: rgba(8,9,7,0.82); font: 0.45rem "IBM Plex Mono", monospace; text-transform: uppercase; cursor: pointer; pointer-events: auto; }
 .closet-hud button:hover { border-color: #d46753; color: #f3a18e; }
+.closet-walk-controls { margin-left: auto; display: grid; grid-template-columns: auto 58px auto; align-items: center; border: 1px solid rgba(238,231,218,0.22); background: rgba(8,9,7,0.82); pointer-events: auto; }
+.closet-walk-controls button { border: 0; background: transparent; }
+.closet-depth-track { position: relative; height: 3px; overflow: hidden; background: rgba(238,231,218,0.16); }
+.closet-depth-track i { position: absolute; top: 0; bottom: 0; left: 0; width: 50%; background: #d46753; box-shadow: 0 0 8px rgba(212,103,83,0.7); transition: width 180ms ease; }
+.closet-hud > [data-centre-closet] { margin-left: 0; }
 
 @keyframes criterion-pull {
   from { opacity: 0; transform: translateY(82px) scale(0.95); }

@@ -1,5 +1,29 @@
 # FirstRoll Project Progress
 
+### 13 August 2026 — Walkable CSS 3D closet
+
+Delivered:
+
+1. Converted the archive from a panoramic composition into a layered CSS 3D scene with a recessed
+   back wall, sharply angled side walls, floor and ceiling planes, and a foreground doorway.
+2. Added a bounded camera depth that can move from the entrance to close shelf-reading distance.
+3. Mapped vertical pointer dragging, mouse-wheel movement, W/S and Up/Down keys, and visible Walk
+   in/Walk out controls to the same camera model; horizontal dragging continues to turn between
+   aisles.
+4. Added a live depth gauge and entrance/mid-room/close-shelf position labels, with Reset view
+   returning both direction and distance to centre.
+5. Preserved transformed case hit targets so a film remains selectable at close range, while drag
+   completion still suppresses accidental selection.
+
+Acceptance evidence:
+
+- live browser checks moved the camera from `-360` at the entrance to `360` close to the shelves;
+- vertical pointer drag reached depth `396`, mouse-wheel movement returned towards the entrance,
+  and the W key advanced the same camera by one bounded step;
+- a real pointer click selected *Ashes of Time* while the case was on a transformed 3D shelf;
+- compact layout retains visible walk controls and no page-level horizontal overflow;
+- 73 automated tests, JavaScript syntax and repository whitespace checks pass.
+
 ### 13 August 2026 — Draggable walk-in film closet
 
 Delivered:
@@ -251,7 +275,7 @@ Status vocabulary:
 
 | Area | Status | Current evidence |
 |---|---|---|
-| Film discovery | Complete | Wikidata identity search, attributed dossier enrichment and a draggable three-wall related-film closet |
+| Film discovery | Complete | Wikidata identity search, attributed dossier enrichment and a walkable CSS 3D related-film closet |
 | Public video resources | Complete | Persistent cumulative catalogue; typed tabs; bounded uploader-description and public YouTube-caption extraction |
 | Product navigation | Complete | Discover and Analyse modes; Study consolidated into Discover |
 | Theme support | Complete | System-aware light/dark themes with a locally persisted accessible toggle |
