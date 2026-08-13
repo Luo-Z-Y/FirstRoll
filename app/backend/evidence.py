@@ -41,6 +41,7 @@ class EvidencePacket(BaseModel):
     focus: str
     film_record: dict[str, Any]
     theory_sources: list[EvidenceItem]
+    attributed_sources: list[EvidenceItem] = Field(default_factory=list)
     critical_claims: list[CriticalClaim] = Field(default_factory=list)
     retrieval: dict[str, Any] = Field(default_factory=dict)
     boundaries: list[str] = Field(default_factory=list)
@@ -52,6 +53,8 @@ class EvidencePacket(BaseModel):
         retrieval: dict[str, Any],
         focus: str | None,
         critical_claims: list[CriticalClaim] | None = None,
+        reviews: list[Any] | None = None,
+        videos: list[Any] | None = None,
     ) -> "EvidencePacket":
         credits = film.get("credits") or {}
         record = {
@@ -87,10 +90,12 @@ class EvidencePacket(BaseModel):
                     ],
                 )
             )
+        attributed = cls._attributed_sources(reviews or [], videos or [])
         return cls(
             focus=(focus or "Create a rigorous formal study dossier for this film.").strip(),
             film_record=record,
             theory_sources=items,
+            attributed_sources=attributed,
             critical_claims=critical_claims or [],
             retrieval={
                 "method": retrieval.get("method", "fts"),
@@ -101,7 +106,94 @@ class EvidencePacket(BaseModel):
             boundaries=[
                 "Theory sources explain concepts; they do not describe this film.",
                 "Criticism reports an attributed interpretation; it is not direct observation.",
+                "Video descriptions are uploader-authored context, not a transcript.",
+                "Video captions are attributed speech, but speaker identity and accuracy may be unverified.",
                 "Without a supplied clip, film-form claims remain viewing hypotheses.",
                 "Creator intention requires an attributed creator statement.",
             ],
         )
+
+    @staticmethod
+    def _attributed_sources(reviews: list[Any], videos: list[Any]) -> list[EvidenceItem]:
+        """Build a bounded, inspectable text layer from already retrieved public sources."""
+        items: list[EvidenceItem] = []
+        total_characters = 0
+        maximum_total = 36_000
+
+        def append(item: EvidenceItem) -> None:
+            nonlocal total_characters
+            remaining = maximum_total - total_characters
+            if remaining < 120:
+                return
+            content = item.content[: min(6_000, remaining)].strip()
+            if len(content) < 40:
+                return
+            items.append(item.model_copy(update={"content": content}))
+            total_characters += len(content)
+
+        for review in reviews:
+            summary = str(getattr(review, "summary", "") or "").strip()
+            provider = str(getattr(review, "provider", "Review") or "Review")
+            author = str(getattr(review, "author", "") or "").strip()
+            append(
+                EvidenceItem(
+                    evidence_id=f"E{len(items) + 1}",
+                    evidence_type="critic_reported",
+                    title=str(getattr(review, "title", "") or "Attributed review"),
+                    content=summary,
+                    locator=" · ".join(part for part in (provider, author) if part),
+                    source_url=str(getattr(review, "url", "") or "") or None,
+                    language=str(getattr(review, "language", "und") or "und"),
+                    permitted_claims=[
+                        "report the attributed author's interpretation",
+                        "identify film details described by this source as claims to verify",
+                    ],
+                )
+            )
+
+        for video in videos:
+            category = str(getattr(video, "category", "other") or "other")
+            if category not in {"interview", "video_essay", "lecture", "behind_the_scenes"}:
+                continue
+            platform = str(getattr(video, "platform", "Video") or "Video")
+            creator = str(getattr(video, "creator", "") or "").strip()
+            url = str(getattr(video, "url", "") or "") or None
+            tracks = list(getattr(video, "text_tracks", []) or [])
+            description = str(getattr(video, "description", "") or "").strip()
+            if description:
+                append(
+                    EvidenceItem(
+                        evidence_id=f"E{len(items) + 1}",
+                        evidence_type="critic_reported",
+                        title=str(getattr(video, "title", "") or "Video description"),
+                        content=description,
+                        locator=f"{platform} · uploader description"
+                        + (f" · {creator}" if creator else ""),
+                        source_url=url,
+                        language="und",
+                        permitted_claims=[
+                            "describe how the uploader presents the resource",
+                            "suggest topics to verify in the video",
+                        ],
+                    )
+                )
+            for track in tracks[:2]:
+                text = str(getattr(track, "text", "") or "").strip()
+                kind = str(getattr(track, "kind", "captions") or "captions")
+                language = str(getattr(track, "language", "und") or "und")
+                append(
+                    EvidenceItem(
+                        evidence_id=f"E{len(items) + 1}",
+                        evidence_type="creator_stated" if getattr(track, "speaker_verified", False) else "critic_reported",
+                        title=str(getattr(video, "title", "") or "Video captions"),
+                        content=text,
+                        locator=f"{platform} · {kind}" + (f" · {creator}" if creator else ""),
+                        source_url=url,
+                        language=language,
+                        permitted_claims=[
+                            "report what the attributed video text says",
+                            "treat caption wording as potentially imperfect",
+                        ],
+                    )
+                )
+        return items

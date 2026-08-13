@@ -410,7 +410,15 @@ def generate_film_study(film_id: str, study_request: FilmStudyRequest) -> dict:
         detail = discovery_service.detail(film_id)
         film = detail["film"]
         critical_bundles = criticism_store.load_all(film_id)
-        claims = [claim for bundle in critical_bundles for claim in bundle.claims]
+        claims = [
+            claim.model_copy(update={"claim_id": f"C{index}"})
+            for index, claim in enumerate(
+                (claim for bundle in critical_bundles for claim in bundle.claims),
+                start=1,
+            )
+        ]
+        reviews = [review for bundle in critical_bundles for review in bundle.reviews]
+        video_bundle = video_service.enrich_cached(film_id)
         reading = library_index.retrieve_for_film(
             film,
             focus=study_request.question,
@@ -422,6 +430,8 @@ def generate_film_study(film_id: str, study_request: FilmStudyRequest) -> dict:
             reading,
             study_request.question,
             claims,
+            reviews=reviews,
+            videos=video_bundle.videos if video_bundle else [],
         )
         return {
             "film_id": film_id,

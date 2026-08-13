@@ -6,6 +6,8 @@ from typing import Any
 import pytest
 
 from app.backend.settings import LocalSettingsStore
+from app.backend.criticism import ReviewSource
+from app.backend.evidence import EvidencePacket
 from app.backend.study_service import DeepSeekStudyService, StudyGenerationError
 
 
@@ -105,6 +107,47 @@ def test_grounded_prompt_separates_frameworks_from_film_evidence() -> None:
     assert "Film Form Handbook" in messages[1]["content"]
     assert result["sections"][0]["source_ids"] == ["S1"]
     assert result["sources"][0]["page"] == 42
+
+
+def test_grounded_prompt_receives_raw_attributed_text_and_validates_its_citation() -> None:
+    captured: dict[str, Any] = {}
+    response = valid_response()
+    response["sections"][0]["attributed_source_ids"] = ["E1"]
+    review = ReviewSource(
+        source_id="R1",
+        provider="Festival publication",
+        review_id="review-1",
+        title="Interview with the director",
+        summary="The director says rehearsal changed the performers' movement through the room.",
+        author="Festival editor",
+        url="https://example.org/interview",
+        language="en",
+    )
+    packet = EvidencePacket.from_retrieval(
+        film_record(),
+        {"passages": local_passages(), "method": "hybrid_rrf"},
+        "Study blocking",
+        reviews=[review],
+    )
+
+    def transport(url: str, payload: dict[str, Any] | None, key: str) -> dict[str, Any]:
+        captured["payload"] = payload
+        return {"model": "deepseek-v4-pro", "choices": [{"message": {"content": json.dumps(response)}}]}
+
+    with tempfile.TemporaryDirectory() as directory:
+        store = LocalSettingsStore(Path(directory) / "settings.json")
+        store.set("deepseek_api_key", "private-test-key")
+        result = DeepSeekStudyService(store, transport=transport).generate(
+            film_record(),
+            local_passages(),
+            evidence_packet=packet,
+        )
+
+    prompt = captured["payload"]["messages"][1]["content"]
+    assert "ATTRIBUTED SOURCE TEXT" in prompt
+    assert "rehearsal changed" in prompt
+    assert result["sections"][0]["attributed_source_ids"] == ["E1"]
+    assert result["attributed_sources"][0]["source_url"] == "https://example.org/interview"
 
 
 def test_invalid_model_citations_are_rejected() -> None:

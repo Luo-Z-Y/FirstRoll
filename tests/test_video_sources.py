@@ -2,6 +2,7 @@ import json
 import os
 import tempfile
 from pathlib import Path
+from typing import Any
 
 from app.backend.settings import LocalSettingsStore
 from app.backend.video_sources import (
@@ -9,6 +10,7 @@ from app.backend.video_sources import (
     FilmVideo,
     FilmVideoService,
     FilmVideoStore,
+    PublicVideoTextExtractor,
     YouTubeVideoAdapter,
     _video_category,
 )
@@ -118,6 +120,54 @@ def test_video_service_survives_one_provider_failure() -> None:
 
         assert bundle.providers == ["Bilibili"]
         assert len(bundle.videos) == 1
+
+
+def test_public_youtube_captions_are_extracted_and_normalised() -> None:
+    page = (
+        '<script>{"captions":{"playerCaptionsTracklistRenderer":'
+        '{"captionTracks":[{"baseUrl":"https://www.youtube.com/api/timedtext?v=abcdefghijk&lang=en",'
+        '"languageCode":"en","name":{"simpleText":"English"}}]}}}</script>'
+    )
+    caption_payload = {
+        "events": [
+            {"segs": [{"utf8": "The director discusses "}, {"utf8": "rehearsal."}]},
+            {"segs": [{"utf8": "The director discusses rehearsal."}]},
+            {"segs": [{"utf8": "Blocking changed during production."}]},
+        ]
+    }
+    requested: list[str] = []
+    pages: list[str] = []
+
+    def captions(url: str) -> dict[str, Any]:
+        requested.append(url)
+        return caption_payload
+
+    extractor = PublicVideoTextExtractor(
+        page_transport=lambda url: pages.append(url) or page,
+        caption_transport=captions,
+    )
+    video = FilmVideo(
+        platform="YouTube",
+        video_id="abcdefghijk",
+        title="Example director interview",
+        url="https://www.youtube.com/watch?v=abcdefghijk",
+        embed_url="https://www.youtube-nocookie.com/embed/abcdefghijk",
+        category="interview",
+        relevance="title_and_director",
+    )
+
+    enriched = extractor.enrich([video])
+
+    assert len(enriched[0].text_tracks) == 1
+    assert enriched[0].text_tracks[0].kind == "captions"
+    assert enriched[0].text_tracks[0].text == (
+        "The director discusses rehearsal.\nBlocking changed during production."
+    )
+    assert "fmt=json3" in requested[0]
+    assert "timedtext" not in enriched[0].text_tracks[0].source_url
+    assert enriched[0].text_checked_at
+    assert extractor.enrich(enriched) == enriched
+    assert len(pages) == 1
 
 
 def test_duration_classifies_a_minimally_labelled_complete_film() -> None:

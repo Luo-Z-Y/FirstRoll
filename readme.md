@@ -56,7 +56,8 @@ The original GPL-3.0 licence and contributor attribution remain applicable. See
 ### Deep Study
 
 - Configure a DeepSeek key from the local Settings page.
-- Build a typed evidence packet from the film record, retrieved theory and criticism.
+- Build a typed evidence packet from the film record, retrieved theory, full cached review text
+  and attributed text attached to relevant videos.
 - Generate four to six sections with separate fields for:
   - critic reports;
   - theory explanations;
@@ -64,7 +65,7 @@ The original GPL-3.0 licence and contributor attribution remain applicable. See
   - proposed formal mechanisms;
   - alternative readings;
   - verification tasks and confidence.
-- Validate every theory and critic citation against supplied evidence IDs.
+- Validate every theory, critic-claim and attributed-text citation against supplied evidence IDs.
 - Run a deterministic specificity and evidence-quality gate.
 - Permit at most one bounded repair request.
 - Label unresolved work as **insufficient evidence** rather than silently accepting it.
@@ -100,7 +101,7 @@ flowchart TB
 
     subgraph INPUTS["INPUTS"]
         direction LR
-        RESEARCH["Public and authorised sources<br/><b>Wikidata · Wikipedia · Crossref<br/>Douban · Letterboxd · Guardian</b>"]
+        RESEARCH["Public and authorised sources<br/><b>Wikidata · Wikipedia · Crossref<br/>Douban · Letterboxd · Guardian · video text</b>"]
         LIBRARY[("Private study library<br/><b>PDF · EPUB · Markdown · text</b>")]
         VIDEO[("Private film clip<br/><b>Browser upload</b>")]
     end
@@ -114,7 +115,7 @@ flowchart TB
 
     subgraph L3["3 · LOCAL EVIDENCE AND STORAGE — PYDANTIC · SQLITE · JSON"]
         direction LR
-        EVIDENCE[("Provenance-preserving evidence<br/><b>film record · critic claims · page-cited theory</b>")]
+        EVIDENCE[("Provenance-preserving evidence<br/><b>film record · review text · captions · page-cited theory</b>")]
         MEASURE[("Measured clip evidence<br/><b>timecodes · scene and shot metrics</b>")]
     end
 
@@ -423,9 +424,23 @@ non-destructive while still allowing repeated searches to discover additional ma
 dossier loads this private catalogue immediately after a browser refresh.
 
 Both adapters enforce HTTPS host allowlists, 20-second timeouts, response-size limits, safe
-embed URL patterns and a maximum of 12 new results per platform per search. The interface preserves the
-platform and canonical source link. Third-party video claims remain unverified until a later
-transcript and evidence-extraction layer is implemented.
+embed URL patterns and a maximum of 12 new results per platform per search. The interface
+preserves the platform and canonical source link.
+
+For study-relevant YouTube categories—interviews, video essays, lectures and behind-the-scenes
+material—FirstRoll also performs a bounded, best-effort text pass. The adapter reads the public
+watch page, locates its balanced `captionTracks` JSON array, prefers manual English tracks over
+automatic or non-English alternatives, requests the selected timed-text track as `json3`, joins
+and de-duplicates caption events, and retains at most 12,000 characters per track. Caption
+discovery is optional: an absent, blocked or malformed track leaves the video usable and does not
+fail discovery. Expiring signed caption URLs are never stored; the canonical video URL is kept as
+provenance. Bilibili and captionless YouTube resources still contribute their retrieved uploader
+descriptions.
+
+Only interviews, video essays, lectures and behind-the-scenes resources enter this textual layer;
+trailers, extracts and complete films are excluded to reduce irrelevant prompt material. A video
+description remains uploader-authored context, while captions remain potentially inaccurate
+attributed speech. Neither is automatically classified as a verified creator statement.
 
 ### Raw evidence, structuring and cache
 
@@ -440,6 +455,22 @@ subsequent `CriticalClaim` must point back to one of those source IDs. Pydantic 
 fields and constrains lengths, evidence status, confidence labels and lens tags. FirstRoll
 therefore cannot accept a model-produced claim whose cited source was not in the retrieved
 bundle.
+
+### Attributed text in Deep Study
+
+Deep Study now receives two complementary criticism layers. Structured `CriticalClaim` objects
+provide compact, schema-checked interpretations, while the underlying cached `ReviewSource.summary`
+text also enters the packet so the model can recover nuance that a prior structuring pass omitted.
+Relevant video descriptions and available caption tracks enter the same layer as separately
+labelled evidence items.
+
+The packet assigns these items `E1`, `E2` and so on, retains title, locator, URL, language and
+permitted uses, caps any one item at 6,000 characters and caps the complete attributed-text layer
+at 36,000 characters. Deep Study must cite used items through `attributed_source_ids`; local
+validation rejects unknown IDs. The interface shows those citations in the essay and exposes the
+actual source text and canonical link beneath **Evidence used**. Text is treated as untrusted data,
+not instructions. Uploader descriptions cannot substantiate video speech, automatic captions are
+explicitly fallible, and creator intention still requires verified speaker attribution.
 
 Refreshes preserve previously validated claims when the provider returns the same source
 IDs. Missing scenes, techniques, observations or alternative readings remain `null` or
@@ -681,10 +712,10 @@ fallback behaviour; these are tracked separately from the new FirstRoll modules.
 | Film discovery and dossier | Complete | Key-free identity, context and visible research routes |
 | Private RAG foundation | Complete | Token chunking, FTS5, local vectors, hybrid retrieval and citations |
 | Attributed criticism | Complete | Crossref, Douban, Letterboxd and Guardian retrieval with structured critic claims |
-| Evidence-grounded Deep Study | Complete | Typed evidence, Pydantic output, quality gate and layered UI |
+| Evidence-grounded Deep Study | Complete | Typed theory, criticism, review and video-text evidence; Pydantic output, citation validation and quality gate |
 | Clip analysis web migration | Complete | Scene, shot, colour, object and export workflow |
 | Clip-to-study evidence bridge | Next | Feed measured scenes, shots and timecodes into synthesis |
-| Creator primary-source layer | Planned | Search, store and cite interviews or production records |
+| Creator primary-source layer | Partial | Discovered interview descriptions and public YouTube captions are stored and cited; verified speaker attribution and dedicated interview search remain planned |
 | Persistent film projects | Planned | Retain film records, clips, analyses, notes and studies |
 | Evaluation suite | Planned | Retrieval relevance, citation accuracy, abstention, latency and cost |
 
@@ -694,7 +725,8 @@ and acceptance evidence. Update that file whenever a milestone changes state.
 ## Known Limitations
 
 - Deep Study does not yet observe the film itself; it produces viewing hypotheses.
-- Creator interviews and production records are not yet automatically collected.
+- FirstRoll does not yet verify video speakers automatically; captions and descriptions therefore
+  cannot alone establish creator intention.
 - Crossref may contain no sufficiently matched abstract for a new or rarely studied film.
 - Douban MCP is unofficial and may return sparse summaries or stop working.
 - Letterboxd public-web retrieval is unofficial and may break when markup or access controls

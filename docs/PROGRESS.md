@@ -1,5 +1,27 @@
 # FirstRoll Project Progress
 
+### 13 August 2026 — Attributed review and video text in Deep Study
+
+Delivered:
+
+1. Added bounded raw review bodies from every cached criticism provider to the typed Deep Study
+   evidence packet alongside structured critical claims.
+2. Added uploader descriptions from relevant interviews, video essays, lectures and production
+   material while excluding complete films, trailers and scene extracts from prompt text.
+3. Added best-effort public YouTube caption discovery, manual/automatic track labelling, event
+   normalisation and private catalogue persistence.
+4. Added `E*` attributed-text citations, strict citation validation and expandable source text
+   with canonical links in the generated-study interface.
+5. Preserved evidence boundaries between criticism, uploader context, fallible captions, verified
+   creator statements and direct film observation.
+
+Acceptance evidence:
+
+- focused tests cover review text, video descriptions, caption parsing, prompt inclusion and
+  attributed-source citation validation;
+- all 60 automated tests pass;
+- scoped Ruff, JavaScript syntax and repository whitespace checks pass.
+
 ### 13 August 2026 — Multi-source crew reconciliation
 
 Delivered:
@@ -106,12 +128,12 @@ Status vocabulary:
 **Release stage:** local working prototype
 
 **Primary development URL:** `http://127.0.0.1:8000`
-**Automated verification:** 57 tests passing
+**Automated verification:** 60 tests passing
 
 | Area | Status | Current evidence |
 |---|---|---|
 | Film discovery | Complete | Wikidata identity search plus attributed Wikipedia overview, poster and reconciled crew enrichment |
-| Public video resources | Complete | Persistent cumulative catalogue; focused Bilibili and optional YouTube retrieval; typed tabs with full films surfaced first |
+| Public video resources | Complete | Persistent cumulative catalogue; typed tabs; bounded uploader-description and public YouTube-caption extraction |
 | Product navigation | Complete | Discover and Analyse modes; Study consolidated into Discover |
 | Local settings | Complete | Write-only connector credentials plus local add, remove and index controls for the private library |
 | Private library catalogue | Complete | Seven existing film-study PDFs retained; managed uploads and non-destructive removal; paths and content withheld from public APIs |
@@ -125,13 +147,13 @@ Status vocabulary:
 | Guardian adapter | Complete | Public content-index matching and attributed article-body retrieval |
 | Criticism structuring | Complete | Pydantic critic claims with missing-field preservation and evidence labels |
 | Criticism source controls | Complete | Tabbed provider switcher; first selection fetches and later selections reuse the cached bundle |
-| Evidence packet | Complete | Film record, theory and critic claims separated by explicit permitted uses |
+| Evidence packet | Complete | Film record, theory, critic claims, raw review text and attributed video text separated by explicit permitted uses |
 | Deep Study schema | Complete | Critic, theory, hypothesis, mechanism, alternative, verification and confidence fields |
 | Quality control | Complete | Deterministic gate, citation checks and at most one bounded repair call |
-| Evidence-layered UI | Complete | Quality status, layered sections, retrieval rationale and expandable excerpts |
+| Evidence-layered UI | Complete | Quality status, validated `S*`/`C*`/`E*` citations, retrieval rationale and expandable excerpts |
 | Clip analysis | Complete | Scene/shot metrics, shot scale, colour, objects and JSON/CSV export |
 | Clip evidence in Deep Study | Planned | Current study generation does not consume measured clip observations or timecodes |
-| Creator primary sources | Planned | No automated interview or production-record ingestion yet |
+| Creator primary sources | Partial | Relevant video descriptions and available public captions enter Deep Study; verified speaker attribution remains planned |
 | Persistent projects | Planned | Film, clip, study and note sessions are not retained as reusable projects |
 
 ## Latest Completed Milestone

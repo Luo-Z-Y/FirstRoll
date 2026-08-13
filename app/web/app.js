@@ -857,7 +857,9 @@ function deepStudyMarkup(study) {
   const sections = Array.isArray(study.sections) ? study.sections : [];
   const sources = Array.isArray(study.sources) ? study.sources : [];
   const criticalClaims = Array.isArray(study.critical_claims) ? study.critical_claims : [];
+  const attributedSources = Array.isArray(study.attributed_sources) ? study.attributed_sources : [];
   const sourceMap = Object.fromEntries(sources.map((source) => [source.id, source]));
+  const attributedSourceMap = Object.fromEntries(attributedSources.map((source) => [source.evidence_id, source]));
   const viewingTasks = Array.isArray(study.next_viewing) ? study.next_viewing : [];
   const quality = study.quality || {};
   const retrieval = study.evidence_packet?.retrieval || {};
@@ -872,16 +874,22 @@ function deepStudyMarkup(study) {
       <header><span>${escapeHtml(study.model || "DeepSeek")} · evidence-grounded essay</span><h4>${escapeHtml(study.title || "Film study")}</h4></header>
       <p class="study-essay-lede">${escapeHtml(study.central_argument || "No central argument was returned.")}</p>
       <div class="study-essay-body">
-        ${sections.map((section, index) => studyEssayParagraphMarkup(section, sourceMap, quality.sections?.[index])).join("")}
+        ${sections.map((section, index) => studyEssayParagraphMarkup(section, sourceMap, attributedSourceMap, quality.sections?.[index])).join("")}
       </div>
       <p class="study-essay-boundary"><strong>Evidence boundary.</strong> ${escapeHtml(study.creator_intent_boundary || study.grounding_notice || "Current evidence does not establish creator intention.")}</p>
     </article>
     ${viewingTasks.length ? `<details class="study-viewing-guide"><summary>How to test this reading against the film</summary><ol>${viewingTasks.map((task) => `<li>${escapeHtml(task)}</li>`).join("")}</ol></details>` : ""}
     <details class="study-retrieval"><summary>Why these sources</summary><p>${escapeHtml(String(retrieval.method || "local retrieval").replaceAll("_", " "))} · ${escapeHtml(retrieval.candidate_count || 0)} candidates · ${escapeHtml(retrieval.embedding?.state || "lexical only")}</p>${plan.map((item) => `<span>${escapeHtml(item.origin)} · ${escapeHtml(item.lens)} — ${escapeHtml(item.query)}</span>`).join("")}</details>
-    <div class="study-source-key"><strong>Evidence used</strong>${sources.map((source) => `<details><summary><b>${escapeHtml(source.id)}</b> ${escapeHtml(source.title)} · ${escapeHtml(source.locator || `p. ${source.page || "?"}`)}</summary><p>${escapeHtml(source.excerpt || "")}</p></details>`).join("")}${criticalClaims.map((claim) => `<span><b>${escapeHtml(claim.claim_id)}</b> Attributed critic report · ${escapeHtml(claim.source_id)}</span>`).join("")}</div>`;
+    <div class="study-source-key"><strong>Evidence used</strong>${sources.map((source) => `<details><summary><b>${escapeHtml(source.id)}</b> ${escapeHtml(source.title)} · ${escapeHtml(source.locator || `p. ${source.page || "?"}`)}</summary><p>${escapeHtml(source.excerpt || "")}</p></details>`).join("")}${attributedSources.map(attributedEvidenceMarkup).join("")}${criticalClaims.map((claim) => `<span><b>${escapeHtml(claim.claim_id)}</b> Attributed critic report · ${escapeHtml(claim.source_id)}</span>`).join("")}</div>`;
 }
 
-function studyEssayParagraphMarkup(section, sourceMap, quality) {
+function attributedEvidenceMarkup(source) {
+  const sourceUrl = safeHttpUrl(source.source_url);
+  const link = sourceUrl ? ` <a href="${escapeHtml(sourceUrl)}" target="_blank" rel="noopener noreferrer">Source ↗</a>` : "";
+  return `<details><summary><b>${escapeHtml(source.evidence_id || "E?")}</b> ${escapeHtml(source.title || "Attributed source")} · ${escapeHtml(source.locator || source.evidence_type || "text")}</summary><p>${escapeHtml(source.content || "")}</p>${link}</details>`;
+}
+
+function studyEssayParagraphMarkup(section, sourceMap, attributedSourceMap, quality) {
   const ids = Array.isArray(section.source_ids) ? section.source_ids : [];
   const citations = ids.map((id) => {
     const source = sourceMap[id];
@@ -890,6 +898,8 @@ function studyEssayParagraphMarkup(section, sourceMap, quality) {
   }).join("");
   const criticIds = Array.isArray(section.critic_claim_ids) ? section.critic_claim_ids : [];
   const criticCitations = criticIds.map((id) => `<span class="critic-citation">${escapeHtml(id)} · critic</span>`).join("");
+  const attributedIds = Array.isArray(section.attributed_source_ids) ? section.attributed_source_ids : [];
+  const attributedCitations = attributedIds.map((id) => `<span class="critic-citation" title="${escapeHtml(attributedSourceMap[id]?.title || "Attributed text")}">${escapeHtml(id)} · text</span>`).join("");
   const qualityIssues = Array.isArray(quality?.issues) ? quality.issues : [];
   const prose = [
     section.critic_reports,
@@ -898,7 +908,7 @@ function studyEssayParagraphMarkup(section, sourceMap, quality) {
     section.mechanism,
     section.alternative_reading,
   ].filter(Boolean).join(" ");
-  return `<div class="study-essay-paragraph"><p>${escapeHtml(prose || "No study paragraph was returned.")}<span class="essay-citations">${citations}${criticCitations}</span></p>${qualityIssues.length ? `<small>Editorial note: ${qualityIssues.map((item) => item.replaceAll("_", " ")).join(" · ")}</small>` : ""}</div>`;
+  return `<div class="study-essay-paragraph"><p>${escapeHtml(prose || "No study paragraph was returned.")}<span class="essay-citations">${citations}${criticCitations}${attributedCitations}</span></p>${qualityIssues.length ? `<small>Editorial note: ${qualityIssues.map((item) => item.replaceAll("_", " ")).join(" · ")}</small>` : ""}</div>`;
 }
 
 async function readApiError(response) {

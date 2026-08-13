@@ -39,6 +39,7 @@ class StudySection(BaseModel):
     verify: str = Field(min_length=20, max_length=600)
     source_ids: list[str] = Field(min_length=1, max_length=6)
     critic_claim_ids: list[str] = Field(default_factory=list, max_length=6)
+    attributed_source_ids: list[str] = Field(default_factory=list, max_length=6)
     confidence: Literal["low", "medium", "high"]
 
 
@@ -236,6 +237,7 @@ class DeepSeekStudyService:
             result,
             {source["id"] for source in sources},
             {claim.claim_id for claim in critical_claims},
+            {source.evidence_id for source in packet.attributed_sources},
         )
         quality = StudyQualityGate.evaluate(result, bool(critical_claims))
         if quality["status"] != "passed":
@@ -247,6 +249,9 @@ class DeepSeekStudyService:
         result["model"] = response.get("model") or self.model
         result["sources"] = sources
         result["critical_claims"] = [claim.model_dump() for claim in critical_claims]
+        result["attributed_sources"] = [
+            source.model_dump() for source in packet.attributed_sources
+        ]
         result["evidence_packet"] = packet.model_dump()
         result["quality"] = quality
         result["grounding_notice"] = (
@@ -294,6 +299,7 @@ class DeepSeekStudyService:
                 repaired,
                 {source["id"] for source in sources},
                 {claim.claim_id for claim in packet.critical_claims},
+                {source.evidence_id for source in packet.attributed_sources},
             )
             return repaired
         except (KeyError, IndexError, TypeError, json.JSONDecodeError, ValidationError, StudyGenerationError):
@@ -437,15 +443,17 @@ Evidence rules:
 1. Do not use unstated facts from memory or invent scenes, shots, quotations, production history, reception, or creator intentions.
 2. Distinguish RECORD-SUPPORTED observations from VIEWING HYPOTHESES that the user must verify against the film.
 3. Never claim that a book passage proves why this filmmaker made a choice.
-4. Cite every borrowed concept with one or more supplied source IDs such as S1. Use only supplied IDs. If a section uses a supplied critic perspective, cite its claim ID such as C1 in critic_claim_ids.
+4. Cite every borrowed concept with one or more supplied source IDs such as S1. Use only supplied IDs. If a section uses a structured critic perspective, cite C1 in critic_claim_ids. If it uses raw attributed review, interview, caption or description text, cite E1 in attributed_source_ids.
 5. If evidence is insufficient, say so precisely and convert the gap into a useful close-viewing question.
 6. Write substantial, specific prose for a serious filmmaker. Avoid generic praise, plot-summary padding, and inflated academic language.
 7. All formal-analysis sections must use status "viewing_hypothesis" because no clip evidence is supplied.
 8. Do not state remembered details about this film, even if you believe they are true. Turn them into conditional propositions for the viewer to test.
 9. If ATTRIBUTED CRITICAL CLAIMS is empty, every critic_claim_ids array must be empty. Never invent a critic claim ID.
-10. Output valid JSON only.
-11. Treat the sections as consecutive movements of one essay, not independent cards. Each section must advance the central argument, develop a distinct formal relation and avoid repeating the same thesis.
-12. Write each field as publication-ready prose that can be joined to the neighbouring fields without visible labels. Use transitions and clear antecedents; do not begin every field by repeating the film title or the lens name.
+10. A video description states how an uploader presents a resource; it does not prove what is said in the video. Captions may be incomplete or automatic. Do not infer speaker identity or creator intention unless the evidence item is explicitly typed creator_stated.
+11. If ATTRIBUTED SOURCE TEXT is empty, every attributed_source_ids array must be empty. Never invent an evidence ID.
+12. Output valid JSON only.
+13. Treat the sections as consecutive movements of one essay, not independent cards. Each section must advance the central argument, develop a distinct formal relation and avoid repeating the same thesis.
+14. Write each field as publication-ready prose that can be joined to the neighbouring fields without visible labels. Use transitions and clear antecedents; do not begin every field by repeating the film title or the lens name.
 
 Calibration examples:
 BAD: "The film uses telephoto lenses to compress space." This is an unsourced remembered detail.
@@ -469,6 +477,7 @@ Required JSON shape:
       "verify": "an observable logging or comparison task",
       "source_ids": ["S1"],
       "critic_claim_ids": ["C1"],
+      "attributed_source_ids": ["E1"],
       "confidence": "low"
     }
   ],
@@ -495,6 +504,12 @@ Return 4 to 6 sections in the order they should appear in a continuous essay. Ea
             )
             + "\n\nEVIDENCE BOUNDARIES\n"
             + json.dumps(packet.boundaries, ensure_ascii=False, indent=2)
+            + "\n\nATTRIBUTED SOURCE TEXT\n"
+            + json.dumps(
+                [source.model_dump() for source in packet.attributed_sources],
+                ensure_ascii=False,
+                indent=2,
+            )
         )
 
     @staticmethod
@@ -552,6 +567,7 @@ Required JSON:
         result: dict[str, Any],
         source_ids: set[str],
         critic_claim_ids: set[str],
+        attributed_source_ids: set[str] | None = None,
     ) -> None:
         sections = result.get("sections")
         if not isinstance(sections, list):
@@ -565,6 +581,11 @@ Required JSON:
             critics = section.get("critic_claim_ids", [])
             if not isinstance(critics, list) or not set(critics).issubset(critic_claim_ids):
                 raise StudyGenerationError("DeepSeek used an invalid criticism claim citation.")
+            attributed = section.get("attributed_source_ids", [])
+            if not isinstance(attributed, list) or not set(attributed).issubset(
+                attributed_source_ids or set()
+            ):
+                raise StudyGenerationError("DeepSeek used an invalid attributed-text citation.")
             if section.get("status") != "viewing_hypothesis":
                 raise StudyGenerationError("DeepSeek did not label the evidence status correctly.")
 

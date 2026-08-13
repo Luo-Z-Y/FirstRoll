@@ -11,7 +11,7 @@ from difflib import SequenceMatcher
 from pathlib import Path
 from typing import Any, Callable, Literal
 from urllib.error import HTTPError, URLError
-from urllib.parse import urlencode, urlparse
+from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 from urllib.request import Request, urlopen
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -21,6 +21,18 @@ from app.backend.settings import LocalSettingsStore
 
 class VideoSourceError(RuntimeError):
     """Raised when a video provider cannot return safe, relevant results."""
+
+
+class VideoTextTrack(BaseModel):
+    """Public textual material attached to a video, retained with its provenance."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    kind: Literal["captions", "auto_captions"]
+    language: str = "und"
+    text: str = Field(min_length=1, max_length=12_000)
+    source_url: str
+    speaker_verified: bool = False
 
 
 class FilmVideo(BaseModel):
@@ -47,6 +59,8 @@ class FilmVideo(BaseModel):
         "other",
     ]
     relevance: Literal["title", "director", "title_and_director"]
+    text_tracks: list[VideoTextTrack] = Field(default_factory=list, max_length=3)
+    text_checked_at: str | None = None
 
 
 class FilmVideoBundle(BaseModel):
@@ -148,7 +162,7 @@ class YouTubeVideoAdapter:
                     video_id=video_id,
                     title=title,
                     creator=str(snippet.get("channelTitle") or "").strip() or None,
-                    description=description[:500],
+                    description=description[:4000],
                     url=f"https://www.youtube.com/watch?v={video_id}",
                     embed_url=f"https://www.youtube-nocookie.com/embed/{video_id}",
                     thumbnail_url=thumbnail,
@@ -282,7 +296,7 @@ class BilibiliPublicVideoAdapter:
                         platform="Bilibili",
                         video_id=video_id,
                         title=clean_title,
-                        description=clean_description[:500],
+                        description=clean_description[:4000],
                         url=f"https://www.bilibili.com/video/{video_id}/",
                         embed_url=f"https://player.bilibili.com/player.html?bvid={video_id}&autoplay=0",
                         thumbnail_url=picture or None,
@@ -367,16 +381,142 @@ class BilibiliPublicVideoAdapter:
             raise VideoSourceError(f"Bilibili video-page request failed: {exc}") from exc
 
 
+class PublicVideoTextExtractor:
+    """Best-effort extraction of public caption tracks without user session credentials."""
+
+    max_page_bytes = 4_000_000
+    max_caption_bytes = 2_000_000
+
+    def __init__(
+        self,
+        page_transport: Callable[[str], str] | None = None,
+        caption_transport: Callable[[str], dict[str, Any]] | None = None,
+    ) -> None:
+        self.page_transport = page_transport or self._request_page
+        self.caption_transport = caption_transport or self._request_caption_json
+
+    def enrich(self, videos: list[FilmVideo], limit: int = 6) -> list[FilmVideo]:
+        enriched: list[FilmVideo] = []
+        requests = 0
+        eligible = {"interview", "video_essay", "lecture", "behind_the_scenes"}
+        for video in videos:
+            if (
+                video.platform == "YouTube"
+                and video.category in eligible
+                and not video.text_tracks
+                and not video.text_checked_at
+                and requests < limit
+            ):
+                requests += 1
+                try:
+                    tracks = self._youtube_tracks(video)
+                except (VideoSourceError, ValueError, TypeError, json.JSONDecodeError):
+                    tracks = []
+                video = video.model_copy(
+                    update={
+                        "text_tracks": tracks,
+                        "text_checked_at": datetime.now(timezone.utc).isoformat(),
+                    }
+                )
+            enriched.append(video)
+        return enriched
+
+    def _youtube_tracks(self, video: FilmVideo) -> list[VideoTextTrack]:
+        page_url = f"https://www.youtube.com/watch?{urlencode({'v': video.video_id})}"
+        body = self.page_transport(page_url)
+        raw_tracks = _json_array_after_key(body, '"captionTracks":')
+        if not raw_tracks:
+            return []
+        candidates = json.loads(raw_tracks)
+        if not isinstance(candidates, list):
+            return []
+        ordered = sorted(
+            (item for item in candidates if isinstance(item, dict) and item.get("baseUrl")),
+            key=lambda item: (item.get("kind") == "asr", item.get("languageCode") != "en"),
+        )
+        tracks: list[VideoTextTrack] = []
+        for item in ordered[:2]:
+            try:
+                base_url = html.unescape(str(item.get("baseUrl") or ""))
+                caption_url = _caption_json_url(base_url)
+                payload = self.caption_transport(caption_url)
+                text = _youtube_caption_text(payload)
+            except (VideoSourceError, ValueError, TypeError, json.JSONDecodeError):
+                continue
+            if len(text) < 40:
+                continue
+            tracks.append(
+                VideoTextTrack(
+                    kind="auto_captions" if item.get("kind") == "asr" else "captions",
+                    language=str(item.get("languageCode") or "und"),
+                    text=text[:12_000],
+                    source_url=video.url,
+                )
+            )
+        return tracks
+
+    @classmethod
+    def _request_page(cls, url: str) -> str:
+        parsed = urlparse(url)
+        if parsed.scheme != "https" or parsed.hostname not in {"youtube.com", "www.youtube.com"}:
+            raise VideoSourceError("Only public YouTube watch pages may be queried for captions.")
+        request = Request(
+            url,
+            headers={
+                "Accept": "text/html,application/xhtml+xml",
+                "Accept-Language": "en-GB,en;q=0.8",
+                "User-Agent": "Mozilla/5.0 FirstRoll/0.1 public-caption-import",
+            },
+            method="GET",
+        )
+        try:
+            with urlopen(request, timeout=20) as response:
+                final = urlparse(response.geturl())
+                if final.scheme != "https" or final.hostname not in {
+                    "youtube.com",
+                    "www.youtube.com",
+                }:
+                    raise VideoSourceError("YouTube redirected outside its public watch host.")
+                payload = response.read(cls.max_page_bytes + 1)
+                if len(payload) > cls.max_page_bytes:
+                    raise VideoSourceError("YouTube returned an unexpectedly large watch page.")
+                return payload.decode("utf-8", errors="replace")
+        except (HTTPError, URLError, TimeoutError, OSError) as exc:
+            raise VideoSourceError(f"YouTube caption discovery failed: {exc}") from exc
+
+    @classmethod
+    def _request_caption_json(cls, url: str) -> dict[str, Any]:
+        parsed = urlparse(url)
+        allowed = {"youtube.com", "www.youtube.com", "video.google.com", "www.youtube-nocookie.com"}
+        if parsed.scheme != "https" or parsed.hostname not in allowed:
+            raise VideoSourceError("YouTube returned an unsupported caption host.")
+        request = Request(url, headers={"Accept": "application/json"}, method="GET")
+        try:
+            with urlopen(request, timeout=20) as response:
+                final = urlparse(response.geturl())
+                if final.scheme != "https" or final.hostname not in allowed:
+                    raise VideoSourceError("YouTube redirected outside its caption hosts.")
+                payload = response.read(cls.max_caption_bytes + 1)
+                if len(payload) > cls.max_caption_bytes:
+                    raise VideoSourceError("YouTube returned an unexpectedly large caption track.")
+                value = json.loads(payload.decode("utf-8"))
+        except (HTTPError, URLError, TimeoutError, UnicodeError, json.JSONDecodeError) as exc:
+            raise VideoSourceError(f"YouTube caption retrieval failed: {exc}") from exc
+        return value if isinstance(value, dict) else {}
+
+
 class FilmVideoService:
     def __init__(
         self,
         youtube: YouTubeVideoAdapter,
         bilibili: BilibiliPublicVideoAdapter,
         store: FilmVideoStore | None = None,
+        text_extractor: PublicVideoTextExtractor | None = None,
     ) -> None:
         self.youtube = youtube
         self.bilibili = bilibili
         self.store = store or FilmVideoStore()
+        self.text_extractor = text_extractor or PublicVideoTextExtractor()
 
     def status(self) -> dict[str, Any]:
         return {"youtube": self.youtube.status(), "bilibili": self.bilibili.status()}
@@ -396,6 +536,7 @@ class FilmVideoService:
                 providers.append(name)
                 fresh_videos.extend(found)
         videos = _merge_videos(existing.videos if existing else [], fresh_videos)
+        videos = self.text_extractor.enrich(videos)
         if not videos:
             detail = f" Provider details: {'; '.join(failures)}" if failures else ""
             raise VideoSourceError(
@@ -418,6 +559,17 @@ class FilmVideoService:
             ),
         )
         self.store.save(bundle)
+        return bundle
+
+    def enrich_cached(self, film_id: str) -> FilmVideoBundle | None:
+        """Materialise public caption text for an existing catalogue before synthesis."""
+        bundle = self.store.load(film_id)
+        if bundle is None:
+            return None
+        videos = self.text_extractor.enrich(bundle.videos)
+        if videos != bundle.videos:
+            bundle = bundle.model_copy(update={"videos": videos})
+            self.store.save(bundle)
         return bundle
 
 
@@ -449,6 +601,67 @@ class FilmVideoStore:
     def _path(self, film_id: str) -> Path:
         safe = re.sub(r"[^a-zA-Z0-9_-]+", "-", film_id).strip("-") or "film"
         return self.directory / f"{safe}.json"
+
+
+def _json_array_after_key(body: str, key: str) -> str | None:
+    """Return one balanced JSON array following a known page-state key."""
+    key_index = body.find(key)
+    if key_index < 0:
+        return None
+    start = body.find("[", key_index + len(key))
+    if start < 0:
+        return None
+    depth = 0
+    in_string = False
+    escaped = False
+    for index in range(start, min(len(body), start + 500_000)):
+        character = body[index]
+        if in_string:
+            if escaped:
+                escaped = False
+            elif character == "\\":
+                escaped = True
+            elif character == '"':
+                in_string = False
+            continue
+        if character == '"':
+            in_string = True
+        elif character == "[":
+            depth += 1
+        elif character == "]":
+            depth -= 1
+            if depth == 0:
+                return body[start : index + 1]
+    return None
+
+
+def _caption_json_url(base_url: str) -> str:
+    parsed = urlparse(base_url)
+    allowed = {"youtube.com", "www.youtube.com", "video.google.com", "www.youtube-nocookie.com"}
+    if parsed.scheme != "https" or parsed.hostname not in allowed:
+        raise VideoSourceError("YouTube returned an unsupported caption host.")
+    query = dict(parse_qsl(parsed.query, keep_blank_values=True))
+    query["fmt"] = "json3"
+    return urlunparse(parsed._replace(query=urlencode(query)))
+
+
+def _youtube_caption_text(payload: dict[str, Any]) -> str:
+    lines: list[str] = []
+    for event in payload.get("events", []):
+        if not isinstance(event, dict):
+            continue
+        segments = event.get("segs")
+        if not isinstance(segments, list):
+            continue
+        line = "".join(
+            str(segment.get("utf8") or "")
+            for segment in segments
+            if isinstance(segment, dict)
+        )
+        line = re.sub(r"\s+", " ", html.unescape(line)).strip()
+        if line and (not lines or line != lines[-1]):
+            lines.append(line)
+    return "\n".join(lines)
 
 
 def _film_video_query(film: dict[str, Any]) -> str:
@@ -484,6 +697,13 @@ def _merge_videos(
         key = (video.platform, video.video_id)
         if key not in videos_by_key:
             keys.append(key)
+        elif previous := videos_by_key.get(key):
+            video = video.model_copy(
+                update={
+                    "text_tracks": video.text_tracks or previous.text_tracks,
+                    "text_checked_at": video.text_checked_at or previous.text_checked_at,
+                }
+            )
         videos_by_key[key] = video
     ordered = [videos_by_key[key] for key in keys]
     return sorted(

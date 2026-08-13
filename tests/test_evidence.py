@@ -1,5 +1,7 @@
 from app.backend.evidence import EvidencePacket
+from app.backend.criticism import ReviewSource
 from app.backend.study_service import StudyQualityGate
+from app.backend.video_sources import FilmVideo, VideoTextTrack
 
 
 def test_evidence_packet_types_theory_as_framework_not_observation() -> None:
@@ -46,6 +48,53 @@ def test_evidence_packet_retains_reconciled_crew_and_provenance() -> None:
     assert packet.film_record["producers"] == ["Producer"]
     assert packet.film_record["editors"] == ["Editor"]
     assert packet.film_record["crew_sources"][0]["name"] == "Wikipedia infobox"
+
+
+def test_evidence_packet_includes_review_bodies_and_typed_video_text() -> None:
+    review = ReviewSource(
+        source_id="R1",
+        provider="The Guardian public web",
+        review_id="review-1",
+        title="A spatial argument",
+        summary="The critic connects repeated corridors to the characters' constrained choices.",
+        author="A Critic",
+        url="https://www.theguardian.com/film/review-1",
+        language="en",
+    )
+    video = FilmVideo(
+        platform="YouTube",
+        video_id="abcdefghijk",
+        title="Director interview",
+        creator="Festival channel",
+        description="A conversation about writing, casting and the production process.",
+        url="https://www.youtube.com/watch?v=abcdefghijk",
+        embed_url="https://www.youtube-nocookie.com/embed/abcdefghijk",
+        category="interview",
+        relevance="title_and_director",
+        text_tracks=[
+            VideoTextTrack(
+                kind="auto_captions",
+                language="en",
+                text="The speaker explains that rehearsal changed how the scene was blocked.",
+                source_url="https://www.youtube.com/watch?v=abcdefghijk",
+            )
+        ],
+    )
+
+    packet = EvidencePacket.from_retrieval(
+        {"title": "Example", "year": 2024},
+        {"passages": []},
+        None,
+        reviews=[review],
+        videos=[video],
+    )
+
+    assert [source.evidence_id for source in packet.attributed_sources] == ["E1", "E2", "E3"]
+    assert packet.attributed_sources[0].content == review.summary
+    assert packet.attributed_sources[1].locator == "YouTube · uploader description · Festival channel"
+    assert packet.attributed_sources[2].locator == "YouTube · auto_captions · Festival channel"
+    assert packet.attributed_sources[2].evidence_type == "critic_reported"
+    assert any("speaker identity" in boundary for boundary in packet.boundaries)
 
 
 def test_quality_gate_rejects_generic_unobservable_prose() -> None:
