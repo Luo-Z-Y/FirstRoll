@@ -13,11 +13,15 @@ Delivered:
    surfaces full films first.
 5. Made textual content markers override duration so long interviews and ceremonies are not
    misclassified as films.
+6. Added criticism-style category tabs that filter the fetched cards locally, showing only
+   categories present in the current result set.
 
 Acceptance evidence:
 
 - a live *Memoria* search classifies the complete film, Cannes press conference, video essays,
   scene extracts and festival ceremony separately;
+- browser checks confirm that All, Full film and Trailer tabs expose 12, two and four matching
+  cards respectively, without another network request;
 - six focused classification and provider tests pass;
 - scoped Ruff, JavaScript syntax and repository whitespace checks pass.
 

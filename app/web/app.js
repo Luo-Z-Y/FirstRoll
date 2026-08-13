@@ -478,6 +478,11 @@ async function onFilmDetailClick(event) {
     await loadFilmVideos(videoButton);
     return;
   }
+  const videoCategoryButton = event.target.closest("[data-video-category]");
+  if (videoCategoryButton) {
+    selectVideoCategory(videoCategoryButton);
+    return;
+  }
   const criticismSourceButton = event.target.closest("[data-criticism-source]");
   if (criticismSourceButton) {
     await selectCriticismSource(criticismSourceButton);
@@ -527,10 +532,34 @@ async function loadFilmVideos(button) {
 function filmVideosMarkup(bundle) {
   const videos = Array.isArray(bundle?.videos) ? bundle.videos : [];
   if (!videos.length) return `<p class="module-empty">No confidently matched videos were returned.</p>`;
-  return `<div class="film-video-grid">
+  const categories = [...new Set(videos.map((video) => video.category || "other"))];
+  return `${videoCategoryTabsMarkup(categories)}
+  <div class="film-video-grid" role="tabpanel" data-video-category-panel>
     ${videos.map(filmVideoCardMarkup).join("")}
   </div>
   <p class="video-source-boundary">${escapeHtml(bundle.notice || "Third-party videos are attributed but their claims are not verified by FirstRoll.")}</p>`;
+}
+
+function videoCategoryTabsMarkup(categories) {
+  const tabs = ["all", ...categories];
+  return `<div class="critical-provider-actions video-category-tabs" role="tablist" aria-label="Video categories">
+    ${tabs.map((category, index) => `<button type="button" role="tab" class="${index === 0 ? "is-active" : ""}" aria-selected="${index === 0}" tabindex="${index === 0 ? "0" : "-1"}" data-video-category="${escapeHtml(category)}">${escapeHtml(category === "all" ? "All" : videoCategoryLabel(category))}</button>`).join("")}
+  </div>`;
+}
+
+function selectVideoCategory(button) {
+  const output = button.closest("[data-film-videos-output]");
+  if (!output) return;
+  const selected = button.dataset.videoCategory || "all";
+  output.querySelectorAll("[data-video-category]").forEach((tab) => {
+    const active = tab === button;
+    tab.classList.toggle("is-active", active);
+    tab.setAttribute("aria-selected", String(active));
+    tab.setAttribute("tabindex", active ? "0" : "-1");
+  });
+  output.querySelectorAll("[data-video-category-card]").forEach((card) => {
+    card.hidden = selected !== "all" && card.dataset.videoCategoryCard !== selected;
+  });
 }
 
 function filmVideoCardMarkup(video) {
@@ -542,7 +571,7 @@ function filmVideoCardMarkup(video) {
   const duration = Number.isFinite(Number(video.duration_seconds))
     ? ` · ${formatTime(Number(video.duration_seconds))}`
     : "";
-  return `<article class="film-video-card">
+  return `<article class="film-video-card" data-video-category-card="${escapeHtml(video.category || "other")}">
     <div class="film-video-frame">
       <iframe
         src="${escapeHtml(embedUrl)}"

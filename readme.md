@@ -401,7 +401,9 @@ interview and a long festival ceremony remains other. Only after those exclusion
 explicit complete-film marker or a duration of at least 45 minutes produce `full_film`.
 FirstRoll intentionally treats a complete feature as one category; it does not infer or display
 rights classifications. Results are ordered by study value across both providers, with full
-films first, and the interface shows the type and duration on each card.
+films first, and the interface shows the type and duration on each card. The returned categories
+become local tabs—`All` plus only the types present in that result set. Switching a tab filters
+the existing cards in the browser and does not repeat either provider request.
 
 Both adapters enforce HTTPS host allowlists, 20-second timeouts, response-size limits, safe
 embed URL patterns and a maximum of six results per platform. The interface preserves the
