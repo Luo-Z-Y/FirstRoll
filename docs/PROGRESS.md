@@ -60,6 +60,12 @@ Delivered:
 9. Prevented partial shelf flashes: the viewer now waits for related-film indexing before mounting,
    renders a complete hidden frame, waits for two browser paint frames and keeps the loading panel in
    place until the canvas fade has finished.
+10. Replaced the two remaining decorative GLB rows and all generated placeholders with five live,
+    selectable rows of real related-film records. Increased relationship retrieval to 18 per category,
+    omitted unresolved Q-ID captions, widened cases to twelve per row and upgraded spine and plaque
+    typography for clear close-view reading. Removed the redundant in-scene control hint so it cannot
+    cross the bottom shelf caption; hovering a case now exposes its full title, year and director in
+    the shelf header without compressing the text onto a narrow spine.
 
 Acceptance evidence:
 

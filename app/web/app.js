@@ -313,7 +313,7 @@ function renderDiscoveryResults(data) {
 async function loadRelatedFilms(primary, nearby) {
   try {
     const res = await fetch(
-      `${discoveryApiBase()}/api/discovery/films/${encodeURIComponent(primary.id)}/related?limit=12`,
+      `${discoveryApiBase()}/api/discovery/films/${encodeURIComponent(primary.id)}/related?limit=18`,
     );
     if (!res.ok) throw new Error(await readApiError(res));
     const data = await res.json();
@@ -329,6 +329,7 @@ async function loadRelatedFilms(primary, nearby) {
       sharedCast,
       sameCountry,
       recommended,
+      nearby: uniqueFilms(nearby, [primary]),
       labels: data.category_labels || {},
     });
   } catch (_) {
@@ -384,7 +385,7 @@ function renderFilmArchive(
     <aside class="film-closet" aria-label="Related film shelf">
       <div class="closet-header">
         <span>FirstRoll shelf</span>
-        <small>Single-wall archive · drag to look · W A S D to move · select a case to pull it out</small>
+        <small data-closet-caption data-default-caption="Single-wall archive · drag to look · W A S D to move · select a case to pull it out">Single-wall archive · drag to look · W A S D to move · select a case to pull it out</small>
       </div>
       ${closetRoomMarkup(loading)}
     </aside>`;
@@ -430,29 +431,43 @@ function criterionCaseMarkup(film) {
 }
 
 function buildShelfCollections(primary, directorWorks, relevant, categories, director) {
-  const directorFilms = uniqueFilms([primary, ...directorWorks]);
-  const castFilms = categories.sharedCast || [];
-  const countryFilms = categories.sameCountry || [];
-  const recommended = categories.recommended || relevant;
-  const directorRow = directorFilms.slice(0, 15);
-  const peopleAndPlace = uniqueFilms(
-    [...castFilms, ...countryFilms],
-    directorRow,
-  ).slice(0, 15);
-  const nearby = uniqueFilms(
-    [...recommended, ...relevant],
-    [...directorRow, ...peopleAndPlace],
-  ).slice(0, 15);
+  const rowSize = 12;
+  const directorFilms = displayableFilms([primary, ...directorWorks]);
+  const castFilms = displayableFilms(categories.sharedCast || []);
+  const countryFilms = displayableFilms(categories.sameCountry || []);
+  const recommended = displayableFilms(categories.recommended || relevant);
+  const nearby = displayableFilms(categories.nearby || relevant);
+  const realFilmPool = displayableFilms([
+    ...directorFilms,
+    ...castFilms,
+    ...countryFilms,
+    ...recommended,
+    ...nearby,
+  ]);
+  const fillRow = (preferred) => displayableFilms([...preferred, ...realFilmPool]).slice(0, rowSize);
   return [
+    { wall: "back", shelf: "bottom", label: "Nearby & relevant works", films: fillRow(nearby) },
     {
       wall: "back",
       shelf: "lower",
-      label: `${director} · complete director row`,
-      films: directorRow,
+      label: `${director} & related works`,
+      films: fillRow(directorFilms),
     },
-    { wall: "back", shelf: "middle", label: "Shared cast & production context", films: peopleAndPlace },
-    { wall: "back", shelf: "upper", label: "Nearby & relevant works", films: nearby },
+    { wall: "back", shelf: "middle", label: "Shared cast & related works", films: fillRow(castFilms) },
+    { wall: "back", shelf: "upper", label: "Production country & related works", films: fillRow(countryFilms) },
+    { wall: "back", shelf: "top", label: "Genre & metadata affinities", films: fillRow(recommended) },
   ];
+}
+
+function displayableFilms(films) {
+  return uniqueFilms(films).flatMap((film) => {
+    const candidateTitles = [film?.title, film?.original_title, ...(film?.alternative_titles || [])];
+    const title = candidateTitles.find((value) => {
+      const text = String(value || "").trim();
+      return text && !/^Q\d+$/i.test(text);
+    });
+    return film?.id && title ? [{ ...film, title: String(title).trim() }] : [];
+  });
 }
 
 function closetRoomMarkup(loading) {
@@ -463,7 +478,6 @@ function closetRoomMarkup(loading) {
         <span></span><strong>${loading ? "Indexing the collection" : "Opening the 3D archive"}</strong><small>0%</small>
       </div>
       <span class="closet-reticle" aria-hidden="true"></span>
-      <p class="closet-help"><span>Drag</span> look around <span>Scroll / W S</span> move closer <span>A D</span> move sideways</p>
     </div>
     <div class="closet-hud">
       <div class="closet-radar" aria-hidden="true"><i></i><span></span></div>

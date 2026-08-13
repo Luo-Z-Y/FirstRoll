@@ -1,9 +1,10 @@
 import * as THREE from "three";
 import { GLTFLoader } from "./vendor/three/addons/loaders/GLTFLoader.js";
 
-const MODEL_URL = "/assets/models/firstroll-closet.glb?v=20260814-7";
+const MODEL_URL = "/assets/models/firstroll-closet.glb?v=20260814-8";
 const CASE_TONES = ["#632d28", "#304138", "#87512f", "#35404a", "#897c64", "#4d3d4d"];
 const CAMERA_BOUNDS = { minX: -0.82, maxX: 0.82, minZ: -3.28, maxZ: 3.82 };
+const SHELF_ROW_SIZE = 12;
 
 let activeViewer = null;
 
@@ -13,6 +14,7 @@ class FirstRollClosetViewer {
     this.payload = payload;
     this.canvas = root.querySelector("[data-closet-canvas]");
     this.loading = root.querySelector("[data-closet-loading]");
+    this.caption = root.closest(".film-closet")?.querySelector("[data-closet-caption]");
     this.renderer = null;
     this.scene = null;
     this.camera = null;
@@ -84,7 +86,7 @@ class FirstRollClosetViewer {
       this.model.traverse((object) => {
         if (!object.isMesh) return;
         object.receiveShadow = true;
-        object.castShadow = !object.userData.firstroll_ambient_case;
+        object.castShadow = true;
         if (object.material) object.material.envMapIntensity = 0.55;
       });
       this.scene.add(this.model);
@@ -145,23 +147,14 @@ class FirstRollClosetViewer {
   }
 
   addFilmRow(collection) {
-    const films = collection.films.slice(0, 15);
-    const minimumCases = collection.shelf === "lower" ? 12 : 10;
-    while (films.length < minimumCases) {
-      films.push({
-        id: null,
-        placeholder: true,
-        title: "FirstRoll Archive",
-        year: String(films.length + 1).padStart(2, "0"),
-      });
-    }
-    const shelfHeights = { lower: 1.44, middle: 2.27, upper: 3.10 };
+    const films = collection.films.filter((film) => film?.id && film?.title).slice(0, SHELF_ROW_SIZE);
+    const shelfHeights = { bottom: 0.61, lower: 1.44, middle: 2.27, upper: 3.10, top: 3.93 };
     const baseY = shelfHeights[collection.shelf] || shelfHeights.lower;
-    const available = 2.72;
-    const gap = 0.06;
+    const available = 2.78;
+    const gap = 0.035;
     const width = Math.min(
-      0.19,
-      Math.max(0.1, (available - gap * Math.max(0, films.length - 1)) / films.length),
+      0.205,
+      Math.max(0.12, (available - gap * Math.max(0, films.length - 1)) / films.length),
     );
     const span = films.length * width + Math.max(0, films.length - 1) * gap;
 
@@ -198,7 +191,7 @@ class FirstRollClosetViewer {
       pullDirection,
       hoverAmount: 0,
       targetHover: 0,
-      selectableCase: !film.placeholder,
+      selectableCase: true,
     };
 
     const height = 0.64;
@@ -270,16 +263,21 @@ class FirstRollClosetViewer {
     context.textAlign = "center";
     context.textBaseline = "middle";
     context.fillStyle = "#fff8e8";
-    context.font = "700 72px sans-serif";
-    const title = String(film.placeholder ? "FIRSTROLL" : film.title || "Untitled").toUpperCase();
-    context.fillText(title, 35, -8, 690);
-    context.font = "500 40px monospace";
+    const fullTitle = String(film.title || "Untitled").toUpperCase();
+    const title = fullTitle.length > 30 ? `${fullTitle.slice(0, 29).trimEnd()}…` : fullTitle;
+    let titleSize = 72;
+    do {
+      context.font = `700 ${titleSize}px sans-serif`;
+      titleSize -= 2;
+    } while (context.measureText(title).width > 740 && titleSize > 48);
+    context.fillText(title, 35, -8);
+    context.font = "600 40px monospace";
     context.fillStyle = "rgba(255,248,232,.82)";
-    context.fillText(String(film.year || "FILM"), -390, -8, 160);
+    context.fillText(String(film.year || "FILM"), -395, -8);
     context.restore();
 
     context.fillStyle = "rgba(255,248,232,.86)";
-    context.font = "600 28px monospace";
+    context.font = "700 28px monospace";
     context.textAlign = "center";
     context.fillText("FR", canvas.width / 2, 62);
     const texture = new THREE.CanvasTexture(canvas);
@@ -290,30 +288,36 @@ class FirstRollClosetViewer {
 
   addShelfPlaque(collection) {
     const canvas = document.createElement("canvas");
-    canvas.width = 1024;
-    canvas.height = 128;
+    canvas.width = 2048;
+    canvas.height = 256;
     const context = canvas.getContext("2d");
     context.fillStyle = "#b69762";
     context.fillRect(0, 0, canvas.width, canvas.height);
     context.fillStyle = "rgba(255,249,226,.2)";
-    context.fillRect(0, 0, canvas.width, 14);
+    context.fillRect(0, 0, canvas.width, 24);
     context.strokeStyle = "#4a331a";
-    context.lineWidth = 8;
-    context.strokeRect(8, 8, canvas.width - 16, canvas.height - 16);
+    context.lineWidth = 12;
+    context.strokeRect(12, 12, canvas.width - 24, canvas.height - 24);
     context.fillStyle = "#17130e";
-    context.font = "700 44px monospace";
     context.textBaseline = "middle";
-    context.fillText(String(collection.label || "Film collection").toUpperCase(), 42, 65, 820);
+    const label = String(collection.label || "Film collection");
+    let labelSize = 82;
+    do {
+      context.font = `700 ${labelSize}px sans-serif`;
+      labelSize -= 2;
+    } while (context.measureText(label).width > 1660 && labelSize > 58);
+    context.fillText(label, 72, 130);
     context.textAlign = "right";
-    context.font = "500 34px monospace";
-    context.fillText(String(collection.films.length), 974, 65);
+    context.font = "700 68px sans-serif";
+    context.fillText(String(collection.films.length), 1960, 130);
     const texture = new THREE.CanvasTexture(canvas);
     texture.colorSpace = THREE.SRGBColorSpace;
     const plaque = new THREE.Mesh(
-      new THREE.PlaneGeometry(collection.wall === "back" ? 2.55 : 2.4, 0.10),
+      new THREE.PlaneGeometry(collection.wall === "back" ? 2.62 : 2.4, 0.12),
       new THREE.MeshStandardMaterial({ map: texture, roughness: 0.5, metalness: 0.2 }),
     );
-    const plaqueHeights = { lower: 1.08, middle: 1.91, upper: 2.74 };
+    texture.anisotropy = Math.min(8, this.renderer.capabilities.getMaxAnisotropy());
+    const plaqueHeights = { bottom: 0.25, lower: 1.08, middle: 1.91, upper: 2.74, top: 3.57 };
     const y = plaqueHeights[collection.shelf] || plaqueHeights.lower;
     if (collection.wall === "back") {
       plaque.position.set(0, y, -3.39);
@@ -416,7 +420,18 @@ class FirstRollClosetViewer {
     if (this.hoveredCase) this.hoveredCase.userData.targetHover = 0;
     this.hoveredCase = filmCase;
     if (this.hoveredCase) this.hoveredCase.userData.targetHover = 1;
+    this.updateCaseCaption(this.hoveredCase?.userData.film);
     this.root.classList.toggle("is-case-hovered", Boolean(filmCase));
+  }
+
+  updateCaseCaption(film) {
+    if (!this.caption) return;
+    if (!film) {
+      this.caption.textContent = this.caption.dataset.defaultCaption || "Film shelf";
+      return;
+    }
+    const director = (film.directors || [])[0];
+    this.caption.textContent = [film.title, film.year, director].filter(Boolean).join(" · ");
   }
 
   pickCase(event) {

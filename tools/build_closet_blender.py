@@ -25,8 +25,6 @@ ROOM_DEPTH = ROOM_HALF_DEPTH * 2
 BACK_WALL_Y = 4.52
 SIDE_WALL_X = 1.7
 BACK_SHELF_Y = 4.04
-BACK_CASE_Y = 3.77
-random.seed(817)
 
 
 def clear_scene() -> None:
@@ -129,41 +127,6 @@ def box(
     return obj
 
 
-def add_case(
-    name: str,
-    location: tuple[float, float, float],
-    dimensions: tuple[float, float, float],
-    mat: bpy.types.Material,
-    *,
-    shell_material: bpy.types.Material,
-    sideways: bool = False,
-    rotation_z: float = 0.0,
-) -> None:
-    insert_dimensions = (
-        dimensions[0] * (0.35 if sideways else 0.82),
-        dimensions[1] * (0.86 if sideways else 0.35),
-        dimensions[2] * 0.91,
-    )
-    insert = box(
-        f"{name} paper insert",
-        location,
-        insert_dimensions,
-        mat,
-        bevel=0.007,
-        rotation=(0.0, 0.0, rotation_z),
-    )
-    insert["firstroll_ambient_case"] = True
-    shell = box(
-        f"{name} clear shell",
-        location,
-        dimensions,
-        shell_material,
-        bevel=0.014,
-        rotation=(0.0, 0.0, rotation_z),
-    )
-    shell["firstroll_ambient_case"] = True
-
-
 def build_shell(materials: dict[str, bpy.types.Material]) -> None:
     box("Floor slab", (0.0, 0.0, -0.12), (ROOM_WIDTH, ROOM_DEPTH, 0.24), materials["structure"], bevel=0.04)
     box("Archive carpet", (0.0, -0.05, 0.015), (3.18, 8.72, 0.03), materials["carpet"], bevel=0.03)
@@ -192,27 +155,8 @@ def build_back_shelves(materials: dict[str, bpy.types.Material]) -> None:
     for x in (-1.56, 0.0, 1.56):
         box("Back shelf upright", (x, 4.28, 2.33), (0.09, 0.18, 4.47), materials["metal"], bevel=0.018)
 
-    # Leave three distinct rows clear for live director, context and related-film cases.
-    palette = materials["case_palette"]
-    for shelf_index, base_z in enumerate(shelf_levels[:-1]):
-        if shelf_index in (1, 2, 3):
-            continue
-        x = -1.46
-        case_index = 0
-        while x < 1.44:
-            width = random.uniform(0.16, 0.22)
-            height = random.uniform(0.48, 0.68)
-            depth = random.uniform(0.11, 0.15)
-            add_case(
-                f"Back ambient case {shelf_index}-{case_index}",
-                (x + width / 2, BACK_CASE_Y, base_z + 0.07 + height / 2),
-                (width, depth, height),
-                random.choice(palette),
-                shell_material=materials["case_shell"],
-                rotation_z=0.0,
-            )
-            x += width + random.uniform(0.028, 0.052)
-            case_index += 1
+    # All five rows remain empty in the asset. The browser fills them exclusively
+    # with titled, selectable films returned by the live discovery service.
 
 
 def build_details(materials: dict[str, bpy.types.Material]) -> None:
@@ -233,7 +177,6 @@ def main() -> None:
         "wood": textured_material("Smoked oak", (0.16, 0.092, 0.045), "wood", roughness=0.52),
         "brass": material("Aged brass", (0.42, 0.29, 0.11, 1.0), metallic=0.78, roughness=0.34),
         "carpet": textured_material("Archive carpet", (0.095, 0.078, 0.061), "carpet", roughness=0.96),
-        "case_shell": material("Clear jewel case", (0.82, 0.84, 0.80, 0.16), roughness=0.16),
         "light": material(
             "Warm diffuser",
             (0.95, 0.88, 0.68, 1.0),
@@ -242,17 +185,6 @@ def main() -> None:
             emission_strength=4.0,
         ),
     }
-    materials["case_palette"] = [
-        material("Insert oxblood", (0.255, 0.066, 0.045, 1.0), roughness=0.58),
-        material("Insert bottle green", (0.062, 0.132, 0.087, 1.0), roughness=0.58),
-        material("Insert tobacco", (0.34, 0.145, 0.056, 1.0), roughness=0.60),
-        material("Insert slate", (0.085, 0.108, 0.132, 1.0), roughness=0.56),
-        material("Insert parchment", (0.46, 0.395, 0.277, 1.0), roughness=0.68),
-        material("Insert plum", (0.185, 0.085, 0.155, 1.0), roughness=0.60),
-        material("Insert ivory", (0.62, 0.58, 0.49, 1.0), roughness=0.72),
-        material("Insert charcoal", (0.11, 0.105, 0.092, 1.0), roughness=0.66),
-    ]
-
     build_shell(materials)
     build_back_shelves(materials)
     # The live archive is intentionally a single shelf wall. Side walls remain
