@@ -8,13 +8,13 @@ The central rule is simple: identity records, critic reports, theory frameworks,
 hypotheses and measured film observations are different kinds of evidence. FirstRoll
 keeps those layers visible instead of presenting one fluent but unsupported answer.
 
-> **Current status:** local working prototype and deployment-ready public-beta shell. Discover, private-library retrieval,
+> **Current status:** local working prototype and deployment-ready public beta. Discover, private-library retrieval,
 > Crossref scholarship, optional Douban, Letterboxd and Guardian criticism, DeepSeek
 > synthesis and clip analysis are implemented. The
 > hosted edition publishes discovery and the 3D shelf while keeping private-library tools,
-> clip analysis and unauthenticated Deep Study disabled. Supabase email authentication is now
-> implemented; the next public milestone is quota-controlled Deep Study, while the research milestone is connecting
-> measured clip evidence to Deep Study.
+> clip analysis and unauthenticated Deep Study disabled. Supabase email authentication and atomic
+> daily Deep Study quotas are implemented; the research milestone is connecting measured clip
+> evidence to Deep Study.
 
 See [Project Progress](docs/PROGRESS.md) for completed milestones, verification results,
 known limitations and the next priorities.
@@ -571,6 +571,12 @@ FIRSTROLL_LIBRARY_MANIFEST=
 FIRSTROLL_LIBRARY_INDEX=
 FIRSTROLL_DOUBAN_MCP_PATH=
 ```
+
+The hosted public beta additionally uses `SUPABASE_URL`,
+`SUPABASE_PUBLISHABLE_KEY` and the fail-closed `FIRSTROLL_DEEP_STUDY_ENABLED` switch. Its
+three-per-account and thirty-global daily limits are installed from
+`supabase/migrations/202608150001_deep_study_quotas.sql`; see
+[Hosting](docs/HOSTING.md) for the safe deployment order. The DeepSeek key remains backend-only.
 
 Use [.env.example](.env.example) as the reference. FirstRoll does not automatically load
 an `.env` file; export variables before starting the process or use Settings.

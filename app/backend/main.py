@@ -28,6 +28,13 @@ from app.backend.discovery import DiscoveryService
 from app.backend.evidence import EvidencePacket
 from app.backend.library import MAX_DOCUMENT_BYTES, SUPPORTED_SUFFIXES, LocalLibraryCatalogue
 from app.backend.library_index import LocalLibraryIndex
+from app.backend.public_study import build_public_study_retrieval
+from app.backend.quota import (
+    QuotaConfigurationError,
+    QuotaExceededError,
+    QuotaServiceError,
+    SupabaseQuotaClient,
+)
 from app.backend.settings import CONNECTORS, LocalSettingsStore
 from app.backend.study_service import DeepSeekStudyService, StudyGenerationError
 from app.backend.video_sources import (
@@ -93,6 +100,7 @@ bilibili_video_adapter = BilibiliPublicVideoAdapter()
 video_store = FilmVideoStore()
 video_service = FilmVideoService(youtube_video_adapter, bilibili_video_adapter, video_store)
 auth_verifier = SupabaseAuthVerifier()
+quota_client = SupabaseQuotaClient()
 reception_cache: dict[str, dict] = {}
 web_directory = Path(__file__).resolve().parents[1] / "web"
 
@@ -147,6 +155,16 @@ def authenticated_user(request: Request) -> dict[str, str | None]:
             detail=str(exc),
             headers={"WWW-Authenticate": "Bearer"},
         ) from exc
+
+
+def hosted_deep_study_enabled() -> bool:
+    return bool(
+        public_mode_enabled()
+        and environment_flag("FIRSTROLL_DEEP_STUDY_ENABLED")
+        and auth_verifier.configured
+        and quota_client.configured
+        and settings_store.secret_state("deepseek").configured
+    )
 
 
 CRITICISM_PROVIDERS = {
@@ -461,7 +479,7 @@ def discovery_status() -> dict:
     status["features"] = {
         "public_mode": public_mode_enabled(),
         "video_analysis": video_analysis_enabled(),
-        "deep_study": not public_mode_enabled(),
+        "deep_study": not public_mode_enabled() or hosted_deep_study_enabled(),
         "authentication": auth_verifier.status(),
     }
     return status
@@ -592,12 +610,15 @@ def generate_film_study(
     study_request: FilmStudyRequest,
     request: Request,
 ) -> dict:
-    if public_mode_enabled():
+    public_mode = public_mode_enabled()
+    quota = None
+    if public_mode:
         authenticated_user(request)
-        raise HTTPException(
-            status_code=503,
-            detail="Your account is ready. Deep Study quotas are being enabled next.",
-        )
+        if not hosted_deep_study_enabled():
+            raise HTTPException(
+                status_code=503,
+                detail="Deep Study is not fully configured on this deployment yet.",
+            )
     try:
         detail = discovery_service.detail(film_id)
         film = detail["film"]
@@ -611,11 +632,15 @@ def generate_film_study(
         ]
         reviews = [review for bundle in critical_bundles for review in bundle.reviews]
         video_bundle = video_service.enrich_cached(film_id)
-        reading = library_index.retrieve_for_film(
-            film,
-            focus=study_request.question,
-            critical_claims=claims,
-            limit=10,
+        reading = (
+            build_public_study_retrieval(film, study_request.question)
+            if public_mode
+            else library_index.retrieve_for_film(
+                film,
+                focus=study_request.question,
+                critical_claims=claims,
+                limit=10,
+            )
         )
         packet = EvidencePacket.from_retrieval(
             film,
@@ -625,7 +650,9 @@ def generate_film_study(
             reviews=reviews,
             videos=video_bundle.videos if video_bundle else [],
         )
-        return {
+        if public_mode:
+            quota = quota_client.reserve(request.headers.get("Authorization"))
+        result = {
             "film_id": film_id,
             "study": study_service.generate(
                 film,
@@ -635,8 +662,21 @@ def generate_film_study(
                 evidence_packet=packet,
             ),
         }
+        if quota is not None:
+            result["quota"] = quota.as_dict()
+        return result
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except QuotaExceededError as exc:
+        raise HTTPException(
+            status_code=429,
+            detail=str(exc),
+            headers={"Retry-After": str(exc.quota.retry_after_seconds())},
+        ) from exc
+    except QuotaConfigurationError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except QuotaServiceError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
     except StudyGenerationError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 

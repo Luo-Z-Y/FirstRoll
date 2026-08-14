@@ -46,6 +46,8 @@ def test_supabase_auth_is_bundled_and_deep_study_sends_bearer_tokens() -> None:
     assert "authorisationHeaders" in auth
     assert "authorisation.Authorization" in app
     assert 'headers: { "Content-Type": "application/json", ...authorisation }' in app
+    assert "deepStudyQuotaMarkup(data.quota)" in app
+    assert "account studies remain today" in app
     assert "FIRSTROLL_SUPABASE_URL" in build
     assert "FIRSTROLL_SUPABASE_PUBLISHABLE_KEY" in build
 
@@ -55,8 +57,8 @@ def test_archive_pullout_collapses_before_zoom_can_clip_its_copy() -> None:
     styles = (WEB / "styles.css").read_text(encoding="utf-8")
     app = (WEB / "app.js").read_text(encoding="utf-8")
 
-    assert "/assets/styles.css?v=20260815-1" in index
-    assert "/assets/app.js?v=20260815-1" in index
+    assert "/assets/styles.css?v=20260815-2" in index
+    assert "/assets/app.js?v=20260815-2" in index
     assert 'class="archive-pullout-shell"' in app
     assert "container-type: inline-size" in styles
     assert "@container (max-width: 520px)" in styles

@@ -1439,6 +1439,8 @@ html[data-theme="dark"] .theme-icon-moon { opacity: 1; transform: rotate(0) scal
 .study-prompt-row button:disabled { opacity: 0.58; cursor: wait; }
 .deep-study-output > p { margin: 0; color: rgba(250, 246, 238, 0.68); font-size: 0.76rem; }
 .study-error { color: #ffab98 !important; }
+.study-quota { margin: 0 0 14px; padding: 10px 12px; border: 1px solid rgba(250, 246, 238, 0.24); color: var(--muted-night); background: rgba(255, 255, 255, 0.035); font: 0.62rem/1.5 "IBM Plex Mono", monospace; }
+.study-quota strong { color: var(--cream); }
 .study-quality { display: flex; max-width: 900px; justify-content: space-between; gap: 16px; margin: 0 auto 18px; padding: 11px 13px; border-left: 3px solid #d58a76; background: rgba(250, 246, 238, 0.06); font: 0.58rem "IBM Plex Mono", monospace; text-transform: uppercase; }
 .study-quality.is-passed { border-left-color: #9aaf72; }
 .study-quality.is-limited { border-left-color: #d58a76; }

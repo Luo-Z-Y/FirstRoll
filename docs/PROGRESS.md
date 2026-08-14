@@ -1,5 +1,30 @@
 # FirstRoll Project Progress
 
+### 15 August 2026 — Authenticated Deep Study quotas
+
+Delivered:
+
+1. Added an idempotent Supabase migration with private RLS-enabled daily counters, authenticated-only
+   status and reservation RPCs, a fixed three-per-account limit and a thirty-per-demo global limit.
+2. Serialised reservations per UTC day inside PostgreSQL, preventing concurrent requests from
+   exceeding either limit without requiring a service-role key.
+3. Added bounded FastAPI quota validation, HTTP 429 responses with reset timing and an explicit
+   hosted feature switch that remains closed unless authentication, quotas and DeepSeek are all
+   configured.
+4. Replaced the hosted edition's unavailable private PDF index with four transparent, first-party
+   formal-analysis frameworks; all generated film-form claims remain viewing hypotheses.
+5. Added remaining account/global allowance to successful study results and retained the local
+   private-library workflow unchanged.
+
+Acceptance evidence:
+
+- focused authentication and quota tests pass across reservation, account denial, malformed RPC
+  response, public evidence and HTTP 429 paths;
+- the full suite passes with 95 tests, together with Python lint, JavaScript syntax and whitespace
+  checks;
+- the paid feature remains fail-closed until the live Supabase migration and Render-only DeepSeek
+  environment settings are verified.
+
 ### 15 August 2026 — Zoom-safe selected edition
 
 Delivered:

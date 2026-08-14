@@ -91,5 +91,5 @@ def test_auth_me_and_public_study_require_a_verified_bearer_token(monkeypatch) -
     }
     assert gated_study.status_code == 503
     assert gated_study.json()["detail"] == (
-        "Your account is ready. Deep Study quotas are being enabled next."
+        "Deep Study is not fully configured on this deployment yet."
     )

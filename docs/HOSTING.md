@@ -139,7 +139,39 @@ The browser stores only Supabase's short-lived user session. FastAPI validates e
 against Supabase Auth before allowing an authenticated operation. No provider secret is included in
 the static bundle.
 
-## 4. Allow the Static Site to call the API
+## 4. Enable quota-controlled Deep Study
+
+The public demo permits three Deep Studies per account per UTC day and thirty across all accounts.
+It stores only the Supabase user UUID, UTC day and counters; prompts and generated studies are not
+stored in Supabase.
+
+1. In Supabase, open **SQL Editor → New query**.
+2. Paste the complete contents of
+   `supabase/migrations/202608150001_deep_study_quotas.sql` and select **Run**.
+3. Confirm the result reports success. The migration creates two RLS-enabled tables in the
+   non-exposed `firstroll_private` schema and two authenticated-only functions:
+   `deep_study_quota_status()` and `reserve_deep_study_quota()`.
+4. In the Render backend Web Service—not the Static Site—open **Environment** and add:
+
+   | Key | Value |
+   |---|---|
+   | `DEEPSEEK_API_KEY` | the private DeepSeek API key |
+   | `DEEPSEEK_MODEL` | `deepseek-v4-flash` |
+   | `FIRSTROLL_DEEP_STUDY_ENABLED` | `true` |
+
+5. Never add `DEEPSEEK_API_KEY` to the Static Site or repository. No Supabase secret or
+   service-role key is required.
+6. Save and redeploy the backend. The explicit feature switch must remain absent or false until the
+   SQL migration and key are both ready.
+7. Sign in on the frontend, open a dossier and generate a study. The result displays the remaining
+   account and global allowance. A fourth account request on the same UTC day returns HTTP 429.
+
+Quota reservation occurs immediately before the paid model call. A request that reaches DeepSeek
+counts against the allowance even if the provider later fails, preventing retries from becoming an
+unbounded cost path. The hosted edition uses a four-part, first-party formal-analysis protocol and
+labels all film-form claims as viewing hypotheses; it does not claim to have watched the film.
+
+## 5. Allow the Static Site to call the API
 
 1. Return to the backend Web Service.
 2. Select **Environment**.
@@ -166,7 +198,7 @@ MCP connector and may require a user cookie, so it must not be exposed through u
 public Settings. Review and pin the connector, then protect its use with Supabase authentication
 before enabling it on the shared server.
 
-## 5. Current public-beta acceptance checks
+## 6. Current public-beta acceptance checks
 
 - `/api/health` returns HTTP 200.
 - The Static Site URL serves the interface and 3D assets without waiting for the backend.
@@ -175,15 +207,15 @@ before enabling it on the shared server.
 - `/api/settings` and `/api/library/status` return HTTP 404 in public mode.
 - `/api/analyze` returns HTTP 503 in public mode.
 - `/api/auth/me` returns HTTP 401 without a session and the signed-in account with a valid session.
-- Deep Study returns HTTP 401 without a session and HTTP 503 at the quota gate when signed in.
+- Deep Study returns HTTP 401 without a session, generates only after an atomic quota reservation,
+  and returns HTTP 429 when either daily limit is exhausted.
 - No `.firstroll` data, uploaded clips, API keys or private library files appear in the image,
   repository, frontend source or network responses.
 
-## 6. Next security milestone
+## 7. Next security milestone
 
-Create durable Supabase usage tables, add per-user and global Deep Study quotas, and only then add
-the DeepSeek API key to Render. Video analysis remains a local feature and is presented as
-**Coming soon** in the public interface.
+Add cost telemetry and an operator-visible kill switch before raising either daily limit. Video
+analysis remains a local feature and is presented as **Coming soon** in the public interface.
 
 ## Free-tier limitations
 

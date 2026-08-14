@@ -1259,13 +1259,28 @@ async function generateDeepStudy(button) {
     );
     if (!response.ok) throw new Error(await readApiError(response));
     const data = await response.json();
-    output.innerHTML = deepStudyMarkup(data.study || {});
+    output.innerHTML = `${deepStudyQuotaMarkup(data.quota)}${deepStudyMarkup(data.study || {})}`;
   } catch (error) {
     output.innerHTML = `<p class="study-error">${escapeHtml(error.message)}</p>`;
   } finally {
     button.disabled = false;
     button.textContent = "Generate study";
   }
+}
+
+function deepStudyQuotaMarkup(quota) {
+  const user = quota?.user;
+  const global = quota?.global;
+  if (!user || !global) return "";
+  const reset = quota.reset_at
+    ? new Date(quota.reset_at).toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+        timeZone: "UTC",
+        timeZoneName: "short",
+      })
+    : "00:00 UTC";
+  return `<p class="study-quota"><strong>${escapeHtml(user.remaining)} of ${escapeHtml(user.limit)}</strong> account studies remain today · ${escapeHtml(global.remaining)} available across the public demo · resets ${escapeHtml(reset)}</p>`;
 }
 
 function deepStudyMarkup(study) {
