@@ -277,6 +277,26 @@ def test_unrelated_long_result_cannot_pass_on_year_and_generic_context() -> None
     assert BilibiliPublicVideoAdapter(transport=lambda _: body).search(film) == []
 
 
+def test_short_localised_title_rejects_music_and_audio_collisions() -> None:
+    film = {
+        "title": "In the Mood for Love",
+        "original_title": "花樣年華",
+        "alternative_titles": ["花样年华"],
+        "year": 2000,
+        "credits": {"directors": ["Wong Kar-wai"]},
+    }
+    music_title = json.dumps("BTS防弹少年团《花樣年華 pt.1》全专音源", ensure_ascii=True)[1:-1]
+    audio_title = json.dumps("粤语广播剧《花樣年華》多人有声小说", ensure_ascii=True)[1:-1]
+    body = (
+        '"http:\\u002F\\u002Fwww.bilibili.com\\u002Fvideo\\u002Fav10",'
+        f'"BV1Ab411c7Dg","{music_title}","专辑歌曲","",10,"音乐","1:05:00"'
+        '"http:\\u002F\\u002Fwww.bilibili.com\\u002Fvideo\\u002Fav11",'
+        f'"BV1Ab411c7Dh","{audio_title}","广播剧","",11,"有声书","1:20:00"'
+    )
+
+    assert BilibiliPublicVideoAdapter(transport=lambda _: body).search(film) == []
+
+
 def _fixture_video(video_id: str, title: str) -> FilmVideo:
     return FilmVideo(
         platform="YouTube",

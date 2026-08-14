@@ -350,8 +350,8 @@ async function loadRelatedFilms(primary, nearby) {
     };
     const director = data.director || (primary.directors || [])[0] || "this director";
     const collections = buildShelfCollections(primary, directorWorks, recommended, categories, director);
-    if (collections.some((collection) => collection.films.length < 10)) {
-      throw new Error("Not enough distinct verified films were returned to fill the shelf.");
+    if (!collections.some((collection) => collection.films.length)) {
+      throw new Error("No distinct verified films were returned for this shelf.");
     }
     state.discovery.archive = { primary, directorWorks, relevant: recommended, categories };
     hydrateFilmShelf(primary.id, collections);
@@ -700,7 +700,9 @@ function renderFilmDetail(film) {
         <p class="detail-overview">${escapeHtml(film.overview || "No synopsis is available from this source.")}</p>
         ${overviewSourceUrl ? `<p class="detail-attribution">Overview: <a href="${escapeHtml(overviewSourceUrl)}" target="_blank" rel="noopener noreferrer">Wikipedia · CC BY-SA ↗</a></p>` : ""}
         <div class="detail-actions">
-          <button class="detail-action primary" type="button" data-analyse-film>Analyse a clip</button>
+          ${runtimeConfig.videoAnalysisEnabled
+            ? '<button class="detail-action primary" type="button" data-analyse-film>Analyse a clip</button>'
+            : '<button class="detail-action primary" type="button" disabled>Video analysis · coming soon</button>'}
           ${sourceUrl ? `<a class="detail-action" href="${escapeHtml(sourceUrl)}" target="_blank" rel="noopener noreferrer">View source ↗</a>` : ""}
         </div>
         ${filmReceptionMarkup(film.awards || [])}
@@ -724,7 +726,7 @@ function renderFilmDetail(film) {
       <div data-film-videos-output>
         ${videoBundle
           ? filmVideosMarkup(videoBundle)
-          : ""}
+          : videoProviderStatusMarkup(film.video_sources?.providers)}
       </div>
     </section>
     <section class="critical-perspectives">
@@ -751,6 +753,16 @@ function renderFilmDetail(film) {
       <div class="deep-study-output" data-study-output></div>
     </section>
     ${reviews.length ? `<div class="reviews-section"><h3>Perspectives</h3><div class="review-grid">${reviews.map(reviewCard).join("")}</div></div>` : ""}`;
+}
+
+function videoProviderStatusMarkup(providers = {}) {
+  const youtubeReady = providers?.youtube?.state === "ready";
+  const bilibiliReady = providers?.bilibili?.state === "ready";
+  if (youtubeReady && bilibiliReady) return "";
+  if (!youtubeReady && bilibiliReady) {
+    return '<p class="module-empty">YouTube search is not configured on this server yet. Bilibili results remain available, with strict film-identity matching.</p>';
+  }
+  return '<p class="module-empty">Public video providers are not configured on this server yet.</p>';
 }
 
 function displayCrew(values) {
@@ -808,10 +820,11 @@ async function loadFilmReception(film) {
     }
     section.classList.remove("hidden");
     const aggregate = reception.aggregate;
+    const doubanUnavailable = reception.providers?.douban?.installed === false;
     output.innerHTML = `<h3>Reception</h3><div class="score-grid">
       ${aggregate ? `<article class="score-card aggregate"><span>Combined</span><strong>${escapeHtml(formatRating(aggregate.score))}</strong><small>/ 100 · ${escapeHtml(aggregate.method)}</small></article>` : ""}
       ${scores.map((score) => `<article class="score-card"><span>${escapeHtml(score.provider)}</span><strong>${escapeHtml(formatRating(score.score))}</strong><small>/ ${escapeHtml(score.scale)}${score.votes ? ` · ${escapeHtml(formatCompactCount(score.votes))} ratings` : ""}</small></article>`).join("")}
-    </div>`;
+    </div>${doubanUnavailable ? '<p class="reception-provider-note">Douban is not connected on this hosted server yet.</p>' : ""}`;
   } catch (_) {
     output.innerHTML = "";
     if (!section.querySelector(".reception-awards article")) section.classList.add("hidden");

@@ -471,8 +471,11 @@ async def discovery_film_reception(film_id: str) -> dict:
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
+    douban_status = douban_adapter.status()
+    letterboxd_status = letterboxd_web_adapter.status()
+
     async def douban_score() -> dict | None:
-        if not douban_adapter.status().get("installed"):
+        if not douban_status.get("installed"):
             return None
         try:
             return await douban_adapter.fetch_score(film)
@@ -487,6 +490,10 @@ async def discovery_film_reception(film_id: str) -> dict:
 
     results = await asyncio.gather(douban_score(), letterboxd_score())
     summary = reception_summary([score for score in results if score])
+    summary["providers"] = {
+        "douban": douban_status,
+        "letterboxd": letterboxd_status,
+    }
     summary["awards"] = film.get("awards", [])[:3]
     if summary["scores"] or summary["awards"]:
         reception_cache[film_id] = summary

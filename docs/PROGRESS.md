@@ -1,5 +1,25 @@
 # FirstRoll Project Progress
 
+### 15 August 2026 — Public deployment acceptance fixes
+
+Delivered:
+
+1. Removed the brittle 50-title shelf gate: the 3D shelf now renders every distinct verified film
+   returned by Wikidata instead of hiding the whole scene when one row contains fewer than ten.
+2. Added stricter Bilibili identity checks so short translated-title collisions such as music
+   albums, audio dramas and dance videos are not presented as film resources.
+3. Added an explicit hosted YouTube configuration state, replaced the unavailable clip-analysis
+   action with its **coming soon** state, and hid the local-only Settings link in public mode.
+4. Preserved local Settings and clip analysis unchanged; connector secrets remain server-side and
+   are not exposed through the unauthenticated public site.
+
+Acceptance evidence:
+
+- the live related-film endpoint returns real Wong Kar-wai, shared-cast, country and genre matches;
+- the hosted API correctly reports YouTube as `credentials_required` and Douban as `not_installed`;
+- all 83 automated tests pass, including regressions for partial shelf rows and short-title video
+  collisions.
+
 ### 15 August 2026 — Deployment-ready public-beta shell
 
 Delivered:

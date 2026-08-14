@@ -250,6 +250,8 @@ html[data-theme="dark"] .brand-mark { filter: invert(1); }
 
 .settings-link:active { transform: scale(0.97); transition-duration: 90ms; }
 
+.public-mode .settings-link { display: none; }
+
 .theme-toggle {
   position: relative;
   width: 54px;
@@ -1244,6 +1246,7 @@ html[data-theme="dark"] .theme-icon-moon { opacity: 1; transform: rotate(0) scal
 .detail-reception { max-width: 850px; margin-top: 30px; padding-top: 22px; border-top: 1px solid var(--line-night); }
 .detail-reception h3 { margin: 0 0 11px; color: #d58a76; font: 500 0.58rem "IBM Plex Mono", monospace; letter-spacing: 0.1em; text-transform: uppercase; }
 .reception-scores:not(:empty) { margin-bottom: 20px; }
+.reception-provider-note { margin: 10px 0 0; color: rgba(244, 237, 223, 0.62); font-size: 0.62rem; }
 .reception-loading { display: flex; align-items: center; min-height: 47px; gap: 6px; }
 .reception-loading i { width: 7px; height: 7px; border-radius: 50%; background: #d58a76; animation: reception-pulse 1.1s ease-in-out infinite; }
 .reception-loading i:nth-child(2) { animation-delay: 120ms; }

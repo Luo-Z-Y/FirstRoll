@@ -120,6 +120,17 @@ unavailable until the API has woken.
 Do not use `*` as the allowed origin. The exact frontend origin will later carry Supabase bearer
 tokens to the API.
 
+## Optional public video provider
+
+YouTube search requires a server-side YouTube Data API v3 key. Add `YOUTUBE_API_KEY` to the
+backend Web Service's **Environment** page and redeploy; never add it to the Static Site. Restrict
+the key to the YouTube Data API in Google Cloud and set a conservative quota alert.
+
+Douban is not bundled into the hosted image. Its current integration is an unofficial Node-based
+MCP connector and may require a user cookie, so it must not be exposed through unauthenticated
+public Settings. Review and pin the connector, then protect its use with Supabase authentication
+before enabling it on the shared server.
+
 ## 4. Current public-beta acceptance checks
 
 - `/api/health` returns HTTP 200.

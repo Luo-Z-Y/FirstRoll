@@ -283,6 +283,11 @@ class BilibiliPublicVideoAdapter:
                     relevance = "title"
                 if relevance is None:
                     continue
+                if not _bilibili_result_matches_film(
+                    film,
+                    f"{title} {description} {tags}",
+                ):
+                    continue
                 picture = _decode_javascript_string(match.group("picture"))
                 if picture.startswith("//"):
                     picture = f"https:{picture}"
@@ -733,10 +738,9 @@ def _revalidate_videos(film: dict[str, Any], videos: list[FilmVideo]) -> list[Fi
             else video.category
         )
         video = video.model_copy(update={"category": category})
-        if (
-            video.platform == "Bilibili"
-            and category == "full_film"
-            and not _strong_film_title_match(film, f"{video.title} {video.description}")
+        if video.platform == "Bilibili" and not _bilibili_result_matches_film(
+            film,
+            f"{video.title} {video.description}",
         ):
             continue
         accepted.append(video)
@@ -781,6 +785,8 @@ def _video_relevance(
             "director",
             "interview",
             "review",
+            "reaction",
+            "analysis",
             "trailer",
             "essay",
             "scene",
@@ -788,6 +794,8 @@ def _video_relevance(
             "影片",
             "导演",
             "影评",
+            "解说",
+            "闲聊",
             "访谈",
             "预告",
             "解析",
@@ -1012,6 +1020,65 @@ def _strong_film_title_match(film: dict[str, Any], text: str) -> bool:
         and title in body
         for title in (_normalise(value) for value in _film_titles(film))
     )
+
+
+def _bilibili_result_matches_film(film: dict[str, Any], text: str) -> bool:
+    """Reject short-title collisions unless the result carries film identity context."""
+    if not _strong_film_title_match(film, text):
+        return False
+    body = _normalise(text)
+    year = str(film.get("year") or "").strip()
+    directors = film.get("credits", {}).get("directors") or film.get("directors") or []
+    director_match = any(
+        name and name in body
+        for name in (_normalise(str(value)) for value in directors if value)
+    )
+    film_context = any(
+        marker in body
+        for marker in (
+            "film",
+            "cinema",
+            "movie",
+            "director",
+            "interview",
+            "review",
+            "reaction",
+            "analysis",
+            "trailer",
+            "scene",
+            "电影",
+            "影片",
+            "导演",
+            "影评",
+            "解说",
+            "闲聊",
+            "访谈",
+            "预告",
+            "解析",
+            "片段",
+            "幕后",
+            "完整版",
+            "完整无删",
+            "正片",
+        )
+    )
+    non_film_collision = any(
+        marker in body
+        for marker in (
+            "bts",
+            "防弹少年团",
+            "专辑",
+            "音源",
+            "广播剧",
+            "有声小说",
+            "有声书",
+            "音声",
+            "舞蹈",
+            "编舞",
+        )
+    )
+    identity_context = bool(director_match or (year and year in body) or film_context)
+    return identity_context and not (non_film_collision and not director_match)
 
 
 def _explicit_full_film_marker(text: str) -> bool:
