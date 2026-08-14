@@ -5,7 +5,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, File, Form, HTTPException, Query, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, HTMLResponse, Response
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, SecretStr
 from starlette.concurrency import run_in_threadpool
@@ -227,7 +227,16 @@ def health() -> dict[str, str]:
 
 
 @app.get("/", response_class=FileResponse)
-def web_app() -> FileResponse:
+def web_app() -> Response:
+    if public_mode_enabled():
+        return JSONResponse(
+            {
+                "service": "FirstRoll API",
+                "status": "ok",
+                "health": "/api/health",
+            },
+            headers={"Cache-Control": "no-store"},
+        )
     return FileResponse(
         web_directory / "index.html",
         headers={"Cache-Control": "no-store"},

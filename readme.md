@@ -196,11 +196,11 @@ evidence packet leaves the device—not complete books, local vectors, clips or 
 paths. The dotted connection is planned work: clip measurements do not yet support claims
 in Deep Study.
 
-The public-beta shell is narrower than the local architecture. By default, one lightweight FastAPI
-container serves both the web interface and public discovery API; an optional CDN-hosted static
-site can be split out later if cold-start measurements justify it. Public mode does not publish
-local settings, private-library retrieval or video analysis, and it keeps Deep Study unavailable
-until Supabase authentication and usage controls are installed.
+The public-beta shell is narrower than the local architecture. A CDN-hosted static frontend and a
+lightweight FastAPI API use separate Render origins; the API root identifies the service instead of
+publishing a duplicate website. Public mode does not publish local settings, private-library
+retrieval or video analysis, and it keeps Deep Study unavailable until Supabase authentication and
+usage controls are installed. Local development retains the convenient combined interface.
 
 | Layer | Primary stack |
 |---|---|

@@ -18,9 +18,12 @@ Delivered:
    added hosted-mode regressions.
 7. Added a click-by-click Render deployment guide that keeps the DeepSeek key absent until Supabase
    JWT verification and quotas are complete.
-8. Simplified the default launch to one Render Web Service and added an uncached runtime-config
-   endpoint, so the hosted interface shows public mode and **Video analysis is coming soon** while
-   the local interface retains its complete analysis workflow.
+8. Added an uncached runtime-config endpoint, so hosted delivery reports public mode and
+   **Video analysis is coming soon** while the local interface retains its complete analysis
+   workflow.
+9. Restored the explicit split requested for publication: the CDN-hosted frontend and sleeping API
+   use separate origins, and the public API root returns service metadata rather than a duplicate
+   website; the combined interface remains available only in local mode.
 
 Acceptance evidence:
 

@@ -1,18 +1,17 @@
 # FirstRoll Public Beta Hosting
 
-FirstRoll's first public beta uses one Render Web Service from the `master` branch:
+FirstRoll's first public beta uses two Render services from the same `master` branch:
 
 ```text
-Browser  ->  Render FastAPI Web Service  ->  public film sources
-                 HTML, assets and API
+Browser  ->  Render Static Site  ->  Render FastAPI Web Service  ->  public film sources
+                 frontend                     API
 ```
 
-This is the lowest-complexity $0 deployment. The hosted edition deliberately publishes discovery
-and the 3D shelf only. Private-library
+The hosted edition deliberately publishes discovery and the 3D shelf only. Private-library
 settings, local documents, clip uploads, computer-vision analysis and unauthenticated Deep Study
 are blocked by the backend. Supabase authentication must be completed before Deep Study is enabled.
-Splitting the static frontend onto Render's CDN remains an optional cold-start optimisation, not a
-launch requirement.
+The separate origins keep the public boundary explicit and allow the frontend shell to load while
+the free API service wakes.
 
 ## Local production checks
 
@@ -76,14 +75,10 @@ Stop the test container with `docker stop firstroll-render-test`.
 
 Record the complete backend URL. It is required when building the static site.
 
-Open the root service URL. The same FastAPI container serves the complete FirstRoll interface and
-emits its public runtime configuration at `/assets/config.js`. No CORS or API-base setting is needed
-for this one-service deployment.
+Open the root service URL. In public mode it identifies itself as the FirstRoll API; it is not the
+visitor-facing website.
 
-## 2. Optional: create a separate Static Site
-
-Skip this section for the initial public beta. Use it later only if measurements show that displaying
-the interface during a backend cold start is worth the extra service and CORS configuration.
+## 2. Create the separate Static Site
 
 1. In Render, select **New** and then **Static Site**.
 2. Select the same GitHub repository and enter:
@@ -109,7 +104,7 @@ the interface during a backend cold start is worth the extra service and CORS co
 The frontend should appear immediately even when the backend is asleep. Search will remain
 unavailable until the API has woken.
 
-## 3. Optional: allow the Static Site to call the API
+## 3. Allow the Static Site to call the API
 
 1. Return to the backend Web Service.
 2. Select **Environment**.
@@ -128,8 +123,8 @@ tokens to the API.
 ## 4. Current public-beta acceptance checks
 
 - `/api/health` returns HTTP 200.
-- The root service URL serves the interface and 3D assets after the backend wakes.
-- `/assets/config.js` reports public mode with video analysis disabled.
+- The Static Site URL serves the interface and 3D assets without waiting for the backend.
+- The backend root identifies itself as the FirstRoll API.
 - Search begins working after the backend wakes.
 - `/api/settings` and `/api/library/status` return HTTP 404 in public mode.
 - `/api/analyze` returns HTTP 503 in public mode.

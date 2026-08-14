@@ -31,6 +31,20 @@ def test_public_mode_serves_hosted_frontend_configuration(monkeypatch) -> None:
     assert "videoAnalysisEnabled: false" in response.text
 
 
+def test_public_mode_root_identifies_the_api(monkeypatch) -> None:
+    monkeypatch.setenv("FIRSTROLL_PUBLIC_MODE", "true")
+    client = TestClient(main.app)
+
+    response = client.get("/")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "service": "FirstRoll API",
+        "status": "ok",
+        "health": "/api/health",
+    }
+
+
 def test_public_mode_does_not_publish_local_or_expensive_features(monkeypatch) -> None:
     monkeypatch.setenv("FIRSTROLL_PUBLIC_MODE", "true")
     client = TestClient(main.app)
