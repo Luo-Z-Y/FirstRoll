@@ -527,11 +527,17 @@ html[data-theme="dark"] .theme-icon-moon { opacity: 1; transform: rotate(0) scal
   align-items: stretch;
 }
 
+.archive-pullout-shell {
+  min-width: 0;
+  container-type: inline-size;
+}
+
 .archive-pullout {
   position: relative;
   min-width: 0;
+  height: 100%;
   display: grid;
-  grid-template-columns: minmax(240px, 0.9fr) minmax(180px, 0.85fr);
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 0.85fr);
   grid-template-rows: auto 1fr;
   gap: 10px 22px;
   overflow: hidden;
@@ -554,8 +560,10 @@ html[data-theme="dark"] .theme-icon-moon { opacity: 1; transform: rotate(0) scal
   z-index: 4;
   grid-column: 1 / -1;
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
+  gap: 6px 18px;
   padding: 0 28px 12px 0;
   border-bottom: 1px solid var(--line);
   font: 0.58rem "IBM Plex Mono", monospace;
@@ -563,7 +571,9 @@ html[data-theme="dark"] .theme-icon-moon { opacity: 1; transform: rotate(0) scal
   text-transform: uppercase;
 }
 
-.archive-pullout-label small { color: var(--ink-soft); font: inherit; }
+.archive-pullout-label span,
+.archive-pullout-label small { min-width: 0; }
+.archive-pullout-label small { margin-left: auto; color: var(--ink-soft); font: inherit; text-align: right; }
 
 .criterion-object {
   position: relative;
@@ -676,15 +686,28 @@ html[data-theme="dark"] .theme-icon-moon { opacity: 1; transform: rotate(0) scal
   z-index: 3;
   align-self: center;
   min-width: 0;
+  max-width: 100%;
   padding: 0 28px 8px 0;
   animation: reveal 520ms 260ms both;
 }
 
 .archive-pullout-copy p { margin: 0 0 10px; color: var(--red); font: 0.58rem "IBM Plex Mono", monospace; letter-spacing: 0.08em; text-transform: uppercase; }
-.archive-pullout-copy h3 { margin: 0 0 13px; font: clamp(2.2rem, 3.6vw, 4.2rem)/0.82 "Bebas Neue", sans-serif; text-transform: uppercase; }
+.archive-pullout-copy h3 { max-width: 100%; margin: 0 0 13px; overflow-wrap: break-word; font: clamp(2.2rem, 3.6vw, 4.2rem)/0.82 "Bebas Neue", sans-serif; text-transform: uppercase; }
 .archive-pullout-copy > div { display: grid; gap: 4px; margin-bottom: 22px; color: var(--ink-soft); font: 0.6rem "IBM Plex Mono", monospace; }
-.archive-pullout-copy button { width: 100%; display: flex; justify-content: space-between; gap: 14px; border: 1px solid var(--ink); border-radius: 10px; padding: 12px 13px; color: var(--inverse-text); background: var(--inverse-bg); box-shadow: var(--control-shadow); font-size: 0.68rem; font-weight: 700; cursor: pointer; }
+.archive-pullout-copy button { width: 100%; max-width: 100%; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 14px; white-space: normal; border: 1px solid var(--ink); border-radius: 10px; padding: 12px 13px; color: var(--inverse-text); background: var(--inverse-bg); box-shadow: var(--control-shadow); font-size: 0.68rem; font-weight: 700; cursor: pointer; }
 .archive-pullout-copy button:hover { color: var(--cream); border-color: var(--red); background: var(--red); box-shadow: var(--control-shadow-hover); transform: translateY(-2px); }
+
+@container (max-width: 520px) {
+  .archive-pullout { grid-template-columns: 1fr; }
+  .archive-pullout-label,
+  .criterion-object,
+  .archive-pullout-copy { grid-column: 1; }
+  .archive-pullout-label { align-items: flex-start; padding-right: 0; }
+  .archive-pullout-label small { flex: 0 0 100%; margin-left: 0; overflow-wrap: anywhere; text-align: left; }
+  .criterion-object { width: min(100%, 310px); margin: 0 auto; }
+  .archive-pullout-copy { padding: 8px 4px 0; }
+  .archive-pullout-copy h3 { font-size: clamp(2.65rem, 13cqi, 3.6rem); }
+}
 
 .film-closet {
   position: relative;
@@ -1602,7 +1625,6 @@ html[data-theme="dark"] .critical-provider-actions button.is-active.is-loaded::a
 
 @media (max-width: 1120px) {
   .film-archive { grid-template-columns: 1fr; }
-  .archive-pullout { grid-template-columns: minmax(280px, 0.8fr) minmax(220px, 1fr); }
   .search-stage { grid-template-columns: 2fr 0.7fr 1.2fr; }
   .search-submit { grid-column: 1 / -1; min-height: 58px; }
   .search-field:nth-of-type(3) { border-right: 0; }
@@ -1663,7 +1685,7 @@ html[data-theme="dark"] .critical-provider-actions button.is-active.is-loaded::a
   .archive-pullout-label { padding-right: 0; }
   .criterion-object { width: min(100%, 310px); min-height: 300px; margin: 0 auto; }
   .archive-pullout-copy { padding: 8px 4px 0; }
-  .archive-pullout-copy h3 { font-size: 3.6rem; }
+  .archive-pullout-copy h3 { font-size: clamp(2.65rem, 13vw, 3.6rem); }
   .film-closet { min-height: 520px; }
   .closet-header { right: 14px; left: 14px; }
   .closet-header small { display: none; }

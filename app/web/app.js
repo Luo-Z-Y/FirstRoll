@@ -437,19 +437,21 @@ function renderFilmArchive(
   state.discovery.archiveSelectionId = primary.id;
   state.discovery.archive = { primary, directorWorks, relevant, categories };
   refs.discoveryResults.innerHTML = `
-    <div class="archive-pullout">
-      <div class="archive-pullout-label"><span>Selected edition</span><small>FirstRoll Collection</small></div>
-      ${criterionCaseMarkup(primary)}
-      <div class="archive-pullout-copy">
-        <p>${escapeHtml((primary.directors || []).join(", ") || "Director not supplied")}</p>
-        <h3>${escapeHtml(primary.title || "Untitled")}</h3>
-        <div>
-          <span>${escapeHtml(primary.year || "Year unknown")}${duration ? ` · ${escapeHtml(duration)}` : ""}</span>
-          ${primary.original_title && primary.original_title !== primary.title ? `<span>${escapeHtml(primary.original_title)}</span>` : ""}
+    <div class="archive-pullout-shell">
+      <div class="archive-pullout">
+        <div class="archive-pullout-label"><span>Selected edition</span><small>FirstRoll Collection</small></div>
+        ${criterionCaseMarkup(primary)}
+        <div class="archive-pullout-copy">
+          <p>${escapeHtml((primary.directors || []).join(", ") || "Director not supplied")}</p>
+          <h3>${escapeHtml(primary.title || "Untitled")}</h3>
+          <div>
+            <span>${escapeHtml(primary.year || "Year unknown")}${duration ? ` · ${escapeHtml(duration)}` : ""}</span>
+            ${primary.original_title && primary.original_title !== primary.title ? `<span>${escapeHtml(primary.original_title)}</span>` : ""}
+          </div>
+          <button type="button" data-film-id="${escapeHtml(primary.id)}">
+            Open film dossier <span aria-hidden="true">↗</span>
+          </button>
         </div>
-        <button type="button" data-film-id="${escapeHtml(primary.id)}">
-          Open film dossier <span aria-hidden="true">↗</span>
-        </button>
       </div>
     </div>
     <aside class="film-closet" aria-label="Related film shelf">

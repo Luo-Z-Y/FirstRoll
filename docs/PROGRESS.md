@@ -1,5 +1,23 @@
 # FirstRoll Project Progress
 
+### 15 August 2026 — Zoom-safe selected edition
+
+Delivered:
+
+1. Replaced the selected-edition card's viewport-only responsive assumption with a component-width
+   container query, so the artwork and film copy collapse to one column before either reaches the
+   inner frame.
+2. Allowed the collection header, long film titles and dossier action to wrap without increasing
+   their grid track or crossing the border at high browser zoom.
+3. Bumped the hosted stylesheet asset version so Render visitors receive the corrected layout
+   immediately after deployment.
+
+Acceptance evidence:
+
+- measured medium- and high-zoom-equivalent layouts keep the header, title, copy and button within
+  the selected-edition panel;
+- all 89 automated tests pass, including a regression for the component-width breakpoint.
+
 ### 15 August 2026 — Supabase authentication boundary
 
 Delivered:

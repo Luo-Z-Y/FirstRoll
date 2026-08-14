@@ -50,6 +50,27 @@ def test_supabase_auth_is_bundled_and_deep_study_sends_bearer_tokens() -> None:
     assert "FIRSTROLL_SUPABASE_PUBLISHABLE_KEY" in build
 
 
+def test_archive_pullout_collapses_before_zoom_can_clip_its_copy() -> None:
+    index = (WEB / "index.html").read_text(encoding="utf-8")
+    styles = (WEB / "styles.css").read_text(encoding="utf-8")
+    app = (WEB / "app.js").read_text(encoding="utf-8")
+
+    assert "/assets/styles.css?v=20260815-1" in index
+    assert "/assets/app.js?v=20260815-1" in index
+    assert 'class="archive-pullout-shell"' in app
+    assert "container-type: inline-size" in styles
+    assert "@container (max-width: 520px)" in styles
+    assert "grid-template-columns: minmax(0, 0.9fr) minmax(0, 0.85fr)" in styles
+    assert "flex: 0 0 100%" in styles
+    assert "overflow-wrap: anywhere" in styles
+    assert ".archive-pullout-label" in styles
+    assert "flex-wrap: wrap" in styles
+    assert ".archive-pullout-copy h3" in styles
+    assert "overflow-wrap: break-word" in styles
+    assert ".archive-pullout-copy button" in styles
+    assert "max-width: 100%" in styles
+
+
 def test_single_wall_shelf_uses_five_rows_of_real_films() -> None:
     app = (WEB / "app.js").read_text(encoding="utf-8")
     runtime = (WEB / "closet3d.js").read_text(encoding="utf-8")
