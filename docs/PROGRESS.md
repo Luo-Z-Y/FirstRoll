@@ -82,6 +82,9 @@ Delivered:
     retaining the existing step-back and free-walk controls. Added an eight-request, IMDb-verified
     Letterboxd fallback budget for related films that have neither a Wikidata image nor a usable
     Wikipedia poster, with cached artwork reused on later shelf builds.
+15. Corrected the Three.js yaw basis used by movement: forward and right now match the camera's
+    negative-Z viewing convention, so W/S and A/D remain camera-relative instead of reversing when
+    the viewer turns towards either side of the shelf.
 
 Acceptance evidence:
 
@@ -105,6 +108,8 @@ Acceptance evidence:
 - live *We Are All Strangers* validation opened directly in `MID VIEW`, returned Reset view to the
   same close position and loaded its real Letterboxd poster through the verified IMDb match; the 3D
   shelf completed with 50 cases and no artwork-loading errors;
+- movement-vector regression checks cover the forward and right basis signs at sideways yaw angles;
+  a live sideways-facing browser check confirmed D moved right and A returned to the starting point;
 - 3D asset tests, the full automated suite, JavaScript syntax and repository whitespace checks pass.
 
 Operational note:

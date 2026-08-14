@@ -35,7 +35,8 @@ The original GPL-3.0 licence and contributor attribution remain applicable. See
 - Search by title, year and director through key-free Wikidata.
 - Read an attributed Wikipedia overview and poster after Wikidata resolves the film.
 - Explore a real Blender-built GLB film shelf rendered locally with Three.js: drag to look,
-  scroll or use W/S to move closer, strafe with A/D, browse separate director and relationship rows
+  scroll or use W/S to move closer, strafe camera-relatively with A/D at any viewing angle, browse
+  separate director and relationship rows
   on one wall,
   then hover a transparent jewel case to pull it out and select it as the new edition. Each curated
   row is deliberately compact at ten cases. All five rows are populated from real Wikidata-backed

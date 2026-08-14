@@ -526,7 +526,7 @@ class FirstRollClosetViewer {
 
   walk(distance) {
     if (!this.camera) return;
-    const forward = new THREE.Vector3(Math.sin(this.yaw), 0, -Math.cos(this.yaw));
+    const forward = new THREE.Vector3(-Math.sin(this.yaw), 0, -Math.cos(this.yaw));
     this.camera.position.addScaledVector(forward, distance);
     this.constrainCamera();
     this.updateHud();
@@ -534,7 +534,7 @@ class FirstRollClosetViewer {
 
   strafe(distance) {
     if (!this.camera) return;
-    const right = new THREE.Vector3(Math.cos(this.yaw), 0, Math.sin(this.yaw));
+    const right = new THREE.Vector3(Math.cos(this.yaw), 0, -Math.sin(this.yaw));
     this.camera.position.addScaledVector(right, distance);
     this.constrainCamera();
     this.updateHud();
