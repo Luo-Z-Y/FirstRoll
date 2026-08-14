@@ -12,8 +12,8 @@ keeps those layers visible instead of presenting one fluent but unsupported answ
 > Crossref scholarship, optional Douban, Letterboxd and Guardian criticism, DeepSeek
 > synthesis and clip analysis are implemented. The
 > hosted edition publishes discovery and the 3D shelf while keeping private-library tools,
-> clip analysis and unauthenticated Deep Study disabled. The next public milestone is Supabase
-> authentication and quota-controlled Deep Study; the next research milestone is connecting
+> clip analysis and unauthenticated Deep Study disabled. Supabase email authentication is now
+> implemented; the next public milestone is quota-controlled Deep Study, while the research milestone is connecting
 > measured clip evidence to Deep Study.
 
 See [Project Progress](docs/PROGRESS.md) for completed milestones, verification results,
@@ -674,6 +674,7 @@ never returned to the browser or committed to Git.
 |---|---|
 | `GET /api/health` | Local process health |
 | `GET /api/contract` | Public API summary |
+| `GET /api/auth/me` | Validate a Supabase bearer session and return its account identity |
 | `GET /api/settings` | Masked local connector status |
 | `GET /api/settings/library` | Private catalogue and local index status for Settings |
 | `POST /api/settings/library` | Add a document to the managed private library |

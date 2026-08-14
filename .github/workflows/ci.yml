@@ -12,6 +12,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
       - name: Install API runtime deps
         run: |
           python -m pip install --upgrade pip
@@ -22,3 +25,9 @@ jobs:
         run: python -c "import app.backend.main as m; print(m.app.title)"
       - name: Test film discovery
         run: python -m pytest -q tests/test_discovery.py tests/test_settings.py tests/test_hosted_mode.py
+      - name: Build hosted frontend
+        env:
+          FIRSTROLL_API_BASE: https://firstroll.example.com
+          FIRSTROLL_SUPABASE_URL: https://example.supabase.co
+          FIRSTROLL_SUPABASE_PUBLISHABLE_KEY: sb_publishable_test
+        run: ./tools/build_web.sh

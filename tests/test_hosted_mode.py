@@ -11,10 +11,16 @@ def test_public_mode_keeps_health_and_discovery_status_available(monkeypatch) ->
     response = client.get("/api/discovery/status")
 
     assert response.status_code == 200
-    assert response.json()["features"] == {
+    features = response.json()["features"]
+    assert features == {
         "public_mode": True,
         "video_analysis": False,
         "deep_study": False,
+        "authentication": {
+            "provider": "Supabase Auth",
+            "state": "not_configured",
+            "configured": False,
+        },
     }
     assert "local_library" not in response.json()
 
@@ -29,6 +35,8 @@ def test_public_mode_serves_hosted_frontend_configuration(monkeypatch) -> None:
     assert response.headers["cache-control"] == "no-store"
     assert "publicMode: true" in response.text
     assert "videoAnalysisEnabled: false" in response.text
+    assert 'supabaseUrl: ""' in response.text
+    assert 'supabasePublishableKey: ""' in response.text
 
 
 def test_public_mode_root_identifies_the_api(monkeypatch) -> None:

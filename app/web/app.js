@@ -140,6 +140,15 @@ function setup() {
 
   setFeatureButtonsEnabled(false);
   loadDiscoveryStatus();
+  document.addEventListener("firstroll:auth-changed", updateDeepStudyAuthState);
+}
+
+function updateDeepStudyAuthState() {
+  const button = refs.filmDetail.querySelector("[data-generate-study]");
+  if (!button || !runtimeConfig.publicMode) return;
+  button.textContent = window.FirstRollAuth?.currentUser()
+    ? "Generate study"
+    : "Sign in to Deep Study";
 }
 
 function applyRuntimeMode() {
@@ -753,6 +762,7 @@ function renderFilmDetail(film) {
       <div class="deep-study-output" data-study-output></div>
     </section>
     ${reviews.length ? `<div class="reviews-section"><h3>Perspectives</h3><div class="review-grid">${reviews.map(reviewCard).join("")}</div></div>` : ""}`;
+  updateDeepStudyAuthState();
 }
 
 function videoProviderStatusMarkup(providers = {}) {
@@ -1227,6 +1237,12 @@ async function generateDeepStudy(button) {
   const output = refs.filmDetail.querySelector("[data-study-output]");
   const question = refs.filmDetail.querySelector("[data-study-question]")?.value.trim() || null;
   if (!film || !output) return;
+  const authorisation = await window.FirstRollAuth?.authorisationHeaders?.() || {};
+  if (runtimeConfig.publicMode && !authorisation.Authorization) {
+    window.FirstRollAuth?.open?.();
+    output.innerHTML = '<p class="study-error">Sign in by email to use Deep Study.</p>';
+    return;
+  }
   button.disabled = true;
   button.textContent = "Studying…";
   output.innerHTML = fetchProgressMarkup("Reading the film record against your cited sources…");
@@ -1235,7 +1251,7 @@ async function generateDeepStudy(button) {
       `${discoveryApiBase()}/api/discovery/films/${encodeURIComponent(film.id)}/study`,
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...authorisation },
         body: JSON.stringify({ question }),
       },
     );

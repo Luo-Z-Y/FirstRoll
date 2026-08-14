@@ -31,6 +31,25 @@ def test_webgl_runtime_is_local_and_loaded_by_the_discovery_page() -> None:
     assert (WEB / "vendor" / "three" / "LICENSE").is_file()
 
 
+def test_supabase_auth_is_bundled_and_deep_study_sends_bearer_tokens() -> None:
+    index = (WEB / "index.html").read_text(encoding="utf-8")
+    auth = (WEB / "auth.js").read_text(encoding="utf-8")
+    app = (WEB / "app.js").read_text(encoding="utf-8")
+    build = (ROOT / "tools" / "build_web.sh").read_text(encoding="utf-8")
+
+    assert 'id="authDialog"' in index
+    assert 'authScript.src = "/assets/auth.js' in index
+    assert 'from "@supabase/supabase-js"' in auth
+    assert 'flowType: "pkce"' in auth
+    assert "signInWithOtp" in auth
+    assert "emailRedirectTo" in auth
+    assert "authorisationHeaders" in auth
+    assert "authorisation.Authorization" in app
+    assert 'headers: { "Content-Type": "application/json", ...authorisation }' in app
+    assert "FIRSTROLL_SUPABASE_URL" in build
+    assert "FIRSTROLL_SUPABASE_PUBLISHABLE_KEY" in build
+
+
 def test_single_wall_shelf_uses_five_rows_of_real_films() -> None:
     app = (WEB / "app.js").read_text(encoding="utf-8")
     runtime = (WEB / "closet3d.js").read_text(encoding="utf-8")

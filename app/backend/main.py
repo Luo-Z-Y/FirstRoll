@@ -1,4 +1,5 @@
 import asyncio
+import json
 import os
 import tempfile
 from pathlib import Path
@@ -22,6 +23,7 @@ from app.backend.criticism import (
     ReviewSource,
     build_bundle,
 )
+from app.backend.auth import AuthConfigurationError, AuthenticationError, SupabaseAuthVerifier
 from app.backend.discovery import DiscoveryService
 from app.backend.evidence import EvidencePacket
 from app.backend.library import MAX_DOCUMENT_BYTES, SUPPORTED_SUFFIXES, LocalLibraryCatalogue
@@ -90,6 +92,7 @@ youtube_video_adapter = YouTubeVideoAdapter(settings_store)
 bilibili_video_adapter = BilibiliPublicVideoAdapter()
 video_store = FilmVideoStore()
 video_service = FilmVideoService(youtube_video_adapter, bilibili_video_adapter, video_store)
+auth_verifier = SupabaseAuthVerifier()
 reception_cache: dict[str, dict] = {}
 web_directory = Path(__file__).resolve().parents[1] / "web"
 
@@ -98,11 +101,18 @@ web_directory = Path(__file__).resolve().parents[1] / "web"
 def web_runtime_config() -> Response:
     public_mode = public_mode_enabled()
     video_analysis = video_analysis_enabled()
+    supabase_url = os.getenv("SUPABASE_URL", "").strip().rstrip("/")
+    supabase_publishable_key = os.getenv("SUPABASE_PUBLISHABLE_KEY", "").strip()
+    if not supabase_publishable_key.startswith("sb_publishable_"):
+        supabase_url = ""
+        supabase_publishable_key = ""
     content = (
         "window.FIRSTROLL_CONFIG = Object.freeze({\n"
         '  apiBase: "",\n'
         f"  publicMode: {str(public_mode).lower()},\n"
         f"  videoAnalysisEnabled: {str(video_analysis).lower()},\n"
+        f"  supabaseUrl: {json.dumps(supabase_url)},\n"
+        f"  supabasePublishableKey: {json.dumps(supabase_publishable_key)},\n"
         "});\n"
     )
     return Response(
@@ -122,6 +132,21 @@ class ConnectorSecretUpdate(BaseModel):
 
 class FilmStudyRequest(BaseModel):
     question: str | None = None
+
+
+def authenticated_user(request: Request) -> dict[str, str | None]:
+    try:
+        return auth_verifier.verify_authorisation(
+            request.headers.get("Authorization")
+        ).as_dict()
+    except AuthConfigurationError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except AuthenticationError as exc:
+        raise HTTPException(
+            status_code=401,
+            detail=str(exc),
+            headers={"WWW-Authenticate": "Bearer"},
+        ) from exc
 
 
 CRITICISM_PROVIDERS = {
@@ -401,6 +426,7 @@ def contract() -> dict:
             "DELETE /api/settings/library/{document_id}",
             "POST /api/settings/library/rebuild",
             "GET /api/discovery/status",
+            "GET /api/auth/me",
             "GET /api/discovery/search",
             "GET /api/discovery/films/{film_id}",
             "GET /api/discovery/films/{film_id}/related",
@@ -436,8 +462,14 @@ def discovery_status() -> dict:
         "public_mode": public_mode_enabled(),
         "video_analysis": video_analysis_enabled(),
         "deep_study": not public_mode_enabled(),
+        "authentication": auth_verifier.status(),
     }
     return status
+
+
+@app.get("/api/auth/me")
+def auth_me(request: Request) -> dict:
+    return {"user": authenticated_user(request)}
 
 
 @app.get("/api/library/status")
@@ -555,11 +587,16 @@ def discovery_film_videos(film_id: str) -> dict:
 
 
 @app.post("/api/discovery/films/{film_id:path}/study")
-def generate_film_study(film_id: str, study_request: FilmStudyRequest) -> dict:
+def generate_film_study(
+    film_id: str,
+    study_request: FilmStudyRequest,
+    request: Request,
+) -> dict:
     if public_mode_enabled():
+        authenticated_user(request)
         raise HTTPException(
             status_code=503,
-            detail="Authenticated Deep Study is not enabled on the public beta yet.",
+            detail="Your account is ready. Deep Study quotas are being enabled next.",
         )
     try:
         detail = discovery_service.detail(film_id)

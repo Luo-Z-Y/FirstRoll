@@ -7,9 +7,10 @@ Browser  ->  Render Static Site  ->  Render FastAPI Web Service  ->  public film
                  frontend                     API
 ```
 
-The hosted edition deliberately publishes discovery and the 3D shelf only. Private-library
-settings, local documents, clip uploads, computer-vision analysis and unauthenticated Deep Study
-are blocked by the backend. Supabase authentication must be completed before Deep Study is enabled.
+The hosted edition deliberately publishes discovery, the 3D shelf and Supabase email sign-in.
+Private-library settings, local documents, clip uploads, computer-vision analysis and
+unauthenticated Deep Study are blocked by the backend. Authenticated Deep Study remains quota-gated
+until its durable Supabase usage tables are installed.
 The separate origins keep the public boundary explicit and allow the frontend shell to load while
 the free API service wakes.
 
@@ -104,7 +105,41 @@ visitor-facing website.
 The frontend should appear immediately even when the backend is asleep. Search will remain
 unavailable until the API has woken.
 
-## 3. Allow the Static Site to call the API
+## 3. Connect Supabase authentication
+
+The Supabase project URL and publishable key are designed to be public. Use the same two values on
+both Render services; never use the secret or service-role key for these settings.
+
+1. In Supabase, open **Project Settings → API** and copy **Project URL** and the
+   `sb_publishable_...` key.
+2. In the Render **Static Site**, open **Environment** and add:
+
+   | Key | Value |
+   |---|---|
+   | `FIRSTROLL_SUPABASE_URL` | the Supabase Project URL |
+   | `FIRSTROLL_SUPABASE_PUBLISHABLE_KEY` | the `sb_publishable_...` key |
+
+3. Save the changes and choose **Manual Deploy → Deploy latest commit**. These are build-time
+   values, so a fresh static build is required.
+4. In the Render **backend Web Service**, open **Environment** and add:
+
+   | Key | Value |
+   |---|---|
+   | `SUPABASE_URL` | the same Supabase Project URL |
+   | `SUPABASE_PUBLISHABLE_KEY` | the same `sb_publishable_...` key |
+
+5. Save and redeploy the backend.
+6. Keep Supabase **Authentication → URL Configuration → Site URL** set to the exact frontend URL,
+   `https://firstroll-web.onrender.com`, and include that same URL in **Redirect URLs**.
+7. Open the frontend in a private window, select **Sign in**, request an email link, follow it and
+   confirm the header displays the account email. `/api/auth/me` should then return that account's
+   Supabase user ID and email when called with its bearer token.
+
+The browser stores only Supabase's short-lived user session. FastAPI validates each bearer token
+against Supabase Auth before allowing an authenticated operation. No provider secret is included in
+the static bundle.
+
+## 4. Allow the Static Site to call the API
 
 1. Return to the backend Web Service.
 2. Select **Environment**.
@@ -131,7 +166,7 @@ MCP connector and may require a user cookie, so it must not be exposed through u
 public Settings. Review and pin the connector, then protect its use with Supabase authentication
 before enabling it on the shared server.
 
-## 4. Current public-beta acceptance checks
+## 5. Current public-beta acceptance checks
 
 - `/api/health` returns HTTP 200.
 - The Static Site URL serves the interface and 3D assets without waiting for the backend.
@@ -139,15 +174,16 @@ before enabling it on the shared server.
 - Search begins working after the backend wakes.
 - `/api/settings` and `/api/library/status` return HTTP 404 in public mode.
 - `/api/analyze` returns HTTP 503 in public mode.
-- Deep Study returns HTTP 503 until Supabase authentication is installed.
+- `/api/auth/me` returns HTTP 401 without a session and the signed-in account with a valid session.
+- Deep Study returns HTTP 401 without a session and HTTP 503 at the quota gate when signed in.
 - No `.firstroll` data, uploaded clips, API keys or private library files appear in the image,
   repository, frontend source or network responses.
 
-## 5. Next security milestone
+## 6. Next security milestone
 
-Create Supabase authentication and usage tables, verify Supabase JWTs in FastAPI, add per-user and
-global Deep Study quotas, and only then add the DeepSeek API key to Render. Video analysis remains a
-local feature and is presented as **Coming soon** in the public interface.
+Create durable Supabase usage tables, add per-user and global Deep Study quotas, and only then add
+the DeepSeek API key to Render. Video analysis remains a local feature and is presented as
+**Coming soon** in the public interface.
 
 ## Free-tier limitations
 

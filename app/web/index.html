@@ -43,6 +43,9 @@
       </nav>
 
       <div class="header-tools">
+        <button id="authOpen" class="auth-open" type="button" hidden>Sign in</button>
+        <span id="authIdentity" class="auth-identity" hidden></span>
+        <button id="authSignOut" class="auth-sign-out" type="button" hidden>Sign out</button>
         <button id="themeToggle" class="theme-toggle" type="button" aria-label="Switch to dark mode" title="Switch to dark mode">
           <span class="theme-toggle-thumb" aria-hidden="true">
             <svg class="theme-icon theme-icon-sun" viewBox="0 0 24 24" focusable="false">
@@ -206,9 +209,33 @@
 
   </div>
 
+  <dialog id="authDialog" class="auth-dialog" aria-labelledby="authTitle">
+    <button id="authClose" class="auth-close" type="button" aria-label="Close sign-in">×</button>
+    <p class="eyebrow">FirstRoll account</p>
+    <h2 id="authTitle">Sign in by email</h2>
+    <p>We will send a secure, one-time sign-in link. No password is required.</p>
+    <form id="authForm">
+      <label for="authEmail">Email address</label>
+      <input id="authEmail" name="email" type="email" autocomplete="email" required />
+      <button id="authSubmit" type="submit">Send sign-in link</button>
+    </form>
+    <p id="authMessage" class="auth-message" role="status" aria-live="polite"></p>
+  </dialog>
+
   <video id="analysisVideo" preload="metadata" class="hidden-asset"></video>
   <canvas id="analysisCanvas" width="160" height="90" class="hidden-asset"></canvas>
   <script src="/assets/config.js"></script>
+  <script>
+    if (
+      window.FIRSTROLL_CONFIG?.publicMode
+      && window.FIRSTROLL_CONFIG?.supabaseUrl
+      && window.FIRSTROLL_CONFIG?.supabasePublishableKey
+    ) {
+      const authScript = document.createElement("script");
+      authScript.src = "/assets/auth.js?v=20260815-1";
+      document.body.append(authScript);
+    }
+  </script>
   <script src="/assets/app.js?v=20260814-26"></script>
   <script type="module" src="/assets/closet3d.js?v=20260814-21"></script>
 </body>

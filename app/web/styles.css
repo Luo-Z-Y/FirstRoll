@@ -252,6 +252,46 @@ html[data-theme="dark"] .brand-mark { filter: invert(1); }
 
 .public-mode .settings-link { display: none; }
 
+.auth-open,
+.auth-sign-out {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  padding: 10px 15px;
+  font: 600 0.72rem "DM Sans", sans-serif;
+  cursor: pointer;
+}
+
+.auth-identity {
+  max-width: 190px;
+  overflow: hidden;
+  color: var(--muted);
+  font: 500 0.67rem "IBM Plex Mono", monospace;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.auth-dialog {
+  width: min(440px, calc(100vw - 32px));
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--paper);
+  color: var(--ink);
+  padding: 34px;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
+}
+
+.auth-dialog::backdrop { background: rgba(8, 8, 6, 0.72); backdrop-filter: blur(6px); }
+.auth-dialog h2 { margin: 7px 0 10px; font: 400 2.4rem "Bebas Neue", sans-serif; }
+.auth-dialog > p:not(.eyebrow, .auth-message) { color: var(--muted); line-height: 1.55; }
+.auth-dialog form { display: grid; gap: 10px; margin-top: 24px; }
+.auth-dialog label { font: 500 0.68rem "IBM Plex Mono", monospace; text-transform: uppercase; }
+.auth-dialog input { border: 1px solid var(--line); border-radius: 10px; background: transparent; color: inherit; padding: 13px; font: inherit; }
+.auth-dialog form button { border: 0; border-radius: 10px; background: var(--accent); color: #fff; padding: 13px; font-weight: 700; cursor: pointer; }
+.auth-close { position: absolute; top: 14px; right: 16px; border: 0; background: none; color: inherit; font-size: 1.4rem; cursor: pointer; }
+.auth-message { min-height: 1.5em; margin: 14px 0 0; color: var(--accent); font-size: 0.75rem; }
+
 .theme-toggle {
   position: relative;
   width: 54px;

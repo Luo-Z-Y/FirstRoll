@@ -1,0 +1,16 @@
+{
+  "name": "firstroll-web",
+  "private": true,
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "scripts": {
+    "build:auth": "esbuild app/web/auth.js --bundle --minify --format=iife --outfile=dist/assets/auth.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "2.112.3"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2"
+  }
+}

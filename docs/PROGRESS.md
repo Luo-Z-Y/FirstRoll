@@ -1,5 +1,32 @@
 # FirstRoll Project Progress
 
+### 15 August 2026 — Supabase authentication boundary
+
+Delivered:
+
+1. Added passwordless email sign-in and sign-out to the hosted frontend using a bundled Supabase
+   browser client with PKCE and persisted user sessions.
+2. Added a public `/api/auth/me` endpoint and a bounded FastAPI bearer-token verifier that resolves
+   identities through Supabase Auth without accepting client-supplied user details.
+3. Protected hosted Deep Study with authentication while retaining a second explicit quota gate;
+   no paid model request can run until durable usage limits are enabled.
+4. Kept the Supabase secret and service-role keys out of the design. Only the project URL and
+   `sb_publishable_...` key may enter the static bundle or backend environment.
+5. Extended the atomic hosted build and CI job to install and bundle the pinned authentication
+   client, with validation for the public Supabase configuration.
+
+Acceptance evidence:
+
+- all 88 automated tests pass, including valid, missing, malformed and wrong-role token paths;
+- hosted-mode tests confirm the public runtime config exposes only a publishable key;
+- Deep Study returns HTTP 401 without a session and reaches the HTTP 503 quota gate only after a
+  verified account is present.
+
+Known constraint:
+
+- authentication is ready, but hosted Deep Study remains disabled until the per-user and global
+  quota tables are installed and enforced.
+
 ### 15 August 2026 — Public deployment acceptance fixes
 
 Delivered:
