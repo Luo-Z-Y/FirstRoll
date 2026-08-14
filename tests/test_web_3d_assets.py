@@ -61,8 +61,10 @@ def test_single_wall_shelf_uses_five_rows_of_real_films() -> None:
     assert "const SHELF_ROW_SIZE = 10" in runtime
     assert "DEFAULT_CAMERA_POSITION = new THREE.Vector3(0, 1.65, 0.12)" in runtime
     assert runtime.count("this.camera.position.copy(DEFAULT_CAMERA_POSITION)") == 2
-    assert "new THREE.Vector3(-Math.sin(this.yaw), 0, -Math.cos(this.yaw))" in runtime
-    assert "new THREE.Vector3(Math.cos(this.yaw), 0, -Math.sin(this.yaw))" in runtime
+    assert "this.camera.getWorldDirection(forward)" in runtime
+    assert "crossVectors(forward, this.camera.up)" in runtime
+    assert "const { forward } = this.movementBasis()" in runtime
+    assert "const { right } = this.movementBasis()" in runtime
     assert "placeholder: true" not in runtime
     assert "FirstRoll Archive" not in runtime
     assert "selectableCase: true" in runtime

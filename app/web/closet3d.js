@@ -526,7 +526,7 @@ class FirstRollClosetViewer {
 
   walk(distance) {
     if (!this.camera) return;
-    const forward = new THREE.Vector3(-Math.sin(this.yaw), 0, -Math.cos(this.yaw));
+    const { forward } = this.movementBasis();
     this.camera.position.addScaledVector(forward, distance);
     this.constrainCamera();
     this.updateHud();
@@ -534,10 +534,20 @@ class FirstRollClosetViewer {
 
   strafe(distance) {
     if (!this.camera) return;
-    const right = new THREE.Vector3(Math.cos(this.yaw), 0, -Math.sin(this.yaw));
+    const { right } = this.movementBasis();
     this.camera.position.addScaledVector(right, distance);
     this.constrainCamera();
     this.updateHud();
+  }
+
+  movementBasis() {
+    const forward = new THREE.Vector3();
+    this.camera.getWorldDirection(forward);
+    forward.y = 0;
+    if (forward.lengthSq() < Number.EPSILON) forward.set(0, 0, -1);
+    forward.normalize();
+    const right = new THREE.Vector3().crossVectors(forward, this.camera.up).normalize();
+    return { forward, right };
   }
 
   constrainCamera() {
