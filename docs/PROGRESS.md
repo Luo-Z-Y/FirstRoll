@@ -78,6 +78,10 @@ Delivered:
     standardised the final rows at ten cases, so five complete rows can remain genuinely distinct while
     respecting the requested 10–15-case width. Matched both spine and fascia texture aspect ratios to
     their physical meshes so captions render at natural proportions.
+14. Moved the default and reset camera from the distant doorway to close reading distance, while
+    retaining the existing step-back and free-walk controls. Added an eight-request, IMDb-verified
+    Letterboxd fallback budget for related films that have neither a Wikidata image nor a usable
+    Wikipedia poster, with cached artwork reused on later shelf builds.
 
 Acceptance evidence:
 
@@ -96,6 +100,11 @@ Acceptance evidence:
   and 3D texture checks preserve the physical aspect ratio of spine and shelf captions;
 - a live *We Are All Strangers* audit rendered 50 cases across five full rows and reported 50 unique
   title/year editions; close-view inspection confirmed naturally proportioned fascia and spine text;
+- related-film regression coverage confirms that an IMDb identity can supply a source-attributed
+  Letterboxd poster when the primary Wikimedia paths are empty;
+- live *We Are All Strangers* validation opened directly in `MID VIEW`, returned Reset view to the
+  same close position and loaded its real Letterboxd poster through the verified IMDb match; the 3D
+  shelf completed with 50 cases and no artwork-loading errors;
 - 3D asset tests, the full automated suite, JavaScript syntax and repository whitespace checks pass.
 
 Operational note:

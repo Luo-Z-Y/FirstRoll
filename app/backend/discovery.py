@@ -20,6 +20,7 @@ WIKIMEDIA_FILE_URL = "https://commons.wikimedia.org/wiki/Special:Redirect/file"
 WIKIPEDIA_SUMMARY_URL = "https://en.wikipedia.org/api/rest_v1/page/summary"
 WIKIPEDIA_API = "https://en.wikipedia.org/w/api.php"
 LETTERBOXD_WEB = "https://letterboxd.com"
+RELATED_POSTER_FALLBACK_LIMIT = 8
 
 
 class DiscoveryProviderError(RuntimeError):
@@ -473,6 +474,7 @@ LIMIT 168
             "recommended": [],
         }
         assigned_by_group: dict[str, set[str]] = {name: set() for name in groups}
+        poster_fallbacks_remaining = RELATED_POSTER_FALLBACK_LIMIT
         for candidate_id in candidate_ids:
             entity = entities.get(candidate_id)
             if not entity or not self._looks_like_film(entity):
@@ -492,8 +494,19 @@ LIMIT 168
             ):
                 candidate_relations.append(("shared_genre", shared_genre))
             candidate = self._normalise_entity(entity)
+            cached_candidate = self._detail_cache.get(candidate_id) or {}
+            if not candidate.get("poster_url") and cached_candidate.get("poster_url"):
+                candidate["poster_url"] = cached_candidate["poster_url"]
+                candidate["poster_source"] = cached_candidate.get("poster_source")
             self._detail_cache[candidate_id] = candidate
             self._enrich_poster(candidate)
+            if (
+                poster_fallbacks_remaining > 0
+                and not candidate.get("poster_url")
+                and candidate.get("external_ids", {}).get("imdb")
+            ):
+                self._enrich_letterboxd_poster(candidate)
+                poster_fallbacks_remaining -= 1
             summary = self._public_live_summary(candidate)
             for relation, shared_id in candidate_relations:
                 group = "recommended" if relation == "shared_genre" else relation

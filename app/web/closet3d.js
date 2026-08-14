@@ -4,6 +4,7 @@ import { GLTFLoader } from "./vendor/three/addons/loaders/GLTFLoader.js";
 const MODEL_URL = "/assets/models/firstroll-closet.glb?v=20260814-8";
 const CASE_TONES = ["#632d28", "#304138", "#87512f", "#35404a", "#897c64", "#4d3d4d"];
 const CAMERA_BOUNDS = { minX: -0.82, maxX: 0.82, minZ: -3.28, maxZ: 3.82 };
+const DEFAULT_CAMERA_POSITION = new THREE.Vector3(0, 1.65, 0.12);
 const SHELF_ROW_SIZE = 10;
 
 let activeViewer = null;
@@ -68,8 +69,9 @@ class FirstRollClosetViewer {
     this.scene.background = new THREE.Color(0x080705);
     this.scene.fog = new THREE.FogExp2(0x0b0907, 0.018);
     this.camera = new THREE.PerspectiveCamera(55, 1, 0.05, 28);
-    this.camera.position.set(0, 1.65, 3.48);
+    this.camera.position.copy(DEFAULT_CAMERA_POSITION);
     this.updateCameraRotation();
+    this.updateHud();
     this.addLighting();
     this.bindEvents();
     this.resize();
@@ -544,7 +546,7 @@ class FirstRollClosetViewer {
   }
 
   reset() {
-    this.camera.position.set(0, 1.65, 3.48);
+    this.camera.position.copy(DEFAULT_CAMERA_POSITION);
     this.yaw = 0;
     this.pitch = -0.015;
     this.updateCameraRotation();

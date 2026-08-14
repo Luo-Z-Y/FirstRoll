@@ -44,8 +44,10 @@ The original GPL-3.0 licence and contributor attribution remain applicable. See
   and the first complete frame are all ready. Hovering a case also replaces the shelf-header hint with
   its full title, year and director for an uncompressed caption. A shelf-wide allocation ledger keeps
   every title/year edition unique across all five rows, while proportion-matched spine and fascia
-  textures keep their lettering at natural dimensions. Available poster artwork wraps each case
-  beneath the title treatment, with the designed colour spine retained when an image is missing.
+  textures keep their lettering at natural dimensions. The initial camera opens at close reading
+  distance. Available Wikimedia poster artwork wraps each case beneath the title treatment; a bounded
+  IMDb-matched Letterboxd fallback fills additional missing covers, while the designed colour spine
+  remains when neither public source supplies an image.
   Sparse or transiently failed relationship responses stay behind the loading panel and retry instead
   of being misrepresented as a complete shelf; successful data hydrates the existing archive in place.
 - Compare attributed Douban and Letterboxd community scores and review up to three prominent

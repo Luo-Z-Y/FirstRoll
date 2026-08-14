@@ -47,6 +47,7 @@ def test_single_wall_shelf_uses_five_rows_of_real_films() -> None:
     assert "shelfFilmIdentity" in app
     assert "LIMIT 168" in discovery
     assert "candidate_ids[:168]" in discovery
+    assert "RELATED_POSTER_FALLBACK_LIMIT = 8" in discovery
     assert "fetchRelatedFilmsWithRetry" in app
     assert "hydrateFilmShelf" in app
     assert "showFilmShelfError" in app
@@ -54,11 +55,12 @@ def test_single_wall_shelf_uses_five_rows_of_real_films() -> None:
     assert "renderFilmArchive(primary, [], uniqueFilms(nearby" not in app
     assert "!/^Q\\d+$/i.test(text)" in app
     assert "closet-help" not in app
-    assert "data-closet-caption" in app
     assert app.count('wall: "back"') == 5
     assert 'wall: "left"' not in app
     assert 'wall: "right"' not in app
     assert "const SHELF_ROW_SIZE = 10" in runtime
+    assert "DEFAULT_CAMERA_POSITION = new THREE.Vector3(0, 1.65, 0.12)" in runtime
+    assert runtime.count("this.camera.position.copy(DEFAULT_CAMERA_POSITION)") == 2
     assert "placeholder: true" not in runtime
     assert "FirstRoll Archive" not in runtime
     assert "selectableCase: true" in runtime

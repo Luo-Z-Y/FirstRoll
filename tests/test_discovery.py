@@ -41,7 +41,13 @@ def fake_wikidata_with_related(params: dict[str, Any]) -> dict[str, Any]:
     related_ids = requested_ids.intersection({"Q101", "Q102", "Q103", "Q104"})
     if params.get("action") == "wbgetentities" and related_ids and params.get("props") != "labels":
         definitions = {
-            "Q101": ("Earlier Example", {"P57": [claim_entity("Q200")]}),
+            "Q101": (
+                "Earlier Example",
+                {
+                    "P57": [claim_entity("Q200")],
+                    "P345": [claim_string("tt7654321")],
+                },
+            ),
             "Q102": ("Actor Reunion", {"P161": [claim_entity("Q500")]}),
             "Q103": ("Singapore Story", {"P495": [claim_entity("Q400")]}),
             "Q104": ("Another Drama", {"P136": [claim_entity("Q300")]}),
@@ -125,6 +131,40 @@ def test_related_films_are_resolved_from_the_verified_director_identity() -> Non
     assert [film["title"] for film in result["same_director"]] == ["Earlier Example"]
     assert result["same_director"][0]["relation"] == "same_director"
     assert "_director_ids" not in service.detail("wikidata:Q100")["film"]
+
+
+def test_related_films_use_a_bounded_public_poster_fallback() -> None:
+    requested_imdb_ids: list[str] = []
+
+    def poster_request(imdb_id: str) -> dict[str, str]:
+        requested_imdb_ids.append(imdb_id)
+        return {
+            "image": (
+                "https://a.ltrbxd.com/resized/film-poster/7/6/5/"
+                "7654321-earlier-example-0-600-0-900-crop.jpg"
+            ),
+            "url": f"https://letterboxd.com/imdb/{imdb_id}/",
+        }
+
+    service = DiscoveryService(
+        request_json=fake_wikidata_with_related,
+        sparql_json=lambda _: {
+            "results": {
+                "bindings": [sparql_relation("Q101", "same_director", "Q200")]
+            }
+        },
+        poster_request=poster_request,
+    )
+    service.search("Example Film")
+    requested_imdb_ids.clear()
+
+    result = service.related("wikidata:Q100")
+
+    assert requested_imdb_ids == ["tt7654321"]
+    assert "/resized/film-poster/" in result["same_director"][0]["poster_url"]
+    assert result["same_director"][0]["poster_source"]["name"] == (
+        "Letterboxd public film page"
+    )
 
 
 def test_related_films_are_grouped_by_cast_country_and_genre() -> None:
