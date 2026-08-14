@@ -1,5 +1,41 @@
 # FirstRoll Project Progress
 
+### 15 August 2026 — Deployment-ready public-beta shell
+
+Delivered:
+
+1. Added a Python 3.11 production Docker image and a bounded hosted dependency set that excludes
+   TensorFlow, Torchvision, OpenCV, EasyOCR, TransNetV2 and the local embedding model.
+2. Added an atomic static-site build that packages the existing HTML, CSS, JavaScript, Three.js,
+   Blender GLB and runtime API configuration into a 1.5 MB `dist` directory.
+3. Added explicit public-mode gates: remote settings and private-library routes return 404, while
+   clip analysis and unauthenticated Deep Study return 503 before loading expensive code or keys.
+4. Added exact-origin CORS configuration for the future Render Static Site without permitting a
+   wildcard origin.
+5. Added a public **Video analysis is coming soon** state while preserving the complete local
+   analysis interface by default.
+6. Reworked CI to install the same lightweight dependency manifest used by the production image and
+   added hosted-mode regressions.
+7. Added a click-by-click Render deployment guide that keeps the DeepSeek key absent until Supabase
+   JWT verification and quotas are complete.
+
+Acceptance evidence:
+
+- the static production build completes and contains the app, local Three.js runtime and Blender
+  model in a 1.5 MB output;
+- a clean temporary Python environment installs only `requirements-hosted.txt`, imports the API and
+  returns `{"status":"ok"}`;
+- the Docker image builds successfully from `python:3.11-slim` and starts Uvicorn on Render's port;
+- live container checks return HTTP 200 for health, HTTP 404 for the private library and HTTP 503 for
+  unauthenticated Deep Study in public mode;
+- all 80 automated tests pass, including 21 focused hosted, discovery and settings checks, together
+  with backend compilation, scoped Ruff and both JavaScript syntax checks.
+
+Known constraint:
+
+- authenticated hosted Deep Study remains deliberately disabled until the Supabase milestone; the
+  public deployment must not receive a DeepSeek key before that work is complete.
+
 ### 14 August 2026 — Compact archive refinement
 
 Delivered:

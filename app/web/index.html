@@ -16,7 +16,7 @@
       document.documentElement.dataset.theme = theme;
     })();
   </script>
-  <link rel="icon" href="/assets/favicon.svg?v=20260811-2" type="image/svg+xml" />
+  <link rel="icon" href="/assets/favicon.svg?v=20260814-6" type="image/svg+xml" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
@@ -33,19 +33,7 @@
   <div class="app-shell">
     <header class="site-header">
       <button class="brand" type="button" data-product-view="discovery" aria-label="FirstRoll home">
-        <svg class="brand-mark" viewBox="0 0 72 32" aria-hidden="true" focusable="false">
-          <defs>
-            <clipPath id="brand-strip-reveal">
-              <rect class="brand-strip-reveal" x="22" y="4" width="15" height="24" />
-            </clipPath>
-          </defs>
-          <g clip-path="url(#brand-strip-reveal)">
-            <path fill="currentColor" d="M20 5h49v22H20z" />
-            <path fill="var(--logo-cutout)" d="M24 8h5v3h-5zm8 0h5v3h-5zm8 0h5v3h-5zm8 0h5v3h-5zm8 0h5v3h-5zm8 0h3v3h-3zM24 21h5v3h-5zm8 0h5v3h-5zm8 0h5v3h-5zm8 0h5v3h-5zm8 0h5v3h-5zm8 0h3v3h-3zM23 13h43v6H23z" />
-            <path stroke="currentColor" d="M34 13v6m11-6v6m11-6v6" />
-          </g>
-          <path fill="currentColor" d="M15.5 2C9.8 2 6 5.3 6 9.5v13C6 26.7 9.8 30 15.5 30s9.5-3.3 9.5-7.5v-13C25 5.3 21.2 2 15.5 2Z" />
-        </svg>
+        <img class="brand-mark" src="/assets/favicon.svg?v=20260814-6" alt="" aria-hidden="true" />
         <span>FirstRoll</span>
       </button>
 
@@ -72,12 +60,6 @@
 
     <main>
       <section id="product-discovery" class="product-view active">
-        <div class="discovery-hero">
-          <div class="hero-copy">
-            <h1>Find a film.<br /><em>Study it.</em></h1>
-          </div>
-        </div>
-
         <form id="discoveryForm" class="search-stage" role="search">
           <div class="search-field search-field-title">
             <label for="filmTitle">Film title</label>
@@ -121,6 +103,15 @@
           </div>
           <p id="analyseContext" class="hidden"></p>
         </div>
+
+        <section id="videoAnalysisComingSoon" class="coming-soon-panel card hidden" aria-live="polite">
+          <p class="eyebrow">Local laboratory</p>
+          <h2>Video analysis is coming soon online.</h2>
+          <p>
+            Clip uploads and computer-vision processing remain on your own machine for now.
+            The public beta focuses on film discovery and the FirstRoll shelf.
+          </p>
+        </section>
 
         <div class="workspace">
           <aside class="control-panel card">
@@ -217,7 +208,8 @@
 
   <video id="analysisVideo" preload="metadata" class="hidden-asset"></video>
   <canvas id="analysisCanvas" width="160" height="90" class="hidden-asset"></canvas>
-  <script src="/assets/app.js?v=20260814-24"></script>
+  <script src="/assets/config.js"></script>
+  <script src="/assets/app.js?v=20260814-26"></script>
   <script type="module" src="/assets/closet3d.js?v=20260814-21"></script>
 </body>
 </html>

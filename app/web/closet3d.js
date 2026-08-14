@@ -78,11 +78,7 @@ class FirstRollClosetViewer {
     this.animate();
 
     try {
-      const gltf = await new GLTFLoader().loadAsync(MODEL_URL, (event) => {
-        if (!this.loading || !event.total) return;
-        const progress = Math.min(99, Math.round((event.loaded / event.total) * 100));
-        this.loading.querySelector("small").textContent = `${progress}%`;
-      });
+      const gltf = await new GLTFLoader().loadAsync(MODEL_URL);
       if (this.destroyed) return;
       this.model = gltf.scene;
       this.model.name = "FirstRoll Blender shelf";
@@ -100,7 +96,6 @@ class FirstRollClosetViewer {
       this.renderer.render(this.scene, this.camera);
       if (this.loading) {
         this.loading.querySelector("strong").textContent = "Shelf ready";
-        this.loading.querySelector("small").textContent = "100%";
       }
       await this.waitForShelfReveal();
       if (this.destroyed) return;

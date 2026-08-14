@@ -8,13 +8,19 @@ The central rule is simple: identity records, critic reports, theory frameworks,
 hypotheses and measured film observations are different kinds of evidence. FirstRoll
 keeps those layers visible instead of presenting one fluent but unsupported answer.
 
-> **Current status:** local working prototype. Discover, private-library retrieval,
+> **Current status:** local working prototype and deployment-ready public-beta shell. Discover, private-library retrieval,
 > Crossref scholarship, optional Douban, Letterboxd and Guardian criticism, DeepSeek
 > synthesis and clip analysis are implemented. The
-> next major milestone is connecting measured clip evidence to Deep Study.
+> hosted edition publishes discovery and the 3D shelf while keeping private-library tools,
+> clip analysis and unauthenticated Deep Study disabled. The next public milestone is Supabase
+> authentication and quota-controlled Deep Study; the next research milestone is connecting
+> measured clip evidence to Deep Study.
 
 See [Project Progress](docs/PROGRESS.md) for completed milestones, verification results,
 known limitations and the next priorities.
+
+See [Public Beta Hosting](docs/HOSTING.md) for the tested Docker and split Render deployment
+workflow.
 
 ## Lineage and Attribution
 
@@ -189,6 +195,11 @@ synthesis service. When the user chooses **Generate study**, only the typed, sel
 evidence packet leaves the device—not complete books, local vectors, clips or private file
 paths. The dotted connection is planned work: clip measurements do not yet support claims
 in Deep Study.
+
+The optional public-beta shell is narrower than the local architecture. A CDN-hosted static site
+calls a lightweight FastAPI container for public discovery. Public mode does not publish local
+settings, private-library retrieval or video analysis, and it keeps Deep Study unavailable until
+Supabase authentication and usage controls are installed.
 
 | Layer | Primary stack |
 |---|---|

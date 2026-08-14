@@ -1,3 +1,9 @@
+const runtimeConfig = Object.freeze({
+  apiBase: window.FIRSTROLL_CONFIG?.apiBase || "",
+  publicMode: Boolean(window.FIRSTROLL_CONFIG?.publicMode),
+  videoAnalysisEnabled: window.FIRSTROLL_CONFIG?.videoAnalysisEnabled !== false,
+});
+
 const state = {
   file: null,
   url: null,
@@ -46,6 +52,7 @@ const refs = {
   resultsMeta: document.getElementById("resultsMeta"),
   filmDetail: document.getElementById("filmDetail"),
   analyseContext: document.getElementById("analyseContext"),
+  videoAnalysisComingSoon: document.getElementById("videoAnalysisComingSoon"),
   recentSearches: document.getElementById("recentSearches"),
   videoFile: document.getElementById("videoFile"),
   fileTitle: document.getElementById("fileTitle"),
@@ -94,6 +101,7 @@ const refs = {
 setup();
 
 function setup() {
+  applyRuntimeMode();
   refs.themeToggle.addEventListener("click", toggleTheme);
   syncThemeToggle();
   refs.productViewTriggers.forEach((trigger) => {
@@ -134,6 +142,18 @@ function setup() {
   loadDiscoveryStatus();
 }
 
+function applyRuntimeMode() {
+  document.body.classList.toggle("public-mode", runtimeConfig.publicMode);
+  document.body.classList.toggle(
+    "video-analysis-disabled",
+    !runtimeConfig.videoAnalysisEnabled,
+  );
+  refs.videoAnalysisComingSoon.classList.toggle(
+    "hidden",
+    runtimeConfig.videoAnalysisEnabled,
+  );
+}
+
 function toggleTheme() {
   const nextTheme = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
   document.documentElement.dataset.theme = nextTheme;
@@ -167,7 +187,7 @@ function setProductView(viewKey) {
 }
 
 function discoveryApiBase() {
-  return (document.body.dataset.apiBase || "").replace(/\/$/, "");
+  return (runtimeConfig.apiBase || document.body.dataset.apiBase || "").replace(/\/$/, "");
 }
 
 function fetchProgressMarkup(message) {
@@ -426,7 +446,6 @@ function renderFilmArchive(
     <aside class="film-closet" aria-label="Related film shelf">
       <div class="closet-header">
         <span>FirstRoll shelf</span>
-        <small data-closet-caption data-default-caption="Single-wall archive · drag to look · W A S D to move · select a case to pull it out">Single-wall archive · drag to look · W A S D to move · select a case to pull it out</small>
       </div>
       ${closetRoomMarkup(loading)}
     </aside>`;
@@ -545,7 +564,7 @@ function closetRoomMarkup(loading) {
     <div class="closet-viewport closet-webgl" data-closet-viewport tabindex="0" aria-label="Interactive Blender film shelf. Drag to look around, scroll or press W and S to move closer or farther away, use A and D to move sideways, and select a case to pull it out.">
       <canvas data-closet-canvas aria-hidden="true"></canvas>
       <div class="closet-model-loading" data-closet-loading role="status">
-        <span></span><strong>${loading ? "Indexing the collection" : "Opening the 3D archive"}</strong><small>0%</small>
+        <span></span><strong>${loading ? "Indexing the collection" : "Opening the 3D archive"}</strong>
       </div>
       <span class="closet-reticle" aria-hidden="true"></span>
     </div>

@@ -174,29 +174,15 @@ button:focus-visible, a:focus-visible { outline: 3px solid rgba(185, 65, 46, 0.2
 }
 
 .brand-mark {
-  width: 49px;
-  height: 25px;
+  width: 37px;
+  height: 37px;
   flex: 0 0 auto;
-  overflow: visible;
-  color: var(--ink);
+  object-fit: contain;
+  transform: translateY(-1.75px) scaleY(0.985);
+  transform-origin: bottom center;
 }
 
-.brand-strip-reveal {
-  width: 15px;
-  animation: brand-strip-roll 1.8s cubic-bezier(0.65, 0, 0.35, 1) forwards;
-}
-
-@keyframes brand-strip-roll {
-  0%, 15% { width: 15px; }
-  100% { width: 48px; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .brand-strip-reveal {
-    width: 48px;
-    animation: none;
-  }
-}
+html[data-theme="dark"] .brand-mark { filter: invert(1); }
 
 .primary-nav {
   display: flex;
@@ -326,14 +312,6 @@ html[data-theme="dark"] .theme-icon-moon { opacity: 1; transform: rotate(0) scal
   text-transform: uppercase;
 }
 
-.discovery-hero {
-  min-height: 300px;
-  display: flex;
-  align-items: center;
-  padding: 48px 4vw 38px;
-}
-
-.hero-copy h1,
 .analyse-intro h1 {
   margin: 18px 0 19px;
   max-width: 900px;
@@ -345,7 +323,6 @@ html[data-theme="dark"] .theme-icon-moon { opacity: 1; transform: rotate(0) scal
   text-transform: uppercase;
 }
 
-.hero-copy h1 em,
 .analyse-intro h1 em {
   color: var(--red);
   font-style: normal;
@@ -537,7 +514,7 @@ html[data-theme="dark"] .theme-icon-moon { opacity: 1; transform: rotate(0) scal
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding-bottom: 12px;
+  padding: 0 28px 12px 0;
   border-bottom: 1px solid var(--line);
   font: 0.58rem "IBM Plex Mono", monospace;
   letter-spacing: 0.12em;
@@ -657,7 +634,7 @@ html[data-theme="dark"] .theme-icon-moon { opacity: 1; transform: rotate(0) scal
   z-index: 3;
   align-self: center;
   min-width: 0;
-  padding: 0 0 8px;
+  padding: 0 28px 8px 0;
   animation: reveal 520ms 260ms both;
 }
 
@@ -1478,6 +1455,24 @@ html[data-theme="dark"] .theme-icon-moon { opacity: 1; transform: rotate(0) scal
 .analyse-intro h1 { margin-bottom: 0; font-size: clamp(3.4rem, 6.6vw, 6.8rem); }
 .analyse-intro > p { max-width: 430px; margin: 0 0 8px; color: var(--ink-soft); line-height: 1.6; }
 .workspace { display: grid; grid-template-columns: minmax(290px, 355px) 1fr; gap: 16px; }
+.video-analysis-disabled #product-analyse .workspace { display: none; }
+.coming-soon-panel {
+  max-width: 760px;
+  padding: clamp(28px, 5vw, 54px);
+  border-left: 5px solid var(--red);
+}
+.coming-soon-panel h2 {
+  max-width: 680px;
+  margin: 0 0 16px;
+  font-size: clamp(2rem, 4vw, 4rem);
+  line-height: 0.95;
+}
+.coming-soon-panel > p:last-child {
+  max-width: 620px;
+  margin: 0;
+  color: var(--ink-soft);
+  line-height: 1.65;
+}
 .card { color: var(--cream); background: var(--night-panel); border: 1px solid var(--line-night); box-shadow: 0 24px 55px rgba(17, 18, 15, 0.22); }
 .control-panel { padding: 21px; display: flex; flex-direction: column; gap: 14px; }
 .panel-kicker, .actions-title { color: #c56d5c; font-family: "IBM Plex Mono", monospace; font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.1em; }
@@ -1573,7 +1568,6 @@ html[data-theme="dark"] .critical-provider-actions button.is-active.is-loaded::a
 @media (max-width: 900px) {
   .app-shell { padding: 0 20px; }
   .site-header { grid-template-columns: 1fr auto; }
-  .discovery-hero { padding-left: 0; padding-right: 0; }
   .criterion-object { width: min(100%, 340px); }
   .detail-hero { grid-template-columns: 1fr; padding: 38px; }
   .detail-facts { border-left: 0; border-top: 1px solid var(--line-night); padding: 18px 0 0; }
@@ -1593,13 +1587,11 @@ html[data-theme="dark"] .critical-provider-actions button.is-active.is-loaded::a
   .site-header { min-height: 72px; grid-template-columns: 1fr auto; grid-template-areas: "brand tools" "nav nav"; gap: 10px; padding: 10px 0 12px; }
   .brand { font-size: 1.25rem; }
   .brand { grid-area: brand; }
-  .brand-mark { width: 43px; height: 22px; }
+  .brand-mark { width: 30px; height: 30px; transform: translateY(-1.25px) scaleY(0.985); }
   .primary-nav { grid-area: nav; width: 100%; }
   .primary-nav .nav-link { flex: 1; }
   .header-tools { grid-area: tools; gap: 8px; }
   .nav-link { padding: 7px 10px; font-size: 0.68rem; }
-  .discovery-hero { min-height: 250px; padding-top: 36px; }
-  .hero-copy h1 { font-size: clamp(3.4rem, 18vw, 5.6rem); }
   .search-stage { grid-template-columns: 1fr; }
   .deep-study { padding: 20px; }
   .critical-perspectives { padding: 19px; }
@@ -1625,6 +1617,7 @@ html[data-theme="dark"] .critical-provider-actions button.is-active.is-loaded::a
   .film-archive, .review-grid { grid-template-columns: 1fr; }
   .archive-pullout { grid-template-columns: 1fr; padding: 16px; }
   .archive-pullout-label, .criterion-object, .archive-pullout-copy { grid-column: 1; }
+  .archive-pullout-label { padding-right: 0; }
   .criterion-object { width: min(100%, 310px); min-height: 300px; margin: 0 auto; }
   .archive-pullout-copy { padding: 8px 4px 0; }
   .archive-pullout-copy h3 { font-size: 3.6rem; }

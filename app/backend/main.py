@@ -4,6 +4,7 @@ import tempfile
 from pathlib import Path
 
 from fastapi import FastAPI, File, Form, HTTPException, Query, Request, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, SecretStr
@@ -40,6 +41,39 @@ app = FastAPI(
     version="0.1.0",
     description="Evidence-grounded film discovery and scene analysis for filmmakers.",
 )
+
+
+def environment_flag(name: str, default: bool = False) -> bool:
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    return raw.strip().casefold() in {"1", "true", "yes", "on"}
+
+
+def public_mode_enabled() -> bool:
+    return environment_flag("FIRSTROLL_PUBLIC_MODE")
+
+
+def video_analysis_enabled() -> bool:
+    return environment_flag(
+        "FIRSTROLL_VIDEO_ANALYSIS_ENABLED",
+        default=not public_mode_enabled(),
+    )
+
+
+allowed_origins = [
+    origin.strip().rstrip("/")
+    for origin in os.getenv("FIRSTROLL_CORS_ALLOWED_ORIGINS", "").split(",")
+    if origin.strip()
+]
+if allowed_origins:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=allowed_origins,
+        allow_credentials=False,
+        allow_methods=["GET", "POST", "OPTIONS"],
+        allow_headers=["Authorization", "Content-Type"],
+    )
 
 settings_store = LocalSettingsStore()
 discovery_service = DiscoveryService()
@@ -112,6 +146,8 @@ def cache_raw_criticism(
 
 
 def require_local_settings_request(request: Request) -> None:
+    if public_mode_enabled():
+        raise HTTPException(status_code=404, detail="FirstRoll settings are not published.")
     client_host = request.client.host if request.client else ""
     if client_host not in {"127.0.0.1", "::1", "testclient"}:
         raise HTTPException(status_code=403, detail="FirstRoll settings are available locally only.")
@@ -363,14 +399,22 @@ def contract() -> dict:
 @app.get("/api/discovery/status")
 def discovery_status() -> dict:
     status = discovery_service.status()
-    local_library = library_catalogue.public_catalogue()
-    local_library["index"] = library_index.status()
-    status["local_library"] = local_library
+    if not public_mode_enabled():
+        local_library = library_catalogue.public_catalogue()
+        local_library["index"] = library_index.status()
+        status["local_library"] = local_library
+    status["features"] = {
+        "public_mode": public_mode_enabled(),
+        "video_analysis": video_analysis_enabled(),
+        "deep_study": not public_mode_enabled(),
+    }
     return status
 
 
 @app.get("/api/library/status")
 def library_status() -> dict:
+    if public_mode_enabled():
+        raise HTTPException(status_code=404, detail="The private library is not published.")
     result = library_catalogue.public_catalogue()
     result["index"] = library_index.status()
     return result
@@ -435,8 +479,9 @@ def discovery_film_related(
 def discovery_film(film_id: str) -> dict:
     try:
         result = discovery_service.detail(film_id)
-        result["film"]["local_library"] = library_catalogue.public_catalogue()
-        result["film"]["study_reading"] = library_index.retrieve_for_film(result["film"])
+        if not public_mode_enabled():
+            result["film"]["local_library"] = library_catalogue.public_catalogue()
+            result["film"]["study_reading"] = library_index.retrieve_for_film(result["film"])
         cached_bundles = criticism_store.load_all(film_id)
         result["film"]["critical_research"] = {
             "providers": {
@@ -475,6 +520,11 @@ def discovery_film_videos(film_id: str) -> dict:
 
 @app.post("/api/discovery/films/{film_id:path}/study")
 def generate_film_study(film_id: str, study_request: FilmStudyRequest) -> dict:
+    if public_mode_enabled():
+        raise HTTPException(
+            status_code=503,
+            detail="Authenticated Deep Study is not enabled on the public beta yet.",
+        )
     try:
         detail = discovery_service.detail(film_id)
         film = detail["film"]
@@ -679,6 +729,11 @@ async def analyze(
     include_object_detection: bool = Form(True),
     include_shot_scale: bool = Form(True),
 ):
+    if not video_analysis_enabled():
+        raise HTTPException(
+            status_code=503,
+            detail="Hosted video analysis is coming soon. Local analysis remains available.",
+        )
     # Keep heavyweight computer-vision imports out of the film-discovery startup path.
     from app.backend.analysis_pipeline import analyze_video
 
