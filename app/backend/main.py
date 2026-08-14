@@ -5,7 +5,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, File, Form, HTTPException, Query, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, SecretStr
 from starlette.concurrency import run_in_threadpool
@@ -92,6 +92,26 @@ video_store = FilmVideoStore()
 video_service = FilmVideoService(youtube_video_adapter, bilibili_video_adapter, video_store)
 reception_cache: dict[str, dict] = {}
 web_directory = Path(__file__).resolve().parents[1] / "web"
+
+
+@app.get("/assets/config.js", include_in_schema=False)
+def web_runtime_config() -> Response:
+    public_mode = public_mode_enabled()
+    video_analysis = video_analysis_enabled()
+    content = (
+        "window.FIRSTROLL_CONFIG = Object.freeze({\n"
+        '  apiBase: "",\n'
+        f"  publicMode: {str(public_mode).lower()},\n"
+        f"  videoAnalysisEnabled: {str(video_analysis).lower()},\n"
+        "});\n"
+    )
+    return Response(
+        content=content,
+        media_type="application/javascript",
+        headers={"Cache-Control": "no-store"},
+    )
+
+
 app.mount("/assets", StaticFiles(directory=web_directory), name="web-assets")
 
 

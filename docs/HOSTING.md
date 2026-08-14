@@ -1,15 +1,18 @@
 # FirstRoll Public Beta Hosting
 
-FirstRoll's first public beta uses two Render services from the same `master` branch:
+FirstRoll's first public beta uses one Render Web Service from the `master` branch:
 
 ```text
-Render Static Site  ->  Render FastAPI Web Service  ->  public film sources
-       immediate             sleeps when idle
+Browser  ->  Render FastAPI Web Service  ->  public film sources
+                 HTML, assets and API
 ```
 
-The hosted edition deliberately publishes discovery and the 3D shelf only. Private-library
+This is the lowest-complexity $0 deployment. The hosted edition deliberately publishes discovery
+and the 3D shelf only. Private-library
 settings, local documents, clip uploads, computer-vision analysis and unauthenticated Deep Study
 are blocked by the backend. Supabase authentication must be completed before Deep Study is enabled.
+Splitting the static frontend onto Render's CDN remains an optional cold-start optimisation, not a
+launch requirement.
 
 ## Local production checks
 
@@ -73,7 +76,14 @@ Stop the test container with `docker stop firstroll-render-test`.
 
 Record the complete backend URL. It is required when building the static site.
 
-## 2. Create the Static Site
+Open the root service URL. The same FastAPI container serves the complete FirstRoll interface and
+emits its public runtime configuration at `/assets/config.js`. No CORS or API-base setting is needed
+for this one-service deployment.
+
+## 2. Optional: create a separate Static Site
+
+Skip this section for the initial public beta. Use it later only if measurements show that displaying
+the interface during a backend cold start is worth the extra service and CORS configuration.
 
 1. In Render, select **New** and then **Static Site**.
 2. Select the same GitHub repository and enter:
@@ -99,7 +109,7 @@ Record the complete backend URL. It is required when building the static site.
 The frontend should appear immediately even when the backend is asleep. Search will remain
 unavailable until the API has woken.
 
-## 3. Allow the Static Site to call the API
+## 3. Optional: allow the Static Site to call the API
 
 1. Return to the backend Web Service.
 2. Select **Environment**.
@@ -118,7 +128,8 @@ tokens to the API.
 ## 4. Current public-beta acceptance checks
 
 - `/api/health` returns HTTP 200.
-- The static page and 3D assets load before the sleeping backend wakes.
+- The root service URL serves the interface and 3D assets after the backend wakes.
+- `/assets/config.js` reports public mode with video analysis disabled.
 - Search begins working after the backend wakes.
 - `/api/settings` and `/api/library/status` return HTTP 404 in public mode.
 - `/api/analyze` returns HTTP 503 in public mode.

@@ -19,6 +19,18 @@ def test_public_mode_keeps_health_and_discovery_status_available(monkeypatch) ->
     assert "local_library" not in response.json()
 
 
+def test_public_mode_serves_hosted_frontend_configuration(monkeypatch) -> None:
+    monkeypatch.setenv("FIRSTROLL_PUBLIC_MODE", "true")
+    client = TestClient(main.app)
+
+    response = client.get("/assets/config.js")
+
+    assert response.status_code == 200
+    assert response.headers["cache-control"] == "no-store"
+    assert "publicMode: true" in response.text
+    assert "videoAnalysisEnabled: false" in response.text
+
+
 def test_public_mode_does_not_publish_local_or_expensive_features(monkeypatch) -> None:
     monkeypatch.setenv("FIRSTROLL_PUBLIC_MODE", "true")
     client = TestClient(main.app)

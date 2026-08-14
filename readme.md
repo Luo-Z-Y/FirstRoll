@@ -19,8 +19,8 @@ keeps those layers visible instead of presenting one fluent but unsupported answ
 See [Project Progress](docs/PROGRESS.md) for completed milestones, verification results,
 known limitations and the next priorities.
 
-See [Public Beta Hosting](docs/HOSTING.md) for the tested Docker and split Render deployment
-workflow.
+See [Public Beta Hosting](docs/HOSTING.md) for the tested single-service Render deployment and
+the optional split-static optimisation.
 
 ## Lineage and Attribution
 
@@ -196,10 +196,11 @@ evidence packet leaves the device—not complete books, local vectors, clips or 
 paths. The dotted connection is planned work: clip measurements do not yet support claims
 in Deep Study.
 
-The optional public-beta shell is narrower than the local architecture. A CDN-hosted static site
-calls a lightweight FastAPI container for public discovery. Public mode does not publish local
-settings, private-library retrieval or video analysis, and it keeps Deep Study unavailable until
-Supabase authentication and usage controls are installed.
+The public-beta shell is narrower than the local architecture. By default, one lightweight FastAPI
+container serves both the web interface and public discovery API; an optional CDN-hosted static
+site can be split out later if cold-start measurements justify it. Public mode does not publish
+local settings, private-library retrieval or video analysis, and it keeps Deep Study unavailable
+until Supabase authentication and usage controls are installed.
 
 | Layer | Primary stack |
 |---|---|
