@@ -23,6 +23,7 @@ class FirstRollClosetViewer {
     this.model = null;
     this.filmCases = [];
     this.posterTextureCache = new Map();
+    this.collectionKey = null;
     this.hoveredCase = null;
     this.drag = null;
     this.yaw = 0;
@@ -89,7 +90,6 @@ class FirstRollClosetViewer {
         if (object.material) object.material.envMapIntensity = 0.55;
       });
       this.scene.add(this.model);
-      if (this.loading) this.loading.querySelector("strong").textContent = "Loading film artwork";
       await this.addLiveCollections();
       if (this.destroyed) return;
       this.root.dataset.liveCaseCount = String(this.filmCases.length);
@@ -140,6 +140,7 @@ class FirstRollClosetViewer {
   async addLiveCollections() {
     const collections = this.payload.collections || [];
     const shelfFilms = collections.flatMap((collection) => collection.films || []);
+    const collectionKey = shelfFilms.map((film) => film?.id).filter(Boolean).join("|");
     const shelfEditions = shelfFilms.map((film) => {
       const title = String(film.title || film.original_title || "")
         .normalize("NFKC")
@@ -150,11 +151,21 @@ class FirstRollClosetViewer {
     });
     this.root.dataset.filmCount = String(shelfFilms.length);
     this.root.dataset.uniqueFilmCount = String(new Set(shelfEditions).size);
+    if (!collectionKey || collectionKey === this.collectionKey) return;
+    this.collectionKey = collectionKey;
     await Promise.all(collections.map(async (collection) => {
       if (!collection.films?.length) return;
       await this.addFilmRow(collection);
       this.addShelfPlaque(collection);
     }));
+    this.root.dataset.liveCaseCount = String(this.filmCases.length);
+  }
+
+  async update(payload) {
+    this.payload = payload;
+    if (!this.model || this.destroyed) return;
+    await this.addLiveCollections();
+    if (!this.destroyed) this.renderer.render(this.scene, this.camera);
   }
 
   async addFilmRow(collection) {
@@ -169,7 +180,7 @@ class FirstRollClosetViewer {
     );
     const span = films.length * width + Math.max(0, films.length - 1) * gap;
 
-    const filmCases = await Promise.all(films.map(async (film, index) => {
+    const filmCases = films.map((film, index) => {
       let position;
       let rotationY = 0;
       let pullDirection;
@@ -185,14 +196,14 @@ class FirstRollClosetViewer {
         pullDirection = new THREE.Vector3(-side, 0, 0);
       }
       return this.createFilmCase(film, index, width, position, rotationY, pullDirection);
-    }));
+    });
     filmCases.forEach((filmCase) => {
       this.scene.add(filmCase);
       this.filmCases.push(filmCase);
     });
   }
 
-  async createFilmCase(film, index, width, position, rotationY, pullDirection) {
+  createFilmCase(film, index, width, position, rotationY, pullDirection) {
     const group = new THREE.Group();
     group.name = `Selectable case — ${film.title || "Untitled"}`;
     group.position.copy(position);
@@ -211,28 +222,30 @@ class FirstRollClosetViewer {
     const depth = 0.13;
     const faceWidth = width * 0.82;
     const faceHeight = height * 0.91;
-    const posterTexture = await this.loadPosterTexture(film.poster_url);
-    if (posterTexture) {
-      const poster = new THREE.Mesh(
-        new THREE.PlaneGeometry(faceWidth, faceHeight),
-        new THREE.MeshStandardMaterial({ map: posterTexture, roughness: 0.62, metalness: 0.0 }),
-      );
-      poster.position.z = depth / 2 + 0.005;
-      poster.userData.caseOwner = group;
-      group.add(poster);
+    if (film.poster_url) {
+      this.loadPosterTexture(film.poster_url).then((posterTexture) => {
+        if (!posterTexture || this.destroyed) return;
+        const poster = new THREE.Mesh(
+          new THREE.PlaneGeometry(faceWidth, faceHeight),
+          new THREE.MeshStandardMaterial({ map: posterTexture, roughness: 0.62, metalness: 0.0 }),
+        );
+        poster.position.z = depth / 2 + 0.005;
+        poster.userData.caseOwner = group;
+        group.add(poster);
+      });
     }
     const insertTexture = this.createSpineTexture(
       film,
       index,
-      Boolean(posterTexture),
+      false,
       faceWidth / faceHeight,
     );
     const insertMaterial = new THREE.MeshStandardMaterial({
       map: insertTexture,
       roughness: 0.58,
       metalness: 0.0,
-      transparent: Boolean(posterTexture),
-      depthWrite: !posterTexture,
+      transparent: false,
+      depthWrite: true,
     });
     const insert = new THREE.Mesh(new THREE.PlaneGeometry(faceWidth, faceHeight), insertMaterial);
     insert.position.z = depth / 2 + 0.008;
@@ -664,6 +677,13 @@ function mount(payload) {
 
 window.FirstRollCloset = {
   mount,
+  update(payload) {
+    if (!activeViewer || activeViewer.root !== payload?.root) {
+      mount(payload);
+      return;
+    }
+    activeViewer.update(payload);
+  },
   unmount() {
     activeViewer?.destroy();
     activeViewer = null;

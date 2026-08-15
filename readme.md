@@ -47,16 +47,18 @@ The original GPL-3.0 licence and contributor attribution remain applicable. See
   then hover a transparent jewel case to pull it out and select it as the new edition. Each curated
   row is deliberately compact at ten cases. All five rows are populated from real Wikidata-backed
   discovery results; unresolved identifier-only records are omitted rather than displayed as fake or
-  placeholder editions. The shelf remains behind its loading panel until related-film data, the GLB
-  and the first complete frame are all ready. Hovering a case also replaces the shelf-header hint with
+  placeholder editions. The GLB room now opens as soon as its first complete frame is ready;
+  related-film cases and poster textures stream into the live scene afterwards instead of holding the
+  interface behind an indexing screen. Hovering a case also replaces the shelf-header hint with
   its full title, year and director for an uncompressed caption. A shelf-wide allocation ledger keeps
   every title/year edition unique across all five rows, while proportion-matched spine and fascia
   textures keep their lettering at natural dimensions. The initial camera opens at close reading
-  distance. Available Wikimedia poster artwork wraps each case beneath the title treatment; a bounded
-  IMDb-matched Letterboxd fallback fills additional missing covers, while the designed colour spine
-  remains when neither public source supplies an image.
-  Sparse or transiently failed relationship responses stay behind the loading panel and retry instead
-  of being misrepresented as a complete shelf; successful data hydrates the existing archive in place.
+  distance. Available Wikimedia poster artwork wraps each case after it arrives, while the designed
+  colour spine makes every case immediately readable when artwork is absent or still loading.
+  The shelf-specific Wikidata route bounds candidate hydration, omits expensive secondary enrichment,
+  caches successful results in the backend and reuses them in the browser. Sparse or transiently
+  failed relationship responses report an explicit shelf error; successful data hydrates the already
+  interactive archive in place.
 - Compare attributed Douban and Letterboxd community scores and review up to three prominent
   Wikidata awards when those sources provide them.
 - Retrieve matched scholarly abstracts and DOI links through Crossref.

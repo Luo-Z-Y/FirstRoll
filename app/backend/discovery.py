@@ -283,6 +283,7 @@ class DiscoveryService:
             self._letterboxd_poster_request if request_json is None else None
         )
         self._detail_cache: dict[str, dict[str, Any]] = {}
+        self._related_cache: dict[tuple[str, int], dict[str, Any]] = {}
 
     def status(self) -> dict[str, Any]:
         return {
@@ -360,7 +361,13 @@ class DiscoveryService:
             "sources": [self._wikidata_status().as_dict(), self._wikipedia_status().as_dict()],
         }
 
-    def related(self, film_id: str, limit: int = 12) -> dict[str, Any]:
+    def related(
+        self,
+        film_id: str,
+        limit: int = 12,
+        *,
+        fast: bool = False,
+    ) -> dict[str, Any]:
         """Return films related by director, cast, country and genre for the closet."""
         limit = max(1, min(limit, 60))
         if film_id.startswith("demo:"):
@@ -369,6 +376,9 @@ class DiscoveryService:
         qid = film_id.removeprefix("wikidata:")
         if not self._valid_qid(qid):
             raise LookupError("The film identifier is not recognised by the Wikidata adapter.")
+        cache_key = (qid, limit)
+        if fast and cache_key in self._related_cache:
+            return self._related_cache[cache_key]
         if qid not in self._detail_cache:
             self.detail(film_id)
         film = self._detail_cache.get(qid) or {}
@@ -431,19 +441,25 @@ class DiscoveryService:
   BIND(1 AS ?rank)
   BIND(\"shared_genre\" AS ?relation)
 }}""")
+        candidate_cap = min(168, max(40, limit * 5)) if fast else 168
+        query_limit = min(168, max(candidate_cap, limit * 8))
         query = f"""
-SELECT DISTINCT ?film ?relation ?shared ?rank ?date WHERE {{
+SELECT DISTINCT ?film ?relation ?shared ?rank WHERE {{
   {' UNION '.join(unions)}
   FILTER(?film != wd:{qid})
-  OPTIONAL {{ ?film wdt:P577 ?date }}
 }}
-ORDER BY DESC(?rank) DESC(?date)
-LIMIT 168
+ORDER BY DESC(?rank)
+LIMIT {query_limit}
 """.strip()
         try:
             payload = self._sparql_json(query)
             candidate_ids = self._sparql_entity_ids(payload, "film")
-            entities = self._get_entities(candidate_ids[:168])
+            selected_ids = candidate_ids[:candidate_cap]
+            entities = (
+                self._get_shelf_entities(selected_ids)
+                if fast
+                else self._get_entities(selected_ids)
+            )
         except (DiscoveryProviderError, KeyError, TypeError, ValueError):
             response["state"] = "unavailable"
             return response
@@ -494,25 +510,29 @@ LIMIT 168
             ):
                 candidate_relations.append(("shared_genre", shared_genre))
             candidate = self._normalise_entity(entity)
-            cached_candidate = self._detail_cache.get(candidate_id) or {}
-            if not candidate.get("poster_url") and cached_candidate.get("poster_url"):
-                candidate["poster_url"] = cached_candidate["poster_url"]
-                candidate["poster_source"] = cached_candidate.get("poster_source")
-            self._detail_cache[candidate_id] = candidate
-            self._enrich_poster(candidate)
-            if (
-                poster_fallbacks_remaining > 0
-                and not candidate.get("poster_url")
-                and candidate.get("external_ids", {}).get("imdb")
-            ):
-                self._enrich_letterboxd_poster(candidate)
-                poster_fallbacks_remaining -= 1
+            if fast:
+                if any(relation == "same_director" for relation, _ in candidate_relations):
+                    candidate["directors"] = [director] if director else []
+            else:
+                cached_candidate = self._detail_cache.get(candidate_id) or {}
+                if not candidate.get("poster_url") and cached_candidate.get("poster_url"):
+                    candidate["poster_url"] = cached_candidate["poster_url"]
+                    candidate["poster_source"] = cached_candidate.get("poster_source")
+                self._detail_cache[candidate_id] = candidate
+                self._enrich_poster(candidate)
+                if (
+                    poster_fallbacks_remaining > 0
+                    and not candidate.get("poster_url")
+                    and candidate.get("external_ids", {}).get("imdb")
+                ):
+                    self._enrich_letterboxd_poster(candidate)
+                    poster_fallbacks_remaining -= 1
             summary = self._public_live_summary(candidate)
             for relation, shared_id in candidate_relations:
                 group = "recommended" if relation == "shared_genre" else relation
                 if group not in groups or candidate_id in assigned_by_group[group]:
                     continue
-                if group != "same_director" and len(groups[group]) >= limit:
+                if (fast or group != "same_director") and len(groups[group]) >= limit:
                     continue
                 related_summary = dict(summary)
                 related_summary["relation"] = relation
@@ -522,7 +542,29 @@ LIMIT 168
         for films in groups.values():
             films.sort(key=lambda item: (item.get("year") is None, -(item.get("year") or 0)))
         response.update(groups)
+        if fast:
+            self._related_cache[cache_key] = response
         return response
+
+    def _get_shelf_entities(self, qids: list[str]) -> dict[str, dict[str, Any]]:
+        """Fetch only the entity fields needed to build shelf summaries."""
+        entities: dict[str, dict[str, Any]] = {}
+        for offset in range(0, len(qids), 50):
+            payload = self._request_json(
+                {
+                    "action": "wbgetentities",
+                    "ids": "|".join(qids[offset : offset + 50]),
+                    "props": "labels|descriptions|claims|sitelinks",
+                    "languages": "en|zh|zh-hans|zh-hant|ja|ko|fr|de|it|es",
+                    "languagefallback": 1,
+                    "format": "json",
+                }
+            )
+            batch = payload.get("entities", {})
+            if not isinstance(batch, dict):
+                raise DiscoveryProviderError("Wikidata returned an unexpected response.")
+            entities.update(batch)
+        return entities
 
     def _search_wikidata(
         self,

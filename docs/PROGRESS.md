@@ -1,5 +1,31 @@
 # FirstRoll Project Progress
 
+### 15 August 2026 — Non-blocking shelf loading
+
+Delivered:
+
+1. Decoupled the Blender/Three.js room from related-film indexing, so the first interactive frame
+   appears while Wikidata relationships continue loading in the background.
+2. Added a bounded fast path for shelf summaries: twelve results per relationship group, at most
+   sixty hydrated candidate entities, no secondary labels, award descriptions, Wikipedia summaries
+   or sequential Letterboxd poster fallbacks on the critical path.
+3. Added backend related-film caching and a browser-session cache, with a fifteen-second request
+   boundary and at most one retry instead of three unbounded attempts.
+4. Made case construction synchronous and streamed poster textures onto existing cases, preventing
+   a slow or unavailable image host from blocking the scene-ready state.
+5. Preserved the full enrichment route for callers that explicitly need it; the fast shelf summaries
+   are not written into the canonical film-detail cache, so opening a dossier still retrieves complete
+   metadata.
+
+Acceptance evidence:
+
+- the previous cold related-film request exceeded thirty seconds; the bounded cold request measured
+  10.24 seconds and the cached request measured 2.1 milliseconds;
+- browser instrumentation showed the interactive room in 2.8 seconds, with twenty-six real cases
+  completing in the background at 14.3 seconds and no console errors;
+- all 104 automated tests pass, including fast-path caching, canonical-detail isolation and
+  non-blocking poster regressions.
+
 ### 15 August 2026 — Hosted Douban MCP runtime
 
 Delivered:

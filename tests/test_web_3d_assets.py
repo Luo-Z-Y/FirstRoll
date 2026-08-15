@@ -25,7 +25,7 @@ def test_webgl_runtime_is_local_and_loaded_by_the_discovery_page() -> None:
     assert "waitForShelfReveal" in runtime
     assert 'textContent = "Shelf ready"' in runtime
     assert "window.setTimeout(resolve, 540)" in runtime
-    assert "window.FirstRollCloset?.unmount()" in (WEB / "app.js").read_text(
+    assert "window.FirstRollCloset.update(detail)" in (WEB / "app.js").read_text(
         encoding="utf-8"
     )
     assert (WEB / "vendor" / "three" / "LICENSE").is_file()
@@ -108,7 +108,8 @@ def test_archive_pullout_collapses_before_zoom_can_clip_its_copy() -> None:
     app = (WEB / "app.js").read_text(encoding="utf-8")
 
     assert "/assets/styles.css?v=20260815-4" in index
-    assert "/assets/app.js?v=20260815-3" in index
+    assert "/assets/app.js?v=20260815-4" in index
+    assert "/assets/closet3d.js?v=20260815-1" in index
     assert 'class="archive-pullout-shell"' in app
     assert "container-type: inline-size" in styles
     assert "@container (max-width: 520px)" in styles
@@ -133,15 +134,17 @@ def test_single_wall_shelf_uses_five_rows_of_real_films() -> None:
 
     assert "const rowSize = 10" in app
     assert "displayableFilms" in app
-    assert "related?limit=60" in app
+    assert "related?limit=12&fast=true" in app
     assert "usedFilmIds" in app
     assert "usedFilmEditions" in app
     assert "shelfFilmIdentity" in app
-    assert "LIMIT 168" in discovery
-    assert "candidate_ids[:168]" in discovery
+    assert "candidate_cap = min(168, max(40, limit * 5))" in discovery
+    assert "self._get_shelf_entities(selected_ids)" in discovery
     assert "RELATED_POSTER_FALLBACK_LIMIT = 8" in discovery
     assert "fetchRelatedFilmsWithRetry" in app
     assert "hydrateFilmShelf" in app
+    assert "initialiseClosetViewport({ primaryId: primary.id, collections: [] })" in app
+    assert "window.FirstRollCloset.update(detail)" in app
     assert "showFilmShelfError" in app
     assert "No distinct verified films were returned" in app
     assert "collections.some((collection) => collection.films.length < 10)" not in app
@@ -179,7 +182,9 @@ def test_single_wall_shelf_uses_five_rows_of_real_films() -> None:
     assert "canvas.height = 96" in runtime
     assert "faceWidth / faceHeight" in runtime
     assert "loadPosterTexture" in runtime
-    assert 'textContent = "Loading film artwork"' in runtime
+    assert 'textContent = "Loading film artwork"' not in runtime
+    assert "this.loadPosterTexture(film.poster_url).then" in runtime
+    assert "async update(payload)" in runtime
     assert 'setCrossOrigin("anonymous")' in runtime
     assert "texture.repeat.set(0.46, 1)" in runtime
     assert "All five rows remain empty in the asset" in blender_builder

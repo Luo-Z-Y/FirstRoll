@@ -17,6 +17,7 @@ const state = {
     mode: "unknown",
     activeCriticismProvider: null,
     recentSearches: [],
+    relatedFilmCache: new Map(),
   },
 };
 
@@ -383,24 +384,34 @@ async function loadRelatedFilms(primary, nearby) {
   }
 }
 
-async function fetchRelatedFilmsWithRetry(filmId, attempts = 3) {
+async function fetchRelatedFilmsWithRetry(filmId, attempts = 2) {
+  const cached = state.discovery.relatedFilmCache.get(filmId);
+  if (cached) return cached;
   let lastError = new Error("The related-film service did not respond.");
   for (let attempt = 0; attempt < attempts; attempt += 1) {
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 15000);
     try {
       const res = await fetch(
-        `${discoveryApiBase()}/api/discovery/films/${encodeURIComponent(filmId)}/related?limit=60`,
+        `${discoveryApiBase()}/api/discovery/films/${encodeURIComponent(filmId)}/related?limit=12&fast=true`,
+        { signal: controller.signal },
       );
       if (!res.ok) throw new Error(await readApiError(res));
       const data = await res.json();
       if (data.state === "unavailable") throw new Error("Verified related films are temporarily unavailable.");
+      state.discovery.relatedFilmCache.set(filmId, data);
       return data;
     } catch (error) {
-      lastError = error;
+      lastError = error?.name === "AbortError"
+        ? new Error("Verified related films took too long to respond.")
+        : error;
       if (attempt < attempts - 1) {
         const loading = refs.discoveryResults.querySelector("[data-closet-loading] strong");
         if (loading) loading.textContent = `Retrying verified films (${attempt + 2}/${attempts})`;
         await new Promise((resolve) => window.setTimeout(resolve, 500 * (attempt + 1)));
       }
+    } finally {
+      window.clearTimeout(timeout);
     }
   }
   throw lastError;
@@ -408,7 +419,7 @@ async function fetchRelatedFilmsWithRetry(filmId, attempts = 3) {
 
 function hydrateFilmShelf(primaryId, collections) {
   if (state.discovery.archiveSelectionId !== primaryId) return;
-  initialiseClosetViewport({ primaryId, collections });
+  initialiseClosetViewport({ primaryId, collections }, true);
 }
 
 function showFilmShelfError(error) {
@@ -474,7 +485,7 @@ function renderFilmArchive(
       ${closetRoomMarkup(loading)}
     </aside>`;
   if (loading) {
-    window.FirstRollCloset?.unmount();
+    initialiseClosetViewport({ primaryId: primary.id, collections: [] });
   } else {
     initialiseClosetViewport({
       primaryId: primary.id,
@@ -588,7 +599,7 @@ function closetRoomMarkup(loading) {
     <div class="closet-viewport closet-webgl" data-closet-viewport tabindex="0" aria-label="Interactive Blender film shelf. Drag to look around, scroll or press W and S to move closer or farther away, use A and D to move sideways, and select a case to pull it out.">
       <canvas data-closet-canvas aria-hidden="true"></canvas>
       <div class="closet-model-loading" data-closet-loading role="status">
-        <span></span><strong>${loading ? "Indexing the collection" : "Opening the 3D archive"}</strong>
+        <span></span><strong>Opening the 3D archive</strong>
       </div>
       <span class="closet-reticle" aria-hidden="true"></span>
     </div>
@@ -625,14 +636,15 @@ async function onFilmResultClick(event) {
   await loadFilmDetail(button.dataset.filmId);
 }
 
-function initialiseClosetViewport(payload) {
+function initialiseClosetViewport(payload, update = false) {
   window.requestAnimationFrame(() => {
     const root = refs.discoveryResults.querySelector("[data-closet-viewport]");
     if (!root) return;
     const detail = { ...payload, root };
     window.__firstRollClosetPayload = detail;
     if (window.FirstRollCloset) {
-      window.FirstRollCloset.mount(detail);
+      if (update) window.FirstRollCloset.update(detail);
+      else window.FirstRollCloset.mount(detail);
       return;
     }
     window.dispatchEvent(new CustomEvent("firstroll:mount-closet", { detail }));

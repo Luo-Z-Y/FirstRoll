@@ -195,6 +195,39 @@ def test_related_films_are_grouped_by_cast_country_and_genre() -> None:
     }
 
 
+def test_fast_related_films_skip_secondary_enrichment_and_are_cached() -> None:
+    entity_requests: list[dict[str, Any]] = []
+    poster_requests: list[str] = []
+
+    def tracked_request(params: dict[str, Any]) -> dict[str, Any]:
+        entity_requests.append(params)
+        return fake_wikidata_with_related(params)
+
+    service = DiscoveryService(
+        request_json=tracked_request,
+        sparql_json=lambda _: {
+            "results": {
+                "bindings": [sparql_relation("Q101", "same_director", "Q200")]
+            }
+        },
+        poster_request=lambda imdb_id: poster_requests.append(imdb_id) or None,
+    )
+    service.search("Example Film")
+    entity_requests.clear()
+    poster_requests.clear()
+
+    first = service.related("wikidata:Q100", limit=12, fast=True)
+    requests_after_first = len(entity_requests)
+    second = service.related("wikidata:Q100", limit=12, fast=True)
+
+    assert first is second
+    assert requests_after_first == 1
+    assert len(entity_requests) == requests_after_first
+    assert poster_requests == []
+    assert first["same_director"][0]["directors"] == ["Example Director"]
+    assert "Q101" not in service._detail_cache
+
+
 def sparql_relation(film: str, relation: str, shared: str) -> dict[str, dict[str, str]]:
     return {
         "film": {"value": f"http://www.wikidata.org/entity/{film}"},

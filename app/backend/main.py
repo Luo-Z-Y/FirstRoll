@@ -620,9 +620,10 @@ async def discovery_film_reception(film_id: str) -> dict:
 def discovery_film_related(
     film_id: str,
     limit: int = Query(default=12, ge=1, le=60),
+    fast: bool = Query(default=True),
 ) -> dict:
     try:
-        return discovery_service.related(film_id, limit=limit)
+        return discovery_service.related(film_id, limit=limit, fast=fast)
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
