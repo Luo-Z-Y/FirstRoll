@@ -74,6 +74,11 @@ def test_public_settings_explains_session_keys_and_hosted_douban_boundary() -> N
     assert 'id="product-settings"' in index
     assert 'data-product-view="settings"' in index
     assert "cleared on refresh or sign-out" in index
+    assert "that study uses your DeepSeek account and provider balance" in index
+    assert "FirstRoll’s three-study daily safety limit still applies" in index
+    assert "search with your Google Cloud quota" in index
+    assert "broader, fresher interviews, trailers and film-study videos" in index
+    assert "never saved to your FirstRoll account" in index
     assert "Hosted MCP" in index
     assert "Visitors are never asked for a Douban cookie" in index
     assert "No visitor credential is accepted" in index
