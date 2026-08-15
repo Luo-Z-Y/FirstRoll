@@ -1,5 +1,23 @@
 # FirstRoll Project Progress
 
+### 15 August 2026 — Ambiguous film identity confirmation
+
+Delivered:
+
+1. Replaced automatic first-result selection with an explicit confirmation step whenever discovery
+   returns more than one possible film.
+2. Added accessible candidate cards showing the poster, release year, director and original title so
+   similarly named works can be distinguished before any dossier or related-film indexing begins.
+3. Kept single-result searches immediate and prevented rejected same-title candidates from being
+   treated as related films on the selected film's shelf.
+
+Acceptance evidence:
+
+- frontend contract coverage verifies that ambiguous searches cannot bypass the selection gate;
+- browser acceptance with *The Thing* exposed four attributed candidates, selected the 1982 John
+  Carpenter film and confirmed that the chooser was removed before the shelf opened;
+- the narrow responsive check reported no horizontal overflow, and all 105 automated tests pass.
+
 ### 15 August 2026 — Non-blocking shelf loading
 
 Delivered:

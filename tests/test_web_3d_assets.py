@@ -107,8 +107,8 @@ def test_archive_pullout_collapses_before_zoom_can_clip_its_copy() -> None:
     styles = (WEB / "styles.css").read_text(encoding="utf-8")
     app = (WEB / "app.js").read_text(encoding="utf-8")
 
-    assert "/assets/styles.css?v=20260815-4" in index
-    assert "/assets/app.js?v=20260815-4" in index
+    assert "/assets/styles.css?v=20260815-5" in index
+    assert "/assets/app.js?v=20260815-6" in index
     assert "/assets/closet3d.js?v=20260815-1" in index
     assert 'class="archive-pullout-shell"' in app
     assert "container-type: inline-size" in styles

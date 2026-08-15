@@ -347,10 +347,70 @@ function renderDiscoveryResults(data) {
     return;
   }
 
-  const primary = films[0];
-  const nearby = films.slice(1);
-  renderFilmArchive(primary, [], nearby, true);
-  loadRelatedFilms(primary, nearby);
+  if (films.length > 1) {
+    refs.resultsTitle.textContent = "Which film did you mean?";
+    refs.resultsMeta.textContent = `${films.length} possible matches`;
+    refs.discoveryResults.innerHTML = filmIdentityChoicesMarkup(films);
+    return;
+  }
+
+  confirmDiscoveryFilm(0);
+}
+
+function filmIdentityChoicesMarkup(films) {
+  return `
+    <section class="identity-confirmation" aria-labelledby="identityConfirmationTitle">
+      <div class="identity-confirmation-intro">
+        <p class="eyebrow">Confirm film identity</p>
+        <h3 id="identityConfirmationTitle">Choose the correct edition</h3>
+        <p>Check the year, filmmaker and original title before FirstRoll builds the dossier.</p>
+      </div>
+      <div class="identity-choice-grid">
+        ${films.map((film, index) => {
+          const title = film.title || film.original_title || "Untitled";
+          const originalTitle = film.original_title && film.original_title !== title
+            ? film.original_title
+            : "";
+          const directors = (film.directors || []).join(", ") || "Director not supplied";
+          const year = film.year || "Year unknown";
+          const accessibleIdentity = [title, year, directors].filter(Boolean).join(", ");
+          return `
+            <button
+              type="button"
+              class="identity-choice"
+              data-confirm-film-index="${index}"
+              aria-label="Choose ${escapeHtml(accessibleIdentity)}"
+            >
+              <span class="identity-choice-poster" aria-hidden="true">
+                ${film.poster_url
+                  ? `<img src="${escapeHtml(film.poster_url)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()" />`
+                  : ""}
+                <span>${escapeHtml(title)}</span>
+              </span>
+              <span class="identity-choice-copy">
+                <small>Candidate ${String(index + 1).padStart(2, "0")}</small>
+                <strong>${escapeHtml(title)}</strong>
+                ${originalTitle ? `<em>${escapeHtml(originalTitle)}</em>` : ""}
+                <span>${escapeHtml(year)} · ${escapeHtml(directors)}</span>
+                <b>Choose this film <i aria-hidden="true">↗</i></b>
+              </span>
+            </button>`;
+        }).join("")}
+      </div>
+    </section>`;
+}
+
+function confirmDiscoveryFilm(index) {
+  const primary = state.discovery.results[index];
+  if (!primary) return;
+  refs.resultsTitle.textContent = "Pulled from the shelf";
+  refs.resultsMeta.textContent = [
+    primary.title,
+    primary.year,
+    (primary.directors || []).join(", "),
+  ].filter(Boolean).join(" / ");
+  renderFilmArchive(primary, [], [], true);
+  loadRelatedFilms(primary, []);
 }
 
 async function loadRelatedFilms(primary, nearby) {
@@ -616,6 +676,11 @@ function closetRoomMarkup(loading) {
 }
 
 async function onFilmResultClick(event) {
+  const identityChoice = event.target.closest("[data-confirm-film-index]");
+  if (identityChoice) {
+    confirmDiscoveryFilm(Number(identityChoice.dataset.confirmFilmIndex));
+    return;
+  }
   const centreButton = event.target.closest("[data-centre-closet]");
   if (centreButton) {
     window.FirstRollCloset?.reset();

@@ -39,6 +39,9 @@ The original GPL-3.0 licence and contributor attribution remain applicable. See
 ### Discover and study
 
 - Search by title, year and director through key-free Wikidata.
+- Confirm the intended film before opening the shelf whenever several records share or closely match
+  a title; each choice exposes its year, director, original title and poster instead of trusting the
+  provider's first-ranked result.
 - Read an attributed Wikipedia overview and poster after Wikidata resolves the film.
 - Explore a real Blender-built GLB film shelf rendered locally with Three.js: drag to look,
   scroll or use W/S to walk in the rendered facing direction, strafe camera-relatively with A/D, browse
