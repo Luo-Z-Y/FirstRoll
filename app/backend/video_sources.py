@@ -122,8 +122,13 @@ class YouTubeVideoAdapter:
             raise VideoSourceError("YouTube returned an invalid search response.")
         return {"message": "YouTube Data API search succeeded."}
 
-    def search(self, film: dict[str, Any], limit: int = 6) -> list[FilmVideo]:
-        key = self.settings.effective_secret("youtube")
+    def search(
+        self,
+        film: dict[str, Any],
+        limit: int = 6,
+        api_key: str | None = None,
+    ) -> list[FilmVideo]:
+        key = api_key or self.settings.effective_secret("youtube")
         if not key:
             return []
         query = _film_video_query(film)
@@ -526,14 +531,22 @@ class FilmVideoService:
     def status(self) -> dict[str, Any]:
         return {"youtube": self.youtube.status(), "bilibili": self.bilibili.status()}
 
-    def search(self, film_id: str, film: dict[str, Any]) -> FilmVideoBundle:
+    def search(
+        self,
+        film_id: str,
+        film: dict[str, Any],
+        youtube_api_key: str | None = None,
+    ) -> FilmVideoBundle:
         existing = self.store.load(film_id)
         fresh_videos: list[FilmVideo] = []
         providers: list[str] = []
         failures: list[str] = []
         for name, adapter in (("YouTube", self.youtube), ("Bilibili", self.bilibili)):
             try:
-                found = adapter.search(film, limit=12)
+                if name == "YouTube" and youtube_api_key:
+                    found = adapter.search(film, limit=12, api_key=youtube_api_key)
+                else:
+                    found = adapter.search(film, limit=12)
             except VideoSourceError as exc:
                 failures.append(f"{name}: {exc}")
                 continue

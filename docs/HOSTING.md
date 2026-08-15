@@ -7,10 +7,10 @@ Browser  ->  Render Static Site  ->  Render FastAPI Web Service  ->  public film
                  frontend                     API
 ```
 
-The hosted edition deliberately publishes discovery, the 3D shelf and Supabase email sign-in.
-Private-library settings, local documents, clip uploads, computer-vision analysis and
-unauthenticated Deep Study are blocked by the backend. Authenticated Deep Study remains quota-gated
-until its durable Supabase usage tables are installed.
+The hosted edition publishes discovery, the 3D shelf, Supabase email sign-in and an authenticated
+Integration Centre. Private-library settings, local documents, clip uploads, computer-vision
+analysis and unauthenticated Deep Study are blocked by the backend. Authenticated Deep Study is
+protected by durable Supabase usage counters.
 The separate origins keep the public boundary explicit and allow the frontend shell to load while
 the free API service wakes.
 
@@ -189,14 +189,15 @@ tokens to the API.
 
 ## Optional public video provider
 
-YouTube search requires a server-side YouTube Data API v3 key. Add `YOUTUBE_API_KEY` to the
-backend Web Service's **Environment** page and redeploy; never add it to the Static Site. Restrict
-the key to the YouTube Data API in Google Cloud and set a conservative quota alert.
+YouTube search can use a server-side YouTube Data API v3 key. Add `YOUTUBE_API_KEY` to the backend
+Web Service's **Environment** page and redeploy; never add it to the Static Site. Alternatively, a
+signed-in visitor can supply a personal key for one browser tab through Settings. The browser holds
+that key only in memory and sends it only with an authenticated video-search request. Restrict keys
+to the YouTube Data API in Google Cloud and set a conservative quota alert.
 
 Douban is not bundled into the hosted image. Its current integration is an unofficial Node-based
-MCP connector and may require a user cookie, so it must not be exposed through unauthenticated
-public Settings. Review and pin the connector, then protect its use with Supabase authentication
-before enabling it on the shared server.
+MCP connector and may require a user cookie. Public Settings therefore presents it as a local-edition
+integration and links to its setup material, but never accepts or stores a visitor's Douban cookie.
 
 ## 6. Current public-beta acceptance checks
 
@@ -207,8 +208,11 @@ before enabling it on the shared server.
 - `/api/settings` and `/api/library/status` return HTTP 404 in public mode.
 - `/api/analyze` returns HTTP 503 in public mode.
 - `/api/auth/me` returns HTTP 401 without a session and the signed-in account with a valid session.
+- `/api/account/integrations` returns quota and provider capability status only for a valid session.
 - Deep Study returns HTTP 401 without a session, generates only after an atomic quota reservation,
   and returns HTTP 429 when either daily limit is exhausted.
+- Personal DeepSeek and YouTube keys remain in tab memory, are cleared on refresh or sign-out and
+  are accepted only on their matching authenticated request.
 - No `.firstroll` data, uploaded clips, API keys or private library files appear in the image,
   repository, frontend source or network responses.
 

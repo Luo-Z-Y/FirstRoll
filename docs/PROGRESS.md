@@ -1,5 +1,27 @@
 # FirstRoll Project Progress
 
+### 15 August 2026 — Authenticated public Settings and session integrations
+
+Delivered:
+
+1. Added a responsive hosted Settings view with verified Supabase account identity, live Deep Study
+   quota status and explicit sign-in, refresh and sign-out controls.
+2. Added optional personal DeepSeek and YouTube keys held only in JavaScript memory for one browser
+   tab. They are cleared on refresh or sign-out, never persisted and sent only with the matching
+   authenticated request.
+3. Preserved the three-study daily account boundary for personal DeepSeek requests and added strict
+   key syntax, length, CORS and authentication checks at the API edge.
+4. Added Douban MCP as a visible local-edition integration with direct setup guidance while refusing
+   Douban cookies on the hosted server.
+5. Kept the private local Settings, library and clip-analysis routes unpublished.
+
+Acceptance evidence:
+
+- desktop and mobile production-build visual QA passed without horizontal overflow;
+- request-scoped DeepSeek and YouTube keys, unauthenticated rejection, account status and quota
+  reporting are covered by backend and frontend contract tests;
+- Python lint, JavaScript syntax, production static build and the full suite pass with 102 tests.
+
 ### 15 August 2026 — Authenticated Deep Study quotas
 
 Delivered:

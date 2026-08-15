@@ -118,9 +118,10 @@ def test_hosted_study_reserves_quota_and_uses_public_framework(monkeypatch) -> N
     }
     captured = {}
 
-    def generate(film_record, passages, question, claims, evidence_packet):
+    def generate(film_record, passages, question, claims, evidence_packet, api_key=None):
         captured["passages"] = passages
         captured["packet"] = evidence_packet
+        captured["api_key"] = api_key
         return {"title": "A bounded public study"}
 
     monkeypatch.setenv("FIRSTROLL_PUBLIC_MODE", "true")
@@ -143,6 +144,7 @@ def test_hosted_study_reserves_quota_and_uses_public_framework(monkeypatch) -> N
     assert response.json()["quota"]["user"]["remaining"] == 2
     assert len(captured["passages"]) == 4
     assert captured["packet"].retrieval["method"] == "firstroll_public_framework"
+    assert captured["api_key"] is None
 
 
 def test_hosted_study_returns_429_when_account_quota_is_exhausted(monkeypatch) -> None:
@@ -185,6 +187,117 @@ def test_hosted_study_returns_429_when_account_quota_is_exhausted(monkeypatch) -
     assert response.status_code == 429
     assert "account" in response.json()["detail"]
     assert int(response.headers["retry-after"]) >= 60
+
+
+def test_account_integrations_returns_identity_and_quota_without_consuming_it(
+    monkeypatch,
+) -> None:
+    user_id = str(uuid4())
+    verifier = SupabaseAuthVerifier(
+        "https://example.supabase.co",
+        "sb_publishable_test",
+        transport=lambda *_: {
+            "id": user_id,
+            "email": "viewer@example.com",
+            "role": "authenticated",
+        },
+    )
+    quota = DeepStudyQuota.from_payload(quota_payload())
+
+    class StatusQuotaClient:
+        configured = True
+
+        def status(self, authorisation: str | None) -> DeepStudyQuota:
+            assert authorisation == "Bearer verified-token"
+            return quota
+
+    monkeypatch.setenv("FIRSTROLL_PUBLIC_MODE", "true")
+    monkeypatch.setenv("FIRSTROLL_DEEP_STUDY_ENABLED", "true")
+    monkeypatch.setenv("DEEPSEEK_API_KEY", "private-test-key")
+    monkeypatch.setattr(main, "auth_verifier", verifier)
+    monkeypatch.setattr(main, "quota_client", StatusQuotaClient())
+
+    missing = TestClient(main.app).get("/api/account/integrations")
+    response = TestClient(main.app).get(
+        "/api/account/integrations",
+        headers={"Authorization": "Bearer verified-token"},
+    )
+
+    assert missing.status_code == 401
+    assert response.status_code == 200
+    assert response.json()["user"]["email"] == "viewer@example.com"
+    assert response.json()["deep_study"]["quota"]["user"]["remaining"] == 2
+    assert response.json()["privacy"] == {
+        "personal_credentials_stored": False,
+        "credential_scope": "single_browser_tab",
+    }
+    assert response.json()["douban"]["hosted_cookie_accepted"] is False
+
+
+def test_personal_deepseek_key_is_used_for_one_authenticated_request(monkeypatch) -> None:
+    verifier = SupabaseAuthVerifier(
+        "https://example.supabase.co",
+        "sb_publishable_test",
+        transport=lambda *_: {
+            "id": str(uuid4()),
+            "email": "viewer@example.com",
+            "role": "authenticated",
+        },
+    )
+    quota = DeepStudyQuota.from_payload(quota_payload())
+
+    class PersonalQuotaClient:
+        configured = True
+
+        def reserve(self, _authorisation: str | None) -> DeepStudyQuota:
+            return quota
+
+    captured = {}
+
+    def generate(_film, _passages, _question, _claims, evidence_packet, api_key=None):
+        captured["api_key"] = api_key
+        captured["packet"] = evidence_packet
+        return {"title": "Personal-key study"}
+
+    monkeypatch.setenv("FIRSTROLL_PUBLIC_MODE", "true")
+    monkeypatch.setenv("FIRSTROLL_DEEP_STUDY_ENABLED", "true")
+    monkeypatch.delenv("DEEPSEEK_API_KEY", raising=False)
+    monkeypatch.setattr(main, "auth_verifier", verifier)
+    monkeypatch.setattr(main, "quota_client", PersonalQuotaClient())
+    monkeypatch.setattr(
+        main.discovery_service,
+        "detail",
+        lambda _: {"film": {"id": "Q1", "title": "Test Film", "credits": {}}},
+    )
+    monkeypatch.setattr(main.criticism_store, "load_all", lambda _: [])
+    monkeypatch.setattr(main.video_service, "enrich_cached", lambda _: None)
+    monkeypatch.setattr(main.study_service, "generate", generate)
+
+    response = TestClient(main.app).post(
+        "/api/discovery/films/Q1/study",
+        json={"question": "How is space organised?"},
+        headers={
+            "Authorization": "Bearer verified-token",
+            "X-FirstRoll-DeepSeek-Key": "sk-personal-session-key-12345",
+        },
+    )
+
+    assert response.status_code == 200
+    assert captured["api_key"] == "sk-personal-session-key-12345"
+    assert response.json()["credential_source"] == "personal_session"
+
+
+def test_personal_provider_keys_are_strictly_validated() -> None:
+    client = TestClient(main.app)
+
+    response = client.post(
+        "/api/discovery/films/Q1/study",
+        json={"question": None},
+        headers={"X-FirstRoll-DeepSeek-Key": "not valid whitespace"},
+    )
+
+    assert response.status_code == 400
+    assert "key is invalid" in response.json()["detail"]
 
 
 def test_quota_migration_has_atomic_and_restricted_rpc_boundaries() -> None:

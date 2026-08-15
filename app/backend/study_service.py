@@ -178,6 +178,7 @@ class DeepSeekStudyService:
         question: str | None = None,
         critical_claims: list[CriticalClaim] | None = None,
         evidence_packet: EvidencePacket | None = None,
+        api_key: str | None = None,
     ) -> dict[str, Any]:
         critical_claims = critical_claims or []
         packet = evidence_packet or EvidencePacket.from_retrieval(
@@ -190,7 +191,7 @@ class DeepSeekStudyService:
             raise StudyGenerationError(
                 "No cited local passages are available. Build the private library index first."
             )
-        key = self._api_key()
+        key = api_key or self._api_key()
         critical_claims = packet.critical_claims
         sources = [
             {

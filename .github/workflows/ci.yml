@@ -31,6 +31,8 @@ jobs:
           tests/test_hosted_mode.py
           tests/test_auth.py
           tests/test_quota.py
+          tests/test_video_sources.py
+          tests/test_web_3d_assets.py
       - name: Build hosted frontend
         env:
           FIRSTROLL_API_BASE: https://firstroll.example.com

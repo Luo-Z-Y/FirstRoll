@@ -9,6 +9,7 @@ from app.backend.auth import (
     AuthenticationError,
     SupabaseAuthVerifier,
 )
+from app.backend.video_sources import FilmVideoBundle
 
 
 def test_supabase_auth_verifier_accepts_a_verified_authenticated_user() -> None:
@@ -93,3 +94,53 @@ def test_auth_me_and_public_study_require_a_verified_bearer_token(monkeypatch) -
     assert gated_study.json()["detail"] == (
         "Deep Study is not fully configured on this deployment yet."
     )
+
+
+def test_personal_youtube_key_requires_authentication_and_is_request_scoped(
+    monkeypatch,
+) -> None:
+    verifier = SupabaseAuthVerifier(
+        "https://example.supabase.co",
+        "sb_publishable_test",
+        transport=lambda *_: {
+            "id": str(uuid4()),
+            "email": "viewer@example.com",
+            "role": "authenticated",
+        },
+    )
+    captured = {}
+
+    class RequestVideoService:
+        def search(self, film_id, film, youtube_api_key=None):
+            captured["film_id"] = film_id
+            captured["film"] = film
+            captured["youtube_api_key"] = youtube_api_key
+            return FilmVideoBundle(
+                film_id=film_id,
+                query="Test Film",
+                fetched_at="2099-08-16T00:00:00+00:00",
+                videos=[],
+                providers=[],
+                notice="Request-scoped test.",
+            )
+
+    monkeypatch.setenv("FIRSTROLL_PUBLIC_MODE", "true")
+    monkeypatch.setattr(main, "auth_verifier", verifier)
+    monkeypatch.setattr(main, "video_service", RequestVideoService())
+    monkeypatch.setattr(
+        main.discovery_service,
+        "detail",
+        lambda _: {"film": {"id": "Q1", "title": "Test Film"}},
+    )
+    client = TestClient(main.app)
+    provider_headers = {"X-FirstRoll-YouTube-Key": "personal-youtube-key-12345"}
+
+    missing = client.post("/api/discovery/films/Q1/videos", headers=provider_headers)
+    response = client.post(
+        "/api/discovery/films/Q1/videos",
+        headers={"Authorization": "Bearer verified-token", **provider_headers},
+    )
+
+    assert missing.status_code == 401
+    assert response.status_code == 200
+    assert captured["youtube_api_key"] == "personal-youtube-key-12345"

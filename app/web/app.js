@@ -36,6 +36,7 @@ const refs = {
   productViews: {
     discovery: document.getElementById("product-discovery"),
     analyse: document.getElementById("product-analyse"),
+    settings: document.getElementById("product-settings"),
   },
   productNav: Array.from(document.querySelectorAll(".nav-link[data-product-view]")),
   productViewTriggers: Array.from(document.querySelectorAll("[data-product-view]")),
@@ -141,6 +142,7 @@ function setup() {
   setFeatureButtonsEnabled(false);
   loadDiscoveryStatus();
   document.addEventListener("firstroll:auth-changed", updateDeepStudyAuthState);
+  document.addEventListener("firstroll:integration-changed", updateIntegrationDependentState);
 }
 
 function updateDeepStudyAuthState() {
@@ -149,6 +151,14 @@ function updateDeepStudyAuthState() {
   button.textContent = window.FirstRollAuth?.currentUser()
     ? "Generate study"
     : "Sign in to Deep Study";
+}
+
+function updateIntegrationDependentState() {
+  const film = state.discovery.selectedFilm;
+  const output = refs.filmDetail.querySelector("[data-film-videos-output]");
+  if (film && output && !film.video_sources?.bundle) {
+    output.innerHTML = videoProviderStatusMarkup(film.video_sources?.providers);
+  }
 }
 
 function applyRuntimeMode() {
@@ -192,6 +202,9 @@ function setProductView(viewKey) {
     button.classList.toggle("active", active);
     button.setAttribute("aria-current", active ? "page" : "false");
   });
+  document.dispatchEvent(new CustomEvent("firstroll:view-changed", {
+    detail: { view: viewKey },
+  }));
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
@@ -768,6 +781,9 @@ function renderFilmDetail(film) {
 }
 
 function videoProviderStatusMarkup(providers = {}) {
+  if (window.FirstRollIntegrations?.configured?.("youtube")) {
+    return '<p class="module-empty">Personal YouTube search is ready for this browser tab.</p>';
+  }
   const youtubeReady = providers?.youtube?.state === "ready";
   const bilibiliReady = providers?.bilibili?.state === "ready";
   if (youtubeReady && bilibiliReady) return "";
@@ -927,9 +943,11 @@ async function loadFilmVideos(button) {
   button.textContent = "Searching…";
   output.innerHTML = fetchProgressMarkup(videoButtonProgressLabel(Boolean(film.video_sources?.bundle)));
   try {
+    const authorisation = await window.FirstRollAuth?.authorisationHeaders?.() || {};
+    const integration = window.FirstRollIntegrations?.requestHeaders?.("youtube") || {};
     const response = await fetch(
       `${discoveryApiBase()}/api/discovery/films/${encodeURIComponent(film.id)}/videos`,
-      { method: "POST" },
+      { method: "POST", headers: { ...authorisation, ...integration } },
     );
     if (!response.ok) throw new Error(await readApiError(response));
     const data = await response.json();
@@ -1249,11 +1267,12 @@ async function generateDeepStudy(button) {
   button.textContent = "Studying…";
   output.innerHTML = fetchProgressMarkup("Reading the film record against your cited sources…");
   try {
+    const integration = window.FirstRollIntegrations?.requestHeaders?.("deepseek") || {};
     const response = await fetch(
       `${discoveryApiBase()}/api/discovery/films/${encodeURIComponent(film.id)}/study`,
       {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...authorisation },
+        headers: { "Content-Type": "application/json", ...authorisation, ...integration },
         body: JSON.stringify({ question }),
       },
     );

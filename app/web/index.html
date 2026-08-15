@@ -20,7 +20,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/assets/styles.css?v=20260815-2" />
+  <link rel="stylesheet" href="/assets/styles.css?v=20260815-4" />
   <script type="importmap">
     {
       "imports": {
@@ -40,6 +40,7 @@
       <nav class="primary-nav" aria-label="Primary navigation">
         <button class="nav-link active" type="button" data-product-view="discovery">Discover</button>
         <button class="nav-link" type="button" data-product-view="analyse">Analyse</button>
+        <button class="nav-link public-settings-nav" type="button" data-product-view="settings">Settings</button>
       </nav>
 
       <div class="header-tools">
@@ -205,6 +206,115 @@
           </section>
         </div>
       </section>
+
+      <section id="product-settings" class="product-view integrations-view" aria-labelledby="integrationsTitle">
+        <header class="integrations-hero">
+          <div>
+            <p class="eyebrow">Account &amp; integrations</p>
+            <h1 id="integrationsTitle">Connect the tools behind the study.</h1>
+          </div>
+          <p>Personal provider keys remain in memory for this browser tab. They are cleared on refresh or sign-out and are never saved by FirstRoll.</p>
+        </header>
+
+        <section id="integrationSignedOut" class="integration-gate card">
+          <p class="eyebrow">FirstRoll account</p>
+          <h2>Sign in to manage integrations.</h2>
+          <p>The hosted Settings area is account-scoped. Local library files and server credentials remain unavailable here.</p>
+          <button id="integrationSignIn" type="button">Sign in by email</button>
+        </section>
+
+        <div id="integrationDashboard" class="integration-dashboard hidden">
+          <p id="integrationStatus" class="integration-page-status" role="status" aria-live="polite">Loading account integrations…</p>
+
+          <section class="integration-account card">
+            <div>
+              <p class="eyebrow">Signed-in account</p>
+              <strong id="integrationAccountEmail">Signed-in account</strong>
+              <span id="integrationAccountState">Verified by Supabase</span>
+            </div>
+            <div class="integration-account-actions">
+              <button id="integrationRefresh" type="button">Refresh</button>
+              <button id="integrationSignOut" type="button">Sign out</button>
+            </div>
+          </section>
+
+          <section class="integration-quota card" aria-labelledby="integrationQuotaTitle">
+            <div>
+              <p class="eyebrow">FirstRoll allowance</p>
+              <h2 id="integrationQuotaTitle">Deep Study</h2>
+            </div>
+            <div>
+              <strong id="integrationQuota">Checking the daily allowance…</strong>
+              <p id="integrationQuotaMeta">Quota status is loading.</p>
+            </div>
+          </section>
+
+          <div class="integration-grid">
+            <article class="integration-card card">
+              <header>
+                <div>
+                  <span class="integration-index">01</span>
+                  <h2>DeepSeek</h2>
+                </div>
+                <span class="integration-badge">Optional BYOK</span>
+              </header>
+              <p>FirstRoll already supplies a quota-controlled connection. A personal key can be used for Deep Study requests in this tab without being stored; the daily account limit still applies.</p>
+              <form id="deepseekSessionForm" class="session-key-form">
+                <label for="deepseekSessionKey">Personal DeepSeek API key</label>
+                <div>
+                  <input id="deepseekSessionKey" type="password" autocomplete="off" spellcheck="false" placeholder="Paste a key for this tab" />
+                  <button type="submit">Use for this tab</button>
+                </div>
+              </form>
+              <footer>
+                <span id="deepseekSessionState">Using the FirstRoll platform connection</span>
+                <button id="deepseekSessionClear" class="integration-clear" type="button" hidden>Clear key</button>
+              </footer>
+            </article>
+
+            <article class="integration-card card">
+              <header>
+                <div>
+                  <span class="integration-index">02</span>
+                  <h2>YouTube</h2>
+                </div>
+                <span class="integration-badge">Official API</span>
+              </header>
+              <p>A personal YouTube Data API key enables official film-video search for the current tab. Public embeds continue to use YouTube’s privacy-enhanced player.</p>
+              <form id="youtubeSessionForm" class="session-key-form">
+                <label for="youtubeSessionKey">YouTube Data API key</label>
+                <div>
+                  <input id="youtubeSessionKey" type="password" autocomplete="off" spellcheck="false" placeholder="Paste a key for this tab" />
+                  <button type="submit">Use for this tab</button>
+                </div>
+              </form>
+              <footer>
+                <span id="youtubeSessionState">Using the FirstRoll platform connection</span>
+                <button id="youtubeSessionClear" class="integration-clear" type="button" hidden>Clear key</button>
+              </footer>
+            </article>
+
+            <article class="integration-card integration-card-local card">
+              <header>
+                <div>
+                  <span class="integration-index">03</span>
+                  <h2>Douban MCP</h2>
+                </div>
+                <span class="integration-badge is-local">Local edition</span>
+              </header>
+              <p>The unofficial connector runs as a local Node process and may require a Douban account cookie. The hosted demo does not collect that cookie or start a shared connector.</p>
+              <div class="integration-local-boundary">
+                <strong>Available in the local edition</strong>
+                <span>Install the connector privately, then configure it through Local Settings.</span>
+              </div>
+              <footer>
+                <a href="https://github.com/moria97/douban-mcp" target="_blank" rel="noopener noreferrer">View connector ↗</a>
+                <span>No cookie is accepted here</span>
+              </footer>
+            </article>
+          </div>
+        </div>
+      </section>
     </main>
 
   </div>
@@ -236,7 +346,8 @@
       document.body.append(authScript);
     }
   </script>
-  <script src="/assets/app.js?v=20260815-2"></script>
+  <script src="/assets/integrations.js?v=20260815-1"></script>
+  <script src="/assets/app.js?v=20260815-3"></script>
   <script type="module" src="/assets/closet3d.js?v=20260814-21"></script>
 </body>
 </html>

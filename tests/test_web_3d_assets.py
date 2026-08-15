@@ -36,6 +36,7 @@ def test_supabase_auth_is_bundled_and_deep_study_sends_bearer_tokens() -> None:
     auth = (WEB / "auth.js").read_text(encoding="utf-8")
     app = (WEB / "app.js").read_text(encoding="utf-8")
     build = (ROOT / "tools" / "build_web.sh").read_text(encoding="utf-8")
+    integrations = (WEB / "integrations.js").read_text(encoding="utf-8")
 
     assert 'id="authDialog"' in index
     assert 'authScript.src = "/assets/auth.js' in index
@@ -45,9 +46,14 @@ def test_supabase_auth_is_bundled_and_deep_study_sends_bearer_tokens() -> None:
     assert "emailRedirectTo" in auth
     assert "authorisationHeaders" in auth
     assert "authorisation.Authorization" in app
-    assert 'headers: { "Content-Type": "application/json", ...authorisation }' in app
+    assert 'headers: { "Content-Type": "application/json", ...authorisation, ...integration }' in app
     assert "deepStudyQuotaMarkup(data.quota)" in app
     assert "account studies remain today" in app
+    assert 'src="/assets/integrations.js?v=20260815-1"' in index
+    assert '"X-FirstRoll-DeepSeek-Key"' in integrations
+    assert '"X-FirstRoll-YouTube-Key"' in integrations
+    assert "localStorage" not in integrations
+    assert 'cp "$source_dir/integrations.js"' in build
     assert "FIRSTROLL_SUPABASE_URL" in build
     assert "FIRSTROLL_SUPABASE_PUBLISHABLE_KEY" in build
 
@@ -60,13 +66,28 @@ def test_public_video_preview_uses_neutral_product_copy() -> None:
     assert "your own machine" not in index
 
 
+def test_public_settings_explains_session_keys_and_local_douban_boundary() -> None:
+    index = (WEB / "index.html").read_text(encoding="utf-8")
+    app = (WEB / "app.js").read_text(encoding="utf-8")
+    styles = (WEB / "styles.css").read_text(encoding="utf-8")
+
+    assert 'id="product-settings"' in index
+    assert 'data-product-view="settings"' in index
+    assert "cleared on refresh or sign-out" in index
+    assert "No cookie is accepted here" in index
+    assert "https://github.com/moria97/douban-mcp" in index
+    assert 'requestHeaders?.("deepseek")' in app
+    assert 'requestHeaders?.("youtube")' in app
+    assert ".public-mode .public-settings-nav" in styles
+
+
 def test_archive_pullout_collapses_before_zoom_can_clip_its_copy() -> None:
     index = (WEB / "index.html").read_text(encoding="utf-8")
     styles = (WEB / "styles.css").read_text(encoding="utf-8")
     app = (WEB / "app.js").read_text(encoding="utf-8")
 
-    assert "/assets/styles.css?v=20260815-2" in index
-    assert "/assets/app.js?v=20260815-2" in index
+    assert "/assets/styles.css?v=20260815-4" in index
+    assert "/assets/app.js?v=20260815-3" in index
     assert 'class="archive-pullout-shell"' in app
     assert "container-type: inline-size" in styles
     assert "@container (max-width: 520px)" in styles

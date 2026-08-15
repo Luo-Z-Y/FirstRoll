@@ -1,6 +1,7 @@
 import asyncio
 import json
 import os
+import re
 import tempfile
 from pathlib import Path
 
@@ -81,7 +82,12 @@ if allowed_origins:
         allow_origins=allowed_origins,
         allow_credentials=False,
         allow_methods=["GET", "POST", "OPTIONS"],
-        allow_headers=["Authorization", "Content-Type"],
+        allow_headers=[
+            "Authorization",
+            "Content-Type",
+            "X-FirstRoll-DeepSeek-Key",
+            "X-FirstRoll-YouTube-Key",
+        ],
     )
 
 settings_store = LocalSettingsStore()
@@ -159,12 +165,33 @@ def authenticated_user(request: Request) -> dict[str, str | None]:
 
 def hosted_deep_study_enabled() -> bool:
     return bool(
+        hosted_deep_study_boundary_enabled()
+        and settings_store.secret_state("deepseek").configured
+    )
+
+
+def hosted_deep_study_boundary_enabled() -> bool:
+    return bool(
         public_mode_enabled()
         and environment_flag("FIRSTROLL_DEEP_STUDY_ENABLED")
         and auth_verifier.configured
         and quota_client.configured
-        and settings_store.secret_state("deepseek").configured
     )
+
+
+def personal_provider_key(request: Request, provider: str) -> str | None:
+    header = {
+        "deepseek": "X-FirstRoll-DeepSeek-Key",
+        "youtube": "X-FirstRoll-YouTube-Key",
+    }.get(provider)
+    if header is None:
+        raise ValueError("Unknown personal provider credential.")
+    value = request.headers.get(header, "").strip()
+    if not value:
+        return None
+    if not 16 <= len(value) <= 512 or not re.fullmatch(r"[A-Za-z0-9._-]+", value):
+        raise HTTPException(status_code=400, detail=f"The personal {provider.title()} key is invalid.")
+    return value
 
 
 CRITICISM_PROVIDERS = {
@@ -445,6 +472,7 @@ def contract() -> dict:
             "POST /api/settings/library/rebuild",
             "GET /api/discovery/status",
             "GET /api/auth/me",
+            "GET /api/account/integrations",
             "GET /api/discovery/search",
             "GET /api/discovery/films/{film_id}",
             "GET /api/discovery/films/{film_id}/related",
@@ -488,6 +516,41 @@ def discovery_status() -> dict:
 @app.get("/api/auth/me")
 def auth_me(request: Request) -> dict:
     return {"user": authenticated_user(request)}
+
+
+@app.get("/api/account/integrations")
+def account_integrations(request: Request) -> dict:
+    if not public_mode_enabled():
+        raise HTTPException(status_code=404, detail="Hosted account integrations are not enabled.")
+    user = authenticated_user(request)
+    try:
+        quota = quota_client.status(request.headers.get("Authorization"))
+    except QuotaConfigurationError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except QuotaServiceError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    return {
+        "user": user,
+        "deep_study": {
+            "platform_enabled": hosted_deep_study_enabled(),
+            "model": study_service.model,
+            "quota": quota.as_dict(),
+            "personal_session_key_supported": True,
+        },
+        "youtube": {
+            "platform_enabled": youtube_video_adapter.status()["configured"],
+            "personal_session_key_supported": True,
+        },
+        "douban": {
+            "availability": "local_only",
+            "hosted_cookie_accepted": False,
+            "connector_url": "https://github.com/moria97/douban-mcp",
+        },
+        "privacy": {
+            "personal_credentials_stored": False,
+            "credential_scope": "single_browser_tab",
+        },
+    }
 
 
 @app.get("/api/library/status")
@@ -593,10 +656,13 @@ def discovery_film(film_id: str) -> dict:
 
 
 @app.post("/api/discovery/films/{film_id:path}/videos")
-def discovery_film_videos(film_id: str) -> dict:
+def discovery_film_videos(film_id: str, request: Request) -> dict:
     try:
+        youtube_key = personal_provider_key(request, "youtube")
+        if public_mode_enabled() and youtube_key:
+            authenticated_user(request)
         film = discovery_service.detail(film_id)["film"]
-        bundle = video_service.search(film_id, film)
+        bundle = video_service.search(film_id, film, youtube_api_key=youtube_key)
         return {"video_sources": bundle.model_dump()}
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
@@ -612,9 +678,12 @@ def generate_film_study(
 ) -> dict:
     public_mode = public_mode_enabled()
     quota = None
+    personal_deepseek_key = personal_provider_key(request, "deepseek")
     if public_mode:
         authenticated_user(request)
-        if not hosted_deep_study_enabled():
+        if not hosted_deep_study_boundary_enabled() or (
+            not personal_deepseek_key and not hosted_deep_study_enabled()
+        ):
             raise HTTPException(
                 status_code=503,
                 detail="Deep Study is not fully configured on this deployment yet.",
@@ -660,6 +729,10 @@ def generate_film_study(
                 study_request.question,
                 claims,
                 evidence_packet=packet,
+                api_key=personal_deepseek_key,
+            ),
+            "credential_source": (
+                "personal_session" if personal_deepseek_key else "firstroll_platform"
             ),
         }
         if quota is not None:

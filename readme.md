@@ -578,6 +578,12 @@ three-per-account and thirty-global daily limits are installed from
 `supabase/migrations/202608150001_deep_study_quotas.sql`; see
 [Hosting](docs/HOSTING.md) for the safe deployment order. The DeepSeek key remains backend-only.
 
+Signed-in visitors can open the hosted **Settings** view to inspect their account and current Deep
+Study allowance. Optional personal DeepSeek and YouTube keys are held only in JavaScript memory for
+that browser tab, sent only with the matching authenticated request and cleared on refresh or
+sign-out. They are not written to local storage, Supabase or the FirstRoll filesystem. Douban MCP is
+shown with local-edition setup guidance because the shared server never accepts a Douban cookie.
+
 Use [.env.example](.env.example) as the reference. FirstRoll does not automatically load
 an `.env` file; export variables before starting the process or use Settings.
 
@@ -681,6 +687,7 @@ never returned to the browser or committed to Git.
 | `GET /api/health` | Local process health |
 | `GET /api/contract` | Public API summary |
 | `GET /api/auth/me` | Validate a Supabase bearer session and return its account identity |
+| `GET /api/account/integrations` | Return authenticated quota and hosted integration capability status |
 | `GET /api/settings` | Masked local connector status |
 | `GET /api/settings/library` | Private catalogue and local index status for Settings |
 | `POST /api/settings/library` | Add a document to the managed private library |

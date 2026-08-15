@@ -84,6 +84,23 @@ def test_youtube_search_keeps_only_relevant_safe_video_ids() -> None:
             os.environ["YOUTUBE_API_KEY"] = previous
 
 
+def test_youtube_search_can_use_a_request_scoped_key_without_storing_it() -> None:
+    with tempfile.TemporaryDirectory() as directory:
+        store = LocalSettingsStore(Path(directory) / "settings.json")
+        requested = []
+
+        def transport(url: str) -> dict:
+            requested.append(url)
+            return {"items": []}
+
+        adapter = YouTubeVideoAdapter(store, transport=transport)
+        adapter.search(FILM, api_key="personal-youtube-key-12345")
+
+        assert requested
+        assert all("key=personal-youtube-key-12345" in url for url in requested)
+        assert store.secret_state("youtube").configured is False
+
+
 def test_bilibili_parses_server_rendered_public_results() -> None:
     title = json.dumps("《Memoria 记忆》(2021) 阿彼察邦映后谈", ensure_ascii=True)[1:-1]
     description = json.dumps("导演讨论声音与记忆。", ensure_ascii=True)[1:-1]
