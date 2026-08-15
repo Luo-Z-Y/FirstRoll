@@ -225,10 +225,13 @@ def cache_raw_criticism(
         provider=provider,
         claim_status="structured" if has_preserved_claims else "pending",
         notice=(
-            "Attributed reviews were refreshed and cached locally. Previously validated "
-            "claims remain visible while DeepSeek prepares a replacement."
+            "Attributed reviews were refreshed. Previously structured claims remain "
+            "visible until an explicit DeepSeek refresh."
             if has_preserved_claims
-            else "Attributed reviews were fetched and cached locally. DeepSeek structuring is pending."
+            else (
+                "Attributed reviews were fetched from the named public source. They are "
+                "secondary criticism, not verified film observations or creator statements."
+            )
         ),
     )
     criticism_store.save(bundle)
@@ -803,8 +806,7 @@ async def research_letterboxd_criticism(film_id: str) -> dict:
 
 
 @app.post("/api/discovery/films/{film_id:path}/criticism/letterboxd-web")
-async def research_letterboxd_web_criticism(film_id: str, request: Request) -> dict:
-    require_local_settings_request(request)
+async def research_letterboxd_web_criticism(film_id: str) -> dict:
     try:
         detail = discovery_service.detail(film_id)
         film = detail["film"]
@@ -827,8 +829,7 @@ async def research_letterboxd_web_criticism(film_id: str, request: Request) -> d
 
 
 @app.post("/api/discovery/films/{film_id:path}/criticism/guardian-web")
-async def research_guardian_web_criticism(film_id: str, request: Request) -> dict:
-    require_local_settings_request(request)
+async def research_guardian_web_criticism(film_id: str) -> dict:
     try:
         detail = discovery_service.detail(film_id)
         film = detail["film"]

@@ -782,7 +782,7 @@ class LetterboxdApiAdapter:
 
 
 class LetterboxdPublicWebAdapter:
-    """Bounded, local-only importer for attributed reviews on public film pages."""
+    """Bounded importer for attributed reviews on public film pages."""
 
     web_base = "https://letterboxd.com"
     max_response_bytes = 2_000_000
@@ -799,7 +799,7 @@ class LetterboxdPublicWebAdapter:
             "state": "ready",
             "configured": True,
             "official": False,
-            "local_only": True,
+            "local_only": False,
             "content_scope": "public attributed reviews selected from one film page",
         }
 
@@ -1139,7 +1139,7 @@ class _GuardianBodyParser(HTMLParser):
 
 
 class GuardianPublicWebAdapter:
-    """Bounded local importer for public Guardian film reviews."""
+    """Bounded importer for public Guardian film reviews."""
 
     search_base = "https://content.guardianapis.com/search"
     max_response_bytes = 3_000_000
@@ -1158,7 +1158,7 @@ class GuardianPublicWebAdapter:
             "state": "ready",
             "configured": True,
             "official": False,
-            "local_only": True,
+            "local_only": False,
             "content_scope": "public film-review articles selected for one film",
         }
 
@@ -1173,7 +1173,7 @@ class GuardianPublicWebAdapter:
         quoted_title = quote_plus(f'"{title}"')
         url = (
             f"{self.search_base}?q={quoted_title}"
-            "&section=film&tag=tone/reviews&order-by=relevance&page-size=10&api-key=test"
+            "&query-fields=headline&section=film&order-by=relevance&page-size=20&api-key=test"
         )
         response = self.search_transport(url).get("response") or {}
         results = response.get("results") if isinstance(response, dict) else []

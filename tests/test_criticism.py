@@ -322,8 +322,14 @@ def test_guardian_public_web_imports_attributed_article_body() -> None:
     </script><main><div data-gu-name="body"><div><p>The repeated hospital spaces turn memory into architectural rhythm.</p>
     <p>Sound and duration allow apparently ordinary gestures to acquire a mysterious charge.</p></div></div></main>'''
 
+    search_urls: list[str] = []
+
+    def search_transport(url: str) -> dict[str, Any]:
+        search_urls.append(url)
+        return search
+
     adapter = GuardianPublicWebAdapter(
-        search_transport=lambda _: search,
+        search_transport=search_transport,
         html_transport=lambda url: (url, article),
     )
     provider_id, title, reviews = adapter.fetch_reviews(
@@ -336,6 +342,8 @@ def test_guardian_public_web_imports_attributed_article_body() -> None:
     assert reviews[0].provider == "The Guardian public web"
     assert "architectural rhythm" in reviews[0].summary
     assert "mysterious charge" in reviews[0].summary
+    assert "query-fields=headline" in search_urls[0]
+    assert "tag=tone/reviews" not in search_urls[0]
 
 
 def test_guardian_public_web_rejects_redirects_outside_guardian() -> None:

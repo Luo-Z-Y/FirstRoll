@@ -88,6 +88,14 @@ def test_public_settings_explains_session_keys_and_hosted_douban_boundary() -> N
     assert ".public-mode .public-settings-nav" in styles
 
 
+def test_public_criticism_fetches_reviews_without_automatic_local_structuring() -> None:
+    app = (WEB / "app.js").read_text(encoding="utf-8")
+
+    assert "if (!runtimeConfig.publicMode)" in app
+    assert "Attributed reviews are ready. Deep Study can develop a separate" in app
+    assert "route && canStructure" in app
+
+
 def test_production_image_pins_and_bundles_douban_mcp() -> None:
     dockerfile = (ROOT / "Dockerfile").read_text(encoding="utf-8")
 
@@ -108,7 +116,7 @@ def test_archive_pullout_collapses_before_zoom_can_clip_its_copy() -> None:
     app = (WEB / "app.js").read_text(encoding="utf-8")
 
     assert "/assets/styles.css?v=20260815-5" in index
-    assert "/assets/app.js?v=20260815-6" in index
+    assert "/assets/app.js?v=20260815-7" in index
     assert "/assets/closet3d.js?v=20260815-3" in index
     assert 'class="archive-pullout-shell"' in app
     assert "container-type: inline-size" in styles
