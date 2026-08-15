@@ -4,7 +4,9 @@ import { GLTFLoader } from "./vendor/three/addons/loaders/GLTFLoader.js";
 const MODEL_URL = "/assets/models/firstroll-closet.glb?v=20260814-8";
 const CASE_TONES = ["#632d28", "#304138", "#87512f", "#35404a", "#897c64", "#4d3d4d"];
 const CAMERA_BOUNDS = { minX: -0.82, maxX: 0.82, minZ: -3.28, maxZ: 3.82 };
-const DEFAULT_CAMERA_POSITION = new THREE.Vector3(0, 1.65, 0.12);
+const SHELF_VERTICAL_CENTRE = 2.27;
+const DEFAULT_CAMERA_POSITION = new THREE.Vector3(0, SHELF_VERTICAL_CENTRE, 0.12);
+const DEFAULT_CAMERA_PITCH = 0;
 const SHELF_ROW_SIZE = 10;
 
 let activeViewer = null;
@@ -24,10 +26,12 @@ class FirstRollClosetViewer {
     this.filmCases = [];
     this.posterTextureCache = new Map();
     this.collectionKey = null;
+    this.collectionLoadPromise = null;
+    this.loadingFinished = false;
     this.hoveredCase = null;
     this.drag = null;
     this.yaw = 0;
-    this.pitch = -0.015;
+    this.pitch = DEFAULT_CAMERA_PITCH;
     this.destroyed = false;
     this.animationFrame = null;
     this.resizeObserver = null;
@@ -90,18 +94,17 @@ class FirstRollClosetViewer {
         if (object.material) object.material.envMapIntensity = 0.55;
       });
       this.scene.add(this.model);
+      if (this.loading) {
+        this.loading.querySelector("strong").textContent = this.hasShelfCollections()
+          ? "Shelving the collection"
+          : "Curating the shelf";
+      }
       await this.addLiveCollections();
       if (this.destroyed) return;
       this.root.dataset.liveCaseCount = String(this.filmCases.length);
       this.renderer.render(this.scene, this.camera);
-      if (this.loading) {
-        this.loading.querySelector("strong").textContent = "Shelf ready";
-      }
-      await this.waitForShelfReveal();
-      if (this.destroyed) return;
       this.root.classList.add("is-ready");
-      await new Promise((resolve) => window.setTimeout(resolve, 540));
-      if (!this.destroyed && this.loading) this.loading.remove();
+      if (this.hasShelfCollections()) await this.finishLoading();
     } catch (error) {
       console.error("FirstRoll shelf model failed to load", error);
       this.showError("The 3D archive model could not be loaded.");
@@ -137,6 +140,20 @@ class FirstRollClosetViewer {
     });
   }
 
+  hasShelfCollections() {
+    return (this.payload.collections || []).some((collection) => collection.films?.length);
+  }
+
+  async finishLoading() {
+    if (this.loadingFinished || !this.loading) return;
+    this.loadingFinished = true;
+    this.loading.querySelector("strong").textContent = "Shelf ready";
+    await this.waitForShelfReveal();
+    if (this.destroyed) return;
+    await new Promise((resolve) => window.setTimeout(resolve, 420));
+    if (!this.destroyed && this.loading) this.loading.remove();
+  }
+
   async addLiveCollections() {
     const collections = this.payload.collections || [];
     const shelfFilms = collections.flatMap((collection) => collection.films || []);
@@ -151,21 +168,27 @@ class FirstRollClosetViewer {
     });
     this.root.dataset.filmCount = String(shelfFilms.length);
     this.root.dataset.uniqueFilmCount = String(new Set(shelfEditions).size);
-    if (!collectionKey || collectionKey === this.collectionKey) return;
+    if (!collectionKey) return;
+    if (collectionKey === this.collectionKey) return this.collectionLoadPromise;
     this.collectionKey = collectionKey;
-    await Promise.all(collections.map(async (collection) => {
+    this.collectionLoadPromise = Promise.all(collections.map(async (collection) => {
       if (!collection.films?.length) return;
       await this.addFilmRow(collection);
       this.addShelfPlaque(collection);
     }));
+    await this.collectionLoadPromise;
     this.root.dataset.liveCaseCount = String(this.filmCases.length);
   }
 
   async update(payload) {
     this.payload = payload;
     if (!this.model || this.destroyed) return;
+    if (this.loading) this.loading.querySelector("strong").textContent = "Shelving the collection";
     await this.addLiveCollections();
-    if (!this.destroyed) this.renderer.render(this.scene, this.camera);
+    if (this.destroyed) return;
+    this.renderer.render(this.scene, this.camera);
+    this.root.classList.add("is-ready");
+    if (this.hasShelfCollections()) await this.finishLoading();
   }
 
   async addFilmRow(collection) {
@@ -566,7 +589,7 @@ class FirstRollClosetViewer {
   reset() {
     this.camera.position.copy(DEFAULT_CAMERA_POSITION);
     this.yaw = 0;
-    this.pitch = -0.015;
+    this.pitch = DEFAULT_CAMERA_PITCH;
     this.updateCameraRotation();
     this.updateHud();
   }

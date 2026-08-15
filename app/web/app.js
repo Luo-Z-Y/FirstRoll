@@ -624,11 +624,11 @@ function buildShelfCollections(primary, directorWorks, relevant, categories, dir
     { wall: "back", shelf: "bottom", label: "Nearby & relevant works", films: nearbyRow },
     {
       wall: "back",
-      shelf: "lower",
+      shelf: "middle",
       label: `${director} & related works`,
       films: directorRow,
     },
-    { wall: "back", shelf: "middle", label: "Shared cast & related works", films: castRow },
+    { wall: "back", shelf: "lower", label: "Shared cast & related works", films: castRow },
     { wall: "back", shelf: "upper", label: "Production country & related works", films: countryRow },
     { wall: "back", shelf: "top", label: "Genre & metadata affinities", films: recommendedRow },
   ];
@@ -659,7 +659,10 @@ function closetRoomMarkup(loading) {
     <div class="closet-viewport closet-webgl" data-closet-viewport tabindex="0" aria-label="Interactive Blender film shelf. Drag to look around, scroll or press W and S to move closer or farther away, use A and D to move sideways, and select a case to pull it out.">
       <canvas data-closet-canvas aria-hidden="true"></canvas>
       <div class="closet-model-loading" data-closet-loading role="status">
-        <span></span><strong>Opening the 3D archive</strong>
+        <div class="closet-loading-cases" aria-hidden="true">
+          <i></i><i></i><i></i><i></i><i></i><i></i>
+        </div>
+        <strong>${loading ? "Curating the shelf" : "Opening the 3D archive"}</strong>
       </div>
       <span class="closet-reticle" aria-hidden="true"></span>
     </div>
@@ -1165,10 +1168,12 @@ async function loadProviderCriticism(button, providerOverride = null) {
       output.innerHTML = criticalResearchMarkup(bundle);
     }
     updateCriticismSourceTabs(state.discovery.activeCriticismProvider);
-    const structureButton = state.discovery.activeCriticismProvider === provider
-      ? output.querySelector(`[data-structure-criticism="${provider}"]`)
-      : null;
-    await structureProviderCriticism(provider, structureButton);
+    if (!runtimeConfig.publicMode) {
+      const structureButton = state.discovery.activeCriticismProvider === provider
+        ? output.querySelector(`[data-structure-criticism="${provider}"]`)
+        : null;
+      await structureProviderCriticism(provider, structureButton);
+    }
   } catch (error) {
     if (state.discovery.activeCriticismProvider === provider) {
       output.innerHTML = `<p class="study-error">Source retrieval failed: ${escapeHtml(error.message)}</p>`;
@@ -1233,16 +1238,17 @@ function criticalResearchMarkup(bundle) {
   const reviewMap = Object.fromEntries(reviews.map((review) => [review.source_id, review]));
   const route = criticismProviderRoute(bundle?.provider);
   const pending = bundle?.claim_status === "pending";
+  const canStructure = !runtimeConfig.publicMode;
   return `
     <div class="critical-source-row">
       <div class="critical-source-heading">${escapeHtml(bundle.provider || "Attributed source")}</div>
       <div class="critical-source-actions">
         ${route ? `<button type="button" data-refresh-criticism="${escapeHtml(route)}">Refresh source</button>` : ""}
-        ${route ? `<button type="button" data-structure-criticism="${escapeHtml(route)}">${pending ? "Structure with DeepSeek" : "Refresh structured claims"}</button>` : ""}
+        ${route && canStructure ? `<button type="button" data-structure-criticism="${escapeHtml(route)}">${pending ? "Structure with DeepSeek" : "Refresh structured claims"}</button>` : ""}
       </div>
     </div>
     ${reviews.length ? rawReviewMarkup(reviews, bundle.provider, pending) : `<p class="module-empty">No attributed review text was fetched.</p>`}
-    ${pending ? `<p class="critical-stage-status" data-structure-status="${escapeHtml(route)}">Reviews are cached locally. Structured claims are pending.</p>` : ""}
+    ${pending ? `<p class="critical-stage-status" data-structure-status="${escapeHtml(route)}">${canStructure ? "Reviews are cached locally. Structured claims are pending." : "Attributed reviews are ready. Deep Study can develop a separate evidence-grounded analysis."}</p>` : ""}
     ${claims.length ? `<div class="critical-grid">${claims.map((claim) => criticalClaimMarkup(claim, reviewMap[claim.source_id], bundle.provider)).join("")}</div>` : ""}
     ${!pending && !claims.length ? `<p class="module-empty">DeepSeek found no substantive claims in the supplied review text.</p>` : ""}
     <p class="critical-boundary">${escapeHtml(bundle.notice || "Secondary criticism; not verified film observation.")}</p>`;

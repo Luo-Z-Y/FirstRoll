@@ -24,7 +24,7 @@ def test_webgl_runtime_is_local_and_loaded_by_the_discovery_page() -> None:
     assert "firstroll:select-film" in runtime
     assert "waitForShelfReveal" in runtime
     assert 'textContent = "Shelf ready"' in runtime
-    assert "window.setTimeout(resolve, 540)" in runtime
+    assert "window.setTimeout(resolve, 420)" in runtime
     assert "window.FirstRollCloset.update(detail)" in (WEB / "app.js").read_text(
         encoding="utf-8"
     )
@@ -109,7 +109,7 @@ def test_archive_pullout_collapses_before_zoom_can_clip_its_copy() -> None:
 
     assert "/assets/styles.css?v=20260815-5" in index
     assert "/assets/app.js?v=20260815-6" in index
-    assert "/assets/closet3d.js?v=20260815-1" in index
+    assert "/assets/closet3d.js?v=20260815-3" in index
     assert 'class="archive-pullout-shell"' in app
     assert "container-type: inline-size" in styles
     assert "@container (max-width: 520px)" in styles
@@ -127,6 +127,7 @@ def test_archive_pullout_collapses_before_zoom_can_clip_its_copy() -> None:
 def test_single_wall_shelf_uses_five_rows_of_real_films() -> None:
     app = (WEB / "app.js").read_text(encoding="utf-8")
     runtime = (WEB / "closet3d.js").read_text(encoding="utf-8")
+    styles = (WEB / "styles.css").read_text(encoding="utf-8")
     discovery = (ROOT / "app" / "backend" / "discovery.py").read_text(encoding="utf-8")
     blender_builder = (ROOT / "tools" / "build_closet_blender.py").read_text(
         encoding="utf-8"
@@ -156,8 +157,12 @@ def test_single_wall_shelf_uses_five_rows_of_real_films() -> None:
     assert app.count('wall: "back"') == 5
     assert 'wall: "left"' not in app
     assert 'wall: "right"' not in app
+    assert 'shelf: "middle",\n      label: `${director} & related works`' in app
+    assert 'shelf: "lower", label: "Shared cast & related works"' in app
     assert "const SHELF_ROW_SIZE = 10" in runtime
-    assert "DEFAULT_CAMERA_POSITION = new THREE.Vector3(0, 1.65, 0.12)" in runtime
+    assert "SHELF_VERTICAL_CENTRE = 2.27" in runtime
+    assert "DEFAULT_CAMERA_POSITION = new THREE.Vector3(0, SHELF_VERTICAL_CENTRE, 0.12)" in runtime
+    assert "DEFAULT_CAMERA_PITCH = 0" in runtime
     assert runtime.count("this.camera.position.copy(DEFAULT_CAMERA_POSITION)") == 2
     assert "this.camera.getWorldDirection(forward)" in runtime
     assert "crossVectors(forward, this.camera.up)" in runtime
@@ -180,6 +185,10 @@ def test_single_wall_shelf_uses_five_rows_of_real_films() -> None:
     assert "updateCaseCaption" in runtime
     assert "uniqueFilmCount" in runtime
     assert "canvas.height = 96" in runtime
+    assert "closet-loading-cases" in app
+    assert "closet-loading-case" in styles
+    assert "hasShelfCollections" in runtime
+    assert "finishLoading" in runtime
     assert "faceWidth / faceHeight" in runtime
     assert "loadPosterTexture" in runtime
     assert 'textContent = "Loading film artwork"' not in runtime
