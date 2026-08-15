@@ -41,14 +41,16 @@ local MCP server. It is interesting for Chinese-language perspectives, but it is
 stable public API contract for FirstRoll because:
 
 - the registry listing marks it as unvalidated;
-- it runs locally and requires a separate Node build/configuration;
+- it requires a separately built Node runtime, pinned and bundled into the hosted image;
 - some functions may require a personal Douban cookie;
 - unofficial access can break when Douban changes its pages or anti-automation controls;
 - the MCP server's MIT licence covers its code, not the copyright or reuse rights of
   Douban reviews returned through it.
 
 For those reasons it remains optional and never becomes the canonical film identity
-provider. The implemented adapter attaches review ID, source URL, retrieval time,
+provider. The hosted edition uses anonymous access and never requests a visitor cookie; if Douban
+requires authentication, the source degrades cleanly instead of collecting credentials. The
+implemented adapter attaches review ID, source URL, retrieval time,
 language and content-scope labels. The MCP output does not supply reviewer names, so
 FirstRoll leaves author empty rather than inventing attribution. It degrades cleanly
 when the local server or review endpoint is unavailable.

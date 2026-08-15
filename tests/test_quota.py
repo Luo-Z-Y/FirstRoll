@@ -211,11 +211,17 @@ def test_account_integrations_returns_identity_and_quota_without_consuming_it(
             assert authorisation == "Bearer verified-token"
             return quota
 
+    class ReadyDoubanAdapter:
+        @staticmethod
+        def status() -> dict:
+            return {"installed": True}
+
     monkeypatch.setenv("FIRSTROLL_PUBLIC_MODE", "true")
     monkeypatch.setenv("FIRSTROLL_DEEP_STUDY_ENABLED", "true")
     monkeypatch.setenv("DEEPSEEK_API_KEY", "private-test-key")
     monkeypatch.setattr(main, "auth_verifier", verifier)
     monkeypatch.setattr(main, "quota_client", StatusQuotaClient())
+    monkeypatch.setattr(main, "douban_adapter", ReadyDoubanAdapter())
 
     missing = TestClient(main.app).get("/api/account/integrations")
     response = TestClient(main.app).get(
@@ -231,7 +237,13 @@ def test_account_integrations_returns_identity_and_quota_without_consuming_it(
         "personal_credentials_stored": False,
         "credential_scope": "single_browser_tab",
     }
-    assert response.json()["douban"]["hosted_cookie_accepted"] is False
+    assert response.json()["douban"] == {
+        "availability": "hosted",
+        "platform_enabled": True,
+        "personal_credentials_supported": False,
+        "hosted_cookie_accepted": False,
+        "connector_url": "https://github.com/moria97/douban-mcp",
+    }
 
 
 def test_personal_deepseek_key_is_used_for_one_authenticated_request(monkeypatch) -> None:

@@ -300,16 +300,16 @@
                   <span class="integration-index">03</span>
                   <h2>Douban MCP</h2>
                 </div>
-                <span class="integration-badge is-local">Local edition</span>
+                <span class="integration-badge is-local">Hosted MCP</span>
               </header>
-              <p>The unofficial connector runs as a local Node process and may require a Douban account cookie. The hosted demo does not collect that cookie or start a shared connector.</p>
+              <p>FirstRoll runs a pinned Douban MCP connector inside the hosted backend for film ratings and Chinese-language review summaries. Visitors are never asked for a Douban cookie.</p>
               <div class="integration-local-boundary">
-                <strong>Available in the local edition</strong>
-                <span>Install the connector privately, then configure it through Local Settings.</span>
+                <strong id="doubanPlatformState">Checking the hosted connection…</strong>
+                <span>Anonymous provider access · unofficial source · may be temporarily rate-limited by Douban</span>
               </div>
               <footer>
                 <a href="https://github.com/moria97/douban-mcp" target="_blank" rel="noopener noreferrer">View connector ↗</a>
-                <span>No cookie is accepted here</span>
+                <span>No visitor credential is accepted</span>
               </footer>
             </article>
           </div>
@@ -346,7 +346,7 @@
       document.body.append(authScript);
     }
   </script>
-  <script src="/assets/integrations.js?v=20260815-1"></script>
+  <script src="/assets/integrations.js?v=20260815-2"></script>
   <script src="/assets/app.js?v=20260815-3"></script>
   <script type="module" src="/assets/closet3d.js?v=20260814-21"></script>
 </body>

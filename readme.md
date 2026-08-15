@@ -581,8 +581,9 @@ three-per-account and thirty-global daily limits are installed from
 Signed-in visitors can open the hosted **Settings** view to inspect their account and current Deep
 Study allowance. Optional personal DeepSeek and YouTube keys are held only in JavaScript memory for
 that browser tab, sent only with the matching authenticated request and cleared on refresh or
-sign-out. They are not written to local storage, Supabase or the FirstRoll filesystem. Douban MCP is
-shown with local-edition setup guidance because the shared server never accepts a Douban cookie.
+sign-out. They are not written to local storage, Supabase or the FirstRoll filesystem. The production
+image bundles a pinned Douban MCP revision and uses it anonymously; the hosted interface has no
+Douban credential field and never accepts a visitor cookie.
 
 Use [.env.example](.env.example) as the reference. FirstRoll does not automatically load
 an `.env` file; export variables before starting the process or use Settings.
@@ -658,6 +659,11 @@ cd ../../..
 FirstRoll uses the connector's `search-movie` and `list-movie-reviews` tools. A personal
 Douban cookie may be required when anonymous requests fail. Never commit or share the
 cookie. Provider behaviour may break when Douban changes its pages or access controls.
+
+The production Docker image performs this build automatically from the exact upstream commit pinned
+in `Dockerfile`. Hosted requests remain anonymous: FirstRoll does not request, receive or persist a
+visitor's Douban cookie. If anonymous access stops working, the hosted source reports itself as
+unavailable rather than asking the visitor to authenticate with Douban.
 
 See [Data Sources](docs/DATA_SOURCES.md) for the source, copyright and model-use policy.
 

@@ -195,9 +195,11 @@ signed-in visitor can supply a personal key for one browser tab through Settings
 that key only in memory and sends it only with an authenticated video-search request. Restrict keys
 to the YouTube Data API in Google Cloud and set a conservative quota alert.
 
-Douban is not bundled into the hosted image. Its current integration is an unofficial Node-based
-MCP connector and may require a user cookie. Public Settings therefore presents it as a local-edition
-integration and links to its setup material, but never accepts or stores a visitor's Douban cookie.
+The production image builds and bundles the unofficial Douban MCP connector at the exact revision
+declared by `DOUBAN_MCP_REF` in `Dockerfile`. It uses anonymous provider access by default. Public
+Settings reports whether that hosted runtime is ready but provides no Douban credential field, and
+the API never accepts or stores a visitor's Douban cookie. Provider page changes, access controls or
+rate limits can still make this optional source temporarily unavailable.
 
 ## 6. Current public-beta acceptance checks
 
@@ -209,6 +211,7 @@ integration and links to its setup material, but never accepts or stores a visit
 - `/api/analyze` returns HTTP 503 in public mode.
 - `/api/auth/me` returns HTTP 401 without a session and the signed-in account with a valid session.
 - `/api/account/integrations` returns quota and provider capability status only for a valid session.
+- The production image reports Douban MCP as installed without exposing a visitor-cookie input.
 - Deep Study returns HTTP 401 without a session, generates only after an atomic quota reservation,
   and returns HTTP 429 when either daily limit is exhausted.
 - Personal DeepSeek and YouTube keys remain in tab memory, are cleared on refresh or sign-out and

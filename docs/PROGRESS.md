@@ -1,5 +1,25 @@
 # FirstRoll Project Progress
 
+### 15 August 2026 — Hosted Douban MCP runtime
+
+Delivered:
+
+1. Added a Node 22 build stage to the production image and pinned `moria97/douban-mcp` to commit
+   `1adc26d39532db893616ceb7ea851733948ae69e` for reproducible builds.
+2. Copied only the built connector, production dependencies and Node runtime into the Python image.
+3. Made authenticated Settings report the live hosted connector state while deliberately providing
+   no Douban cookie or visitor-credential field.
+4. Retained anonymous provider access and graceful degradation when Douban blocks or rate-limits the
+   unofficial connector.
+
+Acceptance evidence:
+
+- the complete production image builds with zero reported npm production vulnerabilities;
+- its cookie-free MCP handshake exposes `search-movie` and `list-movie-reviews`;
+- an anonymous container lookup matched *In the Mood for Love* to Douban subject `1291557` and
+  returned its live community score;
+- the full application suite passes with 103 tests.
+
 ### 15 August 2026 — Authenticated public Settings and session integrations
 
 Delivered:

@@ -49,7 +49,7 @@ def test_supabase_auth_is_bundled_and_deep_study_sends_bearer_tokens() -> None:
     assert 'headers: { "Content-Type": "application/json", ...authorisation, ...integration }' in app
     assert "deepStudyQuotaMarkup(data.quota)" in app
     assert "account studies remain today" in app
-    assert 'src="/assets/integrations.js?v=20260815-1"' in index
+    assert 'src="/assets/integrations.js?v=20260815-2"' in index
     assert '"X-FirstRoll-DeepSeek-Key"' in integrations
     assert '"X-FirstRoll-YouTube-Key"' in integrations
     assert "localStorage" not in integrations
@@ -66,7 +66,7 @@ def test_public_video_preview_uses_neutral_product_copy() -> None:
     assert "your own machine" not in index
 
 
-def test_public_settings_explains_session_keys_and_local_douban_boundary() -> None:
+def test_public_settings_explains_session_keys_and_hosted_douban_boundary() -> None:
     index = (WEB / "index.html").read_text(encoding="utf-8")
     app = (WEB / "app.js").read_text(encoding="utf-8")
     styles = (WEB / "styles.css").read_text(encoding="utf-8")
@@ -74,11 +74,27 @@ def test_public_settings_explains_session_keys_and_local_douban_boundary() -> No
     assert 'id="product-settings"' in index
     assert 'data-product-view="settings"' in index
     assert "cleared on refresh or sign-out" in index
-    assert "No cookie is accepted here" in index
+    assert "Hosted MCP" in index
+    assert "Visitors are never asked for a Douban cookie" in index
+    assert "No visitor credential is accepted" in index
     assert "https://github.com/moria97/douban-mcp" in index
     assert 'requestHeaders?.("deepseek")' in app
     assert 'requestHeaders?.("youtube")' in app
     assert ".public-mode .public-settings-nav" in styles
+
+
+def test_production_image_pins_and_bundles_douban_mcp() -> None:
+    dockerfile = (ROOT / "Dockerfile").read_text(encoding="utf-8")
+
+    assert "FROM node:22-bookworm-slim AS douban-mcp-builder" in dockerfile
+    assert "DOUBAN_MCP_REF=1adc26d39532db893616ceb7ea851733948ae69e" in dockerfile
+    assert "npm ci --ignore-scripts --audit=false" in dockerfile
+    assert "dependencies.@modelcontextprotocol/sdk=1.30.0" in dockerfile
+    assert "overrides.path-to-regexp=8.4.2" in dockerfile
+    assert "overrides.qs=6.15.3" in dockerfile
+    assert "npm audit --omit=dev --audit-level=high" in dockerfile
+    assert "FIRSTROLL_DOUBAN_MCP_PATH=/opt/douban-mcp/dist/index.js" in dockerfile
+    assert "COPY --from=douban-mcp-builder /usr/local/bin/node" in dockerfile
 
 
 def test_archive_pullout_collapses_before_zoom_can_clip_its_copy() -> None:

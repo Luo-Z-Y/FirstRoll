@@ -23,6 +23,15 @@ jobs:
         run: python -m compileall app/backend
       - name: Validate API contract endpoint imports
         run: python -c "import app.backend.main as m; print(m.app.title)"
+      - name: Build hosted backend image
+        run: docker build --tag firstroll-ci .
+      - name: Verify hosted Douban MCP handshake
+        run: >-
+          docker run --rm firstroll-ci python -c
+          "import asyncio; from app.backend.main import douban_adapter;
+          result = asyncio.run(douban_adapter.test_connection());
+          assert result['cookie_configured'] is False;
+          assert result['tools'] == ['list-movie-reviews', 'search-movie']"
       - name: Test film discovery
         run: >-
           python -m pytest -q

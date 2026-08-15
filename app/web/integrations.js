@@ -28,6 +28,7 @@
     youtubeInput: document.getElementById("youtubeSessionKey"),
     youtubeState: document.getElementById("youtubeSessionState"),
     youtubeClear: document.getElementById("youtubeSessionClear"),
+    doubanState: document.getElementById("doubanPlatformState"),
   };
 
   function apiBase() {
@@ -149,7 +150,13 @@
       const quota = payload.deep_study?.quota;
       platformState.deepseek = payload.deep_study?.platform_enabled === true;
       platformState.youtube = payload.youtube?.platform_enabled === true;
+      platformState.douban = payload.douban?.platform_enabled === true;
       renderCredentialStates();
+      if (refs.doubanState) {
+        refs.doubanState.textContent = platformState.douban
+          ? "Hosted connection ready"
+          : "Hosted connection unavailable";
+      }
       if (refs.accountEmail) refs.accountEmail.textContent = payload.user?.email || user.email || "Signed-in account";
       if (refs.quota) {
         refs.quota.textContent = quota

@@ -529,6 +529,7 @@ def account_integrations(request: Request) -> dict:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     except QuotaServiceError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
+    douban = douban_adapter.status()
     return {
         "user": user,
         "deep_study": {
@@ -542,7 +543,9 @@ def account_integrations(request: Request) -> dict:
             "personal_session_key_supported": True,
         },
         "douban": {
-            "availability": "local_only",
+            "availability": "hosted" if douban["installed"] else "unavailable",
+            "platform_enabled": douban["installed"],
+            "personal_credentials_supported": False,
             "hosted_cookie_accepted": False,
             "connector_url": "https://github.com/moria97/douban-mcp",
         },
