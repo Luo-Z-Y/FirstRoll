@@ -52,6 +52,14 @@ def test_supabase_auth_is_bundled_and_deep_study_sends_bearer_tokens() -> None:
     assert "FIRSTROLL_SUPABASE_PUBLISHABLE_KEY" in build
 
 
+def test_public_video_preview_uses_neutral_product_copy() -> None:
+    index = (WEB / "index.html").read_text(encoding="utf-8")
+
+    assert "Online video analysis is coming soon." in index
+    assert "available only in the local edition" in index
+    assert "your own machine" not in index
+
+
 def test_archive_pullout_collapses_before_zoom_can_clip_its_copy() -> None:
     index = (WEB / "index.html").read_text(encoding="utf-8")
     styles = (WEB / "styles.css").read_text(encoding="utf-8")
