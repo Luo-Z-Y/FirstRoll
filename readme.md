@@ -813,10 +813,50 @@ fallback behaviour; these are tracked separately from the new FirstRoll modules.
 | Clip-to-study evidence bridge | Next | Feed measured scenes, shots and timecodes into synthesis |
 | Creator primary-source layer | Partial | Discovered interview descriptions and public YouTube captions are stored and cited; verified speaker attribution and dedicated interview search remain planned |
 | Persistent film projects | Planned | Retain film records, clips, analyses, notes and studies |
-| Evaluation suite | Planned | Retrieval relevance, citation accuracy, abstention, latency and cost |
+| Evaluation suite | Baseline recorded | Five frozen Agent-comparison cases now record accepted quality, operational and quality failure rates, latency, repair use and token consumption |
 
 Progress is maintained in [docs/PROGRESS.md](docs/PROGRESS.md), including dated changes
 and acceptance evidence. Update that file whenever a milestone changes state.
+
+### Fixed-workflow evaluation baseline
+
+FirstRoll records the current non-agent workflow before introducing agency. The frozen suite lives in
+[`evals/agent_cases.json`](evals/agent_cases.json); a future Agent must run those same film identities,
+questions and acceptance rubric rather than substituting easier cases.
+
+Run it locally with configured DeepSeek access and the private index available:
+
+```bash
+uv run --extra dev python tools/evaluate_workflow.py \
+  --output evals/results/baseline-current.json
+```
+
+The 18 August 2026 baseline produced:
+
+| Measure | Fixed workflow |
+|---|---:|
+| Cases completed | 5 / 5 |
+| Operational failure rate | 0% |
+| Deterministic quality-gate pass rate | 20% |
+| Quality acceptance failure rate | 80% |
+| Mean quality score | 80 / 100 |
+| Median quality score | 75 / 100 |
+| Mean end-to-end latency | 90.46 s |
+| P50 / P95 end-to-end latency | 95.44 s / 106.78 s |
+| Repair rate | 80% |
+| DeepSeek calls / total tokens | 9 / 126,820 |
+
+“Operational failure” means the workflow did not return a valid result. “Quality acceptance failure”
+means it returned a result that still failed FirstRoll's deterministic evidence gate. These must remain
+separate: a syntactically successful answer is not automatically a good answer. The composite quality
+score awards no gate component when the gate fails, even if the answer's section-average score is high.
+It measures identity, structure, citations, calibration, observable verification and evidence coverage;
+it does **not** prove that unseen film-form claims are factually correct.
+
+The redacted run record is [`evals/results/baseline-2026-08-18.json`](evals/results/baseline-2026-08-18.json).
+It includes the non-secret configuration fingerprint and per-stage timings. This run is a five-case
+functional baseline, not a statistically stable estimate of stochastic provider reliability; repeat
+the suite when comparing production candidates and report the sample count.
 
 ## Known Limitations
 

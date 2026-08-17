@@ -1,5 +1,66 @@
 # FirstRoll Project Progress
 
+### 18 August 2026 — Fixed-workflow baseline for future Agent evaluation
+
+Delivered:
+
+1. Froze five representative film-study cases covering formal specificity without a clip,
+   abundant secondary interpretation, multilingual identity, ambiguous-title resolution and
+   sparse-evidence limitation.
+2. Added a reproducible evaluator for the current fixed workflow. It records film identity,
+   per-stage and end-to-end latency, operational failures, deterministic quality acceptance,
+   repair use, citation validity, evidence coverage, DeepSeek call count and token usage.
+3. Stored a non-secret configuration fingerprint with the result: DeepSeek Pro and YouTube were
+   configured; Douban and official Letterboxd credentials were absent; the local index contained
+   seven documents, 4,381 chunks and multilingual MiniLM embeddings.
+4. Made the quality gate a blocking rubric component. A high section average cannot receive the
+   gate's 25 points when the final result remains `insufficient_evidence`.
+5. Kept operational and quality failure rates separate and documented that the automated score
+   does not establish factual correctness for film form that has not been observed from a clip.
+
+Baseline results:
+
+| Measure | Result |
+|---|---:|
+| Cases completed | 5 / 5 |
+| Operational failure rate | 0% |
+| Quality-gate pass rate | 20% |
+| Quality acceptance failure rate | 80% |
+| Mean / median quality score | 80 / 75 |
+| Mean end-to-end latency | 90.459 s |
+| P50 / P95 end-to-end latency | 95.444 s / 106.781 s |
+| Repair rate | 80% |
+| Model calls / total tokens | 9 / 126,820 |
+
+Case results:
+
+| Case | Quality | Gate | End-to-end latency |
+|---|---:|---|---:|
+| *Syndromes and a Century* — cinematography | 75 | insufficient evidence | 108.088 s |
+| *In the Mood for Love* — constrained space | 75 | insufficient evidence | 101.551 s |
+| *Memoria* — sound perspective | 100 | passed | 59.865 s |
+| *The Thing* — ambiguous identity | 75 | insufficient evidence | 87.347 s |
+| *We Are All Strangers* — sparse evidence | 75 | insufficient evidence | 95.444 s |
+
+Interpretation:
+
+- the fixed workflow is operationally reliable on this small case set and resolved the deliberately
+  ambiguous *The Thing* query to the 1982 John Carpenter film;
+- four of five studies required the one permitted repair call and still failed the evidence-quality
+  gate, so returning JSON is not the current quality bottleneck;
+- the warm cases remained slow, showing that DeepSeek generation and repair—not only local embedding
+  cold start—dominate latency;
+- the five-case run is a functional baseline, not a statistically stable provider failure estimate.
+  Any Agent comparison must reuse the case file and report its run count, configuration fingerprint
+  and both failure rates.
+
+Acceptance evidence:
+
+- all six evaluator unit tests pass and the new evaluator files pass Ruff;
+- the live result is stored in `evals/results/baseline-2026-08-18.json` without credentials or private
+  source excerpts;
+- all five cases used the same fixed workflow and acceptance rubric intended for later Agent runs.
+
 ### 15 August 2026 — Ambiguous film identity confirmation
 
 Delivered:

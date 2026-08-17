@@ -1,0 +1,568 @@
+{
+  "schema_version": 1,
+  "suite_id": "firstroll-agent-comparison-v1",
+  "system": "fixed_workflow_baseline",
+  "recorded_at": "2026-08-17T17:07:57.213784+00:00",
+  "environment": {
+    "python": "3.11.7",
+    "platform": "macOS-26.5.2-arm64-arm-64bit",
+    "configuration": {
+      "model": "deepseek-v4-pro",
+      "connectors": {
+        "deepseek": {
+          "state": "available",
+          "configured": true,
+          "credential_source": "local_store"
+        },
+        "douban": {
+          "state": "available",
+          "configured": false,
+          "credential_source": "none"
+        },
+        "letterboxd": {
+          "state": "available",
+          "configured": false,
+          "credential_source": "none"
+        },
+        "youtube": {
+          "state": "available",
+          "configured": true,
+          "credential_source": "local_store"
+        },
+        "nyt": {
+          "state": "planned",
+          "configured": false,
+          "credential_source": "none"
+        },
+        "guardian": {
+          "state": "planned",
+          "configured": false,
+          "credential_source": "none"
+        }
+      },
+      "library_documents": 7,
+      "index_chunks": 4381,
+      "index_schema": "2",
+      "embedding_model": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+      "sha256": "e648c6a826485971"
+    }
+  },
+  "quality_scope": "Automated structural, citation, calibration and verifiability proxy; it does not establish the factual correctness of unseen film-form claims.",
+  "summary": {
+    "case_count": 5,
+    "successful_cases": 5,
+    "failed_cases": 0,
+    "operational_failure_rate": 0.0,
+    "failure_rate": 0.0,
+    "mean_quality_score": 80.0,
+    "median_quality_score": 75.0,
+    "quality_gate_pass_rate": 0.2,
+    "quality_acceptance_failure_rate": 0.8,
+    "repair_rate": 0.8,
+    "latency_seconds": {
+      "mean_end_to_end": 90.459,
+      "p50_end_to_end": 95.444,
+      "p95_end_to_end": 106.781,
+      "mean_study": 76.185
+    },
+    "model_calls": 9,
+    "total_tokens": 126820,
+    "failure_stages": {
+      "search": 0,
+      "identity": 0,
+      "detail": 0,
+      "study": 0
+    }
+  },
+  "cases": [
+    {
+      "case_id": "syndromes-cinematography",
+      "challenge": "formal specificity without clip evidence",
+      "status": "passed",
+      "failure_stage": null,
+      "failure_reason": null,
+      "candidate_count": 1,
+      "identity_ambiguity": false,
+      "resolved_film": {
+        "id": "wikidata:Q3508807",
+        "title": "Syndromes and a Century",
+        "year": 2006,
+        "directors": [
+          "Apichatpong Weerasethakul"
+        ]
+      },
+      "cached_criticism_providers": [
+        "douban"
+      ],
+      "cached_video_count": 0,
+      "quality": {
+        "score": 75.0,
+        "components": {
+          "identity": 15.0,
+          "structured_completion": 10.0,
+          "deterministic_quality_gate": 0.0,
+          "citation_integrity": 20.0,
+          "epistemic_calibration": 10.0,
+          "observable_verification": 10.0,
+          "evidence_coverage": 10.0
+        },
+        "quality_gate_status": "insufficient_evidence",
+        "quality_gate_score": 0.92,
+        "repair_attempted": true,
+        "section_count": 5,
+        "valid_citations": true,
+        "distinct_theory_sources_cited": 5,
+        "available_theory_sources": 10,
+        "calibrated_section_ratio": 1.0,
+        "observable_verification_ratio": 1.0
+      },
+      "study_summary": {
+        "title": "Framing the Two Halves: A Spatial Study of Syndromes and a Century",
+        "central_argument": "To test whether framing, camera position, and spatial repetition distinguish the film's two halves, a filmmaker must treat every remembered detail as a hypothesis and design close-viewing tasks that isolate formal variables. The critic's claim of a shift from warm, intimate rural scenes to cold, detached urban ones (C2) provides a starting point, but it remains an attributed interpretation, not an observed fact. By systematically logging shot scale, camera angle, offscreen space, and recurring compositions, the filmmaker can test whether the film's spatial grammar actually changes between halves, or whether the perceived tonal shift arises from other elements such as performance, sound, or editing rhythm. The study must avoid inventing scene details and instead convert each gap into a verifiable question, using theory sources to define what to look for and how to interpret it.",
+        "section_lenses": [
+          "Shot scale and camera distance",
+          "Camera angle and vertical position",
+          "Offscreen space and framing edges",
+          "Spatial repetition and recurring compositions",
+          "Camera movement and staging"
+        ],
+        "model": "deepseek-v4-pro"
+      },
+      "retrieval": {
+        "method": "hybrid_rrf",
+        "candidate_count": 309,
+        "theory_source_count": 10,
+        "critical_claim_count": 4,
+        "attributed_source_count": 1
+      },
+      "latency_seconds": {
+        "search": 2.159,
+        "detail": 44.625,
+        "study": 61.302,
+        "end_to_end": 108.088
+      },
+      "model_calls": [
+        {
+          "endpoint": "completions",
+          "latency_seconds": 38.993,
+          "model": "deepseek-v4-pro",
+          "usage": {
+            "prompt_tokens": 5238,
+            "completion_tokens": 2242,
+            "total_tokens": 7480,
+            "prompt_tokens_details": {
+              "cached_tokens": 0
+            },
+            "prompt_cache_hit_tokens": 0,
+            "prompt_cache_miss_tokens": 5238
+          }
+        },
+        {
+          "endpoint": "completions",
+          "latency_seconds": 20.921,
+          "model": "deepseek-v4-pro",
+          "usage": {
+            "prompt_tokens": 9267,
+            "completion_tokens": 2242,
+            "total_tokens": 11509,
+            "prompt_tokens_details": {
+              "cached_tokens": 0
+            },
+            "prompt_cache_hit_tokens": 0,
+            "prompt_cache_miss_tokens": 9267
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "in-the-mood-for-love-space",
+      "challenge": "well-known film with abundant secondary interpretation",
+      "status": "passed",
+      "failure_stage": null,
+      "failure_reason": null,
+      "candidate_count": 2,
+      "identity_ambiguity": true,
+      "resolved_film": {
+        "id": "wikidata:Q1056853",
+        "title": "In the Mood for Love",
+        "year": 2000,
+        "directors": [
+          "Wong Kar-wai"
+        ]
+      },
+      "cached_criticism_providers": [
+        "crossref scholarship",
+        "douban",
+        "letterboxd public web"
+      ],
+      "cached_video_count": 0,
+      "quality": {
+        "score": 75.0,
+        "components": {
+          "identity": 15.0,
+          "structured_completion": 10.0,
+          "deterministic_quality_gate": 0.0,
+          "citation_integrity": 20.0,
+          "epistemic_calibration": 10.0,
+          "observable_verification": 10.0,
+          "evidence_coverage": 10.0
+        },
+        "quality_gate_status": "insufficient_evidence",
+        "quality_gate_score": 0.93,
+        "repair_attempted": true,
+        "section_count": 6,
+        "valid_citations": true,
+        "distinct_theory_sources_cited": 4,
+        "available_theory_sources": 10,
+        "calibrated_section_ratio": 1.0,
+        "observable_verification_ratio": 1.0
+      },
+      "study_summary": {
+        "title": "Framing Absence: Constraint, Offscreen Space, and Repetition in In the Mood for Love",
+        "central_argument": "In the Mood for Love builds its emotional architecture less through what it shows than through what it withholds. The film’s constrained framings, its systematic use of offscreen space, and its patterned repetitions do not merely decorate a story of unconsummated longing; they constitute the story’s formal engine. By treating the frame as a boundary that both reveals and conceals, Wong Kar-wai and his collaborators create a world in which desire is inseparable from obstruction, and in which the most significant events—the spouses’ affair, the protagonists’ unspoken feelings—occur just beyond the visible. This study proposes that the film’s power depends on a dialectic between the seen and the unseen, the repeated and the withheld, and that a filmmaker can learn from this dialectic by separating what is directly observable in the frame from what is inferred, remembered, or projected.",
+        "section_lenses": [
+          "Constrained framing as emotional architecture",
+          "Offscreen space and the absent spouses",
+          "Repetition as structural rhythm",
+          "Constructive editing and spatial ambiguity",
+          "Sound and offscreen space",
+          "The frame as a moral boundary"
+        ],
+        "model": "deepseek-v4-pro"
+      },
+      "retrieval": {
+        "method": "hybrid_rrf",
+        "candidate_count": 420,
+        "theory_source_count": 10,
+        "critical_claim_count": 26,
+        "attributed_source_count": 18
+      },
+      "latency_seconds": {
+        "search": 3.106,
+        "detail": 1.564,
+        "study": 96.881,
+        "end_to_end": 101.551
+      },
+      "model_calls": [
+        {
+          "endpoint": "completions",
+          "latency_seconds": 62.343,
+          "model": "deepseek-v4-pro",
+          "usage": {
+            "prompt_tokens": 14992,
+            "completion_tokens": 3435,
+            "total_tokens": 18427,
+            "prompt_tokens_details": {
+              "cached_tokens": 0
+            },
+            "prompt_cache_hit_tokens": 0,
+            "prompt_cache_miss_tokens": 14992
+          }
+        },
+        {
+          "endpoint": "completions",
+          "latency_seconds": 32.58,
+          "model": "deepseek-v4-pro",
+          "usage": {
+            "prompt_tokens": 19302,
+            "completion_tokens": 3523,
+            "total_tokens": 22825,
+            "prompt_tokens_details": {
+              "cached_tokens": 0
+            },
+            "prompt_cache_hit_tokens": 0,
+            "prompt_cache_miss_tokens": 19302
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "memoria-sound",
+      "challenge": "multilingual identity and sound-centred analysis",
+      "status": "passed",
+      "failure_stage": null,
+      "failure_reason": null,
+      "candidate_count": 1,
+      "identity_ambiguity": false,
+      "resolved_film": {
+        "id": "wikidata:Q67087116",
+        "title": "Memoria",
+        "year": 2021,
+        "directors": [
+          "Apichatpong Weerasethakul"
+        ]
+      },
+      "cached_criticism_providers": [
+        "crossref scholarship",
+        "douban",
+        "letterboxd public web",
+        "the guardian public web"
+      ],
+      "cached_video_count": 25,
+      "quality": {
+        "score": 100.0,
+        "components": {
+          "identity": 15.0,
+          "structured_completion": 10.0,
+          "deterministic_quality_gate": 25.0,
+          "citation_integrity": 20.0,
+          "epistemic_calibration": 10.0,
+          "observable_verification": 10.0,
+          "evidence_coverage": 10.0
+        },
+        "quality_gate_status": "passed",
+        "quality_gate_score": 1.0,
+        "repair_attempted": false,
+        "section_count": 6,
+        "valid_citations": true,
+        "distinct_theory_sources_cited": 7,
+        "available_theory_sources": 10,
+        "calibrated_section_ratio": 1.0,
+        "observable_verification_ratio": 1.0
+      },
+      "study_summary": {
+        "title": "Sonic Uncertainty and the Long Take: Testing Sound Perspective and Duration in Memoria",
+        "central_argument": "A close viewing of Memoria can test how sound perspective and shot duration jointly produce spatial uncertainty, without claiming the director's intention. By treating the film as a system of acoustic and temporal relations, we can observe how offscreen and ambiguous sounds interact with extended takes to destabilize the viewer's sense of where events occur and how long they last. The analysis proceeds through six movements: first, establishing sound perspective as a perceptual cue; second, examining the role of duration in suspending spatial resolution; third, considering the interplay of sound and image in creating uncertainty; fourth, exploring how editing patterns withhold answers; fifth, assessing the film's slow-cinema aesthetic as a framework for these effects; and sixth, reflecting on the limits of formal analysis when intention remains unclaimed.",
+        "section_lenses": [
+          "Sound perspective and spatial perception",
+          "Duration and temporal suspension",
+          "Sound-image relations and offscreen space",
+          "Editing patterns and withheld information",
+          "Slow cinema and aesthetic distance",
+          "Limits of formal analysis and intention"
+        ],
+        "model": "deepseek-v4-pro"
+      },
+      "retrieval": {
+        "method": "hybrid_rrf",
+        "candidate_count": 385,
+        "theory_source_count": 10,
+        "critical_claim_count": 11,
+        "attributed_source_count": 20
+      },
+      "latency_seconds": {
+        "search": 5.066,
+        "detail": 1.674,
+        "study": 53.125,
+        "end_to_end": 59.865
+      },
+      "model_calls": [
+        {
+          "endpoint": "completions",
+          "latency_seconds": 50.986,
+          "model": "deepseek-v4-pro",
+          "usage": {
+            "prompt_tokens": 13916,
+            "completion_tokens": 2805,
+            "total_tokens": 16721,
+            "prompt_tokens_details": {
+              "cached_tokens": 896
+            },
+            "prompt_cache_hit_tokens": 896,
+            "prompt_cache_miss_tokens": 13020
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "the-thing-ambiguous-identity",
+      "challenge": "ambiguous title requiring explicit film selection",
+      "status": "passed",
+      "failure_stage": null,
+      "failure_reason": null,
+      "candidate_count": 4,
+      "identity_ambiguity": true,
+      "resolved_film": {
+        "id": "wikidata:Q210756",
+        "title": "The Thing",
+        "year": 1982,
+        "directors": [
+          "John Carpenter"
+        ]
+      },
+      "cached_criticism_providers": [],
+      "cached_video_count": 0,
+      "quality": {
+        "score": 75.0,
+        "components": {
+          "identity": 15.0,
+          "structured_completion": 10.0,
+          "deterministic_quality_gate": 0.0,
+          "citation_integrity": 20.0,
+          "epistemic_calibration": 10.0,
+          "observable_verification": 10.0,
+          "evidence_coverage": 10.0
+        },
+        "quality_gate_status": "insufficient_evidence",
+        "quality_gate_score": 0.97,
+        "repair_attempted": true,
+        "section_count": 6,
+        "valid_citations": true,
+        "distinct_theory_sources_cited": 5,
+        "available_theory_sources": 10,
+        "calibrated_section_ratio": 1.0,
+        "observable_verification_ratio": 1.0
+      },
+      "study_summary": {
+        "title": "Framing Mistrust: Testing Uncertainty in The Thing",
+        "central_argument": "Because no clip evidence is supplied, every formal claim about The Thing must remain a viewing hypothesis. The film’s reputation for paranoia invites a study of how framing, eyelines, and editing could organise uncertainty and group mistrust, but the analyst must separate what the record supports from what the viewer must verify. Drawing on continuity editing, constructive editing, vector-line principles, and montage theory, this essay proposes a sequence of testable relations: how shot/reverse-shot patterns may withhold or misdirect eyelines, how screen-direction violations may destabilise spatial trust, how constructive editing may fragment group space, and how rhythmic cutting may escalate suspicion. Each section advances a distinct formal relation, cites a framework source, and converts the gap between theory and film into a precise close-viewing task.",
+        "section_lenses": [
+          "Eyeline matches and shot/reverse-shot",
+          "Screen direction and the 180-degree system",
+          "Constructive editing and fragmented group space",
+          "Rhythmic editing and accelerated montage",
+          "Graphic matches and visual rhyme",
+          "Deep focus and spatial layering"
+        ],
+        "model": "deepseek-v4-pro"
+      },
+      "retrieval": {
+        "method": "hybrid_rrf",
+        "candidate_count": 211,
+        "theory_source_count": 10,
+        "critical_claim_count": 0,
+        "attributed_source_count": 0
+      },
+      "latency_seconds": {
+        "search": 3.855,
+        "detail": 6.167,
+        "study": 77.325,
+        "end_to_end": 87.347
+      },
+      "model_calls": [
+        {
+          "endpoint": "completions",
+          "latency_seconds": 51.936,
+          "model": "deepseek-v4-pro",
+          "usage": {
+            "prompt_tokens": 4257,
+            "completion_tokens": 2560,
+            "total_tokens": 6817,
+            "prompt_tokens_details": {
+              "cached_tokens": 896
+            },
+            "prompt_cache_hit_tokens": 896,
+            "prompt_cache_miss_tokens": 3361
+          }
+        },
+        {
+          "endpoint": "completions",
+          "latency_seconds": 23.603,
+          "model": "deepseek-v4-pro",
+          "usage": {
+            "prompt_tokens": 8663,
+            "completion_tokens": 2560,
+            "total_tokens": 11223,
+            "prompt_tokens_details": {
+              "cached_tokens": 0
+            },
+            "prompt_cache_hit_tokens": 0,
+            "prompt_cache_miss_tokens": 8663
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "we-are-all-strangers-sparse",
+      "challenge": "appropriate limitation and abstention under sparse evidence",
+      "status": "passed",
+      "failure_stage": null,
+      "failure_reason": null,
+      "candidate_count": 1,
+      "identity_ambiguity": false,
+      "resolved_film": {
+        "id": "wikidata:Q137883355",
+        "title": "We Are All Strangers",
+        "year": 2026,
+        "directors": [
+          "Anthony Chen"
+        ]
+      },
+      "cached_criticism_providers": [
+        "douban",
+        "letterboxd public web",
+        "the guardian public web"
+      ],
+      "cached_video_count": 12,
+      "quality": {
+        "score": 75.0,
+        "components": {
+          "identity": 15.0,
+          "structured_completion": 10.0,
+          "deterministic_quality_gate": 0.0,
+          "citation_integrity": 20.0,
+          "epistemic_calibration": 10.0,
+          "observable_verification": 10.0,
+          "evidence_coverage": 10.0
+        },
+        "quality_gate_status": "insufficient_evidence",
+        "quality_gate_score": 0.96,
+        "repair_attempted": true,
+        "section_count": 5,
+        "valid_citations": true,
+        "distinct_theory_sources_cited": 8,
+        "available_theory_sources": 10,
+        "calibrated_section_ratio": 1.0,
+        "observable_verification_ratio": 1.0
+      },
+      "study_summary": {
+        "title": "Preparing Formal Questions for a Sparse-Criticism Film: We Are All Strangers",
+        "central_argument": "Because film-specific criticism and creator statements for We Are All Strangers are sparse and largely thematic, rigorous formal analysis must begin by converting the few attributed claims into testable hypotheses about editing, staging, and sound. The available theory frameworks define concepts—overlapping editing, continuity order, jump cuts, deep focus, vector lines, and staging zones—that can structure close viewing without presuming to know the film's actual techniques. Each section below advances a distinct formal relation, moving from temporal manipulation to spatial staging to sound-image interplay, and each proposes a conditional proposition that the viewer must verify against the film itself. The goal is not to assert what the film does, but to prepare precise questions that turn critical impressions into observable evidence.",
+        "section_lenses": [
+          "Temporal manipulation and overlapping editing",
+          "Continuity editing and the 180-degree system",
+          "Staging, blocking, and deep space",
+          "Sound-image relations and language as a formal element",
+          "Parallel editing and narrative structure"
+        ],
+        "model": "deepseek-v4-pro"
+      },
+      "retrieval": {
+        "method": "hybrid_rrf",
+        "candidate_count": 433,
+        "theory_source_count": 10,
+        "critical_claim_count": 8,
+        "attributed_source_count": 15
+      },
+      "latency_seconds": {
+        "search": 2.133,
+        "detail": 1.017,
+        "study": 92.292,
+        "end_to_end": 95.444
+      },
+      "model_calls": [
+        {
+          "endpoint": "completions",
+          "latency_seconds": 60.517,
+          "model": "deepseek-v4-pro",
+          "usage": {
+            "prompt_tokens": 10527,
+            "completion_tokens": 3154,
+            "total_tokens": 13681,
+            "prompt_tokens_details": {
+              "cached_tokens": 896
+            },
+            "prompt_cache_hit_tokens": 896,
+            "prompt_cache_miss_tokens": 9631
+          }
+        },
+        {
+          "endpoint": "completions",
+          "latency_seconds": 28.659,
+          "model": "deepseek-v4-pro",
+          "usage": {
+            "prompt_tokens": 14983,
+            "completion_tokens": 3154,
+            "total_tokens": 18137,
+            "prompt_tokens_details": {
+              "cached_tokens": 0
+            },
+            "prompt_cache_hit_tokens": 0,
+            "prompt_cache_miss_tokens": 14983
+          }
+        }
+      ]
+    }
+  ],
+  "rubric_version": "acceptance-v2"
+}

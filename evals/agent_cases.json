@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "suite_id": "firstroll-agent-comparison-v1",
+  "description": "Frozen film-study cases for comparing the current fixed workflow with a future FirstRoll Agent.",
+  "quality_rubric": {
+    "identity": 15,
+    "structured_completion": 10,
+    "deterministic_quality_gate": 25,
+    "citation_integrity": 20,
+    "epistemic_calibration": 10,
+    "observable_verification": 10,
+    "evidence_coverage": 10
+  },
+  "cases": [
+    {
+      "id": "syndromes-cinematography",
+      "query": "Syndromes and a Century",
+      "expected": {
+        "title": "Syndromes and a Century",
+        "year": 2006,
+        "director": "Apichatpong Weerasethakul"
+      },
+      "question": "How should a filmmaker test whether framing, camera position and spatial repetition distinguish the film's two halves without inventing unsupported scene details?",
+      "challenge": "formal specificity without clip evidence"
+    },
+    {
+      "id": "in-the-mood-for-love-space",
+      "query": "In the Mood for Love",
+      "expected": {
+        "title": "In the Mood for Love",
+        "year": 2000,
+        "director": "Wong Kar-wai"
+      },
+      "question": "How can a filmmaker analyse constrained framing, offscreen space and repetition in the film while separating critical interpretation from direct observation?",
+      "challenge": "well-known film with abundant secondary interpretation"
+    },
+    {
+      "id": "memoria-sound",
+      "query": "Memoria",
+      "expected": {
+        "title": "Memoria",
+        "year": 2021,
+        "director": "Apichatpong Weerasethakul"
+      },
+      "question": "How can a close viewing test the relationship between sound perspective, duration and spatial uncertainty without claiming the director's intention?",
+      "challenge": "multilingual identity and sound-centred analysis"
+    },
+    {
+      "id": "the-thing-ambiguous-identity",
+      "query": "The Thing",
+      "expected": {
+        "title": "The Thing",
+        "year": 1982,
+        "director": "John Carpenter"
+      },
+      "question": "How can a filmmaker test whether framing, eyelines and editing organise uncertainty and group mistrust without treating a viewing hypothesis as an observed fact?",
+      "challenge": "ambiguous title requiring explicit film selection"
+    },
+    {
+      "id": "we-are-all-strangers-sparse",
+      "query": "We Are All Strangers",
+      "expected": {
+        "title": "We Are All Strangers",
+        "year": 2026,
+        "director": "Anthony Chen"
+      },
+      "question": "What rigorous formal questions can be prepared before close viewing when film-specific criticism and creator statements are sparse?",
+      "challenge": "appropriate limitation and abstention under sparse evidence"
+    }
+  ]
+}
