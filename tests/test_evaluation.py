@@ -107,14 +107,14 @@ def test_quality_proxy_treats_gate_failure_as_a_blocking_acceptance_failure() ->
         "score": 0.96,
         "repair_attempted": True,
         "central_issues": [],
-        "sections": [{"section": 1, "issues": ["generic_language"]}],
+        "sections": [{"section": 1, "issues": ["mechanism_missing"]}],
     }
 
     scored = score_study(study, identity_ok=True)
 
     assert scored["score"] == 75
     assert scored["components"]["deterministic_quality_gate"] == 0
-    assert scored["quality_gate_failed_sections"][0]["issues"] == ["generic_language"]
+    assert scored["quality_gate_failed_sections"][0]["issues"] == ["mechanism_missing"]
 
 
 def test_aggregate_records_failure_rate_and_latency_percentiles() -> None:
@@ -138,8 +138,9 @@ def test_aggregate_records_failure_rate_and_latency_percentiles() -> None:
     summary = aggregate(results)
     assert summary["failure_rate"] == 0.5
     assert summary["operational_failure_rate"] == 0.5
-    assert summary["quality_acceptance_failure_rate"] == 0.5
-    assert summary["mean_quality_score"] == 45
+    assert summary["quality_gate_pass_rate"] == 1
+    assert summary["quality_acceptance_failure_rate"] == 0
+    assert summary["mean_quality_score"] == 90
     assert summary["latency_seconds"]["p50_end_to_end"] == 15
     assert summary["total_tokens"] == 100
     assert percentile([10, 20], 0.95) == 19.5

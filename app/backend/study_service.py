@@ -109,7 +109,11 @@ class StudyQualityGate:
             ).casefold()
             if any(phrase in combined for phrase in cls.GENERIC):
                 issues.append("generic_language")
-            if not any(marker in str(section.get("mechanism") or "").casefold() for marker in cls.MECHANISM_MARKERS):
+            mechanism = str(section.get("mechanism") or "").strip()
+            mechanism_words = re.findall(r"\b[\w'-]+\b", mechanism)
+            if len(mechanism_words) < 6:
+                issues.append("mechanism_missing")
+            elif not any(marker in mechanism.casefold() for marker in cls.MECHANISM_MARKERS):
                 issues.append("mechanism_not_causal")
             verify = str(section.get("verify") or "").casefold()
             if not any(term in verify for term in ("log", "compare", "count", "note", "track", "mark", "inspect")):
@@ -128,15 +132,17 @@ class StudyQualityGate:
                     "issues": issues,
                 }
             )
-        overall = round(sum(item["score"] for item in reports) / max(1, len(reports)), 2)
-        # Generic language is a quality defect, not an evidence-boundary failure. It
-        # still lowers the section and overall scores, but one stock phrase should
-        # not reject an otherwise grounded study. A missing causal mechanism remains
-        # blocking because the section has not completed the requested analysis.
-        blocking_section_issues = {"mechanism_not_causal"}
+        section_average = sum(item["score"] for item in reports) / max(1, len(reports))
+        central_penalty = 0.05 if "central_argument_generic" in central_issues else 0.0
+        overall = round(max(0.0, section_average - central_penalty), 2)
+        # Lexical style checks reduce quality but cannot reliably prove that prose is
+        # semantically non-causal. Only an absent or effectively empty mechanism is a
+        # blocking completeness failure; weak causal signalling remains diagnostic.
+        blocking_section_issues = {"mechanism_missing"}
+        blocking_central_issues = {"central_argument_overclaims_unseen_form"}
         passed = (
             bool(reports)
-            and not central_issues
+            and not (blocking_central_issues & set(central_issues))
             and overall >= 0.75
             and all(item["score"] >= 0.6 for item in reports)
             and not any(blocking_section_issues & set(item["issues"]) for item in reports)

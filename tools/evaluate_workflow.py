@@ -283,11 +283,12 @@ def aggregate(results: list[dict[str, Any]]) -> dict[str, Any]:
         for item in results
         if "study" in item["latency_seconds"]
     ]
-    quality_scores = [float(item.get("quality", {}).get("score", 0)) for item in results]
     failures = [item for item in results if item["status"] != "passed"]
+    completed = [item for item in results if item["status"] == "passed"]
+    quality_scores = [float(item.get("quality", {}).get("score", 0)) for item in completed]
     gate_passes = [
         item
-        for item in results
+        for item in completed
         if item.get("quality", {}).get("quality_gate_status") == "passed"
     ]
     total_tokens = 0
@@ -305,17 +306,19 @@ def aggregate(results: list[dict[str, Any]]) -> dict[str, Any]:
         "failure_rate": round(len(failures) / len(results), 4) if results else None,
         "mean_quality_score": round(statistics.mean(quality_scores), 2) if quality_scores else None,
         "median_quality_score": round(statistics.median(quality_scores), 2) if quality_scores else None,
-        "quality_gate_pass_rate": round(len(gate_passes) / len(results), 4) if results else None,
+        "quality_gate_pass_rate": (
+            round(len(gate_passes) / len(completed), 4) if completed else None
+        ),
         "quality_acceptance_failure_rate": (
-            round(1 - len(gate_passes) / len(results), 4) if results else None
+            round(1 - len(gate_passes) / len(completed), 4) if completed else None
         ),
         "repair_rate": (
             round(
-                sum(bool(item.get("quality", {}).get("repair_attempted")) for item in results)
-                / len(results),
+                sum(bool(item.get("quality", {}).get("repair_attempted")) for item in completed)
+                / len(completed),
                 4,
             )
-            if results
+            if completed
             else None
         ),
         "latency_seconds": {

@@ -835,25 +835,29 @@ The 18 August 2026 baseline produced:
 
 | Measure | Fixed workflow |
 |---|---:|
-| Cases completed | 5 / 5 |
-| Operational failure rate | 0% |
-| Deterministic quality-gate pass rate | 40% |
-| Quality acceptance failure rate | 60% |
-| Mean quality score | 84.6 / 100 |
-| Median quality score | 75 / 100 |
-| Mean end-to-end latency | 73.34 s |
-| P50 / P95 end-to-end latency | 71.56 s / 89.30 s |
-| Repair rate | 60% |
-| DeepSeek calls / total tokens | 8 / 103,871 |
+| Cases completed | 4 / 5 |
+| Operational failure rate | 20% |
+| Deterministic quality-gate pass rate | 100% of completed studies |
+| Quality acceptance failure rate | 0% of completed studies |
+| Mean quality score | 98.94 / 100 |
+| Median quality score | 99.5 / 100 |
+| Mean end-to-end latency | 65.80 s |
+| P50 / P95 end-to-end latency | 66.41 s / 96.45 s |
+| Repair rate | 0% of completed studies |
+| DeepSeek calls / total tokens | 4 / 46,950 |
 
 “Operational failure” means the workflow did not return a valid result. “Quality acceptance failure”
 means it returned a result that still failed FirstRoll's deterministic evidence gate. These must remain
 separate: a syntactically successful answer is not automatically a good answer. The composite quality
 score awards no gate component when the gate fails, even if the answer's section-average score is high.
-For an accepted study, generic-language findings lower the raw gate score and proportionally reduce
-the gate's 25 quality points; generic wording no longer rejects the entire study. Non-causal mechanisms
-remain blocking. The score measures identity, structure, citations, calibration, observable verification
-and evidence coverage; it does **not** prove that unseen film-form claims are factually correct.
+Quality scores, gate rates and repair rates use completed studies as their denominator; operational
+failures remain visible separately. For an accepted study, generic-language and weak causal-signalling
+findings lower the raw gate score and proportionally reduce the gate's 25 quality points. Neither
+wording defect rejects the entire study; only an absent or effectively empty mechanism is blocking.
+The score measures identity, structure, citations, calibration, observable verification and evidence
+coverage; it does **not** prove that unseen film-form claims are factually correct. In this run,
+*Memoria* reached the study stage but DeepSeek timed out before returning a draft, so it received no
+quality-gate decision.
 
 The redacted run record is [`evals/results/baseline-2026-08-18.json`](evals/results/baseline-2026-08-18.json).
 It includes the non-secret configuration fingerprint and per-stage timings. This run is a five-case
