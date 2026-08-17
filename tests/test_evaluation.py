@@ -70,6 +70,23 @@ def test_quality_proxy_rewards_valid_grounded_structure() -> None:
     assert scored["observable_verification_ratio"] == 1
 
 
+def test_quality_proxy_deducts_generic_prose_without_rejecting_an_accepted_study() -> None:
+    study = complete_study()
+    study["quality"] = {
+        "status": "passed",
+        "score": 0.8,
+        "repair_attempted": False,
+        "central_issues": [],
+        "sections": [{"section": 1, "issues": ["generic_language"]}],
+    }
+
+    scored = score_study(study, identity_ok=True)
+
+    assert scored["score"] == 95
+    assert scored["components"]["deterministic_quality_gate"] == 20
+    assert scored["quality_gate_status"] == "passed"
+
+
 def test_quality_proxy_penalises_invalid_citations_and_missing_calibration() -> None:
     study = complete_study()
     study["sections"][0]["source_ids"] = ["S99"]

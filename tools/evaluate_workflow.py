@@ -118,9 +118,10 @@ def score_study(study: dict[str, Any], identity_ok: bool) -> dict[str, Any]:
     components = {
         "identity": 15.0 if identity_ok else 0.0,
         "structured_completion": 10.0 if structured else 0.0,
-        # A blocking gate is acceptance, not a continuous style score. Retain the raw
-        # section average for diagnosis, but do not award acceptance points when it fails.
-        "deterministic_quality_gate": 25.0 if gate_passed else 0.0,
+        # Acceptance and prose quality are related but distinct. A blocking failure
+        # receives no gate points; an accepted study receives points proportional to
+        # its section-average score, so generic wording remains visible in the total.
+        "deterministic_quality_gate": round(25 * gate_score, 2) if gate_passed else 0.0,
         "citation_integrity": 20.0 if citations_valid else 0.0,
         "epistemic_calibration": round(10 * calibration_ratio, 2),
         "observable_verification": round(10 * observable_ratio, 2),

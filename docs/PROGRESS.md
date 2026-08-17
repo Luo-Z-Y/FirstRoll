@@ -13,10 +13,13 @@ Delivered:
 3. Stored a non-secret configuration fingerprint with the result: DeepSeek Pro and YouTube were
    configured; Douban and official Letterboxd credentials were absent; the local index contained
    seven documents, 4,381 chunks and multilingual MiniLM embeddings.
-4. Made the quality gate a blocking rubric component. A high section average cannot receive the
-   gate's 25 points when the final result remains `insufficient_evidence`.
+4. Reclassified `generic_language` as a scored quality defect rather than a hard rejection. An
+   accepted study now receives the gate's 25 points in proportion to its raw section score;
+   unsupported claims and missing causal mechanisms remain blocking.
 5. Kept operational and quality failure rates separate and documented that the automated score
    does not establish factual correctness for film form that has not been observed from a clip.
+6. Reran the same five live cases after the policy change and preserved central and per-section
+   gate diagnostics in the baseline artefact.
 
 Baseline results:
 
@@ -24,30 +27,32 @@ Baseline results:
 |---|---:|
 | Cases completed | 5 / 5 |
 | Operational failure rate | 0% |
-| Quality-gate pass rate | 20% |
-| Quality acceptance failure rate | 80% |
-| Mean / median quality score | 80 / 75 |
-| Mean end-to-end latency | 90.459 s |
-| P50 / P95 end-to-end latency | 95.444 s / 106.781 s |
-| Repair rate | 80% |
-| Model calls / total tokens | 9 / 126,820 |
+| Quality-gate pass rate | 40% |
+| Quality acceptance failure rate | 60% |
+| Mean / median quality score | 84.6 / 75 |
+| Mean end-to-end latency | 73.337 s |
+| P50 / P95 end-to-end latency | 71.562 s / 89.303 s |
+| Repair rate | 60% |
+| Model calls / total tokens | 8 / 103,871 |
 
 Case results:
 
 | Case | Quality | Gate | End-to-end latency |
 |---|---:|---|---:|
-| *Syndromes and a Century* — cinematography | 75 | insufficient evidence | 108.088 s |
-| *In the Mood for Love* — constrained space | 75 | insufficient evidence | 101.551 s |
-| *Memoria* — sound perspective | 100 | passed | 59.865 s |
-| *The Thing* — ambiguous identity | 75 | insufficient evidence | 87.347 s |
-| *We Are All Strangers* — sparse evidence | 75 | insufficient evidence | 95.444 s |
+| *Syndromes and a Century* — cinematography | 75 | insufficient evidence | 86.289 s |
+| *In the Mood for Love* — constrained space | 98 | passed | 64.887 s |
+| *Memoria* — sound perspective | 100 | passed | 53.890 s |
+| *The Thing* — ambiguous identity | 75 | insufficient evidence | 71.562 s |
+| *We Are All Strangers* — sparse evidence | 75 | insufficient evidence | 90.056 s |
 
 Interpretation:
 
 - the fixed workflow is operationally reliable on this small case set and resolved the deliberately
   ambiguous *The Thing* query to the 1982 John Carpenter film;
-- four of five studies required the one permitted repair call and still failed the evidence-quality
-  gate, so returning JSON is not the current quality bottleneck;
+- *In the Mood for Love* passed with two `generic_language` findings, a 0.92 raw gate score and a
+  98 composite score, confirming that generic prose now incurs a deduction without rejection;
+- the three remaining failures were caused by `mechanism_not_causal` findings after the one
+  permitted repair pass, not by generic wording;
 - the warm cases remained slow, showing that DeepSeek generation and repair—not only local embedding
   cold start—dominate latency;
 - the five-case run is a functional baseline, not a statistically stable provider failure estimate.
@@ -56,7 +61,7 @@ Interpretation:
 
 Acceptance evidence:
 
-- all six evaluator unit tests pass and the new evaluator files pass Ruff;
+- all 121 automated tests pass and the modified Python files pass Ruff;
 - the live result is stored in `evals/results/baseline-2026-08-18.json` without credentials or private
   source excerpts;
 - all five cases used the same fixed workflow and acceptance rubric intended for later Agent runs.

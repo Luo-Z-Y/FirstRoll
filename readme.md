@@ -837,21 +837,23 @@ The 18 August 2026 baseline produced:
 |---|---:|
 | Cases completed | 5 / 5 |
 | Operational failure rate | 0% |
-| Deterministic quality-gate pass rate | 20% |
-| Quality acceptance failure rate | 80% |
-| Mean quality score | 80 / 100 |
+| Deterministic quality-gate pass rate | 40% |
+| Quality acceptance failure rate | 60% |
+| Mean quality score | 84.6 / 100 |
 | Median quality score | 75 / 100 |
-| Mean end-to-end latency | 90.46 s |
-| P50 / P95 end-to-end latency | 95.44 s / 106.78 s |
-| Repair rate | 80% |
-| DeepSeek calls / total tokens | 9 / 126,820 |
+| Mean end-to-end latency | 73.34 s |
+| P50 / P95 end-to-end latency | 71.56 s / 89.30 s |
+| Repair rate | 60% |
+| DeepSeek calls / total tokens | 8 / 103,871 |
 
 “Operational failure” means the workflow did not return a valid result. “Quality acceptance failure”
 means it returned a result that still failed FirstRoll's deterministic evidence gate. These must remain
 separate: a syntactically successful answer is not automatically a good answer. The composite quality
 score awards no gate component when the gate fails, even if the answer's section-average score is high.
-It measures identity, structure, citations, calibration, observable verification and evidence coverage;
-it does **not** prove that unseen film-form claims are factually correct.
+For an accepted study, generic-language findings lower the raw gate score and proportionally reduce
+the gate's 25 quality points; generic wording no longer rejects the entire study. Non-causal mechanisms
+remain blocking. The score measures identity, structure, citations, calibration, observable verification
+and evidence coverage; it does **not** prove that unseen film-form claims are factually correct.
 
 The redacted run record is [`evals/results/baseline-2026-08-18.json`](evals/results/baseline-2026-08-18.json).
 It includes the non-secret configuration fingerprint and per-stage timings. This run is a five-case

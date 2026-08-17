@@ -129,7 +129,11 @@ class StudyQualityGate:
                 }
             )
         overall = round(sum(item["score"] for item in reports) / max(1, len(reports)), 2)
-        blocking_section_issues = {"generic_language", "mechanism_not_causal"}
+        # Generic language is a quality defect, not an evidence-boundary failure. It
+        # still lowers the section and overall scores, but one stock phrase should
+        # not reject an otherwise grounded study. A missing causal mechanism remains
+        # blocking because the section has not completed the requested analysis.
+        blocking_section_issues = {"mechanism_not_causal"}
         passed = (
             bool(reports)
             and not central_issues

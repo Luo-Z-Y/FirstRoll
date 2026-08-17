@@ -118,6 +118,34 @@ def test_quality_gate_rejects_generic_unobservable_prose() -> None:
     assert "verification_not_observable" in report["sections"][0]["issues"]
 
 
+def test_quality_gate_scores_generic_language_without_blocking_acceptance() -> None:
+    study = {
+        "central_argument": (
+            "Test whether repeated framings may organise a changing relation between "
+            "the characters and their surroundings."
+        ),
+        "sections": [
+            {
+                "lens": "Framing",
+                "theory_explains": "Framing determines the visible field and offscreen relations.",
+                "hypothesis": (
+                    "Test whether the repeated framing invites the viewer to compare distance; "
+                    "if so, it might organise the surrounding space."
+                ),
+                "mechanism": "By increasing visible separation, the framing could weaken proximity.",
+                "verify": "Log and compare shot scale and figure position in each sequence.",
+                "critic_claim_ids": [],
+            }
+        ],
+    }
+
+    report = StudyQualityGate.evaluate(study, has_criticism=False)
+
+    assert report["status"] == "passed"
+    assert report["score"] == 0.8
+    assert report["sections"][0]["issues"] == ["generic_language"]
+
+
 def test_quality_gate_rejects_overconfident_thesis_before_clip_evidence() -> None:
     study = {
         "central_argument": "The film employs deliberate framing that isolates every character.",
