@@ -201,6 +201,13 @@ evidence packet leaves the device—not complete books, local vectors, clips or 
 paths. The dotted connection is planned work: clip measurements do not yet support claims
 in Deep Study.
 
+The repository also contains a bounded LangGraph research Agent core. It reuses the
+framework-neutral research contract, keeps application policy around model-proposed tools,
+deduplicates and caps graph state, and terminates explicitly under ambiguity, weak evidence,
+provider failure, invalid planning and quality-gate failure. It is not yet the public Deep Study
+execution path: the fixed workflow remains the production comparison and fallback until a
+production service adapter, safe progress stream and golden-case evaluation are complete.
+
 The public-beta shell is narrower than the local architecture. A CDN-hosted static frontend and a
 lightweight FastAPI API use separate Render origins; the API root identifies the service instead of
 publishing a duplicate website. Public mode does not publish local settings, private-library
@@ -210,7 +217,7 @@ usage controls are installed. Local development retains the convenient combined 
 | Layer | Primary stack |
 |---|---|
 | Web interface | HTML5, CSS3, vanilla JavaScript, Three.js WebGL and a Blender-authored GLB |
-| API and orchestration | Python 3.11, FastAPI, Uvicorn, Pydantic |
+| API and orchestration | Python 3.11, FastAPI, Uvicorn, Pydantic and LangGraph 1.2 |
 | Private retrieval | PyPDF, SQLite FTS5, Sentence Transformers, NumPy |
 | Clip analysis | OpenCV, FFmpeg, TransNetV2, TensorFlow and Torchvision |
 | External acquisition | REST/JSON, JSON-LD, MCP and OAuth 2.0 |
@@ -739,6 +746,8 @@ FirstRoll/
 │   │   ├── library.py           # private document catalogue
 │   │   ├── library_index.py     # chunking, embeddings and hybrid retrieval
 │   │   ├── main.py              # FastAPI routes
+│   │   ├── research_agent_contract.py # framework-neutral Agent policy and budgets
+│   │   ├── research_graph/      # typed LangGraph state, nodes, routing and runtime context
 │   │   ├── settings.py          # local credential store
 │   │   └── study_service.py     # DeepSeek synthesis and quality gate
 │   └── web/
@@ -809,6 +818,7 @@ fallback behaviour; these are tracked separately from the new FirstRoll modules.
 | Private RAG foundation | Complete | Token chunking, FTS5, local vectors, hybrid retrieval and citations |
 | Attributed criticism | Complete | Crossref, Douban, Letterboxd and Guardian retrieval with structured critic claims |
 | Evidence-grounded Deep Study | Complete | Typed theory, criticism, review and video-text evidence; Pydantic output, citation validation and quality gate |
+| Bounded research Agent core | Implemented | LangGraph control flow, bounded reducers, deterministic tool authorisation, fake-service scenarios and optional checkpointing; production route integration remains gated |
 | Clip analysis web migration | Complete | Scene, shot, colour, object and export workflow |
 | Clip-to-study evidence bridge | Next | Feed measured scenes, shots and timecodes into synthesis |
 | Creator primary-source layer | Partial | Discovered interview descriptions and public YouTube captions are stored and cited; verified speaker attribution and dedicated interview search remain planned |

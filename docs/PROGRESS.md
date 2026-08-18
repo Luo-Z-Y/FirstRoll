@@ -1,5 +1,49 @@
 # FirstRoll Project Progress
 
+### 18 August 2026 — Bounded LangGraph research Agent core
+
+Delivered:
+
+1. Added LangGraph 1.2 to local and hosted dependency sets and locked version 1.2.11.
+2. Preserved the framework-neutral research contract as the deterministic policy boundary around
+   the graph rather than duplicating authentication, budget and tool-authorisation rules.
+3. Implemented typed graph state, bounded reducers, safe public progress events, runtime-injected
+   service interfaces, named nodes, conditional routing and explicit terminal states.
+4. Split model-proposed tool choice from deterministic application authorisation and provider
+   execution. Retrieved evidence remains untrusted data and cannot authorise an action.
+5. Added bounded recovery for an unavailable provider, empty evidence, invalid planning and one
+   failed quality pass. A repair can run only once.
+6. Added optional LangGraph checkpoint compilation and verified that a completed thread is
+   checkpointed without placing credentials or service clients in graph state.
+7. Kept the current fixed Deep Study route unchanged as the production comparison and fallback.
+
+Acceptance evidence:
+
+- 18 focused contract-and-graph tests pass, covering existing evidence, ambiguous film identity,
+  empty research, provider timeout recovery, malicious retrieved instructions, one-shot repair,
+  repeated quality failure, invalid or out-of-policy planner output, final-budget authorisation,
+  reducers, graph structure and checkpoint state;
+- all 137 automated tests pass;
+- the new graph, contract and tests pass Ruff, and the graph plus contract pass MyPy;
+- the graph compiles with named nodes and runs entirely with deterministic fake services in CI.
+
+Known constraints:
+
+- the graph does not yet replace `POST /api/discovery/films/{film_id}/study`;
+- production criticism, retrieval and DeepSeek adapters still need to implement the graph service
+  protocol behind a feature flag;
+- browser SSE progress, authenticated checkpoint ownership and durable production checkpoint
+  storage remain pending;
+- the Agent must run the frozen five-case evaluation before any public cut-over.
+
+Next actionable work:
+
+1. Implement a production `ResearchGraphServices` adapter over the existing discovery, evidence,
+   criticism and study services.
+2. Add a feature-flagged authenticated endpoint and safe SSE event projection.
+3. Run the fixed workflow and Agent on the same golden cases, then retain the Agent only if its
+   quality and recovery gains justify its latency, cost and operational complexity.
+
 ### 18 August 2026 — Fixed-workflow baseline for future Agent evaluation
 
 Delivered:
