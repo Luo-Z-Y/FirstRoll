@@ -220,6 +220,105 @@ function fetchProgressMarkup(message) {
   </div>`;
 }
 
+const RESEARCH_PROGRESS_KINDS = new Set([
+  "film_resolving",
+  "film_needs_choice",
+  "existing_evidence_loading",
+  "research_planning",
+  "tool_started",
+  "tool_completed",
+  "tool_failed",
+  "evidence_assessed",
+  "study_drafting",
+  "quality_checked",
+  "study_repairing",
+  "run_completed",
+  "run_failed",
+]);
+const RESEARCH_PROGRESS_KEYS = new Set([
+  "run_id", "kind", "sequence", "message", "elapsed_ms", "counts",
+]);
+const RESEARCH_PROGRESS_COUNT_KEYS = new Set([
+  "theory_sources", "critical_claims", "attributed_sources", "sections",
+]);
+
+function parseProgressEvent(block) {
+  const lines = block.split(/\r?\n/);
+  const eventName = lines.find((line) => line.startsWith("event:"))?.slice(6).trim();
+  if (eventName !== "progress") return null;
+  const data = lines
+    .filter((line) => line.startsWith("data:"))
+    .map((line) => line.slice(5).trimStart())
+    .join("\n");
+  if (!data) return null;
+  const parsed = JSON.parse(data);
+  if (
+    !parsed
+    || typeof parsed !== "object"
+    || Array.isArray(parsed)
+    || Object.keys(parsed).some((key) => !RESEARCH_PROGRESS_KEYS.has(key))
+    || !RESEARCH_PROGRESS_KINDS.has(parsed.kind)
+    || typeof parsed.message !== "string"
+    || parsed.message.length > 180
+    || (parsed.counts && (
+      typeof parsed.counts !== "object"
+      || Array.isArray(parsed.counts)
+      || Object.entries(parsed.counts).some(([key, value]) => (
+        !RESEARCH_PROGRESS_COUNT_KEYS.has(key)
+        || !Number.isInteger(value)
+        || value < 0
+      ))
+    ))
+  ) {
+    throw new Error("The research progress stream was invalid.");
+  }
+  return {
+    run_id: String(parsed.run_id || ""),
+    kind: String(parsed.kind || ""),
+    sequence: Number(parsed.sequence || 0),
+    message: String(parsed.message || ""),
+    elapsed_ms: Number(parsed.elapsed_ms || 0),
+    counts: parsed.counts && typeof parsed.counts === "object" ? parsed.counts : {},
+  };
+}
+
+async function consumeResearchProgress(response, expectedRunId, onProgress) {
+  if (!response.body) throw new Error("This browser cannot read streaming progress.");
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let lastSequence = 0;
+  let completed = false;
+
+  const consumeBlock = (block) => {
+    const progress = parseProgressEvent(block);
+    if (!progress) return;
+    if (
+      !progress.run_id
+      || progress.run_id !== expectedRunId
+      || progress.sequence !== lastSequence + 1
+      || !progress.message
+    ) {
+      throw new Error("The research progress stream was invalid.");
+    }
+    lastSequence = progress.sequence;
+    onProgress(progress);
+    if (progress.kind === "run_failed") throw new Error(progress.message);
+    if (progress.kind === "run_completed") completed = true;
+  };
+
+  while (true) {
+    const { value, done } = await reader.read();
+    buffer += decoder.decode(value || new Uint8Array(), { stream: !done });
+    const blocks = buffer.split(/\r?\n\r?\n/);
+    buffer = blocks.pop() || "";
+    blocks.forEach(consumeBlock);
+    if (done) break;
+  }
+  if (buffer.trim()) consumeBlock(buffer);
+  if (!completed) throw new Error("The research progress stream ended before completion.");
+}
+
 async function loadDiscoveryStatus() {
   try {
     const res = await fetch(`${discoveryApiBase()}/api/discovery/status`);
@@ -1351,6 +1450,30 @@ async function generateDeepStudy(button) {
   output.innerHTML = fetchProgressMarkup("Reading the film record against your cited sources…");
   try {
     const integration = window.FirstRollIntegrations?.requestHeaders?.("deepseek") || {};
+    if (runtimeConfig.publicMode) {
+      const streamResponse = await fetch(
+        `${discoveryApiBase()}/api/discovery/films/${encodeURIComponent(film.id)}/study/stream`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...authorisation, ...integration },
+          body: JSON.stringify({ question }),
+        },
+      );
+      if (!streamResponse.ok) throw new Error(await readApiError(streamResponse));
+      const runId = streamResponse.headers.get("X-FirstRoll-Run-ID");
+      if (!runId) throw new Error("The research run did not return an identifier.");
+      await consumeResearchProgress(streamResponse, runId, (progress) => {
+        output.innerHTML = fetchProgressMarkup(progress.message);
+      });
+      const resultResponse = await fetch(
+        `${discoveryApiBase()}/api/research/runs/${encodeURIComponent(runId)}`,
+        { headers: authorisation },
+      );
+      if (!resultResponse.ok) throw new Error(await readApiError(resultResponse));
+      const data = await resultResponse.json();
+      output.innerHTML = `${deepStudyQuotaMarkup(data.quota)}${deepStudyMarkup(data.study || {})}`;
+      return;
+    }
     const response = await fetch(
       `${discoveryApiBase()}/api/discovery/films/${encodeURIComponent(film.id)}/study`,
       {

@@ -4,10 +4,11 @@ import os
 import re
 import tempfile
 from pathlib import Path
+from uuid import uuid4
 
 from fastapi import FastAPI, File, Form, HTTPException, Query, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, SecretStr
 from starlette.concurrency import run_in_threadpool
@@ -35,6 +36,11 @@ from app.backend.quota import (
     QuotaExceededError,
     QuotaServiceError,
     SupabaseQuotaClient,
+)
+from app.backend.research_stream import (
+    ResearchProgressStream,
+    StudyRunStore,
+    public_progress_message,
 )
 from app.backend.settings import CONNECTORS, LocalSettingsStore
 from app.backend.study_service import DeepSeekStudyService, StudyGenerationError
@@ -88,6 +94,7 @@ if allowed_origins:
             "X-FirstRoll-DeepSeek-Key",
             "X-FirstRoll-YouTube-Key",
         ],
+        expose_headers=["X-FirstRoll-Run-ID"],
     )
 
 settings_store = LocalSettingsStore()
@@ -107,6 +114,7 @@ video_store = FilmVideoStore()
 video_service = FilmVideoService(youtube_video_adapter, bilibili_video_adapter, video_store)
 auth_verifier = SupabaseAuthVerifier()
 quota_client = SupabaseQuotaClient()
+study_run_store = StudyRunStore()
 reception_cache: dict[str, dict] = {}
 web_directory = Path(__file__).resolve().parents[1] / "web"
 
@@ -146,6 +154,49 @@ class ConnectorSecretUpdate(BaseModel):
 
 class FilmStudyRequest(BaseModel):
     question: str | None = None
+
+
+def prepare_film_study(
+    film_id: str,
+    film: dict,
+    question: str | None,
+    *,
+    public_mode: bool,
+) -> dict:
+    critical_bundles = criticism_store.load_all(film_id)
+    claims = [
+        claim.model_copy(update={"claim_id": f"C{index}"})
+        for index, claim in enumerate(
+            (claim for bundle in critical_bundles for claim in bundle.claims),
+            start=1,
+        )
+    ]
+    reviews = [review for bundle in critical_bundles for review in bundle.reviews]
+    video_bundle = video_service.enrich_cached(film_id)
+    reading = (
+        build_public_study_retrieval(film, question)
+        if public_mode
+        else library_index.retrieve_for_film(
+            film,
+            focus=question,
+            critical_claims=claims,
+            limit=10,
+        )
+    )
+    packet = EvidencePacket.from_retrieval(
+        film,
+        reading,
+        question,
+        claims,
+        reviews=reviews,
+        videos=video_bundle.videos if video_bundle else [],
+    )
+    return {
+        "film": film,
+        "claims": claims,
+        "reading": reading,
+        "packet": packet,
+    }
 
 
 def authenticated_user(request: Request) -> dict[str, str | None]:
@@ -482,6 +533,8 @@ def contract() -> dict:
             "GET /api/discovery/films/{film_id}/reception",
             "POST /api/discovery/films/{film_id}/videos",
             "POST /api/discovery/films/{film_id}/study",
+            "POST /api/discovery/films/{film_id}/study/stream",
+            "GET /api/research/runs/{run_id}",
             "POST /api/discovery/films/{film_id}/criticism/douban",
             "POST /api/discovery/films/{film_id}/criticism/letterboxd",
             "GET /api/library/status",
@@ -698,33 +751,11 @@ def generate_film_study(
     try:
         detail = discovery_service.detail(film_id)
         film = detail["film"]
-        critical_bundles = criticism_store.load_all(film_id)
-        claims = [
-            claim.model_copy(update={"claim_id": f"C{index}"})
-            for index, claim in enumerate(
-                (claim for bundle in critical_bundles for claim in bundle.claims),
-                start=1,
-            )
-        ]
-        reviews = [review for bundle in critical_bundles for review in bundle.reviews]
-        video_bundle = video_service.enrich_cached(film_id)
-        reading = (
-            build_public_study_retrieval(film, study_request.question)
-            if public_mode
-            else library_index.retrieve_for_film(
-                film,
-                focus=study_request.question,
-                critical_claims=claims,
-                limit=10,
-            )
-        )
-        packet = EvidencePacket.from_retrieval(
+        prepared = prepare_film_study(
+            film_id,
             film,
-            reading,
             study_request.question,
-            claims,
-            reviews=reviews,
-            videos=video_bundle.videos if video_bundle else [],
+            public_mode=public_mode,
         )
         if public_mode:
             quota = quota_client.reserve(request.headers.get("Authorization"))
@@ -732,10 +763,10 @@ def generate_film_study(
             "film_id": film_id,
             "study": study_service.generate(
                 film,
-                reading.get("passages", []),
+                prepared["reading"].get("passages", []),
                 study_request.question,
-                claims,
-                evidence_packet=packet,
+                prepared["claims"],
+                evidence_packet=prepared["packet"],
                 api_key=personal_deepseek_key,
             ),
             "credential_source": (
@@ -759,6 +790,158 @@ def generate_film_study(
         raise HTTPException(status_code=502, detail=str(exc)) from exc
     except StudyGenerationError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+
+@app.post("/api/discovery/films/{film_id:path}/study/stream")
+async def stream_film_study(
+    film_id: str,
+    study_request: FilmStudyRequest,
+    request: Request,
+) -> StreamingResponse:
+    """Run Deep Study while streaming only allow-listed, public progress events."""
+
+    user = authenticated_user(request)
+    owner_id = str(user["id"])
+    public_mode = public_mode_enabled()
+    personal_deepseek_key = personal_provider_key(request, "deepseek")
+    if public_mode and (
+        not hosted_deep_study_boundary_enabled()
+        or (not personal_deepseek_key and not hosted_deep_study_enabled())
+    ):
+        raise HTTPException(
+            status_code=503,
+            detail="Deep Study is not fully configured on this deployment yet.",
+        )
+
+    run_id = str(uuid4())
+    study_run_store.create(run_id, owner_id)
+
+    async def generate_events():
+        progress = ResearchProgressStream(run_id)
+        try:
+            yield progress.frame("film_resolving")
+            detail = await run_in_threadpool(discovery_service.detail, film_id)
+            film = detail["film"]
+
+            yield progress.frame("existing_evidence_loading")
+            prepared = await run_in_threadpool(
+                prepare_film_study,
+                film_id,
+                film,
+                study_request.question,
+                public_mode=public_mode,
+            )
+            packet = prepared["packet"]
+            yield progress.frame(
+                "evidence_assessed",
+                counts={
+                    "theory_sources": len(packet.theory_sources),
+                    "critical_claims": len(packet.critical_claims),
+                    "attributed_sources": len(packet.attributed_sources),
+                },
+            )
+
+            quota = None
+            if public_mode:
+                quota = await run_in_threadpool(
+                    quota_client.reserve,
+                    request.headers.get("Authorization"),
+                )
+
+            yield progress.frame("study_drafting")
+            study = await run_in_threadpool(
+                study_service.generate,
+                film,
+                prepared["reading"].get("passages", []),
+                study_request.question,
+                prepared["claims"],
+                evidence_packet=packet,
+                api_key=personal_deepseek_key,
+            )
+            payload = {
+                "film_id": film_id,
+                "study": study,
+                "credential_source": (
+                    "personal_session" if personal_deepseek_key else "firstroll_platform"
+                ),
+            }
+            if quota is not None:
+                payload["quota"] = quota.as_dict()
+            study_run_store.complete(run_id, owner_id, payload)
+            quality_passed = study.get("quality", {}).get("status") == "passed"
+            yield progress.frame(
+                "quality_checked",
+                message_variant="passed" if quality_passed else "limited",
+                counts={"sections": len(study.get("sections", []))},
+            )
+            yield progress.frame("run_completed")
+        except asyncio.CancelledError:
+            message = public_progress_message("run_failed", "disconnected")
+            study_run_store.fail(run_id, owner_id, message)
+            raise
+        except LookupError:
+            variant = "film_missing"
+            message = public_progress_message("run_failed", variant)
+            study_run_store.fail(run_id, owner_id, message)
+            yield progress.frame("run_failed", message_variant=variant)
+        except QuotaExceededError:
+            variant = "quota_exhausted"
+            message = public_progress_message("run_failed", variant)
+            study_run_store.fail(run_id, owner_id, message)
+            yield progress.frame("run_failed", message_variant=variant)
+        except (QuotaConfigurationError, QuotaServiceError):
+            variant = "quota_unavailable"
+            message = public_progress_message("run_failed", variant)
+            study_run_store.fail(run_id, owner_id, message)
+            yield progress.frame("run_failed", message_variant=variant)
+        except StudyGenerationError:
+            variant = "invalid_study"
+            message = public_progress_message("run_failed", variant)
+            study_run_store.fail(run_id, owner_id, message)
+            yield progress.frame("run_failed", message_variant=variant)
+        except Exception:
+            variant = "safe_stop"
+            message = public_progress_message("run_failed", variant)
+            study_run_store.fail(run_id, owner_id, message)
+            yield progress.frame("run_failed", message_variant=variant)
+
+    return StreamingResponse(
+        generate_events(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-store, no-transform",
+            "Vary": "Authorization, X-FirstRoll-DeepSeek-Key",
+            "X-Content-Type-Options": "nosniff",
+            "X-Accel-Buffering": "no",
+            "X-FirstRoll-Run-ID": run_id,
+        },
+    )
+
+
+@app.get("/api/research/runs/{run_id}")
+def research_run_result(run_id: str, request: Request) -> JSONResponse:
+    user = authenticated_user(request)
+    try:
+        stored = study_run_store.read(run_id, str(user["id"]))
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="Unknown research run.") from exc
+    if stored.status == "running":
+        raise HTTPException(status_code=409, detail="The research run is still in progress.")
+    if stored.status == "failed":
+        raise HTTPException(
+            status_code=502,
+            detail=stored.public_error or "The research run failed safely.",
+        )
+    if stored.result is None:
+        raise HTTPException(status_code=502, detail="The research result is unavailable.")
+    return JSONResponse(
+        content=stored.result,
+        headers={
+            "Cache-Control": "no-store",
+            "Vary": "Authorization",
+            "X-Content-Type-Options": "nosniff",
+        },
+    )
 
 
 @app.post("/api/discovery/films/{film_id:path}/criticism/douban")

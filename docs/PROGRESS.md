@@ -1,5 +1,47 @@
 # FirstRoll Project Progress
 
+### 18 August 2026 — Authenticated, redacted browser research progress
+
+Delivered:
+
+1. Added an authenticated `POST /api/discovery/films/{film_id}/study/stream` endpoint for hosted
+   Deep Study. Supabase bearer validation and hosted availability checks complete before an SSE
+   response is created.
+2. Added a strict public event projector with an allow-list for lifecycle kinds, bounded public
+   messages, monotonic sequence numbers, elapsed time and four non-sensitive aggregate counts.
+   Prompts, credentials, retrieved passages, review bodies, model output and hidden reasoning have no
+   field in this contract.
+3. Mapped provider and application exceptions to fixed public failure messages. Raw exception text
+   cannot enter the stream even when it contains request credentials or private source material.
+4. Kept the full result outside SSE. The browser retrieves it through
+   `GET /api/research/runs/{run_id}`, which authenticates again, enforces run ownership and gives
+   unknown and cross-account callers the same 404 response.
+5. Updated the hosted browser to consume the POST response as a readable stream, show only each
+   public progress message, require ordered events and fetch the final study separately. The local
+   edition retains its existing synchronous route.
+6. Kept the transport independent of the production Agent decision: it currently projects the
+   deterministic Deep Study workflow and can later receive the bounded graph's safe lifecycle
+   events without exposing graph state.
+
+Acceptance evidence:
+
+- authenticated integration coverage injects a synthetic personal DeepSeek key, private prompt,
+  private book passage and synthetic hidden-reasoning field, then proves none appears anywhere in
+  the SSE response while the separately authenticated result retains the private study payload;
+- ownership coverage proves a second authenticated account receives 404 for the run, and failure
+  coverage proves provider exceptions are redacted;
+- public-contract coverage rejects arbitrary messages, event kinds and token-like counts, while frontend
+  contract coverage verifies the streamed request, ordered parser and separate result request;
+- all 142 automated tests pass; scoped Ruff, JavaScript syntax and whitespace checks pass.
+
+Known constraints:
+
+- the final result store is process-local, bounded to 50 runs and expires entries after ten minutes;
+  durable, owner-scoped storage is required before multi-instance or resumable execution;
+- this progress transport does not switch the public Deep Study route to the LangGraph Agent;
+- the in-app browser automation client blocked programmatic localhost navigation during acceptance.
+  A human-opened localhost tab is still required for the final interactive browser observation.
+
 ### 18 August 2026 — Bounded LangGraph research Agent core
 
 Delivered:
@@ -32,8 +74,7 @@ Known constraints:
 - the graph does not yet replace `POST /api/discovery/films/{film_id}/study`;
 - production criticism, retrieval and DeepSeek adapters still need to implement the graph service
   protocol behind a feature flag;
-- browser SSE progress, authenticated checkpoint ownership and durable production checkpoint
-  storage remain pending;
+- authenticated checkpoint ownership and durable production checkpoint storage remain pending;
 - the Agent must run the frozen five-case evaluation before any public cut-over.
 
 Next actionable work:

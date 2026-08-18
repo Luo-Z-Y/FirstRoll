@@ -724,8 +724,42 @@ never returned to the browser or committed to Git.
 | `POST /api/discovery/films/{film_id}/criticism/letterboxd` | Retrieve and cache official Letterboxd reviews |
 | `POST /api/discovery/films/{film_id}/criticism/{provider}/structure` | Structure an already cached provider bundle with DeepSeek |
 | `POST /api/discovery/films/{film_id}/study` | Generate an evidence-grounded Deep Study |
+| `POST /api/discovery/films/{film_id}/study/stream` | Authenticated SSE progress for hosted Deep Study; returns the run ID in `X-FirstRoll-Run-ID` |
+| `GET /api/research/runs/{run_id}` | Retrieve the completed result through a second authenticated, owner-scoped request |
 | `GET /api/library/status` | Private library and index status |
 | `POST /api/analyze` | Analyse an uploaded private clip |
+
+### Authenticated research progress
+
+The hosted browser uses a streamed `fetch()` request rather than the native `EventSource` API,
+because the request must carry the Supabase bearer token and may carry a request-scoped personal
+DeepSeek key. Authentication and hosted availability checks finish before the SSE response begins.
+The response is marked `no-store`, disables reverse-proxy buffering and contains only the following
+allow-listed fields:
+
+```json
+{
+  "run_id": "opaque UUID",
+  "kind": "allow-listed lifecycle event",
+  "sequence": 1,
+  "message": "bounded public status copy",
+  "elapsed_ms": 0,
+  "counts": { "attributed_sources": 8 }
+}
+```
+
+Prompts, provider credentials, retrieved passages, review bodies, model output and model reasoning
+are structurally absent from the progress serializer. Event copy is selected from a fixed server-side
+message allow-list, so callers cannot place arbitrary prompt or exception text in its `message` field.
+Provider exceptions are mapped to those fixed public messages rather than copied into the stream.
+The complete study is held outside SSE for ten minutes
+and is returned only by `GET /api/research/runs/{run_id}` after the caller is authenticated again and
+matched to the run owner. Unknown and cross-account run IDs deliberately return the same 404.
+
+The current stream wraps the deterministic Deep Study workflow. Its event projection is ready for
+the bounded research graph, but it does not by itself represent a production Agent cut-over. The
+temporary result store is process-local, so a multi-instance deployment will require a durable,
+owner-scoped run store before resumable research jobs are enabled.
 
 Health check:
 
@@ -747,6 +781,7 @@ FirstRoll/
 │   │   ├── library_index.py     # chunking, embeddings and hybrid retrieval
 │   │   ├── main.py              # FastAPI routes
 │   │   ├── research_agent_contract.py # framework-neutral Agent policy and budgets
+│   │   ├── research_stream.py # allow-listed SSE projection and owner-scoped transient runs
 │   │   ├── research_graph/      # typed LangGraph state, nodes, routing and runtime context
 │   │   ├── settings.py          # local credential store
 │   │   └── study_service.py     # DeepSeek synthesis and quality gate
@@ -819,6 +854,7 @@ fallback behaviour; these are tracked separately from the new FirstRoll modules.
 | Attributed criticism | Complete | Crossref, Douban, Letterboxd and Guardian retrieval with structured critic claims |
 | Evidence-grounded Deep Study | Complete | Typed theory, criticism, review and video-text evidence; Pydantic output, citation validation and quality gate |
 | Bounded research Agent core | Implemented | LangGraph control flow, bounded reducers, deterministic tool authorisation, fake-service scenarios and optional checkpointing; production route integration remains gated |
+| Authenticated research progress | Complete | Allow-listed SSE lifecycle events, separate owner-scoped result retrieval and secret/evidence redaction tests |
 | Clip analysis web migration | Complete | Scene, shot, colour, object and export workflow |
 | Clip-to-study evidence bridge | Next | Feed measured scenes, shots and timecodes into synthesis |
 | Creator primary-source layer | Partial | Discovered interview descriptions and public YouTube captions are stored and cited; verified speaker attribution and dedicated interview search remain planned |

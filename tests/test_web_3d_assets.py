@@ -58,6 +58,21 @@ def test_supabase_auth_is_bundled_and_deep_study_sends_bearer_tokens() -> None:
     assert "FIRSTROLL_SUPABASE_PUBLISHABLE_KEY" in build
 
 
+def test_public_deep_study_consumes_authenticated_safe_sse_progress() -> None:
+    app = (WEB / "app.js").read_text(encoding="utf-8")
+
+    assert "/study/stream" in app
+    assert "consumeResearchProgress" in app
+    assert "RESEARCH_PROGRESS_KINDS" in app
+    assert "progress.run_id !== expectedRunId" in app
+    assert "progress.sequence !== lastSequence + 1" in app
+    assert 'streamResponse.headers.get("X-FirstRoll-Run-ID")' in app
+    assert "/api/research/runs/" in app
+    assert 'eventName !== "progress"' in app
+    assert 'progress.kind === "run_failed"' in app
+    assert 'progress.kind === "run_completed"' in app
+
+
 def test_public_video_preview_uses_neutral_product_copy() -> None:
     index = (WEB / "index.html").read_text(encoding="utf-8")
 
@@ -116,7 +131,7 @@ def test_archive_pullout_collapses_before_zoom_can_clip_its_copy() -> None:
     app = (WEB / "app.js").read_text(encoding="utf-8")
 
     assert "/assets/styles.css?v=20260815-5" in index
-    assert "/assets/app.js?v=20260815-7" in index
+    assert "/assets/app.js?v=20260818-1" in index
     assert "/assets/closet3d.js?v=20260815-3" in index
     assert 'class="archive-pullout-shell"' in app
     assert "container-type: inline-size" in styles
