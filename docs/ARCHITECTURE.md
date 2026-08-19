@@ -3,7 +3,7 @@
 **Status:** Current implementation  
 **Last reconciled:** 19 August 2026
 
-FirstRoll is a local-first film-study system with a deployed public beta on Render. “Local-first”
+FirstRoll is a local-first film-study system with a hybrid Azure and Render public beta. “Local-first”
 describes where private books, credentials, derived vectors and uploaded film clips are kept; it does
 not mean the product is available only on one computer.
 
@@ -16,8 +16,11 @@ flowchart LR
         Session["Supabase session<br/>hosted edition only"]
     end
 
-    subgraph Render["Render public beta"]
-        Static["Static Site<br/>HTML · CSS · JavaScript · Three.js"]
+    subgraph Azure["Azure public edge"]
+        Static["Static Web Apps<br/>firstroll.app<br/>HTML · CSS · JavaScript · Three.js"]
+    end
+
+    subgraph Render["Render API"]
         API["FastAPI Web Service<br/>public mode · Docker"]
         Runs["Transient run store<br/>50 items · 10-minute TTL"]
     end
@@ -63,16 +66,19 @@ flowchart LR
     LocalAPI --> Providers
 ```
 
-The Render Static Site and FastAPI Web Service are separate deployments from the same `master`
-branch. The static site remains available while a free-tier API instance wakes. The browser learns
-the API origin at build time through `FIRSTROLL_API_BASE`; the API accepts only the configured static
-origin through `FIRSTROLL_CORS_ALLOWED_ORIGINS`.
+Azure Static Web Apps deploys the browser bundle from `master` and serves it at `firstroll.app`.
+Render deploys the Docker FastAPI service independently from the same branch. The static frontend
+remains available while the free-tier API instance wakes. The browser learns the API origin at build
+time through `FIRSTROLL_API_BASE`; the API accepts only configured frontend origins through
+`FIRSTROLL_CORS_ALLOWED_ORIGINS`. Terraform under `infra/terraform` defines the foundation for the
+planned migration of that API to Azure Container Apps; it does not yet own the existing Static Web
+App.
 
 ## Runtime Modes
 
-| Capability | Local private edition | Render public beta |
+| Capability | Local private edition | Hosted public beta |
 |---|---|---|
-| Web delivery | FastAPI serves the interface and API on `127.0.0.1:8000` | Render Static Site serves the interface; Render Web Service serves the API |
+| Web delivery | FastAPI serves the interface and API on `127.0.0.1:8000` | Azure Static Web Apps serves the interface; Render Web Service currently serves the API |
 | Film discovery | Public Wikidata/Wikipedia adapters | Same adapters |
 | Criticism and videos | Public adapters plus optional local credentials and persistent private caches | Public/hosted adapters; personal DeepSeek and YouTube keys may be request-scoped in one signed-in tab |
 | Private document library | Enabled | Not published; local routes return 404 |
@@ -138,7 +144,7 @@ books, vectors, local paths and uploaded clips do not leave the device.
 ```mermaid
 sequenceDiagram
     actor User
-    participant Web as Render Static Site
+    participant Web as Azure Static Web App
     participant API as Render FastAPI
     participant Auth as Supabase Auth
     participant Quota as Supabase quota RPC
@@ -194,7 +200,8 @@ but they cannot authorise tools, change system policy or become model instructio
 
 ## Availability and Scaling
 
-- Render free-tier cold starts can delay discovery even though the static shell loads immediately.
+- Render free-tier cold starts can delay discovery even though the Azure-hosted static shell loads
+  immediately.
 - Discovery, reception and related-film caches are process memory and reset on restart.
 - The hosted research result store is capped at 50 runs with a ten-minute TTL. It is suitable for a
   single-process beta, not horizontal scaling or resumable work.
@@ -209,7 +216,7 @@ but they cannot authorise tools, change system policy or become model instructio
 
 | Setting class | Examples | Placement |
 |---|---|---|
-| Public static build values | `FIRSTROLL_API_BASE`, `FIRSTROLL_SUPABASE_URL`, `FIRSTROLL_SUPABASE_PUBLISHABLE_KEY` | Render Static Site build environment |
+| Public static build values | `FIRSTROLL_API_BASE`, `FIRSTROLL_SUPABASE_URL`, `FIRSTROLL_SUPABASE_PUBLISHABLE_KEY` | Azure Static Web Apps GitHub Actions build environment |
 | Hosted backend public configuration | `FIRSTROLL_PUBLIC_MODE`, `FIRSTROLL_CORS_ALLOWED_ORIGINS`, `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` | Render Web Service environment |
 | Hosted backend secrets | `DEEPSEEK_API_KEY`, optional `YOUTUBE_API_KEY` | Render Web Service only |
 | Local private paths | `FIRSTROLL_LIBRARY_PATH`, `FIRSTROLL_LIBRARY_MANIFEST`, `FIRSTROLL_LIBRARY_INDEX`, `FIRSTROLL_SETTINGS_PATH` | Local backend environment |

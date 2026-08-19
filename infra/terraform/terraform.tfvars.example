@@ -1,0 +1,22 @@
+resource_group_name = "firstroll-production"
+location            = "Southeast Asia"
+
+# The first apply creates only the registry, logs, identity and Container Apps environment.
+deploy_container_app = false
+image_tag             = "bootstrap"
+
+# One warm replica avoids the cold start. Set this to 0 only when minimising cost matters more.
+minimum_replicas = 1
+maximum_replicas = 2
+
+allowed_origins = [
+  "https://firstroll.app",
+]
+
+# Required only when deploy_container_app becomes true.
+supabase_url             = "https://YOUR_PROJECT.supabase.co"
+supabase_publishable_key = "sb_publishable_REPLACE_ME"
+
+# Keep paid study disabled until its Azure secret has been configured and tested.
+deep_study_enabled = false
+deepseek_model      = "deepseek-v4-flash"

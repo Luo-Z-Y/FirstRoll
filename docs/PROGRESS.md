@@ -5,7 +5,7 @@
 Delivered:
 
 1. Corrected the product description from a merely local or deployment-ready application to a
-   local-first system with an active two-service Render public beta. The documentation now treats
+   local-first system with an active Azure frontend and Render API. The documentation now treats
    “local-first” as a privacy and data-placement decision while describing the hosted browser/API
    boundary separately.
 2. Split detailed technical material into linked, maintainable references: current architecture,

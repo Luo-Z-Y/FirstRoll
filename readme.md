@@ -1,6 +1,7 @@
 # FirstRoll — Evidence-Grounded Film Study
 
-FirstRoll is a local-first film-study platform for filmmakers with a deployed Render public beta.
+FirstRoll is a local-first film-study platform for filmmakers with an Azure-hosted frontend and a
+deployed Render API.
 It combines open film metadata, attributed criticism, a private study library,
 evidence-constrained language-model synthesis and clip-based visual analysis. The hosted and local
 editions share the discovery and study architecture, while private books and clip analysis remain
@@ -10,7 +11,7 @@ The central rule is simple: identity records, critic reports, theory frameworks,
 hypotheses and measured film observations are different kinds of evidence. FirstRoll
 keeps those layers visible instead of presenting one fluent but unsupported answer.
 
-> **Current status:** local working prototype and deployed Render public beta. Discover,
+> **Current status:** local working prototype and deployed hybrid Azure/Render public beta. Discover,
 > private-library retrieval, Crossref scholarship, optional Douban, Letterboxd and Guardian
 > criticism, DeepSeek synthesis and clip analysis are implemented. The hosted edition publishes
 > discovery, the 3D shelf and authenticated Deep Study while keeping private-library tools, clip
@@ -21,7 +22,7 @@ keeps those layers visible instead of presenting one fluent but unsupported answ
 See [Project Progress](docs/PROGRESS.md) for completed milestones, verification results,
 known limitations and the next priorities.
 
-See [Public Beta Hosting](docs/HOSTING.md) for the deployed two-service Render topology, environment
+See [Public Beta Hosting](docs/HOSTING.md) for the deployed Azure frontend and Render API topology, environment
 configuration, acceptance checks and operational limits.
 
 ## Documentation Map
@@ -902,7 +903,7 @@ fallback behaviour; these are tracked separately from the new FirstRoll modules.
 | Milestone | Status | Outcome |
 |---|---|---|
 | Film discovery and dossier | Complete | Key-free identity, context and visible research routes |
-| Render public beta | Deployed | Separate static frontend and public-mode FastAPI service with Supabase authentication and bounded Deep Study |
+| Hybrid public beta | Deployed | Azure Static Web Apps frontend and separate Render FastAPI service with Supabase authentication and bounded Deep Study |
 | Private RAG foundation | Complete | Token chunking, FTS5, local vectors, hybrid retrieval and citations |
 | Attributed criticism | Complete | Crossref, Douban, Letterboxd and Guardian retrieval with structured critic claims |
 | Evidence-grounded Deep Study | Complete | Typed theory, criticism, review and video-text evidence; Pydantic output, citation validation and quality gate |

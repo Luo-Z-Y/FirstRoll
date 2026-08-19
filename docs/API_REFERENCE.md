@@ -4,7 +4,7 @@
 **Last reconciled:** 19 August 2026
 
 FirstRoll uses one FastAPI application in two modes. The local edition serves the web interface and
-API from `http://127.0.0.1:8000`. The Render public beta serves the frontend and API from separate
+API from `http://127.0.0.1:8000`. The hosted public beta serves the Azure frontend and Render API from separate
 origins configured in the Render dashboard. This document uses relative paths so it remains correct
 when those deployment URLs change.
 

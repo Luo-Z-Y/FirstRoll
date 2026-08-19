@@ -14,7 +14,7 @@ public API.
 |---|---|---|---|
 | 001 | Evolve pyCinemetrics with preserved attribution | Accepted | Faster foundation versus inherited complexity |
 | 002 | Local-first private edition plus constrained hosted beta | Accepted | Private depth versus public convenience |
-| 003 | Split Render Static Site and FastAPI Web Service | Accepted | Explicit boundary and fast shell versus two-service configuration |
+| 003 | Split static frontend and FastAPI service across Azure and Render | Accepted | Explicit boundary and fast shell versus multi-platform configuration |
 | 004 | Use Wikidata identity and explicit ambiguity confirmation | Accepted | Correct identity versus one-click speed |
 | 005 | Use bounded provider adapters, not unconstrained LLM browsing | Accepted | Provenance and control versus breadth |
 | 006 | Type evidence by epistemic role | Accepted | Honest uncertainty versus simpler prose generation |
@@ -97,7 +97,7 @@ Deep Study, but returns 404/503 for private or expensive local features.
 Encrypted user-owned storage, deletion policy, consent and operating budget justify hosted private
 projects.
 
-## ADR-003: Split Render Static Site and FastAPI Web Service
+## ADR-003: Split static frontend and FastAPI service across Azure and Render
 
 **Status:** Accepted  
 **Date:** 15 August 2026
@@ -109,26 +109,29 @@ Python and the optional Douban MCP runtime.
 
 ### Decision
 
-Deploy the browser bundle as a Render Static Site and FastAPI as a separate Docker Web Service from
-`master`. Inject the API origin at static build time and configure one exact CORS origin in the API.
+Deploy the browser bundle through Azure Static Web Apps and FastAPI as a separate Render Docker Web
+Service from `master`. Inject the API origin at static build time and configure exact CORS origins
+in the API. Define the planned Render-to-Azure Container Apps migration in Terraform without
+importing the existing Static Web App during the first infrastructure milestone.
 
 ### Options considered
 
 | Option | Assessment |
 |---|---|
 | One combined Web Service | Simpler origin model, but every page load waits for backend cold start |
-| Separate static and API services | Faster shell and explicit boundary; requires CORS and two deploys |
+| Separate Azure static and Render API services | Faster shell and explicit boundary; requires CORS and multi-platform operations |
 | Serverless functions | Poor fit for heavyweight Python/provider runtime and longer study requests |
 
 ### Consequences
 
-- Public values are duplicated across the two Render environments with different variable names.
+- Public values are supplied to Azure's frontend build and the Render backend with different
+  variable names.
 - Bearer and request-scoped-key headers must be explicitly allowed by CORS.
 - The backend root identifies the API instead of serving a second visitor website.
 
 ### Revisit when
 
-The deployment moves to infrastructure with an edge CDN and API under one managed domain.
+The Container Apps migration is complete and `api.firstroll.app` has passed the rollback window.
 
 ## ADR-004: Use Wikidata identity and explicit ambiguity confirmation
 
