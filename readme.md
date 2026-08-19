@@ -8,13 +8,13 @@ The central rule is simple: identity records, critic reports, theory frameworks,
 hypotheses and measured film observations are different kinds of evidence. FirstRoll
 keeps those layers visible instead of presenting one fluent but unsupported answer.
 
-> **Current status:** local working prototype and deployment-ready public beta. Discover, private-library retrieval,
-> Crossref scholarship, optional Douban, Letterboxd and Guardian criticism, DeepSeek
-> synthesis and clip analysis are implemented. The
-> hosted edition publishes discovery and the 3D shelf while keeping private-library tools,
-> clip analysis and unauthenticated Deep Study disabled. Supabase email authentication and atomic
-> daily Deep Study quotas are implemented; the research milestone is connecting measured clip
-> evidence to Deep Study.
+> **Current status:** local working prototype and deployment-ready public beta. Discover,
+> private-library retrieval, Crossref scholarship, optional Douban, Letterboxd and Guardian
+> criticism, DeepSeek synthesis and clip analysis are implemented. The hosted edition publishes
+> discovery, the 3D shelf and authenticated Deep Study while keeping private-library tools, clip
+> analysis and unauthenticated model use disabled. Supabase email authentication, atomic daily
+> quotas and redacted SSE research progress are implemented. The next research milestone is
+> connecting measured clip evidence to Deep Study.
 
 See [Project Progress](docs/PROGRESS.md) for completed milestones, verification results,
 known limitations and the next priorities.
@@ -100,6 +100,8 @@ The original GPL-3.0 licence and contributor attribution remain applicable. See
 - Permit at most one bounded repair request.
 - Label unresolved work as **insufficient evidence** rather than silently accepting it.
 - Show the retrieval plan, source rationale and expandable evidence excerpts in the UI.
+- In hosted mode, stream only allow-listed public progress after authentication, then retrieve the
+  complete study through a separate authenticated, owner-scoped result request.
 
 ### Analyse
 
@@ -205,14 +207,17 @@ The repository also contains a bounded LangGraph research Agent core. It reuses 
 framework-neutral research contract, keeps application policy around model-proposed tools,
 deduplicates and caps graph state, and terminates explicitly under ambiguity, weak evidence,
 provider failure, invalid planning and quality-gate failure. It is not yet the public Deep Study
-execution path: the fixed workflow remains the production comparison and fallback until a
-production service adapter, safe progress stream and golden-case evaluation are complete.
+execution path: the fixed workflow remains the production comparison and fallback. The safe
+progress transport and fixed-workflow baseline now exist; production service adapters and a
+like-for-like Agent evaluation are still required before any cut-over.
 
 The public-beta shell is narrower than the local architecture. A CDN-hosted static frontend and a
 lightweight FastAPI API use separate Render origins; the API root identifies the service instead of
 publishing a duplicate website. Public mode does not publish local settings, private-library
 retrieval or video analysis, and it keeps Deep Study unavailable until Supabase authentication and
-usage controls are installed. Local development retains the convenient combined interface.
+usage controls are configured. When enabled, hosted Deep Study authenticates the account, reserves
+quota and streams only the public progress projection. Local development retains the convenient
+combined interface.
 
 | Layer | Primary stack |
 |---|---|
@@ -752,14 +757,35 @@ Prompts, provider credentials, retrieved passages, review bodies, model output a
 are structurally absent from the progress serializer. Event copy is selected from a fixed server-side
 message allow-list, so callers cannot place arbitrary prompt or exception text in its `message` field.
 Provider exceptions are mapped to those fixed public messages rather than copied into the stream.
-The complete study is held outside SSE for ten minutes
-and is returned only by `GET /api/research/runs/{run_id}` after the caller is authenticated again and
-matched to the run owner. Unknown and cross-account run IDs deliberately return the same 404.
+The complete study is held outside SSE for ten minutes and is returned only by
+`GET /api/research/runs/{run_id}` after the caller is authenticated again and matched to the run
+owner. Unknown and cross-account run IDs deliberately return the same 404.
 
 The current stream wraps the deterministic Deep Study workflow. Its event projection is ready for
 the bounded research graph, but it does not by itself represent a production Agent cut-over. The
 temporary result store is process-local, so a multi-instance deployment will require a durable,
 owner-scoped run store before resumable research jobs are enabled.
+
+```mermaid
+sequenceDiagram
+    actor Browser
+    participant API as FastAPI boundary
+    participant Auth as Supabase Auth
+    participant Study as Deterministic Deep Study
+    participant Events as Safe event projector
+    participant Runs as Owner-scoped run store
+
+    Browser->>API: POST /study/stream + bearer token
+    API->>Auth: Verify account
+    Auth-->>API: Authenticated user ID
+    API->>Study: Film, question and typed evidence packet
+    Study-->>Events: Internal lifecycle only
+    Events-->>Browser: Allow-listed SSE progress
+    Study->>Runs: Store complete private result for owner
+    Browser->>API: GET /research/runs/{run_id} + bearer token
+    API->>Runs: Read only when owner matches
+    Runs-->>Browser: Complete study (no-store)
+```
 
 Health check:
 
@@ -781,7 +807,7 @@ FirstRoll/
 │   │   ├── library_index.py     # chunking, embeddings and hybrid retrieval
 │   │   ├── main.py              # FastAPI routes
 │   │   ├── research_agent_contract.py # framework-neutral Agent policy and budgets
-│   │   ├── research_stream.py # allow-listed SSE projection and owner-scoped transient runs
+│   │   ├── research_stream.py  # allow-listed SSE projection and owner-scoped transient runs
 │   │   ├── research_graph/      # typed LangGraph state, nodes, routing and runtime context
 │   │   ├── settings.py          # local credential store
 │   │   └── study_service.py     # DeepSeek synthesis and quality gate
@@ -854,7 +880,7 @@ fallback behaviour; these are tracked separately from the new FirstRoll modules.
 | Attributed criticism | Complete | Crossref, Douban, Letterboxd and Guardian retrieval with structured critic claims |
 | Evidence-grounded Deep Study | Complete | Typed theory, criticism, review and video-text evidence; Pydantic output, citation validation and quality gate |
 | Bounded research Agent core | Implemented | LangGraph control flow, bounded reducers, deterministic tool authorisation, fake-service scenarios and optional checkpointing; production route integration remains gated |
-| Authenticated research progress | Complete | Allow-listed SSE lifecycle events, separate owner-scoped result retrieval and secret/evidence redaction tests |
+| Authenticated research progress | Implemented | Allow-listed SSE lifecycle events, separate owner-scoped result retrieval and secret/evidence redaction tests; final interactive browser observation remains pending |
 | Clip analysis web migration | Complete | Scene, shot, colour, object and export workflow |
 | Clip-to-study evidence bridge | Next | Feed measured scenes, shots and timecodes into synthesis |
 | Creator primary-source layer | Partial | Discovered interview descriptions and public YouTube captions are stored and cited; verified speaker attribution and dedicated interview search remain planned |
@@ -922,6 +948,8 @@ the suite when comparing production candidates and report the sample count.
 - Guardian search may have no confidently matched review for a film.
 - The first semantic retrieval after process start may pause while the local model loads.
 - A study may correctly remain labelled insufficient evidence after its one repair pass.
+- Hosted research results currently live in a bounded, process-local ten-minute store; durable
+  owner-scoped storage is required before multi-instance or resumable execution.
 - Some inherited computer-vision dependencies are large and have platform-specific setup.
 - Object and shot-scale analysis may use labelled fallbacks when optional models fail.
 

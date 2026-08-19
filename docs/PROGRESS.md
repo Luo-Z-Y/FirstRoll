@@ -1,5 +1,33 @@
 # FirstRoll Project Progress
 
+### 19 August 2026 — README architecture and status reconciliation
+
+Delivered:
+
+1. Reconciled the README status with the implemented hosted boundary: Supabase authentication,
+   atomic quota reservation and redacted SSE progress now appear as delivered capabilities rather
+   than future prerequisites.
+2. Updated the Agent boundary to distinguish completed fixed-workflow streaming and baseline work
+   from the still-pending production graph adapter and like-for-like Agent evaluation.
+3. Added an authenticated Deep Study sequence diagram covering bearer verification, the fixed
+   workflow, public event projection, transient owner-scoped result storage and the separate result
+   request.
+4. Made the roadmap and known limitations explicitly retain the outstanding interactive browser
+   observation and the process-local ten-minute run-store constraint.
+
+Acceptance evidence:
+
+- README architecture, API and roadmap statements now agree with the implementation and this
+  progress log;
+- Markdown whitespace validation passes and no runtime behaviour changed in this documentation
+  checkpoint.
+
+Next actionable work:
+
+1. Complete the synthetic privacy observation in a human-opened localhost browser tab.
+2. Replace the transient run store before multi-instance or resumable research execution.
+3. Implement the production graph service adapter and compare it against the frozen baseline.
+
 ### 18 August 2026 — Authenticated, redacted browser research progress
 
 Delivered:
