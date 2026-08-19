@@ -1,11 +1,13 @@
 # FirstRoll Data Model
 
-**Status:** Current implementation  
-**Last reconciled:** 19 August 2026
+**Status:** Current implementation and staged identity-neutral migration
+**Last reconciled:** 20 August 2026
 
 FirstRoll deliberately uses different stores for different privacy and durability requirements. The
-hosted edition persists account identity and quota counters in Supabase. The local edition persists
-private books, derived search data, connector settings and acquired research under `.firstroll/`.
+hosted edition persists account identity, profile, preferences, saved films and quota counters in Supabase. The replacement
+quota model is ordinary PostgreSQL and keys usage by identity provider plus immutable subject, so
+it can work with either Supabase Auth or Entra External ID. The local edition persists private
+books, derived search data, connector settings and acquired research under `.firstroll/`.
 Film discovery caches and current hosted study results are process memory.
 
 ## Storage Inventory
@@ -13,7 +15,9 @@ Film discovery caches and current hosted study results are process memory.
 | Store | Runtime | Durable | Contains | Excluded from Git |
 |---|---|---:|---|---:|
 | Supabase Auth | Hosted | Yes | User identity and session state managed by Supabase | Not applicable |
+| Supabase Postgres public account tables | Hosted | Yes | RLS-owned profile, preferences and saved film records | Not applicable |
 | Supabase Postgres private schema | Hosted | Yes | Daily per-user and global Deep Study counters | Not applicable |
+| Generic PostgreSQL private schema | Hosted, staged | Yes | Daily provider/subject and global Deep Study counters | Not applicable |
 | `.firstroll/library.sqlite3` | Local | Yes | Extracted chunks, FTS5 index, float32 embeddings and index metadata | Yes |
 | `.firstroll/library/` | Local | Yes | Managed private document files | Yes |
 | `.firstroll/library.json` | Local | Yes | Registered paths and managed-file exclusions | Yes |
@@ -25,17 +29,51 @@ Film discovery caches and current hosted study results are process memory.
 
 ## Supabase Postgres
 
-Migration: `supabase/migrations/202608150001_deep_study_quotas.sql`
+Migrations:
 
-The application does not maintain a parallel FirstRoll user table. Supabase Auth owns identity in
-`auth.users`; FirstRoll's private quota table references that UUID.
+- `supabase/migrations/202608150001_deep_study_quotas.sql`
+- `supabase/migrations/202608200002_persistent_accounts.sql`
+
+Supabase Auth owns credentials and identity in `auth.users`. FirstRoll does not duplicate passwords
+or email addresses. Public application tables and the legacy private quota table reference the
+stable Auth UUID.
 
 ```mermaid
 erDiagram
+    AUTH_USERS ||--|| FIRSTROLL_PROFILES : "user_id"
+    AUTH_USERS ||--|| FIRSTROLL_PREFERENCES : "user_id"
+    AUTH_USERS ||--o{ FIRSTROLL_SAVED_FILMS : "user_id"
     AUTH_USERS ||--o{ DEEP_STUDY_USER_DAILY : "user_id"
 
     AUTH_USERS {
         uuid id PK
+    }
+
+    FIRSTROLL_PROFILES {
+        uuid user_id PK_FK
+        text display_name
+        timestamptz created_at
+        timestamptz updated_at
+    }
+
+    FIRSTROLL_PREFERENCES {
+        uuid user_id PK_FK
+        text theme
+        boolean shelf_motion
+        timestamptz created_at
+        timestamptz updated_at
+    }
+
+    FIRSTROLL_SAVED_FILMS {
+        uuid id PK
+        uuid user_id FK
+        text film_id UK
+        text title
+        smallint release_year
+        text director
+        text poster_url
+        timestamptz created_at
+        timestamptz updated_at
     }
 
     DEEP_STUDY_USER_DAILY {
@@ -51,6 +89,23 @@ erDiagram
         timestamptz updated_at
     }
 ```
+
+### Public account tables
+
+`firstroll_profiles` and `firstroll_preferences` have one row per Auth user.
+`firstroll_saved_films` has a unique `(user_id, film_id)` constraint, where `film_id` is the
+canonical discovery identity rather than a mutable title. The saved record contains only enough
+display metadata to render an account library without repeating discovery immediately.
+
+All three tables enable row-level security. `anon` has no privileges. The authenticated role has
+only the operations needed by the UI, and every policy constrains old and new rows with
+`(select auth.uid()) = user_id`. An indexed `user_id, created_at desc` path supports each account's
+saved-film list. A small security-definer trigger creates profile and preference rows after Auth
+sign-up; the migration also backfills existing users.
+
+Deleting an Auth account cascades all three application records. Passwords remain in Supabase Auth.
+Personal DeepSeek/YouTube keys, prompts, evidence and generated studies are explicitly excluded
+from these tables.
 
 ### `firstroll_private.deep_study_user_daily`
 
@@ -92,6 +147,47 @@ Both tables have row-level security enabled and all direct table privileges are 
 `public`, `anon` and `authenticated`. The functions are `SECURITY DEFINER`, set an empty
 `search_path`, derive the user with `auth.uid()` and expose execute permission only to
 `authenticated`. FirstRoll does not require a Supabase service-role key.
+
+## Identity-neutral PostgreSQL quota store
+
+Migration: `database/migrations/202608200001_identity_neutral_deep_study_quotas.sql`
+
+This is the target quota boundary. It can run on the existing Supabase PostgreSQL database first and
+later on Azure Database for PostgreSQL without changing the application contract. FastAPI validates
+the browser's access token, extracts the provider and immutable subject, and passes only those two
+values to PostgreSQL through a backend-only connection. The bearer token never reaches the quota
+database.
+
+```mermaid
+erDiagram
+    DEEP_STUDY_IDENTITY_DAILY {
+        date usage_day PK
+        varchar identity_provider PK
+        varchar subject PK
+        integer request_count
+        timestamptz updated_at
+    }
+
+    DEEP_STUDY_GLOBAL_DAILY {
+        date usage_day PK
+        integer request_count
+        timestamptz updated_at
+    }
+```
+
+`firstroll_private.deep_study_quota_decision(provider, subject, reserve)` returns the same JSONB
+contract as the legacy RPC. When `reserve` is true, a transaction-scoped advisory lock serialises
+the account and global increments. The schema stores no email, bearer token, prompt, film, evidence
+or generated study.
+
+The database login should be a dedicated `firstroll_backend` role with only schema usage and execute
+permission on the `SECURITY DEFINER` function. It does not require direct table permissions. Its
+connection URL is an Azure Container Apps secret selected with
+`FIRSTROLL_QUOTA_PROVIDER=postgres`; it must never enter the static frontend.
+
+The old Supabase RPC and tables remain temporarily for rollback. Their current-day counts are not
+automatically copied because the quota window resets every UTC day. Once the generic store has run
+successfully through a complete quota day, the visitor-token adapter can be removed.
 
 ## Local SQLite Retrieval Index
 
@@ -248,7 +344,7 @@ captions cannot establish creator intention.
 | Field | Type | Meaning |
 |---|---|---|
 | Run key | UUID string | Opaque ID returned in `X-FirstRoll-Run-ID` |
-| `owner_id` | Supabase user UUID | Required again when reading the result |
+| `owner_id` | `provider:subject` string | Required again when reading the result; prevents cross-provider identifier collisions |
 | `created_at` | monotonic process time | TTL calculation only |
 | `status` | `running | complete | failed` | Current terminal state |
 | `result` | object or null | Complete study; never placed in SSE |
@@ -267,9 +363,10 @@ for process lifetime. They are accelerators, not records of truth, and are repop
 
 1. Never commit `.firstroll`, private books, extracted text, embeddings, provider caches, cookies,
    API keys or uploaded clips.
-2. Supabase stores quota counters only; it does not store prompts or generated studies.
-3. Render's filesystem is ephemeral and must not be treated as durable application storage.
+2. Quota PostgreSQL stores provider, subject, UTC day and counters only; it does not store emails,
+   bearer tokens, prompts or generated studies.
+3. Azure Container Apps' filesystem is ephemeral and must not be treated as durable application storage.
 4. Private local files use restrictive modes and atomic replacement where practical.
-5. Schema changes require a new Supabase migration or a bumped local index `schema_version`.
+5. Schema changes require a new PostgreSQL migration or a bumped local index `schema_version`.
 6. A new persisted field must document its owner, retention, privacy class and deletion behaviour in
    this file before release.

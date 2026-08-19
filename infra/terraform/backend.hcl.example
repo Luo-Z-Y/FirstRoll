@@ -2,4 +2,8 @@ resource_group_name  = "firstroll-production"
 storage_account_name = "REPLACE_WITH_GLOBALLY_UNIQUE_NAME"
 container_name       = "tfstate"
 key                  = "firstroll-production.tfstate"
-use_azuread_auth     = true
+
+# The NUS tenant's Conditional Access policy currently blocks local user
+# tokens for the Azure Storage data plane. Set ARM_ACCESS_KEY from a secure
+# local secret store such as macOS Keychain; never put the key in this file.
+use_azuread_auth = false

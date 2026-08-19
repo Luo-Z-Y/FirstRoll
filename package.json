@@ -9,6 +9,7 @@
     "build:auth": "esbuild app/web/auth.js --bundle --minify --format=iife --outfile=dist/assets/auth.js"
   },
   "dependencies": {
+    "@azure/msal-browser": "5.19.0",
     "@supabase/supabase-js": "2.112.3"
   },
   "devDependencies": {

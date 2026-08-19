@@ -27,6 +27,8 @@ dependencies = [
     "python-multipart>=0.0.20",
     "mcp>=1.0,<2.0",
     "sentence-transformers>=5.0,<6.0",
+    "pyjwt[crypto]>=2.10,<3.0",
+    "psycopg[binary]>=3.2,<4.0",
 ]
 
 [project.scripts]

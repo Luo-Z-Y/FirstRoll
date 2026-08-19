@@ -1,54 +1,55 @@
 # FirstRoll Public Beta Hosting
 
-**Deployment status:** Active Azure frontend with Render API
+**Deployment status:** Active Azure frontend and Azure API
 
 **Visitor URL:** `https://firstroll.app`
 
-**API URL:** `https://firstroll.onrender.com`
+**API URL:** `https://api.firstroll.app`
 
-**Last reconciled:** 19 August 2026
+**Last reconciled:** 20 August 2026
 
 FirstRoll is not merely a local application. Its active public beta uses Azure Static Web Apps for
-the frontend and Render for the Docker API, while private-library and clip-analysis capabilities
-remain local by design:
+the frontend and Azure Container Apps for the Docker API, while private-library and clip-analysis
+capabilities remain local by design:
 
 ```text
-Browser  ->  Azure Static Web Apps  ->  Render FastAPI Web Service  ->  public film sources
-              firstroll.app                  API
+Browser  ->  Azure Static Web Apps  ->  Azure Container Apps  ->  public film sources
+              firstroll.app             api.firstroll.app
 ```
 
-The hosted edition publishes discovery, the 3D shelf, Supabase email sign-in and an authenticated
-Integration Centre. Private-library settings, local documents, clip uploads, computer-vision
+The hosted edition publishes discovery, the 3D shelf, Supabase email-and-password accounts with
+saved films, and an authenticated Integration Centre. Private-library settings, local documents, clip uploads, computer-vision
 analysis and unauthenticated Deep Study are blocked by the backend. Authenticated Deep Study is
 protected by durable Supabase usage counters.
-The separate origins keep the public boundary explicit and allow the Azure-hosted frontend shell to
-load while the free Render API wakes.
+The separate origins keep the public boundary explicit and allow either service to be deployed or
+rolled back independently.
 
-The frontend and API origins are deployment configuration. `FIRSTROLL_API_BASE` currently points to
-the Render API, while `FIRSTROLL_CORS_ALLOWED_ORIGINS` must include the exact
+The frontend and API origins are deployment configuration. `FIRSTROLL_API_BASE` points to
+`https://api.firstroll.app`, while `FIRSTROLL_CORS_ALLOWED_ORIGINS` must include the exact
 `https://firstroll.app` origin. See
 [Architecture](ARCHITECTURE.md), [API Reference](API_REFERENCE.md), [Data Model](DATA_MODEL.md) and
 [Architecture Decisions](DECISIONS.md) for the corresponding runtime contracts.
 
-Terraform under `infra/terraform` defines the foundation for moving FastAPI to Azure Container
-Apps. It intentionally does not manage or import the existing Static Web App.
+Terraform under `infra/terraform` manages the imported Static Web App, both custom-domain
+associations, Azure Container Registry, Log Analytics, the Container Apps environment and the
+FastAPI Container App. Spaceship remains the DNS provider.
 
 ## Local production checks
 
 Build the static site with a temporary API address:
 
 ```bash
-FIRSTROLL_API_BASE=https://firstroll-api-example.onrender.com ./tools/build_web.sh
+FIRSTROLL_API_BASE=https://api.firstroll.app ./tools/build_web.sh
 ```
 
 Build and start the backend container:
 
 ```bash
-docker build -t firstroll:render .
-docker run --rm --name firstroll-render-test \
+docker build -t firstroll:azure .
+docker run --rm --name firstroll-azure-test \
   -e FIRSTROLL_PUBLIC_MODE=true \
   -p 127.0.0.1:18000:10000 \
-  firstroll:render
+  firstroll:azure
 ```
 
 In another terminal, verify:
@@ -58,11 +59,12 @@ curl http://127.0.0.1:18000/api/health
 curl http://127.0.0.1:18000/api/discovery/status
 ```
 
-Stop the test container with `docker stop firstroll-render-test`.
+Stop the test container with `docker stop firstroll-azure-test`.
 
-## 1. Current Render API recovery procedure
+## 1. Render rollback procedure
 
-The active API is already deployed. Use these steps only to recreate it during recovery:
+Render is no longer the production API. Use these steps only if an Azure rollback cannot be
+completed by selecting the last healthy immutable Container App revision:
 
 1. Sign in to the Render dashboard.
 2. Select **New** and then **Web Service**.
@@ -117,7 +119,7 @@ The workflow supplies these public build values:
 
 | Key | Purpose |
 |---|---|
-| `FIRSTROLL_API_BASE` | complete backend origin; currently `https://firstroll.onrender.com` |
+| `FIRSTROLL_API_BASE` | complete backend origin; `https://api.firstroll.app` |
 | `FIRSTROLL_SUPABASE_URL` | Supabase project URL |
 | `FIRSTROLL_SUPABASE_PUBLISHABLE_KEY` | browser-safe Supabase publishable key |
 
@@ -127,12 +129,12 @@ public build variable.
 
 Every push to `master` runs CI and the Azure deployment. After it succeeds, verify
 `https://firstroll.app` because custom-domain DNS and CDN caching are separate from the build job.
-The frontend should appear immediately even when the Render backend is asleep.
+The frontend should appear independently of the API's deployment state.
 
 ## 3. Connect Supabase authentication
 
 The Supabase project URL and publishable key are designed to be public. Use the same two values in
-the Azure frontend build and Render backend; never use the secret or service-role key for these
+the Azure frontend build and Container App; never use the secret or service-role key for these
 settings.
 
 1. In Supabase, open **Project Settings → API** and copy **Project URL** and the
@@ -146,25 +148,47 @@ settings.
 
 3. Trigger a new Azure Static Web Apps build after changing either value; they are compiled into
    `dist/assets/config.js`.
-4. In the Render **backend Web Service**, open **Environment** and add:
+4. Configure the matching Container App values through Terraform and Azure's secret boundary:
 
    | Key | Value |
    |---|---|
    | `SUPABASE_URL` | the same Supabase Project URL |
    | `SUPABASE_PUBLISHABLE_KEY` | the same `sb_publishable_...` key |
 
-5. Save and redeploy the backend.
+5. Deploy a new immutable Container App revision.
 6. Keep Supabase **Authentication → URL Configuration → Site URL** set to
    `https://firstroll.app`, and include `https://firstroll.app/**` in **Redirect URLs**. Retain the
    Azure-generated hostname only when it remains an intentional test entry point; remove obsolete
    Render frontend URLs.
-7. Open the frontend in a private window, select **Sign in**, request an email link, follow it and
-   confirm the header displays the account email. `/api/auth/me` should then return that account's
-   Supabase user ID and email when called with its bearer token.
+7. In Supabase **Authentication → Providers → Email**, keep email/password enabled. Decide whether
+   email confirmation is required for the public beta; the browser handles both an immediate
+   session and a confirmation-first sign-up.
+8. Open the frontend in a private window, select **Sign in**, create a password account and confirm
+   the header displays its name or email. Sign out and use the same credentials to sign in again.
+   `/api/auth/me` should return that account's Supabase user ID and email when called with its bearer
+   token.
 
-The browser stores only Supabase's short-lived user session. FastAPI validates each bearer token
-against Supabase Auth before allowing an authenticated operation. No provider secret is included in
-the static bundle.
+The Supabase browser client persists the session and refresh token in browser storage, with automatic
+token refresh. FastAPI validates each bearer token against Supabase Auth before allowing an
+authenticated API operation. The browser contains no password after form submission and no
+provider secret is included in the static bundle.
+
+### Install persistent account data
+
+1. In Supabase, open **SQL Editor → New query**.
+2. Paste the complete contents of
+   `supabase/migrations/202608200002_persistent_accounts.sql` and select **Run**.
+3. In **Table Editor**, confirm `firstroll_profiles`, `firstroll_preferences` and
+   `firstroll_saved_films` exist and show RLS as enabled.
+4. Create or sign into Account A, save a film and refresh the page. Confirm the film remains in
+   **Settings → Saved films**.
+5. Sign out, create Account B and confirm Account A's film is absent. Save a different film, then
+   return to Account A and confirm each account still sees only its own row.
+6. Test **Forgot password?** and confirm the recovery link returns to `https://firstroll.app`.
+
+The account migration backfills profile and preference rows for existing Auth users. It grants no
+table access to `anon`, needs no service-role key and stores no password, provider API key, study
+prompt, evidence or generated result.
 
 ## 4. Enable quota-controlled Deep Study
 
@@ -178,7 +202,7 @@ stored in Supabase.
 3. Confirm the result reports success. The migration creates two RLS-enabled tables in the
    non-exposed `firstroll_private` schema and two authenticated-only functions:
    `deep_study_quota_status()` and `reserve_deep_study_quota()`.
-4. In the Render backend Web Service—not the Static Site—open **Environment** and add:
+4. Add these values to the Azure Container App—not the Static Web App—and deploy a new revision:
 
    | Key | Value |
    |---|---|
@@ -198,18 +222,35 @@ counts against the allowance even if the provider later fails, preventing retrie
 unbounded cost path. The hosted edition uses a four-part, first-party formal-analysis protocol and
 labels all film-form claims as viewing hypotheses; it does not claim to have watched the film.
 
+### Move quota to the identity-neutral PostgreSQL boundary
+
+The replacement migration is
+`database/migrations/202608200001_identity_neutral_deep_study_quotas.sql`. It can be installed on
+Supabase PostgreSQL first and moved unchanged to Azure PostgreSQL later.
+
+1. Run the migration with a database administrator.
+2. Create a dedicated `firstroll_backend` login and grant only schema usage and execute permission
+   on `firstroll_private.deep_study_quota_decision(text, text, boolean)`, as shown at the end of the
+   migration. Do not grant direct table access.
+3. Store its `postgresql://...?...sslmode=require` connection URL in macOS Keychain and provide it
+   to Terraform through `TF_VAR_database_url`; never commit or print it.
+4. Set `quota_provider = "postgres"`, review the plan, deploy a new API image and test quota status,
+   reservation, the fourth-request 429 and concurrent reservations.
+5. Observe one complete UTC quota day before removing the legacy Supabase RPC.
+
+The API passes PostgreSQL only the verified identity-provider name and immutable subject. It does
+not forward the browser bearer token, email, study question or generated result.
+
 ## 5. Allow the Azure frontend to call the API
 
-1. Return to the backend Web Service.
-2. Select **Environment**.
-3. Add:
+1. Set this Container App environment value through Terraform:
 
    | Key | Value |
    |---|---|
    | `FIRSTROLL_CORS_ALLOWED_ORIGINS` | `https://firstroll.app` |
 
-4. Choose **Save, rebuild, and deploy**.
-5. Open `https://firstroll.app` in a private browser window and perform a film search.
+2. Review and apply the Terraform plan.
+3. Open `https://firstroll.app` in a private browser window and perform a film search.
 
 Do not use `*` as the allowed origin. The exact frontend origin will later carry Supabase bearer
 tokens to the API. Add the Azure-generated hostname only if it intentionally remains a supported
@@ -217,8 +258,8 @@ visitor origin.
 
 ## Optional public video provider
 
-YouTube search can use a server-side YouTube Data API v3 key. Add `YOUTUBE_API_KEY` to the backend
-Web Service's **Environment** page and redeploy; never add it to the Azure static build.
+YouTube search can use a server-side YouTube Data API v3 key. Add `YOUTUBE_API_KEY` to the Container
+App's secret boundary and deploy a new revision; never add it to the Azure static build.
 Alternatively, a
 signed-in visitor can supply a personal key for one browser tab through Settings. The browser holds
 that key only in memory and sends it only with an authenticated video-search request. Restrict keys
@@ -248,43 +289,53 @@ rate limits can still make this optional source temporarily unavailable.
 - No `.firstroll` data, uploaded clips, API keys or private library files appear in the image,
   repository, frontend source or network responses.
 
-## 7. Azure Container Apps migration
+## 7. Azure Container Apps production state
 
-The next infrastructure milestone replaces only the Render API:
+The API migration is complete:
 
 ```text
 firstroll.app     -> Azure Static Web Apps
 api.firstroll.app -> Azure Container Apps
-Supabase          -> authentication and quota, unchanged
+Supabase Auth     -> production password accounts and persistent sessions
+Supabase Postgres -> RLS-owned profiles, preferences and saved films
+PostgreSQL        -> provider-neutral quota store (deployment staged)
 ```
 
-The migration sequence is deliberately reversible:
+`api.firstroll.app` has a CNAME to the Azure-generated Container Apps hostname and `asuid.api` has
+the Azure verification TXT record. Azure owns the managed certificate. Terraform has imported the
+live association and reports no infrastructure drift.
 
-1. Use `infra/terraform` to create Azure Container Registry, Log Analytics and a Container Apps
-   environment in the existing `firstroll-production` resource group.
-2. Build the current Dockerfile into Azure Container Registry.
-3. Enable the gated Container App resource and verify its Azure hostname.
-4. Copy backend configuration and secrets through Azure's secret boundary.
-5. Test health, discovery, authentication, quota and Deep Study.
-6. Bind `api.firstroll.app` and allow Azure to issue TLS.
-7. Rebuild the static frontend with the new API origin.
-8. Keep Render available as a rollback target for at least 48 hours.
-9. Remove Render only after logs and acceptance checks remain healthy.
+Render may remain available briefly as a rollback target, but it is not the active API. Prefer
+rolling the Container App back to the last healthy immutable image before changing DNS.
 
-Do not migrate authentication or introduce PostgreSQL in the same change. Those are separate
-milestones with independent rollback and data-migration plans.
+## 8. Optional Entra External ID learning path
 
-## 8. Next security milestone
+ADR-017 keeps Supabase as production authentication because it already supplies password accounts,
+session management and user-scoped PostgreSQL on the appropriate cost tier. Entra External ID is no
+longer required to launch persistent FirstRoll accounts.
+
+The code and Terraform provider switch remain staged but inactive as an architecture-learning or
+future enterprise path. Before ever selecting
+`FIRSTROLL_AUTH_PROVIDER=entra`, create an External ID customer tenant, an email/password user
+flow, separate `FirstRoll Web` and `FirstRoll API` registrations, and expose the delegated
+`access_as_user` scope. The browser and API must switch together.
+
+The backend-owned PostgreSQL quota adapter and migration are implemented. It stores provider plus
+immutable subject and never forwards browser tokens. Before enabling Entra, install that migration,
+configure the dedicated database login and set `FIRSTROLL_QUOTA_PROVIDER=postgres`. Terraform
+rejects an Entra deployment that still selects the legacy Supabase quota RPC.
+
+## 9. Next security milestone
 
 Add cost telemetry and an operator-visible kill switch before raising either daily limit. Video
 analysis remains a local feature and is presented as **Coming soon** in the public interface.
 
 ## Cost and availability notes
 
-The Render backend sleeps after an idle period and its filesystem is ephemeral. Any durable account,
-quota or study data must live in Supabase. Azure Static Web Apps is CDN-served and does not depend on
-the backend process to display the interface.
+The Container App filesystem is ephemeral. Durable account, quota or study data must live in a
+database rather than the container. Azure Static Web Apps is CDN-served and does not depend on the
+backend process to display the interface.
 
-The planned Container App defaults to one minimum replica to address cold starts. Lowering it to
+The Container App defaults to one minimum replica to address cold starts. Lowering it to
 zero reduces compute cost but reintroduces a wake-up delay. Azure Container Registry Basic and Log
 Analytics can incur charges even before application traffic arrives.

@@ -1,19 +1,15 @@
-.git
-.github
-.venv
-.firstroll
-.pytest_cache
-.ruff_cache
-__pycache__
-dist
-docs
-img
-models
-tests
-video
-*.env
-*.mp4
-*.mov
-*.mkv
-*.avi
-*.pyc
+# Build-context allow-list
+# ------------------------
+# The production Dockerfile clones and builds Douban MCP itself, installs the
+# hosted Python requirements, and copies only app/. Everything else in this
+# 5+ GiB development workspace is unnecessary and may contain local state.
+**
+
+# Files required by the production Dockerfile.
+!Dockerfile
+!requirements-hosted.txt
+
+# FastAPI application source. The parent directory must be re-included before
+# Docker can follow the recursive app/** exception.
+!app
+!app/**

@@ -39,11 +39,15 @@ def test_supabase_auth_is_bundled_and_deep_study_sends_bearer_tokens() -> None:
     integrations = (WEB / "integrations.js").read_text(encoding="utf-8")
 
     assert 'id="authDialog"' in index
-    assert 'authScript.src = "/assets/auth.js' in index
+    assert '"/assets/auth.js?v=20260820-2"' in index
     assert 'from "@supabase/supabase-js"' in auth
     assert 'flowType: "pkce"' in auth
-    assert "signInWithOtp" in auth
+    assert "signInWithPassword" in auth
+    assert "client.auth.signUp" in auth
+    assert "resetPasswordForEmail" in auth
+    assert "signInWithOtp" not in auth
     assert "emailRedirectTo" in auth
+    assert "persistSession: true" in auth
     assert "authorisationHeaders" in auth
     assert "authorisation.Authorization" in app
     assert 'headers: { "Content-Type": "application/json", ...authorisation, ...integration }' in app
@@ -56,6 +60,55 @@ def test_supabase_auth_is_bundled_and_deep_study_sends_bearer_tokens() -> None:
     assert 'cp "$source_dir/integrations.js"' in build
     assert "FIRSTROLL_SUPABASE_URL" in build
     assert "FIRSTROLL_SUPABASE_PUBLISHABLE_KEY" in build
+
+
+def test_account_saved_films_are_persistent_and_user_scoped() -> None:
+    index = (WEB / "index.html").read_text(encoding="utf-8")
+    auth = (WEB / "auth.js").read_text(encoding="utf-8")
+    app = (WEB / "app.js").read_text(encoding="utf-8")
+    migration = (
+        ROOT
+        / "supabase"
+        / "migrations"
+        / "202608200002_persistent_accounts.sql"
+    ).read_text(encoding="utf-8")
+
+    assert 'id="accountSavedFilms"' in index
+    assert 'data-save-film' in app
+    assert 'data-remove-saved-film' in app
+    assert '.from("firstroll_saved_films")' in auth
+    assert 'onConflict: "user_id,film_id"' in auth
+    assert "firstroll_profiles" in migration
+    assert "firstroll_preferences" in migration
+    assert "firstroll_saved_films" in migration
+    assert migration.count("enable row level security") == 3
+    assert migration.count("(select auth.uid()) = user_id") >= 10
+    assert "references auth.users(id) on delete cascade" in migration
+    assert "revoke all on public.firstroll_saved_films from public, anon" in migration
+    assert "grant select, insert, update, delete on public.firstroll_saved_films to authenticated" in migration
+    assert "security definer" in migration
+    assert "firstroll_on_auth_user_created" in migration
+    assert "Passwords, provider API keys, prompts, evidence and generated studies do not" in migration
+
+
+def test_entra_external_id_account_auth_is_staged_without_breaking_supabase() -> None:
+    index = (WEB / "index.html").read_text(encoding="utf-8")
+    auth = (WEB / "entra-auth.js").read_text(encoding="utf-8")
+    build = (ROOT / "tools" / "build_web.sh").read_text(encoding="utf-8")
+
+    assert 'from "@azure/msal-browser"' in auth
+    assert "PublicClientApplication" in auth
+    assert "loginRedirect" in auth
+    assert "acquireTokenSilent" in auth
+    assert "knownAuthorities" in auth
+    assert 'cacheLocation: "localStorage"' in auth
+    assert 'id="entraAuthForm"' in index
+    assert "Sign in or create an account" in index
+    assert 'authProvider === "entra"' in index
+    assert '"$source_dir/entra-auth.js"' in build
+    assert "FIRSTROLL_ENTRA_AUTHORITY" in build
+    assert "FIRSTROLL_ENTRA_SPA_CLIENT_ID" in build
+    assert "FIRSTROLL_ENTRA_API_SCOPE" in build
 
 
 def test_public_deep_study_consumes_authenticated_safe_sse_progress() -> None:
@@ -130,8 +183,8 @@ def test_archive_pullout_collapses_before_zoom_can_clip_its_copy() -> None:
     styles = (WEB / "styles.css").read_text(encoding="utf-8")
     app = (WEB / "app.js").read_text(encoding="utf-8")
 
-    assert "/assets/styles.css?v=20260815-5" in index
-    assert "/assets/app.js?v=20260818-1" in index
+    assert "/assets/styles.css?v=20260820-6" in index
+    assert "/assets/app.js?v=20260820-2" in index
     assert "/assets/closet3d.js?v=20260815-3" in index
     assert 'class="archive-pullout-shell"' in app
     assert "container-type: inline-size" in styles

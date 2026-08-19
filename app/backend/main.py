@@ -25,17 +25,18 @@ from app.backend.criticism import (
     ReviewSource,
     build_bundle,
 )
-from app.backend.auth import AuthConfigurationError, AuthenticationError, SupabaseAuthVerifier
+from app.backend.auth import AuthConfigurationError, AuthenticationError, configured_auth_verifier
 from app.backend.discovery import DiscoveryService
 from app.backend.evidence import EvidencePacket
 from app.backend.library import MAX_DOCUMENT_BYTES, SUPPORTED_SUFFIXES, LocalLibraryCatalogue
 from app.backend.library_index import LocalLibraryIndex
 from app.backend.public_study import build_public_study_retrieval
 from app.backend.quota import (
+    QuotaIdentity,
     QuotaConfigurationError,
     QuotaExceededError,
     QuotaServiceError,
-    SupabaseQuotaClient,
+    configured_quota_client,
 )
 from app.backend.research_stream import (
     ResearchProgressStream,
@@ -112,8 +113,8 @@ youtube_video_adapter = YouTubeVideoAdapter(settings_store)
 bilibili_video_adapter = BilibiliPublicVideoAdapter()
 video_store = FilmVideoStore()
 video_service = FilmVideoService(youtube_video_adapter, bilibili_video_adapter, video_store)
-auth_verifier = SupabaseAuthVerifier()
-quota_client = SupabaseQuotaClient()
+auth_verifier = configured_auth_verifier()
+quota_client = configured_quota_client()
 study_run_store = StudyRunStore()
 reception_cache: dict[str, dict] = {}
 web_directory = Path(__file__).resolve().parents[1] / "web"
@@ -123,18 +124,30 @@ web_directory = Path(__file__).resolve().parents[1] / "web"
 def web_runtime_config() -> Response:
     public_mode = public_mode_enabled()
     video_analysis = video_analysis_enabled()
+    auth_provider = os.getenv("FIRSTROLL_AUTH_PROVIDER", "supabase").strip().casefold()
     supabase_url = os.getenv("SUPABASE_URL", "").strip().rstrip("/")
     supabase_publishable_key = os.getenv("SUPABASE_PUBLISHABLE_KEY", "").strip()
     if not supabase_publishable_key.startswith("sb_publishable_"):
         supabase_url = ""
         supabase_publishable_key = ""
+    entra_authority = os.getenv("ENTRA_AUTHORITY", "").strip().rstrip("/")
+    entra_spa_client_id = os.getenv("ENTRA_SPA_CLIENT_ID", "").strip()
+    entra_api_scope = os.getenv("ENTRA_API_SCOPE", "").strip()
+    if not all((entra_authority, entra_spa_client_id, entra_api_scope)):
+        entra_authority = ""
+        entra_spa_client_id = ""
+        entra_api_scope = ""
     content = (
         "window.FIRSTROLL_CONFIG = Object.freeze({\n"
         '  apiBase: "",\n'
         f"  publicMode: {str(public_mode).lower()},\n"
         f"  videoAnalysisEnabled: {str(video_analysis).lower()},\n"
+        f"  authProvider: {json.dumps(auth_provider)},\n"
         f"  supabaseUrl: {json.dumps(supabase_url)},\n"
         f"  supabasePublishableKey: {json.dumps(supabase_publishable_key)},\n"
+        f"  entraAuthority: {json.dumps(entra_authority)},\n"
+        f"  entraSpaClientId: {json.dumps(entra_spa_client_id)},\n"
+        f"  entraApiScope: {json.dumps(entra_api_scope)},\n"
         "});\n"
     )
     return Response(
@@ -214,6 +227,28 @@ def authenticated_user(request: Request) -> dict[str, str | None]:
         ) from exc
 
 
+def quota_identity(user: dict[str, str | None], request: Request) -> QuotaIdentity:
+    """Build the persistence identity only after bearer-token verification."""
+
+    return QuotaIdentity(
+        provider=str(user.get("provider") or ""),
+        subject=str(user.get("id") or ""),
+        # The legacy adapter alone consumes this field. PostgreSQL deliberately
+        # receives only provider and subject.
+        legacy_authorisation=request.headers.get("Authorization"),
+    )
+
+
+def account_owner_id(user: dict[str, str | None]) -> str:
+    """Namespace transient result ownership across identity providers."""
+
+    identity = QuotaIdentity(
+        provider=str(user.get("provider") or ""),
+        subject=str(user.get("id") or ""),
+    ).validated()
+    return f"{identity.provider}:{identity.subject}"
+
+
 def hosted_deep_study_enabled() -> bool:
     return bool(
         hosted_deep_study_boundary_enabled()
@@ -222,11 +257,13 @@ def hosted_deep_study_enabled() -> bool:
 
 
 def hosted_deep_study_boundary_enabled() -> bool:
+    auth_provider = os.getenv("FIRSTROLL_AUTH_PROVIDER", "supabase").strip().casefold()
     return bool(
         public_mode_enabled()
         and environment_flag("FIRSTROLL_DEEP_STUDY_ENABLED")
         and auth_verifier.configured
         and quota_client.configured
+        and (auth_provider != "entra" or quota_client.backend_owned)
     )
 
 
@@ -580,7 +617,7 @@ def account_integrations(request: Request) -> dict:
         raise HTTPException(status_code=404, detail="Hosted account integrations are not enabled.")
     user = authenticated_user(request)
     try:
-        quota = quota_client.status(request.headers.get("Authorization"))
+        quota = quota_client.status(quota_identity(user, request))
     except QuotaConfigurationError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     except QuotaServiceError as exc:
@@ -740,7 +777,7 @@ def generate_film_study(
     quota = None
     personal_deepseek_key = personal_provider_key(request, "deepseek")
     if public_mode:
-        authenticated_user(request)
+        user = authenticated_user(request)
         if not hosted_deep_study_boundary_enabled() or (
             not personal_deepseek_key and not hosted_deep_study_enabled()
         ):
@@ -758,7 +795,7 @@ def generate_film_study(
             public_mode=public_mode,
         )
         if public_mode:
-            quota = quota_client.reserve(request.headers.get("Authorization"))
+            quota = quota_client.reserve(quota_identity(user, request))
         result = {
             "film_id": film_id,
             "study": study_service.generate(
@@ -801,7 +838,7 @@ async def stream_film_study(
     """Run Deep Study while streaming only allow-listed, public progress events."""
 
     user = authenticated_user(request)
-    owner_id = str(user["id"])
+    owner_id = account_owner_id(user)
     public_mode = public_mode_enabled()
     personal_deepseek_key = personal_provider_key(request, "deepseek")
     if public_mode and (
@@ -845,7 +882,7 @@ async def stream_film_study(
             if public_mode:
                 quota = await run_in_threadpool(
                     quota_client.reserve,
-                    request.headers.get("Authorization"),
+                    quota_identity(user, request),
                 )
 
             yield progress.frame("study_drafting")
@@ -922,7 +959,7 @@ async def stream_film_study(
 def research_run_result(run_id: str, request: Request) -> JSONResponse:
     user = authenticated_user(request)
     try:
-        stored = study_run_store.read(run_id, str(user["id"]))
+        stored = study_run_store.read(run_id, account_owner_id(user))
     except KeyError as exc:
         raise HTTPException(status_code=404, detail="Unknown research run.") from exc
     if stored.status == "running":

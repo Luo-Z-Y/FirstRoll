@@ -74,6 +74,8 @@ const refs = {
   generateLlmDraftBtn: document.getElementById("generateLlmDraftBtn"),
   llmDraftWrap: document.getElementById("llmDraftWrap"),
   llmDraftText: document.getElementById("llmDraftText"),
+  accountSavedFilms: document.getElementById("accountSavedFilms"),
+  accountLibraryCount: document.getElementById("accountLibraryCount"),
   statusText: document.getElementById("statusText"),
   progressBar: document.getElementById("progressBar"),
   previewVideo: document.getElementById("previewVideo"),
@@ -135,6 +137,7 @@ function setup() {
   refs.exportScenesCsvBtn.addEventListener("click", exportScenesCsv);
   refs.exportShotsCsvBtn.addEventListener("click", exportShotsCsv);
   refs.generateLlmDraftBtn.addEventListener("click", generateLlmDraft);
+  refs.accountSavedFilms?.addEventListener("click", onSavedFilmsClick);
 
   refs.tabs.forEach((tab) => {
     tab.addEventListener("click", () => setActiveView(tab.dataset.view));
@@ -142,8 +145,15 @@ function setup() {
 
   setFeatureButtonsEnabled(false);
   loadDiscoveryStatus();
-  document.addEventListener("firstroll:auth-changed", updateDeepStudyAuthState);
+  document.addEventListener("firstroll:auth-changed", updateAccountFilmState);
+  document.addEventListener("firstroll:account-data-changed", updateAccountFilmState);
   document.addEventListener("firstroll:integration-changed", updateIntegrationDependentState);
+}
+
+function updateAccountFilmState() {
+  updateDeepStudyAuthState();
+  updateSavedFilmButton();
+  renderSavedFilms(window.FirstRollAuth?.savedFilms?.() || []);
 }
 
 function updateDeepStudyAuthState() {
@@ -152,6 +162,55 @@ function updateDeepStudyAuthState() {
   button.textContent = window.FirstRollAuth?.currentUser()
     ? "Generate study"
     : "Sign in to Deep Study";
+}
+
+function updateSavedFilmButton() {
+  const button = refs.filmDetail.querySelector("[data-save-film]");
+  const film = state.discovery.selectedFilm;
+  if (!button || !film) return;
+  const signedIn = Boolean(window.FirstRollAuth?.currentUser?.());
+  const saved = Boolean(window.FirstRollAuth?.isFilmSaved?.(film.id));
+  button.dataset.saved = String(saved);
+  button.textContent = signedIn
+    ? (saved ? "Remove from saved films" : "Save to account")
+    : "Sign in to save";
+}
+
+function renderSavedFilms(films) {
+  if (!refs.accountSavedFilms || !refs.accountLibraryCount) return;
+  const items = Array.isArray(films) ? films : [];
+  refs.accountLibraryCount.textContent = `${items.length} ${items.length === 1 ? "film" : "films"}`;
+  if (!items.length) {
+    refs.accountSavedFilms.innerHTML = '<p class="module-empty">No saved films yet. Open a film dossier and choose “Save to account”.</p>';
+    return;
+  }
+  refs.accountSavedFilms.innerHTML = items.map((film) => {
+    const poster = safeHttpUrl(film.poster_url);
+    const meta = [film.release_year, film.director].filter(Boolean).join(" · ") || "Film details unavailable";
+    return `<article class="saved-film">
+      ${poster
+        ? `<img src="${escapeHtml(poster)}" alt="" loading="lazy" referrerpolicy="no-referrer" />`
+        : `<span class="saved-film-poster" aria-hidden="true">FR</span>`}
+      <div>
+        <strong>${escapeHtml(film.title || "Untitled")}</strong>
+        <small>${escapeHtml(meta)}</small>
+      </div>
+      <button type="button" data-remove-saved-film="${escapeHtml(film.film_id)}" aria-label="Remove ${escapeHtml(film.title || "film")} from saved films">×</button>
+    </article>`;
+  }).join("");
+}
+
+async function onSavedFilmsClick(event) {
+  const button = event.target.closest("[data-remove-saved-film]");
+  if (!button) return;
+  button.disabled = true;
+  try {
+    await window.FirstRollAuth?.removeSavedFilm?.(button.dataset.removeSavedFilm);
+  } catch (error) {
+    refs.accountSavedFilms.innerHTML = `<p class="study-error">Saved film could not be removed: ${escapeHtml(error?.message || "Unknown error")}</p>`;
+  } finally {
+    button.disabled = false;
+  }
 }
 
 function updateIntegrationDependentState() {
@@ -920,6 +979,7 @@ function renderFilmDetail(film) {
           ${runtimeConfig.videoAnalysisEnabled
             ? '<button class="detail-action primary" type="button" data-analyse-film>Analyse a clip</button>'
             : '<button class="detail-action primary" type="button" disabled>Video analysis · coming soon</button>'}
+          ${runtimeConfig.publicMode ? '<button class="detail-action" type="button" data-save-film>Save to account</button>' : ""}
           ${sourceUrl ? `<a class="detail-action" href="${escapeHtml(sourceUrl)}" target="_blank" rel="noopener noreferrer">View source ↗</a>` : ""}
         </div>
         ${filmReceptionMarkup(film.awards || [])}
@@ -971,6 +1031,7 @@ function renderFilmDetail(film) {
     </section>
     ${reviews.length ? `<div class="reviews-section"><h3>Perspectives</h3><div class="review-grid">${reviews.map(reviewCard).join("")}</div></div>` : ""}`;
   updateDeepStudyAuthState();
+  updateSavedFilmButton();
 }
 
 function videoProviderStatusMarkup(providers = {}) {
@@ -1093,6 +1154,11 @@ async function onFilmDetailClick(event) {
     refs.videoFile.focus();
     return;
   }
+  const saveButton = event.target.closest("[data-save-film]");
+  if (saveButton) {
+    await toggleSavedFilm(saveButton);
+    return;
+  }
   const studyButton = event.target.closest("[data-generate-study]");
   if (studyButton) {
     await generateDeepStudy(studyButton);
@@ -1124,6 +1190,28 @@ async function onFilmDetailClick(event) {
   const structureButton = event.target.closest("[data-structure-criticism]");
   if (structureButton) {
     await structureProviderCriticism(structureButton.dataset.structureCriticism, structureButton);
+  }
+}
+
+async function toggleSavedFilm(button) {
+  const film = state.discovery.selectedFilm;
+  if (!film) return;
+  if (!window.FirstRollAuth?.currentUser?.()) {
+    window.FirstRollAuth?.open?.("sign-in");
+    return;
+  }
+  button.disabled = true;
+  try {
+    if (window.FirstRollAuth.isFilmSaved(film.id)) {
+      await window.FirstRollAuth.removeSavedFilm(film.id);
+    } else {
+      await window.FirstRollAuth.saveFilm(film);
+    }
+    updateSavedFilmButton();
+  } catch (error) {
+    button.textContent = error?.message || "Could not update saved films";
+  } finally {
+    button.disabled = false;
   }
 }
 

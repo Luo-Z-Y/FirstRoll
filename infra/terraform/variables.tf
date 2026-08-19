@@ -1,3 +1,7 @@
+# -----------------------------------------------------------------------------
+# Shared Azure placement
+# -----------------------------------------------------------------------------
+
 variable "resource_group_name" {
   description = "Existing Azure resource group that contains the FirstRoll production resources."
   type        = string
@@ -10,6 +14,48 @@ variable "location" {
   default     = "Southeast Asia"
 }
 
+# -----------------------------------------------------------------------------
+# Existing frontend configuration
+# -----------------------------------------------------------------------------
+
+variable "static_web_app_name" {
+  description = "Name of the existing Azure Static Web App that Terraform will import."
+  type        = string
+  default     = "firstroll-web"
+}
+
+variable "static_web_app_location" {
+  description = "Immutable API location of the existing Static Web App. Azure Portal labels it Global, but Azure Resource Manager reports centralus."
+  type        = string
+  default     = "centralus"
+
+  validation {
+    condition     = var.static_web_app_location == "centralus"
+    error_message = "The imported firstroll-web resource reports its immutable API location as centralus; changing it would replace the live site."
+  }
+}
+
+variable "static_web_app_sku" {
+  description = "Hosting plan used by the existing Static Web App. FirstRoll should normally use Free."
+  type        = string
+  default     = "Free"
+
+  validation {
+    condition     = contains(["Free", "Standard"], var.static_web_app_sku)
+    error_message = "static_web_app_sku must be either Free or Standard."
+  }
+}
+
+variable "frontend_domain" {
+  description = "Existing apex domain associated with the Azure Static Web App."
+  type        = string
+  default     = "firstroll.app"
+}
+
+# -----------------------------------------------------------------------------
+# Container Apps names and image selection
+# -----------------------------------------------------------------------------
+
 variable "environment_name" {
   description = "Azure Container Apps managed environment name."
   type        = string
@@ -20,6 +66,17 @@ variable "container_app_name" {
   description = "Azure Container App name for the public FastAPI service."
   type        = string
   default     = "firstroll-api"
+}
+
+variable "api_domain" {
+  description = "Custom HTTPS hostname bound to the public FastAPI Container App."
+  type        = string
+  default     = "api.firstroll.app"
+
+  validation {
+    condition     = can(regex("^[a-z0-9.-]+$", var.api_domain)) && strcontains(var.api_domain, ".")
+    error_message = "api_domain must be a lower-case fully qualified domain name."
+  }
 }
 
 variable "image_repository" {
@@ -44,6 +101,10 @@ variable "deploy_container_app" {
   type        = bool
   default     = false
 }
+
+# -----------------------------------------------------------------------------
+# API scaling and browser access
+# -----------------------------------------------------------------------------
 
 variable "minimum_replicas" {
   description = "Minimum warm replicas. Use 1 to avoid cold starts or 0 to minimise compute cost."
@@ -80,6 +141,10 @@ variable "allowed_origins" {
   }
 }
 
+# -----------------------------------------------------------------------------
+# Runtime integration and feature configuration
+# -----------------------------------------------------------------------------
+
 variable "supabase_url" {
   description = "Supabase project URL used for bearer-token verification."
   type        = string
@@ -91,6 +156,65 @@ variable "supabase_publishable_key" {
   type        = string
   sensitive   = true
   default     = ""
+}
+
+variable "quota_provider" {
+  description = "Deep Study quota persistence boundary: legacy Supabase RPC or backend-owned PostgreSQL."
+  type        = string
+  default     = "supabase"
+
+  validation {
+    condition     = contains(["supabase", "postgres"], var.quota_provider)
+    error_message = "quota_provider must be either supabase or postgres."
+  }
+}
+
+variable "database_url" {
+  description = "Backend-only PostgreSQL URL used when quota_provider is postgres. This sensitive value is stored in encrypted remote Terraform state and as a Container Apps secret."
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "auth_provider" {
+  description = "Single identity provider trusted by FastAPI during migration: supabase or entra."
+  type        = string
+  default     = "supabase"
+
+  validation {
+    condition     = contains(["supabase", "entra"], var.auth_provider)
+    error_message = "auth_provider must be either supabase or entra."
+  }
+}
+
+variable "entra_authority" {
+  description = "External ID authority, for example https://TENANT.ciamlogin.com/TENANT_ID."
+  type        = string
+  default     = ""
+}
+
+variable "entra_api_client_id" {
+  description = "Application client ID of the FirstRoll API registration in the external tenant."
+  type        = string
+  default     = ""
+}
+
+variable "entra_spa_client_id" {
+  description = "Application client ID of the FirstRoll browser SPA registration."
+  type        = string
+  default     = ""
+}
+
+variable "entra_api_scope" {
+  description = "Complete delegated API scope requested by MSAL, normally api://API_CLIENT_ID/access_as_user."
+  type        = string
+  default     = ""
+}
+
+variable "entra_required_scope" {
+  description = "Scope claim FastAPI requires after validating an Entra access token."
+  type        = string
+  default     = "access_as_user"
 }
 
 variable "deep_study_enabled" {

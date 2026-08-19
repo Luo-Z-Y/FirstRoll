@@ -1,9 +1,18 @@
 resource_group_name = "firstroll-production"
 location            = "Southeast Asia"
 
+# Existing frontend created manually in the Azure portal. The portal displays
+# its service location as Global, but Azure Resource Manager—the API Terraform
+# reads—reports the immutable resource location as centralus. Do not change it.
+static_web_app_name     = "firstroll-web"
+static_web_app_location = "centralus"
+static_web_app_sku      = "Free"
+frontend_domain        = "firstroll.app"
+
 # The first apply creates only the registry, logs, identity and Container Apps environment.
 deploy_container_app = false
 image_tag             = "bootstrap"
+api_domain            = "api.firstroll.app"
 
 # One warm replica avoids the cold start. Set this to 0 only when minimising cost matters more.
 minimum_replicas = 1
@@ -16,6 +25,22 @@ allowed_origins = [
 # Required only when deploy_container_app becomes true.
 supabase_url             = "https://YOUR_PROJECT.supabase.co"
 supabase_publishable_key = "sb_publishable_REPLACE_ME"
+
+# First move Supabase-authenticated accounts to the generic PostgreSQL quota
+# store. Supply database_url through TF_VAR_database_url rather than committing
+# it. The old Supabase RPC remains available only as a rollback path.
+quota_provider = "supabase"
+database_url   = ""
+
+# Keep Supabase during migration. Switch to entra only after the external
+# tenant, SPA registration, API registration, user flow and PostgreSQL quota
+# store all exist. Entra cannot be paired with the legacy Supabase quota RPC.
+auth_provider        = "supabase"
+entra_authority      = ""
+entra_api_client_id  = ""
+entra_spa_client_id  = ""
+entra_api_scope      = ""
+entra_required_scope = "access_as_user"
 
 # Keep paid study disabled until its Azure secret has been configured and tested.
 deep_study_enabled = false

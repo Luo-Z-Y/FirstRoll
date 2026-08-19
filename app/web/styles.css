@@ -293,12 +293,24 @@ html[data-theme="dark"] .brand-mark { filter: invert(1); }
 .auth-dialog::backdrop { background: rgba(8, 8, 6, 0.72); backdrop-filter: blur(6px); }
 .auth-dialog h2 { margin: 7px 0 10px; font: 400 2.4rem "Bebas Neue", sans-serif; }
 .auth-dialog > p:not(.eyebrow, .auth-message) { color: var(--muted); line-height: 1.55; }
+.auth-provider-copy > p { margin: 0; color: var(--muted); line-height: 1.55; }
 .auth-dialog form { display: grid; min-width: 0; gap: 10px; margin-top: 24px; }
+.auth-field { display: grid; gap: 7px; }
+.auth-field[hidden] { display: none; }
 .auth-dialog label { font: 500 0.68rem "IBM Plex Mono", monospace; text-transform: uppercase; }
 .auth-dialog input { width: 100%; min-width: 0; border: 1px solid var(--line); border-radius: 10px; background: transparent; color: inherit; padding: 13px; font: inherit; }
 .auth-dialog form button { width: 100%; min-width: 0; border: 0; border-radius: 10px; background: var(--accent); color: #fff; padding: 13px; font-weight: 700; cursor: pointer; }
+.auth-mode-switch { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-top: 20px; padding: 4px; border: 1px solid var(--line); border-radius: 12px; }
+.auth-mode-switch button { border: 0; border-radius: 8px; background: transparent; color: var(--muted); padding: 9px; font: 700 0.72rem "DM Sans", sans-serif; cursor: pointer; }
+.auth-mode-switch button.is-active { background: var(--inverse-bg); color: var(--inverse-text); }
+.auth-dialog form button.auth-reset { border: 0; background: transparent; color: var(--muted); padding: 3px 8px; font-weight: 600; }
+.auth-dialog form button.auth-reset:hover { color: var(--ink); }
 .auth-close { position: absolute; top: 14px; right: 16px; border: 0; background: none; color: inherit; font-size: 1.4rem; cursor: pointer; }
 .auth-message { min-height: 1.5em; margin: 14px 0 0; color: var(--accent); font-size: 0.75rem; }
+.auth-provider-entra { display: none; }
+body[data-auth-provider="entra"] .auth-provider-supabase { display: none; }
+body[data-auth-provider="entra"] .auth-provider-entra { display: block; }
+body[data-auth-provider="entra"] form.auth-provider-entra { display: grid; }
 
 .integrations-view { padding: clamp(52px, 8vw, 104px) 0 90px; }
 .integrations-hero { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(260px, 0.65fr); align-items: end; gap: 48px; margin-bottom: 38px; padding-bottom: 34px; border-bottom: 1px solid var(--line); }
@@ -319,6 +331,20 @@ html[data-theme="dark"] .brand-mark { filter: invert(1); }
 .integration-account span { color: var(--muted); font: 0.65rem "IBM Plex Mono", monospace; }
 .integration-account-actions { display: flex; gap: 8px; }
 .integration-account-actions button:first-child { background: transparent; color: var(--ink); }
+.account-library { display: grid; gap: 18px; padding: 28px; }
+.account-library > header { display: flex; align-items: end; justify-content: space-between; gap: 24px; padding-bottom: 18px; border-bottom: 1px solid var(--line); }
+.account-library h2 { margin: 8px 0 0; font: 400 2.9rem/0.9 "Bebas Neue", sans-serif; text-transform: uppercase; }
+.account-library > header > span { color: var(--muted); font: 0.65rem "IBM Plex Mono", monospace; }
+.account-library > p { max-width: 760px; margin: 0; color: var(--muted); line-height: 1.55; }
+.account-saved-films { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 10px; }
+.saved-film { min-width: 0; display: grid; grid-template-columns: 54px minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 10px; border: 1px solid var(--line); background: var(--control-fill); }
+.saved-film img, .saved-film-poster { width: 54px; aspect-ratio: 2 / 3; object-fit: cover; background: var(--night); }
+.saved-film-poster { display: grid; place-items: center; color: var(--cream); font: 0.85rem "Bebas Neue", sans-serif; }
+.saved-film div { min-width: 0; display: grid; gap: 4px; }
+.saved-film strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.saved-film small { color: var(--muted); font: 0.58rem/1.35 "IBM Plex Mono", monospace; }
+.saved-film button { width: 34px; height: 34px; border: 1px solid var(--line); border-radius: 50%; background: transparent; color: var(--ink); cursor: pointer; }
+.saved-film button:hover { border-color: var(--red); color: var(--red); }
 .integration-quota { display: grid; grid-template-columns: minmax(190px, 0.45fr) minmax(0, 1fr); align-items: end; gap: 32px; padding: 28px; background: var(--night); color: var(--cream); }
 .integration-quota h2 { margin: 8px 0 0; font: 400 2.9rem/0.9 "Bebas Neue", sans-serif; text-transform: uppercase; }
 .integration-quota > div:last-child { display: grid; gap: 8px; }
@@ -1869,6 +1895,9 @@ html[data-theme="dark"] .critical-provider-actions button.is-active.is-loaded::a
   .integration-account { align-items: flex-start; flex-direction: column; }
   .integration-account-actions { width: 100%; }
   .integration-account-actions button { flex: 1; }
+  .account-library { padding: 21px; }
+  .account-library > header { align-items: start; }
+  .account-saved-films { grid-template-columns: 1fr; }
   .integration-quota { grid-template-columns: 1fr; align-items: start; gap: 18px; }
   .integration-card { min-height: 0; padding: 21px; }
   .integration-card > header { align-items: flex-start; flex-direction: column-reverse; }

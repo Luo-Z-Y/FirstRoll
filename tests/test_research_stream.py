@@ -8,7 +8,7 @@ from fastapi.testclient import TestClient
 from app.backend import main
 from app.backend.auth import SupabaseAuthVerifier
 from app.backend.evidence import EvidencePacket
-from app.backend.quota import DeepStudyQuota
+from app.backend.quota import DeepStudyQuota, QuotaIdentity
 from app.backend.research_stream import (
     PUBLIC_PROGRESS_KINDS,
     ResearchProgressStream,
@@ -78,8 +78,8 @@ def configured_client(monkeypatch, *, fail_generation: bool = False) -> tuple[Te
             }
 
     class FakeQuotaClient:
-        def reserve(self, authorisation):
-            captured["authorisation"] = authorisation
+        def reserve(self, identity: QuotaIdentity):
+            captured["quota_identity"] = identity
             return DeepStudyQuota(
                 allowed=True,
                 reason="available",

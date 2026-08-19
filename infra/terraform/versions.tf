@@ -1,6 +1,11 @@
 terraform {
+  # Keep Terraform within the tested major version. A future 2.x release may
+  # contain breaking language or state-format changes.
   required_version = ">= 1.8.0, < 2.0.0"
 
+  # Providers are plugins that translate Terraform resources into calls to a
+  # particular platform. AzureRM manages Azure; Random creates the stable ACR
+  # name suffix stored in Terraform state.
   required_providers {
     azurerm = {
       source  = "hashicorp/azurerm"
@@ -20,5 +25,11 @@ terraform {
 }
 
 provider "azurerm" {
+  # `features {}` activates the Azure provider with its standard behaviour.
   features {}
+
+  # The NUS subscription restricts some Azure services. Register only the
+  # providers FirstRoll actually uses instead of asking AzureRM to register a
+  # broad catalogue of unrelated services during every first plan.
+  resource_provider_registrations = "none"
 }

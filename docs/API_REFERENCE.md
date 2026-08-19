@@ -1,12 +1,12 @@
 # FirstRoll API Reference
 
 **API version:** `0.1.0`  
-**Last reconciled:** 19 August 2026
+**Last reconciled:** 20 August 2026
 
 FirstRoll uses one FastAPI application in two modes. The local edition serves the web interface and
-API from `http://127.0.0.1:8000`. The hosted public beta serves the Azure frontend and Render API from separate
-origins configured in the Render dashboard. This document uses relative paths so it remains correct
-when those deployment URLs change.
+API from `http://127.0.0.1:8000`. The hosted public beta serves the Azure frontend at
+`https://firstroll.app` and the Azure Container Apps API at `https://api.firstroll.app`. This
+document uses relative paths so it remains correct when those deployment URLs change.
 
 FastAPI also exposes generated OpenAPI documentation at `/docs` and the machine-readable schema at
 `/openapi.json` unless deployment configuration disables them in future.
@@ -17,19 +17,21 @@ FastAPI also exposes generated OpenAPI documentation at `/docs` and the machine-
 |---|---|
 | Public | No FirstRoll account required |
 | Local only | Available only when `FIRSTROLL_PUBLIC_MODE` is false and the client is loopback |
-| Hosted bearer | Requires `Authorization: Bearer <Supabase access token>` |
+| Hosted bearer | Requires `Authorization: Bearer <access token>` from the configured identity provider |
 | Conditional bearer | Public operation, but a personal request-scoped provider key requires a valid bearer token in hosted mode |
 | Feature gated | Availability depends on explicit backend configuration |
 
-Authentication is not inferred from an email or browser field. FastAPI sends the bearer token to
-Supabase Auth, requires a valid UUID and the `authenticated` role, and returns HTTP 401 with
-`WWW-Authenticate: Bearer` when the session is missing or rejected.
+Authentication is not inferred from an email or browser field. Production currently validates
+Supabase access tokens, UUIDs and the `authenticated` role. A staged Entra External ID verifier
+instead validates the configured issuer, API audience, signature, expiry and `access_as_user`
+scope. Exactly one provider is selected by configuration. FastAPI returns HTTP 401 with
+`WWW-Authenticate: Bearer` when a session is missing or rejected.
 
 ## Header Dictionary
 
 | Header | Direction | Required | Meaning |
 |---|---|---:|---|
-| `Authorization: Bearer …` | Request | Hosted account, study and run endpoints | Supabase user access token; maximum accepted length 16,384 characters |
+| `Authorization: Bearer …` | Request | Hosted account, study and run endpoints | Access token from the configured provider; maximum accepted length 16,384 characters |
 | `Content-Type: application/json` | Request | JSON writes | Request body encoding |
 | `Content-Type: multipart/form-data` | Request | Library upload and clip analysis | Browser-generated multipart boundary required |
 | `X-FirstRoll-DeepSeek-Key` | Request | Optional | Personal DeepSeek key for one authenticated request; 16–512 characters, `[A-Za-z0-9._-]` only |
@@ -61,7 +63,7 @@ FastAPI errors use:
 | 429 | Account or public-demo Deep Study allowance exhausted |
 | 500 | Local index, filesystem or analysis failure |
 | 501 | Known connector exists but its test operation is not implemented |
-| 502 | Upstream provider, quota RPC or model returned no trustworthy result |
+| 502 | Upstream provider, quota store or model returned no trustworthy result |
 | 503 | Required hosted configuration absent, feature disabled or hosted clip analysis unavailable |
 
 Provider endpoints fail independently. A 502 from one criticism source does not invalidate the film

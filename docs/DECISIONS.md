@@ -1,7 +1,7 @@
 # FirstRoll Architecture Decision Register
 
 **Decision owner:** FirstRoll maintainer  
-**Last reconciled:** 19 August 2026
+**Last reconciled:** 20 August 2026
 
 This register captures the major decisions that shape the current product. It does not attempt to
 record every CSS or parsing implementation detail. A choice belongs here when changing it would
@@ -14,18 +14,21 @@ public API.
 |---|---|---|---|
 | 001 | Evolve pyCinemetrics with preserved attribution | Accepted | Faster foundation versus inherited complexity |
 | 002 | Local-first private edition plus constrained hosted beta | Accepted | Private depth versus public convenience |
-| 003 | Split static frontend and FastAPI service across Azure and Render | Accepted | Explicit boundary and fast shell versus multi-platform configuration |
+| 003 | Split static frontend and FastAPI service across Azure and Render | Superseded by ADR-015 | Explicit boundary and fast shell versus multi-platform configuration |
 | 004 | Use Wikidata identity and explicit ambiguity confirmation | Accepted | Correct identity versus one-click speed |
 | 005 | Use bounded provider adapters, not unconstrained LLM browsing | Accepted | Provenance and control versus breadth |
 | 006 | Type evidence by epistemic role | Accepted | Honest uncertainty versus simpler prose generation |
 | 007 | Keep private RAG in local SQLite FTS5 and embeddings | Accepted | Privacy and portability versus shared hosted search |
 | 008 | Use DeepSeek structured output, deterministic validation and one repair | Accepted | Reliability versus latency and model cost |
-| 009 | Use Supabase bearer verification and atomic quota RPCs without service-role keys | Accepted | Least privilege versus an extra network dependency |
+| 009 | Use Supabase bearer verification and atomic quota RPCs without service-role keys | Superseded by ADR-016 | Least privilege versus an extra network dependency |
 | 010 | Stream allow-listed SSE progress and fetch the full result separately | Accepted | Privacy and authentication versus transient run state |
 | 011 | Keep the bounded LangGraph Agent behind a production gate | Accepted | Measured benefit versus premature orchestration complexity |
 | 012 | Keep clip analysis local in the public beta | Accepted | Privacy and feasible hosting versus no hosted visual analysis yet |
 | 013 | Make secondary providers optional and independently degradable | Accepted | Resilience versus uneven evidence coverage |
 | 014 | Avoid durable study/project storage in the beta | Accepted, temporary | Smaller data-risk surface versus no history/resume |
+| 015 | Consolidate hosting on Azure and stage Entra External ID | Partially superseded by ADR-017 | Simpler cloud boundary versus customer-tenant and quota migration work |
+| 016 | Decouple quota persistence from browser identity tokens | Accepted, deployment staged | Provider portability versus a protected backend database credential |
+| 017 | Keep Supabase Auth and add RLS-owned account data | Accepted | Low-cost persistence versus an additional managed platform boundary |
 
 ## ADR-001: Evolve pyCinemetrics with preserved attribution
 
@@ -99,7 +102,7 @@ projects.
 
 ## ADR-003: Split static frontend and FastAPI service across Azure and Render
 
-**Status:** Accepted  
+**Status:** Superseded by ADR-015
 **Date:** 15 August 2026
 
 ### Context
@@ -288,7 +291,7 @@ central assertions remain blocking.
 
 ## ADR-009: Use Supabase bearer verification and atomic quota RPCs without service-role keys
 
-**Status:** Accepted  
+**Status:** Superseded by ADR-016
 **Date:** 15 August 2026
 
 ### Context
@@ -385,7 +388,7 @@ until a real adapter runs the same frozen cases and demonstrates a justified gai
 ### Context
 
 Clip analysis uses large computer-vision dependencies, user-supplied media and potentially long CPU
-or GPU work. The Render beta has an ephemeral filesystem and limited free compute.
+or GPU work. The hosted Container App has an ephemeral filesystem and deliberately bounded compute.
 
 ### Decision
 
@@ -447,6 +450,177 @@ durable; keep final streamed results in a bounded ten-minute process store.
 The product specifies project ownership, retention, deletion, export, encryption, multi-device sync
 and the legal basis for retaining user-submitted material. Any replacement must include a migration,
 RLS policy, owner checks, operational runbook and deletion tests.
+
+## ADR-015: Consolidate hosting on Azure and stage Entra External ID
+
+**Status:** Partially superseded by ADR-017; Azure hosting decision remains accepted
+**Date:** 20 August 2026
+
+### Context
+
+The frontend already ran on Azure Static Web Apps while FastAPI ran on Render. This introduced two
+deployment control planes, a backend cold start and an API address tied to a hosting provider.
+Supabase magic-link authentication also does not match the desired public email-and-password
+account experience. The current Azure login belongs to an NUS workforce tenant and cannot be used
+as the public customer directory.
+
+### Decision
+
+Run FastAPI on Azure Container Apps behind `api.firstroll.app`, retain the static frontend at
+`firstroll.app`, and manage both Azure services with Terraform. Keep Spaceship as DNS and preserve
+Render temporarily as a rollback target.
+
+Stage Microsoft Entra External ID as a second, explicitly selected authentication provider. The
+target requires a customer tenant, separate SPA and API registrations, an email/password user flow
+and the delegated `access_as_user` scope. Keep Supabase active until the customer tenant exists and
+quota persistence no longer relies on a visitor's Supabase token.
+
+### Options considered
+
+| Option | Assessment |
+|---|---|
+| Keep Azure frontend, Render API and Supabase Auth | Lowest immediate effort, but retains two cloud control planes, the old API domain and magic-link UX |
+| Move API to Azure but keep Supabase indefinitely | Improves hosting and removes cold start; does not meet the requested account experience |
+| Move hosting to Azure and stage External ID separately | Gives a stable Azure topology while preserving a safe, independently reversible identity migration |
+| Use the NUS workforce tenant | Rejected: it is not controlled as a public customer directory and current account lacks tenant administration permission |
+
+### Consequences
+
+- `firstroll.app` and `api.firstroll.app` are stable product domains independent of a Render service
+  name.
+- Azure Container Registry stores immutable API images; a managed identity pulls them without an
+  ACR password.
+- One warm Container App replica removes the former free-tier wake delay but incurs ongoing cost.
+- Entra access-token validation is implemented but inactive, so the current Supabase login keeps
+  working throughout the migration.
+- An External ID customer tenant and a replacement quota persistence boundary are mandatory before
+  activation.
+- The browser and API provider switches must be deployed together; no client secret belongs in the
+  SPA.
+
+### Revisit when
+
+Entra External ID becomes materially necessary for the product rather than merely useful as a
+learning exercise. Any future activation must rerun the authentication, persistence and quota
+acceptance suite before replacing Supabase Auth.
+
+## ADR-016: Decouple quota persistence from browser identity tokens
+
+**Status:** Accepted; deployment staged
+**Date:** 20 August 2026
+
+### Context
+
+The original quota RPC derived `auth.uid()` from a Supabase bearer token. That was least-privilege
+for the first beta, but it coupled paid-operation accounting to one identity product. An Entra
+access token cannot authorise a Supabase authenticated-only RPC, and forwarding visitor tokens into
+persistence expands the trust boundary.
+
+### Decision
+
+Introduce an identity-neutral PostgreSQL quota function and a backend-owned connection. FastAPI
+first verifies the access token, then passes only a normalised identity provider and immutable
+subject to `deep_study_quota_decision`. Keep the three-per-account and thirty-global UTC limits and
+the transaction-scoped advisory lock.
+
+Run the schema on Supabase PostgreSQL initially if that avoids a new database charge. The same
+migration can later run on Azure Database for PostgreSQL. Select persistence explicitly with
+`FIRSTROLL_QUOTA_PROVIDER`; retain the old Supabase RPC only for a bounded rollback period.
+
+### Options considered
+
+| Option | Assessment |
+|---|---|
+| Keep the visitor-token Supabase RPC | Cheapest short term, but blocks an Entra migration and couples identity to quota storage |
+| Use a Supabase service-role REST key | Identity-neutral, but grants a broad backend credential and retains a provider-specific API |
+| Use generic PostgreSQL with a restricted login | Portable and narrow at the SQL boundary; introduces a backend secret and connection management |
+| Store counters in Container Apps memory | No database cost, but loses state and breaks under restart or multiple replicas |
+
+### Consequences
+
+- Supabase and Entra identities share one quota contract without sharing identifier namespaces.
+- Quota rows use `(usage_day, identity_provider, subject)` rather than a foreign key to
+  `auth.users`.
+- The database sees no bearer token, email, prompt, film, evidence or generated study.
+- A dedicated login needs only schema usage and function execute permission; the security-definer
+  function owns table access.
+- The database URL becomes a protected backend credential. It is stored as a Container Apps secret
+  and, during this stage, in encrypted remote Terraform state; Azure Key Vault is the next
+  hardening step.
+- Daily counters need no historical account migration. The cut-over should begin at a UTC boundary
+  or accept that the first transition day can reset a small demo allowance.
+
+### Action items
+
+1. Install `database/migrations/202608200001_identity_neutral_deep_study_quotas.sql`.
+2. Create the restricted `firstroll_backend` login and store its URL securely.
+3. Switch quota storage while Supabase Auth remains active and test status, concurrency and 429s.
+4. Observe a full UTC day, then activate Entra separately.
+5. Remove the legacy RPC after its rollback window and move the database secret to Key Vault.
+
+## ADR-017: Keep Supabase Auth and add RLS-owned account data
+
+**Status:** Accepted
+**Date:** 20 August 2026
+**Decider:** FirstRoll maintainer
+
+### Context
+
+The public beta needs ordinary email-and-password accounts and durable data that follows a user
+between devices. The maintainer's personal Azure account is not eligible for the expected credit,
+and an administrable Entra External ID customer tenant would add cost and setup work without
+improving the current film-study experience. Supabase is already deployed, supports password auth
+and supplies PostgreSQL plus row-level security on its free tier.
+
+### Decision
+
+Keep Supabase Auth as the production identity provider. Replace magic-link-only login with
+`signUp()` and `signInWithPassword()`, preserve Supabase's browser session, and support password
+recovery. Store FirstRoll application data in three public PostgreSQL tables:
+
+- one profile per `auth.users` primary key;
+- one preferences row per account;
+- a user-owned saved-film collection keyed by canonical film identity.
+
+Every exposed table enables RLS and grants access only to `authenticated`. Every policy compares
+`(select auth.uid())` with `user_id`; `anon` receives no table privileges. A small, idempotent
+`auth.users` trigger creates profile and preferences rows, and the migration backfills existing
+accounts. The browser uses only the publishable key. Passwords stay inside Supabase Auth, while API
+keys, prompts, evidence and generated studies remain outside these account tables.
+
+### Options considered
+
+| Option | Complexity | Cost | Portability | Current fit |
+|---|---|---|---|---|
+| Supabase Auth + RLS account tables | Low | Free-tier friendly | Moderate | Best: already deployed and directly solves persistence |
+| Entra External ID now | High | Uncertain without credit | Azure-native | Poor until a customer tenant is justified |
+| Custom auth in FastAPI | Very high | Infrastructure dependent | High | Rejected: credentials and recovery become FirstRoll's security burden |
+
+### Trade-off analysis
+
+This retains a second managed platform alongside Azure, but avoids inventing an authentication
+system and gives the browser a well-defined data-isolation mechanism. Provider-neutral quota code
+from ADR-016 remains valuable for later database portability; it does not require an immediate
+identity migration. The staged Entra implementation remains an optional architecture exercise,
+not a production dependency.
+
+### Consequences
+
+- A user can create an account, sign in with a password, recover access and keep a durable saved
+  film list across devices.
+- Account deletion cascades application rows from the referenced `auth.users(id)` primary key.
+- A policy mistake would be a cross-account data risk, so migration tests and RLS acceptance tests
+  are release requirements.
+- Saved films are durable; studies, evidence and personal provider keys are deliberately not.
+- Supabase remains an operational dependency even though the frontend and API run on Azure.
+
+### Action items
+
+1. [x] Add the password-account browser flow.
+2. [x] Add profile, preference and saved-film tables with RLS policies.
+3. [x] Add saved-film controls to dossiers and Settings.
+4. [x] Apply `supabase/migrations/202608200002_persistent_accounts.sql` to production.
+5. [ ] Run two-account isolation, refresh-session and password-recovery acceptance tests.
 
 ## How to Add or Change a Decision
 

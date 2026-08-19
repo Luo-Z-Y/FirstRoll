@@ -20,7 +20,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/assets/styles.css?v=20260815-5" />
+  <link rel="stylesheet" href="/assets/styles.css?v=20260820-6" />
   <script type="importmap">
     {
       "imports": {
@@ -220,7 +220,7 @@
           <p class="eyebrow">FirstRoll account</p>
           <h2>Sign in to manage integrations.</h2>
           <p>The hosted Settings area is account-scoped. Local library files and server credentials remain unavailable here.</p>
-          <button id="integrationSignIn" type="button">Sign in by email</button>
+          <button id="integrationSignIn" type="button">Sign in or create an account</button>
         </section>
 
         <div id="integrationDashboard" class="integration-dashboard hidden">
@@ -235,6 +235,20 @@
             <div class="integration-account-actions">
               <button id="integrationRefresh" type="button">Refresh</button>
               <button id="integrationSignOut" type="button">Sign out</button>
+            </div>
+          </section>
+
+          <section class="account-library card" aria-labelledby="accountLibraryTitle">
+            <header>
+              <div>
+                <p class="eyebrow">Persistent account data</p>
+                <h2 id="accountLibraryTitle">Saved films</h2>
+              </div>
+              <span id="accountLibraryCount">0 films</span>
+            </header>
+            <p>Films saved here belong to this signed-in account and are available on another device after sign-in.</p>
+            <div id="accountSavedFilms" class="account-saved-films" aria-live="polite">
+              <p class="module-empty">No saved films yet. Open a film dossier and choose “Save to account”.</p>
             </div>
           </section>
 
@@ -319,15 +333,39 @@
 
   </div>
 
-  <dialog id="authDialog" class="auth-dialog" aria-labelledby="authTitle">
+  <dialog id="authDialog" class="auth-dialog" aria-label="FirstRoll account">
     <button id="authClose" class="auth-close" type="button" aria-label="Close sign-in">×</button>
     <p class="eyebrow">FirstRoll account</p>
-    <h2 id="authTitle">Sign in by email</h2>
-    <p>We’ll email you a secure one-time sign-in link.</p>
-    <form id="authForm">
-      <label for="authEmail">Email address</label>
-      <input id="authEmail" name="email" type="email" autocomplete="email" required />
-      <button id="authSubmit" type="submit">Send sign-in link</button>
+    <div class="auth-provider-copy auth-provider-supabase">
+      <h2 id="authHeading">Welcome back</h2>
+      <p id="authDescription">Sign in to use Deep Study and open your saved films on any device.</p>
+      <div class="auth-mode-switch" role="tablist" aria-label="Account action">
+        <button class="is-active" type="button" role="tab" aria-selected="true" data-auth-mode="sign-in">Sign in</button>
+        <button type="button" role="tab" aria-selected="false" data-auth-mode="sign-up">Create account</button>
+      </div>
+    </div>
+    <div class="auth-provider-copy auth-provider-entra">
+      <h2>Sign in or create an account</h2>
+      <p>Your email and password are handled on Microsoft’s secure account page.</p>
+    </div>
+    <form id="authForm" class="auth-provider-form auth-provider-supabase">
+      <div id="authNameWrap" class="auth-field" hidden>
+        <label for="authName">Display name</label>
+        <input id="authName" name="displayName" type="text" autocomplete="name" maxlength="80" />
+      </div>
+      <div id="authEmailWrap" class="auth-field">
+        <label for="authEmail">Email address</label>
+        <input id="authEmail" name="email" type="email" autocomplete="email" required />
+      </div>
+      <div class="auth-field">
+        <label id="authPasswordLabel" for="authPassword">Password</label>
+        <input id="authPassword" name="password" type="password" autocomplete="current-password" minlength="8" required />
+      </div>
+      <button id="authSubmit" type="submit">Sign in</button>
+      <button id="authReset" class="auth-reset" type="button">Forgot password?</button>
+    </form>
+    <form id="entraAuthForm" class="auth-provider-form auth-provider-entra">
+      <button id="entraAuthSubmit" type="submit">Continue to secure sign-in</button>
     </form>
     <p id="authMessage" class="auth-message" role="status" aria-live="polite"></p>
   </dialog>
@@ -336,18 +374,29 @@
   <canvas id="analysisCanvas" width="160" height="90" class="hidden-asset"></canvas>
   <script src="/assets/config.js"></script>
   <script>
-    if (
-      window.FIRSTROLL_CONFIG?.publicMode
+    const authProvider = window.FIRSTROLL_CONFIG?.authProvider || "supabase";
+    document.body.dataset.authProvider = authProvider;
+    const entraReady = (
+      authProvider === "entra"
+      && window.FIRSTROLL_CONFIG?.entraAuthority
+      && window.FIRSTROLL_CONFIG?.entraSpaClientId
+      && window.FIRSTROLL_CONFIG?.entraApiScope
+    );
+    const supabaseReady = (
+      authProvider === "supabase"
       && window.FIRSTROLL_CONFIG?.supabaseUrl
       && window.FIRSTROLL_CONFIG?.supabasePublishableKey
-    ) {
+    );
+    if (window.FIRSTROLL_CONFIG?.publicMode && (entraReady || supabaseReady)) {
       const authScript = document.createElement("script");
-      authScript.src = "/assets/auth.js?v=20260815-1";
+      authScript.src = entraReady
+        ? "/assets/entra-auth.js?v=20260820-1"
+        : "/assets/auth.js?v=20260820-2";
       document.body.append(authScript);
     }
   </script>
   <script src="/assets/integrations.js?v=20260815-2"></script>
-  <script src="/assets/app.js?v=20260818-1"></script>
+  <script src="/assets/app.js?v=20260820-2"></script>
   <script type="module" src="/assets/closet3d.js?v=20260815-3"></script>
 </body>
 </html>

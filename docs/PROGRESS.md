@@ -1,5 +1,60 @@
 # FirstRoll Project Progress
 
+### 20 August 2026 — Persistent Supabase accounts
+
+Delivered:
+
+1. Kept Supabase as the production identity provider and replaced the magic-link-only interface
+   with password sign-up, password sign-in, confirmation-aware account creation and password
+   recovery. Supabase continues to persist and refresh the browser session.
+2. Added a production migration for user profiles, preferences and saved films. Every record
+   references `auth.users(id)` with cascading deletion; all exposed tables enable RLS and limit
+   operations to `(select auth.uid()) = user_id`.
+3. Added “Save to account” to film dossiers and a persistent saved-film collection in Settings,
+   including removal and cross-device reload through the signed-in Supabase client.
+4. Recorded ADR-017: Entra remains staged for learning or a later enterprise requirement, but is
+   no longer on the public-beta critical path.
+
+Acceptance evidence:
+
+- static tests reject a regression to `signInWithOtp()` and require password sign-up/sign-in,
+  session persistence and recovery;
+- migration tests require all three RLS boundaries, Auth foreign keys, `anon` revocation and the
+  new-user trigger;
+- the production migration reports three RLS-enabled tables, ten policies, profile and preference
+  backfills for both existing Auth users, and the new-user trigger;
+- local PostgreSQL acceptance testing proves Account B sees only its own saved film, a cross-account
+  insert is blocked, and Auth deletion cascades all three user-owned record types;
+- frontend deployment, refresh-session and password-recovery browser acceptance remain.
+
+### 20 August 2026 — Azure API cut-over and account-authentication staging
+
+Delivered:
+
+1. Published FastAPI through Azure Container Apps at `https://api.firstroll.app`, verified managed
+   TLS, health, discovery and exact-origin CORS, and rebuilt the Azure Static Web Apps frontend with
+   the stable API origin.
+2. Imported the live API custom-domain association into Terraform. The production plan now reports
+   no drift and protects both frontend and API domains from accidental destruction.
+3. Staged a provider-selectable Microsoft Entra External ID implementation: MSAL in the browser,
+   strict JWT issuer/audience/signature/scope validation in FastAPI and corresponding Terraform
+   variables. Supabase remains the only active provider.
+4. Chose email-and-password customer accounts rather than email OTP. Activation is blocked until an
+   administrable External ID customer tenant exists.
+5. Added an identity-neutral PostgreSQL quota adapter and migration. FastAPI now has a provider plus
+   immutable-subject persistence contract, a dedicated backend connection path and a guarded legacy
+   Supabase rollback adapter; Entra cannot be configured with the visitor-token quota RPC.
+
+Acceptance evidence:
+
+- `https://api.firstroll.app/api/health` returns HTTP 200;
+- production discovery returns the expected canonical film for an exact title/year query;
+- the deployed frontend runtime configuration points to `https://api.firstroll.app`;
+- Terraform validates and reports `No changes` against the live Azure state;
+- provider-selection and Entra-token tests pass while the production Supabase path remains intact.
+- quota tests prove that the PostgreSQL boundary does not receive the browser bearer token and that
+  the migration retains the atomic daily advisory lock.
+
 ### 19 August 2026 — Hosted architecture and technical reference pack
 
 Delivered:

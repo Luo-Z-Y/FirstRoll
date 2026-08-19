@@ -9,9 +9,13 @@ from app.backend.auth import SupabaseAuthVerifier
 from app.backend.public_study import build_public_study_retrieval
 from app.backend.quota import (
     DeepStudyQuota,
+    PostgresQuotaClient,
+    QuotaConfigurationError,
+    QuotaIdentity,
     QuotaExceededError,
     QuotaServiceError,
     SupabaseQuotaClient,
+    configured_quota_client,
 )
 
 
@@ -39,7 +43,9 @@ def test_quota_client_reserves_through_the_authenticated_rpc() -> None:
         ),
     )
 
-    quota = client.reserve("Bearer verified-token")
+    quota = client.reserve(
+        QuotaIdentity("supabase", str(uuid4()), "Bearer verified-token")
+    )
 
     assert quota.allowed is True
     assert quota.user_remaining == 2
@@ -66,9 +72,92 @@ def test_quota_client_rejects_denial_and_malformed_decisions() -> None:
     )
 
     with pytest.raises(QuotaExceededError, match="account"):
-        denied.reserve("Bearer verified-token")
+        denied.reserve(QuotaIdentity("supabase", str(uuid4()), "Bearer verified-token"))
     with pytest.raises(QuotaServiceError, match="invalid quota"):
-        malformed.reserve("Bearer verified-token")
+        malformed.reserve(QuotaIdentity("supabase", str(uuid4()), "Bearer verified-token"))
+
+
+def test_postgres_quota_uses_verified_identity_without_forwarding_the_bearer_token() -> None:
+    calls = []
+    client = PostgresQuotaClient(
+        "postgresql://firstroll_backend:secret@database.example/firstroll?sslmode=require",
+        transport=lambda url, provider, subject, reserve: (
+            calls.append((url, provider, subject, reserve)) or quota_payload()
+        ),
+    )
+    identity = QuotaIdentity(
+        provider="entra",
+        subject="customer-object-id",
+        legacy_authorisation="Bearer must-not-cross-the-database-boundary",
+    )
+
+    quota = client.reserve(identity)
+
+    assert quota.allowed is True
+    assert calls == [
+        (
+            "postgresql://firstroll_backend:secret@database.example/firstroll?sslmode=require",
+            "entra",
+            "customer-object-id",
+            True,
+        )
+    ]
+    assert "must-not-cross" not in repr(identity)
+
+
+def test_postgres_quota_rejects_invalid_identity_and_factory_is_explicit(monkeypatch) -> None:
+    client = PostgresQuotaClient(
+        "postgresql://firstroll_backend:secret@database.example/firstroll",
+        transport=lambda *_: quota_payload(),
+    )
+
+    with pytest.raises(QuotaServiceError, match="provider is invalid"):
+        client.status(QuotaIdentity("not valid", "subject"))
+
+    monkeypatch.setenv("FIRSTROLL_QUOTA_PROVIDER", "postgres")
+    monkeypatch.setenv(
+        "FIRSTROLL_DATABASE_URL",
+        "postgresql://firstroll_backend:secret@database.example/firstroll",
+    )
+    assert isinstance(configured_quota_client(), PostgresQuotaClient)
+
+    monkeypatch.setenv("FIRSTROLL_QUOTA_PROVIDER", "unknown")
+    with pytest.raises(QuotaConfigurationError, match="FIRSTROLL_QUOTA_PROVIDER"):
+        configured_quota_client()
+
+
+def test_entra_deep_study_requires_backend_owned_quota(monkeypatch) -> None:
+    class ReadyAuth:
+        configured = True
+
+    class LegacyQuota:
+        configured = True
+        backend_owned = False
+
+    class BackendQuota:
+        configured = True
+        backend_owned = True
+
+    monkeypatch.setenv("FIRSTROLL_PUBLIC_MODE", "true")
+    monkeypatch.setenv("FIRSTROLL_DEEP_STUDY_ENABLED", "true")
+    monkeypatch.setenv("FIRSTROLL_AUTH_PROVIDER", "entra")
+    monkeypatch.setattr(main, "auth_verifier", ReadyAuth())
+    monkeypatch.setattr(main, "quota_client", LegacyQuota())
+
+    assert main.hosted_deep_study_boundary_enabled() is False
+
+    monkeypatch.setattr(main, "quota_client", BackendQuota())
+
+    assert main.hosted_deep_study_boundary_enabled() is True
+
+
+def test_transient_result_owner_is_namespaced_by_identity_provider() -> None:
+    assert main.account_owner_id(
+        {"id": "same-subject", "provider": "supabase", "email": None, "role": "authenticated"}
+    ) == "supabase:same-subject"
+    assert main.account_owner_id(
+        {"id": "same-subject", "provider": "entra", "email": None, "role": "authenticated"}
+    ) == "entra:same-subject"
 
 
 def test_public_study_framework_is_bounded_and_first_party() -> None:
@@ -103,8 +192,9 @@ def test_hosted_study_reserves_quota_and_uses_public_framework(monkeypatch) -> N
     class FakeQuotaClient:
         configured = True
 
-        def reserve(self, authorisation: str | None) -> DeepStudyQuota:
-            assert authorisation == "Bearer verified-token"
+        def reserve(self, identity: QuotaIdentity) -> DeepStudyQuota:
+            assert identity.provider == "supabase"
+            assert identity.legacy_authorisation == "Bearer verified-token"
             return quota
 
     film = {
@@ -162,7 +252,7 @@ def test_hosted_study_returns_429_when_account_quota_is_exhausted(monkeypatch) -
     class DeniedQuotaClient:
         configured = True
 
-        def reserve(self, _authorisation: str | None) -> DeepStudyQuota:
+        def reserve(self, _identity: QuotaIdentity) -> DeepStudyQuota:
             raise QuotaExceededError(denied)
 
     monkeypatch.setenv("FIRSTROLL_PUBLIC_MODE", "true")
@@ -207,8 +297,9 @@ def test_account_integrations_returns_identity_and_quota_without_consuming_it(
     class StatusQuotaClient:
         configured = True
 
-        def status(self, authorisation: str | None) -> DeepStudyQuota:
-            assert authorisation == "Bearer verified-token"
+        def status(self, identity: QuotaIdentity) -> DeepStudyQuota:
+            assert identity.provider == "supabase"
+            assert identity.legacy_authorisation == "Bearer verified-token"
             return quota
 
     class ReadyDoubanAdapter:
@@ -261,7 +352,7 @@ def test_personal_deepseek_key_is_used_for_one_authenticated_request(monkeypatch
     class PersonalQuotaClient:
         configured = True
 
-        def reserve(self, _authorisation: str | None) -> DeepStudyQuota:
+        def reserve(self, _identity: QuotaIdentity) -> DeepStudyQuota:
             return quota
 
     captured = {}
@@ -330,3 +421,21 @@ def test_quota_migration_has_atomic_and_restricted_rpc_boundaries() -> None:
         "grant execute on function public.reserve_deep_study_quota() to authenticated" in migration
     )
     assert "service_role" not in migration
+
+
+def test_identity_neutral_quota_migration_is_atomic_and_backend_only() -> None:
+    migration = (
+        Path(__file__).resolve().parents[1]
+        / "database"
+        / "migrations"
+        / "202608200001_identity_neutral_deep_study_quotas.sql"
+    ).read_text(encoding="utf-8")
+
+    assert "identity_provider varchar(64)" in migration
+    assert "subject varchar(256)" in migration
+    assert "pg_advisory_xact_lock" in migration
+    assert "security definer" in migration
+    assert "set search_path = ''" in migration
+    assert "revoke all on function" in migration
+    assert "grant execute" in migration
+    assert "auth.uid()" not in migration

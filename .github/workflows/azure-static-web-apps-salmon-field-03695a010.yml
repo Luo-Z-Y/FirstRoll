@@ -23,7 +23,9 @@ jobs:
         id: builddeploy
         uses: Azure/static-web-apps-deploy@v1
         env:
-          FIRSTROLL_API_BASE: https://firstroll.onrender.com
+          FIRSTROLL_API_BASE: https://api.firstroll.app
+          # Keep the live provider explicit until the Entra customer tenant is ready.
+          FIRSTROLL_AUTH_PROVIDER: supabase
           FIRSTROLL_SUPABASE_URL: https://obnxmfcvshbkbsgxbmgg.supabase.co
           FIRSTROLL_SUPABASE_PUBLISHABLE_KEY: sb_publishable_P6VzoeBdroR-2yeit62cbg_vvTXH47Y
         with:
