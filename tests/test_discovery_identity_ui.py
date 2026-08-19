@@ -16,5 +16,7 @@ def test_ambiguous_search_requires_explicit_film_identity_confirmation() -> None
     assert "confirmDiscoveryFilm(Number(identityChoice.dataset.confirmFilmIndex))" in app
     assert "renderFilmArchive(primary, [], [], true)" in app
     assert "loadRelatedFilms(primary, [])" in app
+    assert "function filmYearLabel(film)" in app
+    assert '`${matchedYear} release · first release ${years[0]}`' in app
     assert ".identity-choice-grid" in styles
     assert ".identity-choice:focus-visible" in styles

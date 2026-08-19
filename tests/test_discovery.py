@@ -439,3 +439,123 @@ def test_search_returns_empty_for_wrong_identity() -> None:
     result = service.search("Example Film", year=1972)
 
     assert result["results"] == []
+
+
+def test_wikipedia_search_supplements_lagging_wikidata_title_index() -> None:
+    def request(params: dict[str, Any]) -> dict[str, Any]:
+        if params["action"] == "wbsearchentities":
+            return {"search": [{"id": "Q2002001"}]}
+        ids = str(params.get("ids") or "").split("|")
+        if params.get("props") == "labels":
+            labels = {
+                "QOLD_DIRECTOR": "Brian De Palma",
+                "QNEW_DIRECTOR": "Curry Barker",
+            }
+            return {
+                "entities": {
+                    qid: {"id": qid, "labels": {"en": {"value": labels[qid]}}}
+                    for qid in ids
+                    if qid in labels
+                }
+            }
+        definitions = {
+            "Q2002001": ("1976 film by Brian De Palma", "QOLD_DIRECTOR", [1976]),
+            "Q136163067": ("2025 film directed by Curry Barker", "QNEW_DIRECTOR", [2025, 2026]),
+        }
+        return {
+            "entities": {
+                qid: {
+                    "id": qid,
+                    "labels": {"en": {"value": "Obsession"}},
+                    "descriptions": {"en": {"value": definitions[qid][0]}},
+                    "claims": {
+                        "P57": [claim_entity(definitions[qid][1])],
+                        "P577": [
+                            claim_time(f"+{release_year}-05-15T00:00:00Z")
+                            for release_year in definitions[qid][2]
+                        ],
+                    },
+                    "sitelinks": {},
+                }
+                for qid in ids
+                if qid in definitions
+            }
+        }
+
+    wikipedia_result = {
+        "query": {
+            "pages": [
+                {
+                    "index": 1,
+                    "title": "Obsession (2025 film)",
+                    "pageprops": {"wikibase_item": "Q136163067"},
+                }
+            ]
+        }
+    }
+    service = DiscoveryService(
+        request_json=request,
+        wikipedia_search=lambda _: wikipedia_result,
+    )
+
+    result = service.search("Obsession")
+
+    assert [film["provider_id"] for film in result["results"]] == [
+        "Q2002001",
+        "Q136163067",
+    ]
+    assert result["results"][1]["release_years"] == [2025, 2026]
+
+
+def test_year_filter_accepts_a_later_recorded_release_year() -> None:
+    def request(params: dict[str, Any]) -> dict[str, Any]:
+        if params["action"] == "wbsearchentities":
+            return {"search": []}
+        ids = str(params.get("ids") or "").split("|")
+        if params.get("props") == "labels":
+            return {
+                "entities": {
+                    "QNEW_DIRECTOR": {
+                        "id": "QNEW_DIRECTOR",
+                        "labels": {"en": {"value": "Curry Barker"}},
+                    }
+                }
+            }
+        return {
+            "entities": {
+                "Q136163067": {
+                    "id": "Q136163067",
+                    "labels": {"en": {"value": "Obsession"}},
+                    "descriptions": {
+                        "en": {"value": "2025 film directed by Curry Barker"}
+                    },
+                    "claims": {
+                        "P57": [claim_entity("QNEW_DIRECTOR")],
+                        "P577": [
+                            claim_time("+2025-09-05T00:00:00Z"),
+                            claim_time("+2026-05-15T00:00:00Z"),
+                        ],
+                    },
+                    "sitelinks": {},
+                }
+            }
+            if "Q136163067" in ids
+            else {},
+        }
+
+    service = DiscoveryService(
+        request_json=request,
+        wikipedia_search=lambda _: {
+            "query": {
+                "pages": [
+                    {"index": 1, "pageprops": {"wikibase_item": "Q136163067"}}
+                ]
+            }
+        },
+    )
+
+    result = service.search("Obsession", year=2026)
+
+    assert result["result_count"] == 1
+    assert result["results"][0]["matched_year"] == 2026
+    assert result["results"][0]["release_years"] == [2025, 2026]

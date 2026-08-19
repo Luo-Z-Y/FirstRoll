@@ -264,12 +264,16 @@ class DiscoveryService:
     def __init__(
         self,
         request_json: JsonRequest | None = None,
+        wikipedia_search: JsonRequest | None = None,
         wikipedia_summary: WikipediaRequest | None = None,
         wikipedia_infobox: WikipediaRequest | None = None,
         sparql_json: SparqlRequest | None = None,
         poster_request: PosterRequest | None = None,
     ) -> None:
         self._request_json = request_json or self._wikidata_request
+        self._wikipedia_search = wikipedia_search or (
+            self._wikipedia_search_request if request_json is None else None
+        )
         self._wikipedia_summary = wikipedia_summary or (
             self._wikipedia_request if request_json is None else None
         )
@@ -585,6 +589,9 @@ LIMIT {query_limit}
         )
         ids = [item.get("id") for item in payload.get("search", [])]
         qids = [qid for qid in ids if self._valid_qid(qid)]
+        for qid in self._wikipedia_search_qids(query, year, director):
+            if qid not in qids:
+                qids.append(qid)
         if not qids:
             return []
 
@@ -596,8 +603,9 @@ LIMIT {query_limit}
                 continue
             film = self._normalise_entity(entity)
             film_year = film.get("year")
+            release_years = film.get("release_years") or ([film_year] if film_year else [])
             directors = film.get("directors", [])
-            if year is not None and film_year != year:
+            if year is not None and year not in release_years:
                 continue
             if director and not any(
                 self._normalise_identity(director) in self._normalise_identity(name)
@@ -611,6 +619,9 @@ LIMIT {query_limit}
             ).ratio()
             if year is not None and film_year == year:
                 score += 0.12
+            elif year is not None and year in release_years:
+                score += 0.1
+                film["matched_year"] = year
             if director:
                 score += 0.16
             film["match_score"] = round(min(1.0, score), 3)
@@ -620,6 +631,47 @@ LIMIT {query_limit}
         for index, film in enumerate(results[:8]):
             self._enrich_poster(film, external_fallback=index == 0)
         return [self._public_live_summary(film) for film in results]
+
+    def _wikipedia_search_qids(
+        self,
+        query: str,
+        year: int | None,
+        director: str | None,
+    ) -> list[str]:
+        """Supplement Wikidata's lagging title index with Wikipedia film identities."""
+        if not self._wikipedia_search:
+            return []
+        search = " ".join(
+            part for part in (query, str(year) if year else None, director, "film") if part
+        )
+        try:
+            payload = self._wikipedia_search(
+                {
+                    "action": "query",
+                    "generator": "search",
+                    "gsrsearch": search,
+                    "gsrnamespace": 0,
+                    "gsrlimit": 12,
+                    "prop": "pageprops",
+                    "ppprop": "wikibase_item",
+                    "format": "json",
+                    "formatversion": 2,
+                }
+            )
+        except DiscoveryProviderError:
+            return []
+        pages = payload.get("query", {}).get("pages", [])
+        if isinstance(pages, dict):
+            pages = list(pages.values())
+        if not isinstance(pages, list):
+            return []
+        pages.sort(key=lambda page: page.get("index", 10_000) if isinstance(page, dict) else 10_000)
+        qids: list[str] = []
+        for page in pages:
+            qid = page.get("pageprops", {}).get("wikibase_item") if isinstance(page, dict) else None
+            if self._valid_qid(qid) and qid not in qids:
+                qids.append(qid)
+        return qids
 
     def _get_entities(self, qids: list[str]) -> dict[str, dict[str, Any]]:
         if not qids:
@@ -710,7 +762,10 @@ LIMIT {query_limit}
         title = self._best_text(entity.get("labels", {})) or qid
         original_title = self._original_title(entity.get("labels", {}), title)
         alternative_titles = self._alternative_titles(entity.get("labels", {}), title)
-        release_date = self._time_value(claims, "P577")
+        release_dates = self._time_values(claims, "P577")
+        release_date = release_dates[0] if release_dates else None
+        release_years = list(dict.fromkeys(self._year(value) for value in release_dates))
+        release_years = [value for value in release_years if value is not None]
         description = self._best_text(entity.get("descriptions", {}))
         directors = self._labelled_claims(claims, "P57", labels)
         writers = self._labelled_claims(claims, "P58", labels)
@@ -729,6 +784,7 @@ LIMIT {query_limit}
             "original_title": original_title,
             "alternative_titles": alternative_titles,
             "year": self._year(release_date),
+            "release_years": release_years,
             "release_date": release_date,
             "directors": directors,
             "overview": (
@@ -1198,6 +1254,23 @@ LIMIT {query_limit}
             raise DiscoveryProviderError("Wikidata Query Service could not be reached.") from exc
 
     @staticmethod
+    def _wikipedia_search_request(params: dict[str, Any]) -> dict[str, Any]:
+        request = Request(
+            f"{WIKIPEDIA_API}?{urlencode(params)}",
+            headers={
+                "Accept": "application/json",
+                "User-Agent": "FirstRoll/0.1 (https://github.com/Luo-Z-Y/FirstRoll)",
+            },
+        )
+        try:
+            with urlopen(request, timeout=8) as response:
+                return json.loads(response.read().decode("utf-8"))
+        except HTTPError as exc:
+            raise DiscoveryProviderError(f"Wikipedia returned HTTP {exc.code}.") from exc
+        except (URLError, TimeoutError, json.JSONDecodeError) as exc:
+            raise DiscoveryProviderError("Wikipedia could not be reached.") from exc
+
+    @staticmethod
     def _wikipedia_request(title: str) -> dict[str, Any]:
         url = f"{WIKIPEDIA_SUMMARY_URL}/{quote(title.replace(' ', '_'), safe='')}"
         request = Request(
@@ -1380,12 +1453,20 @@ LIMIT {query_limit}
 
     @staticmethod
     def _time_value(claims: dict[str, Any], property_id: str) -> str | None:
+        values = DiscoveryService._time_values(claims, property_id)
+        return values[0] if values else None
+
+    @staticmethod
+    def _time_values(claims: dict[str, Any], property_id: str) -> list[str]:
+        values: list[str] = []
         for claim in claims.get(property_id, []):
             value = claim.get("mainsnak", {}).get("datavalue", {}).get("value")
             raw = value.get("time") if isinstance(value, dict) else None
             if isinstance(raw, str) and len(raw) >= 11:
-                return raw[1:11]
-        return None
+                date_value = raw[1:11]
+                if date_value not in values:
+                    values.append(date_value)
+        return values
 
     @staticmethod
     def _string_value(claims: dict[str, Any], property_id: str) -> str | None:
@@ -1429,6 +1510,8 @@ LIMIT {query_limit}
                 "original_title",
                 "alternative_titles",
                 "year",
+                "release_years",
+                "matched_year",
                 "runtime_minutes",
                 "directors",
                 "overview",

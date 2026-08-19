@@ -471,7 +471,7 @@ function filmIdentityChoicesMarkup(films) {
             ? film.original_title
             : "";
           const directors = (film.directors || []).join(", ") || "Director not supplied";
-          const year = film.year || "Year unknown";
+          const year = filmYearLabel(film);
           const accessibleIdentity = [title, year, directors].filter(Boolean).join(", ");
           return `
             <button
@@ -505,7 +505,7 @@ function confirmDiscoveryFilm(index) {
   refs.resultsTitle.textContent = "Pulled from the shelf";
   refs.resultsMeta.textContent = [
     primary.title,
-    primary.year,
+    filmYearLabel(primary),
     (primary.directors || []).join(", "),
   ].filter(Boolean).join(" / ");
   renderFilmArchive(primary, [], [], true);
@@ -628,7 +628,7 @@ function renderFilmArchive(
           <p>${escapeHtml((primary.directors || []).join(", ") || "Director not supplied")}</p>
           <h3>${escapeHtml(primary.title || "Untitled")}</h3>
           <div>
-            <span>${escapeHtml(primary.year || "Year unknown")}${duration ? ` · ${escapeHtml(duration)}` : ""}</span>
+            <span>${escapeHtml(filmYearLabel(primary))}${duration ? ` · ${escapeHtml(duration)}` : ""}</span>
             ${primary.original_title && primary.original_title !== primary.title ? `<span>${escapeHtml(primary.original_title)}</span>` : ""}
           </div>
           <button type="button" data-film-id="${escapeHtml(primary.id)}">
@@ -660,6 +660,20 @@ function formatFilmDuration(minutes) {
   const remainder = Math.round(total % 60);
   if (!hours) return `${remainder} min`;
   return remainder ? `${hours}h ${remainder}m` : `${hours}h`;
+}
+
+function filmYearLabel(film) {
+  const years = [...new Set(
+    [film?.year, ...(Array.isArray(film?.release_years) ? film.release_years : [])]
+      .map(Number)
+      .filter(Number.isFinite),
+  )].sort((left, right) => left - right);
+  const matchedYear = Number(film?.matched_year);
+  if (Number.isFinite(matchedYear) && years.length > 1 && matchedYear !== years[0]) {
+    return `${matchedYear} release · first release ${years[0]}`;
+  }
+  if (years.length > 1) return `${years.join(" / ")} releases`;
+  return years[0] ? String(years[0]) : "Year unknown";
 }
 
 function criterionCaseMarkup(film) {
@@ -897,7 +911,7 @@ function renderFilmDetail(film) {
       <button class="detail-close" type="button" data-detail-close aria-label="Close film dossier">×</button>
       ${backdrop}
       <div class="detail-copy">
-        <p class="eyebrow">Study dossier / ${escapeHtml(film.year || "Undated")}</p>
+        <p class="eyebrow">Study dossier / ${escapeHtml(filmYearLabel(film))}</p>
         <h2>${escapeHtml(film.title || "Untitled")}</h2>
         ${originalTitle}
         <p class="detail-overview">${escapeHtml(film.overview || "No synopsis is available from this source.")}</p>
