@@ -1,14 +1,16 @@
 # FirstRoll — Evidence-Grounded Film Study
 
-FirstRoll is a local film-study platform for filmmakers. It combines open film metadata,
-attributed criticism, a private study library, evidence-constrained language-model
-synthesis and clip-based visual analysis.
+FirstRoll is a local-first film-study platform for filmmakers with a deployed Render public beta.
+It combines open film metadata, attributed criticism, a private study library,
+evidence-constrained language-model synthesis and clip-based visual analysis. The hosted and local
+editions share the discovery and study architecture, while private books and clip analysis remain
+on the filmmaker's own machine.
 
 The central rule is simple: identity records, critic reports, theory frameworks, model
 hypotheses and measured film observations are different kinds of evidence. FirstRoll
 keeps those layers visible instead of presenting one fluent but unsupported answer.
 
-> **Current status:** local working prototype and deployment-ready public beta. Discover,
+> **Current status:** local working prototype and deployed Render public beta. Discover,
 > private-library retrieval, Crossref scholarship, optional Douban, Letterboxd and Guardian
 > criticism, DeepSeek synthesis and clip analysis are implemented. The hosted edition publishes
 > discovery, the 3D shelf and authenticated Deep Study while keeping private-library tools, clip
@@ -19,8 +21,22 @@ keeps those layers visible instead of presenting one fluent but unsupported answ
 See [Project Progress](docs/PROGRESS.md) for completed milestones, verification results,
 known limitations and the next priorities.
 
-See [Public Beta Hosting](docs/HOSTING.md) for the tested single-service Render deployment and
-the optional split-static optimisation.
+See [Public Beta Hosting](docs/HOSTING.md) for the deployed two-service Render topology, environment
+configuration, acceptance checks and operational limits.
+
+## Documentation Map
+
+| Reader need | Document |
+|---|---|
+| Understand the local and Render-hosted system | [Architecture](docs/ARCHITECTURE.md) |
+| Integrate with every HTTP and SSE endpoint | [API Reference](docs/API_REFERENCE.md) |
+| Review Supabase, SQLite, JSON and in-memory storage | [Data Model](docs/DATA_MODEL.md) |
+| Understand why the major architectural choices were made | [Architecture Decisions](docs/DECISIONS.md) |
+| Read the current versioned benchmark and update protocol | [Evaluation](docs/EVALUATION.md) |
+| Install and run the private local edition | [Local Setup](docs/LOCAL_SETUP.md) |
+| Operate the public Render deployment | [Public Beta Hosting](docs/HOSTING.md) |
+| Review provider, copyright and model-use boundaries | [Data Sources](docs/DATA_SOURCES.md) |
+| Check dated delivery evidence and next work | [Project Progress](docs/PROGRESS.md) |
 
 ## Lineage and Attribution
 
@@ -120,14 +136,16 @@ implemented, film-specific formal claims remain viewing hypotheses.
 
 ## System Architecture
 
-FirstRoll is a local-first, five-layer pipeline. Layer headings name the shared runtime;
-the bold second line inside each component names its specialised technology.
+FirstRoll is a local-first, five-layer product with a separately deployed public web/API boundary.
+Layer headings below describe the shared analysis pipeline; the complete dual-runtime topology,
+trust boundaries and deployment flows are documented in [Architecture](docs/ARCHITECTURE.md).
+The bold second line inside each component names its specialised technology.
 
 ```mermaid
 flowchart TB
     MAKER(["Filmmaker"])
 
-    subgraph L1["1 · LOCAL WEB INTERFACE — HTML5 · CSS3 · VANILLA JAVASCRIPT · WEBGL"]
+    subgraph L1["1 · WEB INTERFACE — HTML5 · CSS3 · VANILLA JAVASCRIPT · WEBGL"]
         UI["Discover · 3D shelf · Deep Study · Analyse<br/><b>Three.js · Blender GLB · responsive browser UI</b>"]
     end
 
@@ -138,14 +156,14 @@ flowchart TB
         VIDEO[("Private film clip<br/><b>Browser upload</b>")]
     end
 
-    subgraph L2["2 · LOCAL APPLICATION SERVICES — PYTHON 3.11 · FASTAPI · UVICORN"]
+    subgraph L2["2 · APPLICATION SERVICES — PYTHON 3.11 · FASTAPI · UVICORN"]
         direction LR
         DISCOVERY["Film identity and source adapters<br/><b>REST/JSON · JSON-LD · MCP · OAuth 2.0</b>"]
         RETRIEVAL["Library ingestion and hybrid search<br/><b>PyPDF · SQLite FTS5 · Sentence Transformers</b>"]
         ANALYSIS["Clip measurement<br/><b>OpenCV · FFmpeg · TransNetV2 · NumPy</b>"]
     end
 
-    subgraph L3["3 · LOCAL EVIDENCE AND STORAGE — PYDANTIC · SQLITE · JSON"]
+    subgraph L3["3 · EVIDENCE AND STORAGE — PYDANTIC · SQLITE · JSON"]
         direction LR
         EVIDENCE[("Provenance-preserving evidence<br/><b>film record · review text · captions · page-cited theory</b>")]
         MEASURE[("Measured clip evidence<br/><b>timecodes · scene and shot metrics</b>")]
@@ -158,7 +176,7 @@ flowchart TB
         GATE["Local validation<br/><b>schema · citation · quality checks</b>"]
     end
 
-    subgraph L5["5 · LOCAL OUTPUTS — HTML · JSON · CSV"]
+    subgraph L5["5 · OUTPUTS — HTML · JSON · CSV"]
         OUTPUTS["Critical essay · inline citations<br/><b>insufficient-evidence labels · analysis exports</b>"]
     end
 
@@ -819,7 +837,13 @@ FirstRoll/
 │       ├── styles.css
 │       └── vendor/three/          # pinned local Three.js runtime and licence
 ├── docs/
+│   ├── API_REFERENCE.md
+│   ├── ARCHITECTURE.md
+│   ├── DATA_MODEL.md
 │   ├── DATA_SOURCES.md
+│   ├── DECISIONS.md
+│   ├── EVALUATION.md
+│   ├── HOSTING.md
 │   ├── LOCAL_SETUP.md
 │   ├── PROGRESS.md
 │   └── RELEASE.md
@@ -867,7 +891,9 @@ the room asset after changing its geometry or materials, install Blender 5.2 or 
 blender --background --python tools/build_closet_blender.py
 ```
 
-The current verification baseline is recorded in [Project Progress](docs/PROGRESS.md).
+The current verification baseline and its update protocol are recorded in
+[Evaluation](docs/EVALUATION.md); dated delivery evidence remains in
+[Project Progress](docs/PROGRESS.md).
 Some inherited algorithm modules still contain historical lint warnings and pragmatic
 fallback behaviour; these are tracked separately from the new FirstRoll modules.
 
@@ -876,6 +902,7 @@ fallback behaviour; these are tracked separately from the new FirstRoll modules.
 | Milestone | Status | Outcome |
 |---|---|---|
 | Film discovery and dossier | Complete | Key-free identity, context and visible research routes |
+| Render public beta | Deployed | Separate static frontend and public-mode FastAPI service with Supabase authentication and bounded Deep Study |
 | Private RAG foundation | Complete | Token chunking, FTS5, local vectors, hybrid retrieval and citations |
 | Attributed criticism | Complete | Crossref, Douban, Letterboxd and Guardian retrieval with structured critic claims |
 | Evidence-grounded Deep Study | Complete | Typed theory, criticism, review and video-text evidence; Pydantic output, citation validation and quality gate |
@@ -890,51 +917,16 @@ fallback behaviour; these are tracked separately from the new FirstRoll modules.
 Progress is maintained in [docs/PROGRESS.md](docs/PROGRESS.md), including dated changes
 and acceptance evidence. Update that file whenever a milestone changes state.
 
-### Fixed-workflow evaluation baseline
+### Versioned evaluation baseline
 
-FirstRoll records the current non-agent workflow before introducing agency. The frozen suite lives in
-[`evals/agent_cases.json`](evals/agent_cases.json); a future Agent must run those same film identities,
-questions and acceptance rubric rather than substituting easier cases.
+Evaluation results are mutable experimental records, so the README no longer duplicates a large
+metric table that can silently become stale. The frozen cases, latest committed result, metric
+definitions, case-level results and replacement procedure live in [Evaluation](docs/EVALUATION.md).
 
-Run it locally with configured DeepSeek access and the private index available:
-
-```bash
-uv run --extra dev python tools/evaluate_workflow.py \
-  --output evals/results/baseline-current.json
-```
-
-The 18 August 2026 baseline produced:
-
-| Measure | Fixed workflow |
-|---|---:|
-| Cases completed | 4 / 5 |
-| Operational failure rate | 20% |
-| Deterministic quality-gate pass rate | 100% of completed studies |
-| Quality acceptance failure rate | 0% of completed studies |
-| Mean quality score | 98.94 / 100 |
-| Median quality score | 99.5 / 100 |
-| Mean end-to-end latency | 65.80 s |
-| P50 / P95 end-to-end latency | 66.41 s / 96.45 s |
-| Repair rate | 0% of completed studies |
-| DeepSeek calls / total tokens | 4 / 46,950 |
-
-“Operational failure” means the workflow did not return a valid result. “Quality acceptance failure”
-means it returned a result that still failed FirstRoll's deterministic evidence gate. These must remain
-separate: a syntactically successful answer is not automatically a good answer. The composite quality
-score awards no gate component when the gate fails, even if the answer's section-average score is high.
-Quality scores, gate rates and repair rates use completed studies as their denominator; operational
-failures remain visible separately. For an accepted study, generic-language and weak causal-signalling
-findings lower the raw gate score and proportionally reduce the gate's 25 quality points. Neither
-wording defect rejects the entire study; only an absent or effectively empty mechanism is blocking.
-The score measures identity, structure, citations, calibration, observable verification and evidence
-coverage; it does **not** prove that unseen film-form claims are factually correct. In this run,
-*Memoria* reached the study stage but DeepSeek timed out before returning a draft, so it received no
-quality-gate decision.
-
-The redacted run record is [`evals/results/baseline-2026-08-18.json`](evals/results/baseline-2026-08-18.json).
-It includes the non-secret configuration fingerprint and per-stage timings. This run is a five-case
-functional baseline, not a statistically stable estimate of stochastic provider reliability; repeat
-the suite when comparing production candidates and report the sample count.
+The source of truth is the newest reviewed JSON artefact under `evals/results/`, not a screenshot or
+copied Markdown table. Any fixed-workflow or Agent comparison must use the same identities, questions
+and rubric in [`evals/agent_cases.json`](evals/agent_cases.json), report operational and quality
+failures separately and retain its non-secret configuration fingerprint.
 
 ## Known Limitations
 

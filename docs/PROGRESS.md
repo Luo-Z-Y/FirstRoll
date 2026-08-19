@@ -1,5 +1,59 @@
 # FirstRoll Project Progress
 
+### 19 August 2026 — Hosted architecture and technical reference pack
+
+Delivered:
+
+1. Corrected the product description from a merely local or deployment-ready application to a
+   local-first system with an active two-service Render public beta. The documentation now treats
+   “local-first” as a privacy and data-placement decision while describing the hosted browser/API
+   boundary separately.
+2. Split detailed technical material into linked, maintainable references: current architecture,
+   complete HTTP/SSE API dictionary, Supabase/SQLite/JSON/in-memory data model, architectural
+   decision register and evaluation contract.
+3. Added field-level table designs for the Supabase quota schema and local retrieval index,
+   including keys, constraints, RLS/RPC ownership, atomic reservation behaviour and persistence
+   boundaries.
+4. Added an endpoint-by-endpoint access, request, response and failure dictionary, plus the safe SSE
+   event and header contracts. Local-only, bearer-protected, conditionally authenticated and
+   feature-gated operations are now distinguished explicitly.
+5. Recorded fourteen major product and architecture decisions with context, alternatives,
+   consequences and revisit conditions. These cover lineage, dual runtime, Render topology, film
+   identity, provider adapters, evidence types, local RAG, quality policy, Supabase, progress
+   streaming, the gated Agent, clip locality, provider degradation and temporary result storage.
+6. Removed the mutable baseline table from the README and made the newest reviewed JSON under
+   `evals/results/` canonical. Added metric definitions, case-level results, limitations and a
+   replacement procedure that prevents screenshots or copied prose from silently becoming a new
+   baseline.
+
+Acceptance evidence:
+
+- every README documentation-map target exists and the repository tree lists the new references;
+- the API dictionary covers every FastAPI route currently declared in `app/backend/main.py`;
+- the data tables reconcile with the checked-in Supabase migration and local SQLite/index models;
+- the Render deployment is documented as active without inventing service origins that are not
+  versioned in the repository;
+- the latest available raw evaluation artefact remains
+  `evals/results/baseline-2026-08-18.json`; its recorded metrics are reproduced in
+  `docs/EVALUATION.md` and no newer values were inferred from an image.
+
+Known constraints:
+
+- if a newer baseline has been run outside this repository, its complete redacted JSON report must
+  still be added before it can replace the versioned 18 August baseline;
+- the exact Render frontend and API origins are dashboard configuration and are not currently
+  recorded in the repository;
+- the decision register captures consequential architecture/product choices, not every visual or
+  parser implementation detail.
+
+Next actionable work:
+
+1. Commit the next complete evaluation artefact and update only the canonical evaluation document.
+2. Record the exact public origins in hosting documentation if stable publication of those URLs is
+   desired.
+3. Continue the production Agent comparison and clip-to-study evidence bridge under the documented
+   decision and evaluation contracts.
+
 ### 19 August 2026 — README architecture and status reconciliation
 
 Delivered:

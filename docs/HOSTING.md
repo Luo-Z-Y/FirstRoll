@@ -1,6 +1,12 @@
 # FirstRoll Public Beta Hosting
 
-FirstRoll's first public beta uses two Render services from the same `master` branch:
+**Deployment status:** Active Render public beta
+
+**Last reconciled:** 19 August 2026
+
+FirstRoll is not merely a local application. Its active public beta uses two Render services from
+the same `master` branch, while the private-library and clip-analysis capabilities remain local by
+design:
 
 ```text
 Browser  ->  Render Static Site  ->  Render FastAPI Web Service  ->  public film sources
@@ -13,6 +19,12 @@ analysis and unauthenticated Deep Study are blocked by the backend. Authenticate
 protected by durable Supabase usage counters.
 The separate origins keep the public boundary explicit and allow the frontend shell to load while
 the free API service wakes.
+
+The exact frontend and API origins are deployment configuration rather than constants in the
+repository. Do not infer or hard-code them: `FIRSTROLL_API_BASE` and
+`FIRSTROLL_CORS_ALLOWED_ORIGINS` must contain the real Render service origins. See
+[Architecture](ARCHITECTURE.md), [API Reference](API_REFERENCE.md), [Data Model](DATA_MODEL.md) and
+[Architecture Decisions](DECISIONS.md) for the corresponding runtime contracts.
 
 ## Local production checks
 
