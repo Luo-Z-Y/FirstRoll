@@ -5,6 +5,7 @@
     "node": ">=22.0.0"
   },
   "scripts": {
+    "build": "sh tools/build_web.sh",
     "build:auth": "esbuild app/web/auth.js --bundle --minify --format=iife --outfile=dist/assets/auth.js"
   },
   "dependencies": {
