@@ -1,5 +1,36 @@
 # FirstRoll Project Progress
 
+### 20 August 2026 — README dual-runtime architecture graph
+
+Delivered:
+
+1. Replaced the README's older five-layer local pipeline diagram with the current dual-runtime
+   topology: Azure Static Web Apps, Azure Container Apps, Supabase identity and RLS-owned account
+   data, backend quota PostgreSQL, transient hosted study results and the local private edition.
+2. Drew the hosted request path and private-runtime path in one Mermaid graph, including public
+   provider acquisition, typed evidence assembly, DeepSeek structured synthesis, deterministic
+   validation and the planned clip-to-study evidence bridge.
+3. Updated the adjacent architecture explanation and stack table so they no longer describe the
+   API as a Render service or imply that private books, vectors, secrets and clips enter the hosted
+   runtime.
+
+Acceptance evidence:
+
+- the compact README graph agrees with `docs/ARCHITECTURE.md` on hosting, identity, persistence,
+  quota and privacy boundaries;
+- Mermaid node labels containing punctuation are quoted and every edge target is declared;
+- Markdown whitespace and local-link validation pass.
+
+Known constraint:
+
+- the graph deliberately summarises the system; field-level persistence, API contracts and decision
+  history remain in the linked architecture, data-model, API-reference and ADR documents.
+
+Next actionable work:
+
+1. Keep the README graph and `docs/ARCHITECTURE.md` in the same checkpoint whenever a deployment or
+   trust boundary changes.
+
 ### 20 August 2026 — Persistent Supabase accounts
 
 Delivered:

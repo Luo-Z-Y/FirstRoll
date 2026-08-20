@@ -1,7 +1,6 @@
 # FirstRoll — Evidence-Grounded Film Study
 
-FirstRoll is a local-first film-study platform for filmmakers with an Azure-hosted frontend and a
-deployed Render API.
+FirstRoll is a local-first film-study platform for filmmakers with a deployed Azure public beta.
 It combines open film metadata, attributed criticism, a private study library,
 evidence-constrained language-model synthesis and clip-based visual analysis. The hosted and local
 editions share the discovery and study architecture, while private books and clip analysis remain
@@ -11,7 +10,7 @@ The central rule is simple: identity records, critic reports, theory frameworks,
 hypotheses and measured film observations are different kinds of evidence. FirstRoll
 keeps those layers visible instead of presenting one fluent but unsupported answer.
 
-> **Current status:** local working prototype and deployed hybrid Azure/Render public beta. Discover,
+> **Current status:** local working prototype and deployed Azure public beta. Discover,
 > private-library retrieval, Crossref scholarship, optional Douban, Letterboxd and Guardian
 > criticism, DeepSeek synthesis and clip analysis are implemented. The hosted edition publishes
 > discovery, the 3D shelf and authenticated Deep Study while keeping private-library tools, clip
@@ -22,20 +21,20 @@ keeps those layers visible instead of presenting one fluent but unsupported answ
 See [Project Progress](docs/PROGRESS.md) for completed milestones, verification results,
 known limitations and the next priorities.
 
-See [Public Beta Hosting](docs/HOSTING.md) for the deployed Azure frontend and Render API topology, environment
-configuration, acceptance checks and operational limits.
+See [Public Beta Hosting](docs/HOSTING.md) for the deployed Azure frontend/API topology,
+environment configuration, acceptance checks and operational limits.
 
 ## Documentation Map
 
 | Reader need | Document |
 |---|---|
-| Understand the local and Render-hosted system | [Architecture](docs/ARCHITECTURE.md) |
+| Understand the local and Azure-hosted system | [Architecture](docs/ARCHITECTURE.md) |
 | Integrate with every HTTP and SSE endpoint | [API Reference](docs/API_REFERENCE.md) |
 | Review Supabase, SQLite, JSON and in-memory storage | [Data Model](docs/DATA_MODEL.md) |
 | Understand why the major architectural choices were made | [Architecture Decisions](docs/DECISIONS.md) |
 | Read the current versioned benchmark and update protocol | [Evaluation](docs/EVALUATION.md) |
 | Install and run the private local edition | [Local Setup](docs/LOCAL_SETUP.md) |
-| Operate the public Render deployment | [Public Beta Hosting](docs/HOSTING.md) |
+| Operate the public Azure deployment | [Public Beta Hosting](docs/HOSTING.md) |
 | Review provider, copyright and model-use boundaries | [Data Sources](docs/DATA_SOURCES.md) |
 | Check dated delivery evidence and next work | [Project Progress](docs/PROGRESS.md) |
 
@@ -137,90 +136,97 @@ implemented, film-specific formal claims remain viewing hypotheses.
 
 ## System Architecture
 
-FirstRoll is a local-first, five-layer product with a separately deployed public web/API boundary.
-Layer headings below describe the shared analysis pipeline; the complete dual-runtime topology,
-trust boundaries and deployment flows are documented in [Architecture](docs/ARCHITECTURE.md).
-The bold second line inside each component names its specialised technology.
+FirstRoll has two deliberate runtime paths: an Azure-hosted public beta and a richer private edition
+that runs on the filmmaker's computer. They share film identity, attributed research and the
+evidence-quality contract, but private books, derived vectors, connector secrets and uploaded clips
+remain inside the local boundary. The complete component contracts and trust boundaries are
+documented in [Architecture](docs/ARCHITECTURE.md).
 
 ```mermaid
 flowchart TB
-    MAKER(["Filmmaker"])
+    USER(["Filmmaker"])
 
-    subgraph L1["1 · WEB INTERFACE — HTML5 · CSS3 · VANILLA JAVASCRIPT · WEBGL"]
-        UI["Discover · 3D shelf · Deep Study · Analyse<br/><b>Three.js · Blender GLB · responsive browser UI</b>"]
+    subgraph BROWSER["Browser"]
+        UI["FirstRoll<br/>Discover · Deep Study · Analyse"]
+        SESSION["Supabase session<br/>email + password"]
     end
 
-    subgraph INPUTS["INPUTS"]
-        direction LR
-        RESEARCH["Public and authorised sources<br/><b>Wikidata · Wikipedia · Crossref<br/>Douban · Letterboxd · Guardian · video text</b>"]
-        LIBRARY[("Private study library<br/><b>PDF · EPUB · Markdown · text</b>")]
-        VIDEO[("Private film clip<br/><b>Browser upload</b>")]
+    subgraph HOSTED["Azure-hosted public beta"]
+        STATIC["Azure Static Web Apps<br/>firstroll.app"]
+        API["Azure Container Apps<br/>FastAPI · api.firstroll.app"]
+        HPACKET["Hosted evidence packet<br/>public frameworks + attributed sources"]
+        HGATE["Schema · citation<br/>and quality validation"]
+        RUNS[("Transient study results<br/>owner scoped · 10-minute TTL")]
     end
 
-    subgraph L2["2 · APPLICATION SERVICES — PYTHON 3.11 · FASTAPI · UVICORN"]
-        direction LR
-        DISCOVERY["Film identity and source adapters<br/><b>REST/JSON · JSON-LD · MCP · OAuth 2.0</b>"]
-        RETRIEVAL["Library ingestion and hybrid search<br/><b>PyPDF · SQLite FTS5 · Sentence Transformers</b>"]
-        ANALYSIS["Clip measurement<br/><b>OpenCV · FFmpeg · TransNetV2 · NumPy</b>"]
+    subgraph ACCOUNTS["Identity and durable account data"]
+        AUTH["Supabase Auth<br/>credentials · sessions · recovery"]
+        USERDATA[("Supabase PostgreSQL + RLS<br/>profiles · preferences · saved films")]
+        QUOTA[("Backend quota PostgreSQL<br/>provider + immutable subject")]
     end
 
-    subgraph L3["3 · EVIDENCE AND STORAGE — PYDANTIC · SQLITE · JSON"]
-        direction LR
-        EVIDENCE[("Provenance-preserving evidence<br/><b>film record · review text · captions · page-cited theory</b>")]
-        MEASURE[("Measured clip evidence<br/><b>timecodes · scene and shot metrics</b>")]
+    subgraph LOCAL["Local private edition"]
+        LOCALAPP["Combined web + FastAPI process<br/>127.0.0.1:8000"]
+        LIBRARY[("Private documents<br/>and manifest")]
+        INDEX[("SQLite FTS5<br/>local embeddings")]
+        CACHE[("Criticism and video<br/>JSON caches")]
+        CLIP["pyCinemetrics-derived clip analysis<br/>shots · scenes · colour · objects"]
+        SECRETS[("Local connector<br/>secret store")]
+        LPACKET["Typed private evidence packet<br/>selected excerpts only"]
+        LGATE["Local schema · citation<br/>and quality validation"]
     end
 
-    subgraph L4["4 · SYNTHESIS AND QUALITY CONTROL"]
-        direction LR
-        PACKET["Local evidence assembly<br/><b>Pydantic typed packet</b>"]
-        DEEPSEEK["External synthesis<br/><b>DeepSeek HTTPS API · structured JSON</b>"]
-        GATE["Local validation<br/><b>schema · citation · quality checks</b>"]
+    subgraph EXTERNAL["External evidence and synthesis"]
+        IDENTITY["Wikidata · Wikipedia"]
+        CRITICISM["Crossref · Douban<br/>Letterboxd · Guardian"]
+        VIDEOS["YouTube · Bilibili"]
+        DEEPSEEK["DeepSeek API<br/>structured synthesis"]
     end
 
-    subgraph L5["5 · OUTPUTS — HTML · JSON · CSV"]
-        OUTPUTS["Critical essay · inline citations<br/><b>insufficient-evidence labels · analysis exports</b>"]
-    end
+    USER --> STATIC
+    STATIC -->|"serves web bundle"| UI
+    UI -->|"HTTPS JSON + authenticated SSE"| API
+    UI --- SESSION
+    SESSION -->|"verification"| AUTH
+    UI -->|"Supabase SDK · RLS"| USERDATA
+    API -->|"verify bearer"| AUTH
+    API -->|"atomic reservation"| QUOTA
+    API --> IDENTITY
+    API --> CRITICISM
+    API --> VIDEOS
+    API --> HPACKET --> DEEPSEEK --> HGATE --> RUNS
+    RUNS -->|"owner-scoped result fetch"| API
 
-    MAKER --> UI
-    UI --> DISCOVERY
-    UI --> RETRIEVAL
-    UI --> ANALYSIS
+    USER -. "private runtime" .-> LOCALAPP
+    LOCALAPP --> LIBRARY --> INDEX --> LPACKET
+    LOCALAPP --> CACHE --> LPACKET
+    LOCALAPP --> SECRETS
+    LOCALAPP --> CLIP
+    LOCALAPP --> IDENTITY
+    LOCALAPP --> CRITICISM
+    LOCALAPP --> VIDEOS
+    LPACKET -->|"selected evidence only"| DEEPSEEK --> LGATE --> LOCALAPP
+    CLIP -. "planned evidence bridge" .-> LPACKET
 
-    RESEARCH -->|"attributed material"| DISCOVERY
-    LIBRARY -->|"private ingestion"| RETRIEVAL
-    VIDEO -->|"private analysis"| ANALYSIS
-
-    DISCOVERY --> EVIDENCE
-    RETRIEVAL --> EVIDENCE
-    ANALYSIS --> MEASURE
-    EVIDENCE --> PACKET
-    PACKET -->|"selected evidence only"| DEEPSEEK
-    DEEPSEEK --> GATE --> OUTPUTS
-    MEASURE -->|"JSON · CSV"| OUTPUTS
-    MEASURE -. "planned evidence bridge" .-> PACKET
-
-    classDef person fill:#2f5d50,stroke:#2f5d50,color:#ffffff;
-    classDef service fill:#e8f0ed,stroke:#5d7f74,color:#17211e;
-    classDef evidence fill:#fff3dc,stroke:#b8792a,color:#2a2115;
-    classDef study fill:#f2eafa,stroke:#77569a,color:#21192b;
-    classDef private fill:#eef0df,stroke:#7c824f,color:#1f2117;
+    classDef actor fill:#243c35,stroke:#243c35,color:#ffffff;
+    classDef hosted fill:#e7effc,stroke:#5178ad,color:#172237;
+    classDef account fill:#efe9fb,stroke:#77569a,color:#21192b;
+    classDef private fill:#eef2df,stroke:#7c824f,color:#1f2117;
     classDef external fill:#f8e8e4,stroke:#a55445,color:#2b1b18;
 
-    class MAKER person;
-    class UI,DISCOVERY,RETRIEVAL,ANALYSIS service;
-    class EVIDENCE,MEASURE evidence;
-    class PACKET,GATE,OUTPUTS study;
-    class LIBRARY,VIDEO private;
-    class RESEARCH,DEEPSEEK external;
+    class USER actor;
+    class UI,SESSION,STATIC,API,HPACKET,HGATE,RUNS hosted;
+    class AUTH,USERDATA,QUOTA account;
+    class LOCALAPP,LIBRARY,INDEX,CACHE,CLIP,SECRETS,LPACKET,LGATE private;
+    class IDENTITY,CRITICISM,VIDEOS,DEEPSEEK external;
 ```
 
-The numbered bands show both system responsibility and implementation technology. Layers
-labelled **local** run on the user's machine; books, vectors, clips and exports stay there.
-External research services return attributed source material, while DeepSeek is the only
-synthesis service. When the user chooses **Generate study**, only the typed, selected
-evidence packet leaves the device—not complete books, local vectors, clips or private file
-paths. The dotted connection is planned work: clip measurements do not yet support claims
-in Deep Study.
+The solid path through Azure is the deployed public product: Static Web Apps serves the browser,
+Container Apps runs the public-mode API, Supabase owns identity and user-scoped records, and a
+backend-only PostgreSQL connection reserves provider quotas. Hosted study results remain transient
+and owner-scoped. The dotted path enters the private edition, where books, vectors, caches, secrets
+and clips stay on the user's machine. In either runtime, DeepSeek receives a typed, selected evidence
+packet rather than complete books or uploaded media. The dotted clip-to-packet edge remains planned.
 
 The repository also contains a bounded LangGraph research Agent core. It reuses the
 framework-neutral research contract, keeps application policy around model-proposed tools,
@@ -230,18 +236,19 @@ execution path: the fixed workflow remains the production comparison and fallbac
 progress transport and fixed-workflow baseline now exist; production service adapters and a
 like-for-like Agent evaluation are still required before any cut-over.
 
-The public-beta shell is narrower than the local architecture. A CDN-hosted static frontend and a
-lightweight FastAPI API use separate Render origins; the API root identifies the service instead of
-publishing a duplicate website. Public mode does not publish local settings, private-library
-retrieval or video analysis, and it keeps Deep Study unavailable until Supabase authentication and
-usage controls are configured. When enabled, hosted Deep Study authenticates the account, reserves
-quota and streams only the public progress projection. Local development retains the convenient
-combined interface.
+The public beta is intentionally narrower than the local edition. Azure Static Web Apps and Azure
+Container Apps use separate origins and custom domains. Public mode does not publish local settings,
+private-library retrieval or clip analysis. Hosted Deep Study verifies the Supabase bearer, reserves
+quota, streams only allow-listed progress and exposes the complete result through a separate
+owner-scoped request. Local development retains the convenient combined interface.
 
 | Layer | Primary stack |
 |---|---|
-| Web interface | HTML5, CSS3, vanilla JavaScript, Three.js WebGL and a Blender-authored GLB |
-| API and orchestration | Python 3.11, FastAPI, Uvicorn, Pydantic and LangGraph 1.2 |
+| Hosted web and API | Azure Static Web Apps, Azure Container Apps, Docker, FastAPI and Uvicorn |
+| Browser interface | HTML5, CSS3, vanilla JavaScript, Supabase JS, Three.js WebGL and a Blender-authored GLB |
+| Identity and account data | Supabase Auth plus PostgreSQL tables protected by RLS |
+| API and orchestration | Python 3.11, FastAPI, Pydantic and LangGraph 1.2 |
+| Quota enforcement | Backend-only PostgreSQL function with provider/subject counters; legacy Supabase RPC rollback path |
 | Private retrieval | PyPDF, SQLite FTS5, Sentence Transformers, NumPy |
 | Clip analysis | OpenCV, FFmpeg, TransNetV2, TensorFlow and Torchvision |
 | External acquisition | REST/JSON, JSON-LD, MCP and OAuth 2.0 |
@@ -903,7 +910,7 @@ fallback behaviour; these are tracked separately from the new FirstRoll modules.
 | Milestone | Status | Outcome |
 |---|---|---|
 | Film discovery and dossier | Complete | Key-free identity, context and visible research routes |
-| Hybrid public beta | Deployed | Azure Static Web Apps frontend and separate Render FastAPI service with Supabase authentication and bounded Deep Study |
+| Azure public beta | Deployed | Azure Static Web Apps frontend and Azure Container Apps FastAPI service with Supabase authentication and bounded Deep Study |
 | Private RAG foundation | Complete | Token chunking, FTS5, local vectors, hybrid retrieval and citations |
 | Attributed criticism | Complete | Crossref, Douban, Letterboxd and Guardian retrieval with structured critic claims |
 | Evidence-grounded Deep Study | Complete | Typed theory, criticism, review and video-text evidence; Pydantic output, citation validation and quality gate |
