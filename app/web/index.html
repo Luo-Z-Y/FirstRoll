@@ -20,7 +20,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/assets/styles.css?v=20260820-6" />
+  <link rel="stylesheet" href="/assets/styles.css?v=20260820-9" />
   <script type="importmap">
     {
       "imports": {
@@ -35,6 +35,7 @@
       <button class="brand" type="button" data-product-view="discovery" aria-label="FirstRoll home">
         <img class="brand-mark" src="/assets/favicon.svg?v=20260814-6" alt="" aria-hidden="true" />
         <span>FirstRoll</span>
+        <span id="buildIdentity" class="build-identity hidden" aria-label="Application build"></span>
       </button>
 
       <nav class="primary-nav" aria-label="Primary navigation">
@@ -210,49 +211,104 @@
       <section id="product-settings" class="product-view integrations-view" aria-labelledby="integrationsTitle">
         <header class="integrations-hero">
           <div>
-            <p class="eyebrow">Account &amp; integrations</p>
-            <h1 id="integrationsTitle">Connect the tools behind the study.</h1>
+            <p class="eyebrow">FirstRoll settings</p>
+            <h1 id="integrationsTitle">Your account. Your system.</h1>
           </div>
-          <p>Bring your own provider account when you want more control. Personal keys remain in memory for this browser tab, are cleared on refresh or sign-out, and are never saved to your FirstRoll account.</p>
+          <p>Manage personal account details separately from the appearance and provider connections used by FirstRoll.</p>
         </header>
 
         <section id="integrationSignedOut" class="integration-gate card">
           <p class="eyebrow">FirstRoll account</p>
-          <h2>Sign in to manage integrations.</h2>
+          <h2>Sign in to manage settings.</h2>
           <p>The hosted Settings area is account-scoped. Local library files and server credentials remain unavailable here.</p>
           <button id="integrationSignIn" type="button">Sign in or create an account</button>
         </section>
 
         <div id="integrationDashboard" class="integration-dashboard hidden">
-          <p id="integrationStatus" class="integration-page-status" role="status" aria-live="polite">Loading account integrations…</p>
+          <p id="integrationStatus" class="integration-page-status" role="status" aria-live="polite">Loading account settings…</p>
 
-          <section class="integration-account card">
-            <div>
-              <p class="eyebrow">Signed-in account</p>
-              <strong id="integrationAccountEmail">Signed-in account</strong>
-              <span id="integrationAccountState">Verified by Supabase</span>
-            </div>
-            <div class="integration-account-actions">
-              <button id="integrationRefresh" type="button">Refresh</button>
-              <button id="integrationSignOut" type="button">Sign out</button>
-            </div>
-          </section>
+          <nav class="settings-section-tabs" role="tablist" aria-label="Settings sections">
+            <button id="accountSettingsTab" class="is-active" type="button" role="tab" aria-selected="true" aria-controls="accountSettingsPanel" data-settings-section="account">Account settings</button>
+            <button id="systemSettingsTab" type="button" role="tab" aria-selected="false" aria-controls="systemSettingsPanel" data-settings-section="system">System settings</button>
+          </nav>
 
-          <section class="account-library card" aria-labelledby="accountLibraryTitle">
-            <header>
+          <section id="accountSettingsPanel" class="settings-panel" role="tabpanel" aria-labelledby="accountSettingsTab" data-settings-panel="account">
+            <section class="integration-account card">
               <div>
-                <p class="eyebrow">Persistent account data</p>
-                <h2 id="accountLibraryTitle">Saved films</h2>
+                <p class="eyebrow">Signed-in account</p>
+                <strong id="integrationAccountName">FirstRoll member</strong>
+                <span id="integrationAccountEmail">Signed-in account</span>
+                <span id="integrationAccountState">Authenticated by Supabase</span>
               </div>
-              <span id="accountLibraryCount">0 films</span>
-            </header>
-            <p>Films saved here belong to this signed-in account and are available on another device after sign-in.</p>
-            <div id="accountSavedFilms" class="account-saved-films" aria-live="polite">
-              <p class="module-empty">No saved films yet. Open a film dossier and choose “Save to account”.</p>
+              <div class="integration-account-actions">
+                <button id="integrationRefresh" type="button">Refresh</button>
+                <button id="integrationSignOut" type="button">Sign out</button>
+              </div>
+            </section>
+
+            <div class="account-settings-grid">
+              <section class="account-setting-card card" aria-labelledby="profileSettingsTitle">
+                <header>
+                  <p class="eyebrow">Profile</p>
+                  <h2 id="profileSettingsTitle">Display name</h2>
+                </header>
+                <p>This name appears in FirstRoll’s header and follows the account across devices.</p>
+                <form id="accountProfileForm" class="account-settings-form">
+                  <label for="accountDisplayName">Display name</label>
+                  <input id="accountDisplayName" name="displayName" type="text" autocomplete="name" maxlength="80" required />
+                  <button type="submit">Save display name</button>
+                </form>
+                <p id="accountProfileStatus" class="account-setting-status" role="status" aria-live="polite"></p>
+              </section>
+
+              <section class="account-setting-card card" aria-labelledby="passwordSettingsTitle">
+                <header>
+                  <p class="eyebrow">Security</p>
+                  <h2 id="passwordSettingsTitle">Change password</h2>
+                </header>
+                <p>Use at least eight characters. Changing the password keeps this device signed in.</p>
+                <form id="accountPasswordForm" class="account-settings-form">
+                  <label for="accountNewPassword">New password</label>
+                  <input id="accountNewPassword" name="newPassword" type="password" autocomplete="new-password" minlength="8" required />
+                  <label for="accountConfirmPassword">Confirm new password</label>
+                  <input id="accountConfirmPassword" name="confirmPassword" type="password" autocomplete="new-password" minlength="8" required />
+                  <button type="submit">Update password</button>
+                </form>
+                <p id="accountPasswordStatus" class="account-setting-status" role="status" aria-live="polite"></p>
+              </section>
             </div>
+
+            <section class="account-library card" aria-labelledby="accountLibraryTitle">
+              <header>
+                <div>
+                  <p class="eyebrow">Persistent account data</p>
+                  <h2 id="accountLibraryTitle">Saved films</h2>
+                </div>
+                <span id="accountLibraryCount">0 films</span>
+              </header>
+              <p>Films saved here belong to this signed-in account and are available on another device after sign-in.</p>
+              <div id="accountSavedFilms" class="account-saved-films" aria-live="polite">
+                <p class="module-empty">No saved films yet. Open a film dossier and choose “Save to account”.</p>
+              </div>
+            </section>
           </section>
 
-          <section class="integration-quota card" aria-labelledby="integrationQuotaTitle">
+          <section id="systemSettingsPanel" class="settings-panel hidden" role="tabpanel" aria-labelledby="systemSettingsTab" data-settings-panel="system">
+            <section class="system-appearance card" aria-labelledby="appearanceSettingsTitle">
+              <div>
+                <p class="eyebrow">Appearance</p>
+                <h2 id="appearanceSettingsTitle">Colour theme</h2>
+                <p>Use the device preference or keep FirstRoll consistently light or dark.</p>
+              </div>
+              <div class="theme-choice" role="radiogroup" aria-label="Colour theme">
+                <label><input type="radio" name="accountTheme" value="system" /> System</label>
+                <label><input type="radio" name="accountTheme" value="light" /> Light</label>
+                <label><input type="radio" name="accountTheme" value="dark" /> Dark</label>
+              </div>
+              <p id="systemSettingsStatus" class="account-setting-status" role="status" aria-live="polite"></p>
+            </section>
+
+            <section class="integration-quota card" aria-labelledby="integrationQuotaTitle">
             <div>
               <p class="eyebrow">FirstRoll allowance</p>
               <h2 id="integrationQuotaTitle">Deep Study</h2>
@@ -263,7 +319,7 @@
             </div>
           </section>
 
-          <div class="integration-grid">
+            <div class="integration-grid">
             <article class="integration-card card">
               <header>
                 <div>
@@ -326,7 +382,10 @@
                 <span>No visitor credential is accepted</span>
               </footer>
             </article>
-          </div>
+            </div>
+
+            <p class="system-key-note">Personal provider keys remain in memory for this browser tab, are cleared on refresh or sign-out, and are never saved to your FirstRoll account.</p>
+          </section>
         </div>
       </section>
     </main>
@@ -391,12 +450,12 @@
       const authScript = document.createElement("script");
       authScript.src = entraReady
         ? "/assets/entra-auth.js?v=20260820-1"
-        : "/assets/auth.js?v=20260820-2";
+        : "/assets/auth.js?v=20260820-3";
       document.body.append(authScript);
     }
   </script>
-  <script src="/assets/integrations.js?v=20260815-2"></script>
-  <script src="/assets/app.js?v=20260820-2"></script>
-  <script type="module" src="/assets/closet3d.js?v=20260815-3"></script>
+  <script src="/assets/integrations.js?v=20260820-3"></script>
+  <script src="/assets/app.js?v=20260820-5"></script>
+  <script type="module" src="/assets/closet3d.js?v=20260820-4"></script>
 </body>
 </html>

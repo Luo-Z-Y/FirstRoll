@@ -24,6 +24,9 @@ jobs:
         uses: Azure/static-web-apps-deploy@v1
         env:
           FIRSTROLL_API_BASE: https://api.firstroll.app
+          # The UI renders a small comparable release badge; localhost reserves
+          # the next Git-derived number and Azure publishes the current one.
+          FIRSTROLL_BUILD_CHANNEL: live
           # Keep the live provider explicit until the Entra customer tenant is ready.
           FIRSTROLL_AUTH_PROVIDER: supabase
           FIRSTROLL_SUPABASE_URL: https://obnxmfcvshbkbsgxbmgg.supabase.co

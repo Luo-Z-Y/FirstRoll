@@ -12,6 +12,50 @@ auth_provider=${FIRSTROLL_AUTH_PROVIDER:-supabase}
 entra_authority=${FIRSTROLL_ENTRA_AUTHORITY:-}
 entra_spa_client_id=${FIRSTROLL_ENTRA_SPA_CLIENT_ID:-}
 entra_api_scope=${FIRSTROLL_ENTRA_API_SCOPE:-}
+build_channel=${FIRSTROLL_BUILD_CHANNEL:-}
+build_number=${FIRSTROLL_BUILD_NUMBER:-}
+build_commit=${FIRSTROLL_BUILD_COMMIT:-}
+
+# Git commit count gives both local and deployed builds a small, comparable
+# number. CI publishes the current number; local builds reserve the next one so
+# the working copy is always visibly ahead of the live release.
+if [ -z "$build_channel" ]; then
+  if [ "${GITHUB_ACTIONS:-}" = "true" ] || [ "${CI:-}" = "true" ]; then
+    build_channel=live
+  else
+    build_channel=local
+  fi
+fi
+case "$build_channel" in
+  local|live|preview) ;;
+  *)
+    echo "FIRSTROLL_BUILD_CHANNEL must be local, live or preview." >&2
+    exit 1
+    ;;
+esac
+
+if [ -z "$build_number" ]; then
+  build_number=$(git -C "$project_root" rev-list --count HEAD 2>/dev/null || echo 0)
+  if [ "$build_channel" = "local" ]; then
+    build_number=$((build_number + 1))
+  fi
+fi
+case "$build_number" in
+  ''|*[!0-9]*)
+    echo "FIRSTROLL_BUILD_NUMBER must be a non-negative integer." >&2
+    exit 1
+    ;;
+esac
+
+if [ -z "$build_commit" ]; then
+  build_commit=$(git -C "$project_root" rev-parse --short=8 HEAD 2>/dev/null || echo unknown)
+fi
+case "$build_commit" in
+  *[!A-Za-z0-9._-]*)
+    echo "FIRSTROLL_BUILD_COMMIT contains invalid characters." >&2
+    exit 1
+    ;;
+esac
 
 case "$api_base" in
   https://*) ;;
@@ -100,6 +144,10 @@ window.FIRSTROLL_CONFIG = Object.freeze({
   entraAuthority: "${entra_authority}",
   entraSpaClientId: "${entra_spa_client_id}",
   entraApiScope: "${entra_api_scope}",
+  buildId: "v${build_number}",
+  buildNumber: ${build_number},
+  buildChannel: "${build_channel}",
+  buildCommit: "${build_commit}",
 });
 EOF
 

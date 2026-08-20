@@ -9,6 +9,8 @@ let client = null;
 let session = null;
 let authMode = "sign-in";
 let savedFilms = [];
+let profile = null;
+let preferences = null;
 
 const refs = {
   open: document.getElementById("authOpen"),
@@ -39,13 +41,30 @@ function currentUser() {
   return session?.user || null;
 }
 
+function currentProfile() {
+  return profile ? { ...profile } : null;
+}
+
+function currentPreferences() {
+  return preferences ? { ...preferences } : null;
+}
+
+function emitAccountSettingsChanged() {
+  document.dispatchEvent(new CustomEvent("firstroll:account-settings-changed", {
+    detail: {
+      profile: currentProfile(),
+      preferences: currentPreferences(),
+    },
+  }));
+}
+
 function emitAccountDataChanged() {
   document.dispatchEvent(new CustomEvent("firstroll:account-data-changed", {
     detail: { savedFilms: savedFilms.map((film) => ({ ...film })) },
   }));
 }
 
-function render() {
+function render(emitAuthChange = true) {
   const user = currentUser();
   document.body.classList.toggle("auth-configured", configured());
   document.body.classList.toggle("auth-signed-in", Boolean(user));
@@ -55,12 +74,17 @@ function render() {
   }
   if (refs.identity) {
     refs.identity.hidden = !user;
-    refs.identity.textContent = user?.user_metadata?.display_name || user?.email || "Signed in";
+    refs.identity.textContent = profile?.display_name
+      || user?.user_metadata?.display_name
+      || user?.email
+      || "Signed in";
   }
   if (refs.signOut) refs.signOut.hidden = !user;
-  document.dispatchEvent(new CustomEvent("firstroll:auth-changed", {
-    detail: { configured: configured(), user },
-  }));
+  if (emitAuthChange) {
+    document.dispatchEvent(new CustomEvent("firstroll:auth-changed", {
+      detail: { configured: configured(), user },
+    }));
+  }
 }
 
 function setMessage(message) {
@@ -149,6 +173,86 @@ async function updatePassword(password) {
   if (!client) throw new Error("Password recovery is not configured on this deployment.");
   const { error } = await client.auth.updateUser({ password });
   if (error) throw error;
+}
+
+async function refreshAccountSettings() {
+  const user = currentUser();
+  if (!client || !user) {
+    profile = null;
+    preferences = null;
+    emitAccountSettingsChanged();
+    return { profile: null, preferences: null };
+  }
+  const [profileResult, preferencesResult] = await Promise.all([
+    client
+      .from("firstroll_profiles")
+      .select("display_name,created_at,updated_at")
+      .eq("user_id", user.id)
+      .maybeSingle(),
+    client
+      .from("firstroll_preferences")
+      .select("theme,shelf_motion,created_at,updated_at")
+      .eq("user_id", user.id)
+      .maybeSingle(),
+  ]);
+  if (profileResult.error) throw profileResult.error;
+  if (preferencesResult.error) throw preferencesResult.error;
+  profile = profileResult.data || {
+    display_name: user.user_metadata?.display_name || null,
+  };
+  preferences = preferencesResult.data || { theme: "system", shelf_motion: true };
+  render(false);
+  emitAccountSettingsChanged();
+  return { profile: currentProfile(), preferences: currentPreferences() };
+}
+
+async function updateDisplayName(displayName) {
+  await ready;
+  const user = currentUser();
+  if (!client || !user) throw new Error("Sign in before changing your display name.");
+  const cleaned = String(displayName || "").trim();
+  if (!cleaned || cleaned.length > 80) {
+    throw new Error("Display name must be between 1 and 80 characters.");
+  }
+  const { data, error } = await client
+    .from("firstroll_profiles")
+    .upsert({ user_id: user.id, display_name: cleaned }, { onConflict: "user_id" })
+    .select("display_name,created_at,updated_at")
+    .single();
+  if (error) throw error;
+  profile = data;
+  const metadata = { ...(user.user_metadata || {}), display_name: cleaned };
+  const { error: metadataError } = await client.auth.updateUser({ data: metadata });
+  if (metadataError) throw metadataError;
+  render(false);
+  emitAccountSettingsChanged();
+  return currentProfile();
+}
+
+async function updatePreferences(changes) {
+  await ready;
+  const user = currentUser();
+  if (!client || !user) throw new Error("Sign in before changing system settings.");
+  const payload = { user_id: user.id };
+  if (Object.prototype.hasOwnProperty.call(changes || {}, "theme")) {
+    const theme = String(changes.theme || "");
+    if (!["system", "light", "dark"].includes(theme)) {
+      throw new Error("Choose System, Light or Dark appearance.");
+    }
+    payload.theme = theme;
+  }
+  if (Object.prototype.hasOwnProperty.call(changes || {}, "shelf_motion")) {
+    payload.shelf_motion = Boolean(changes.shelf_motion);
+  }
+  const { data, error } = await client
+    .from("firstroll_preferences")
+    .upsert(payload, { onConflict: "user_id" })
+    .select("theme,shelf_motion,created_at,updated_at")
+    .single();
+  if (error) throw error;
+  preferences = data;
+  emitAccountSettingsChanged();
+  return currentPreferences();
 }
 
 async function signOut() {
@@ -260,7 +364,7 @@ async function initialise() {
       if (event === "PASSWORD_RECOVERY") openDialog("recovery");
       render();
       try {
-        await refreshSavedFilms();
+        await Promise.all([refreshSavedFilms(), refreshAccountSettings()]);
       } catch (_) {
         savedFilms = [];
         emitAccountDataChanged();
@@ -322,7 +426,10 @@ refs.form?.addEventListener("submit", async (event) => {
         refs.form.reset();
         refs.dialog?.close();
       } else {
-        setMessage("Account created. Check your email to confirm it, then sign in.");
+        setMessage(
+          "If this is a new account, check your email to confirm it. "
+          + "Already used FirstRoll? Switch to Sign in and use Forgot password? to set a password."
+        );
       }
     } else if (authMode === "recovery") {
       await updatePassword(password);
@@ -344,7 +451,7 @@ refs.form?.addEventListener("submit", async (event) => {
 
 const ready = initialise().then(async () => {
   try {
-    await refreshSavedFilms();
+    await Promise.all([refreshSavedFilms(), refreshAccountSettings()]);
   } catch (_) {
     savedFilms = [];
     emitAccountDataChanged();
@@ -356,9 +463,15 @@ window.FirstRollAuth = Object.freeze({
   configured,
   open: openDialog,
   currentUser,
+  currentProfile,
+  currentPreferences,
   accessToken,
   authorisationHeaders,
   signOut,
+  updateDisplayName,
+  updatePassword,
+  updatePreferences,
+  refreshAccountSettings,
   savedFilms: () => savedFilms.map((film) => ({ ...film })),
   refreshSavedFilms,
   isFilmSaved,

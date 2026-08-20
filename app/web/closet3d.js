@@ -24,6 +24,7 @@ class FirstRollClosetViewer {
     this.clock = new THREE.Clock();
     this.model = null;
     this.filmCases = [];
+    this.shelfPlaques = [];
     this.posterTextureCache = new Map();
     this.collectionKey = null;
     this.collectionLoadPromise = null;
@@ -170,6 +171,9 @@ class FirstRollClosetViewer {
     this.root.dataset.uniqueFilmCount = String(new Set(shelfEditions).size);
     if (!collectionKey) return;
     if (collectionKey === this.collectionKey) return this.collectionLoadPromise;
+    if (this.collectionLoadPromise) await this.collectionLoadPromise;
+    if (this.destroyed || collectionKey === this.collectionKey) return this.collectionLoadPromise;
+    if (this.filmCases.length || this.shelfPlaques.length) this.clearLiveCollections();
     this.collectionKey = collectionKey;
     this.collectionLoadPromise = Promise.all(collections.map(async (collection) => {
       if (!collection.films?.length) return;
@@ -178,6 +182,27 @@ class FirstRollClosetViewer {
     }));
     await this.collectionLoadPromise;
     this.root.dataset.liveCaseCount = String(this.filmCases.length);
+  }
+
+  clearLiveCollections() {
+    const dispose = (object) => {
+      this.scene.remove(object);
+      object.traverse((child) => {
+        child.geometry?.dispose?.();
+        const materials = Array.isArray(child.material) ? child.material : [child.material];
+        materials.filter(Boolean).forEach((material) => {
+          if (material.map?.isCanvasTexture) material.map.dispose();
+          material.dispose?.();
+        });
+      });
+    };
+    this.filmCases.forEach(dispose);
+    this.shelfPlaques.forEach(dispose);
+    this.filmCases = [];
+    this.shelfPlaques = [];
+    this.hoveredCase = null;
+    this.collectionKey = null;
+    this.collectionLoadPromise = null;
   }
 
   async update(payload) {
@@ -431,6 +456,7 @@ class FirstRollClosetViewer {
       plaque.rotation.y = side < 0 ? Math.PI / 2 : -Math.PI / 2;
     }
     this.scene.add(plaque);
+    this.shelfPlaques.push(plaque);
   }
 
   bindEvents() {

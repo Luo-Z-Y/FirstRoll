@@ -16,7 +16,19 @@
     signOut: document.getElementById("integrationSignOut"),
     refresh: document.getElementById("integrationRefresh"),
     accountEmail: document.getElementById("integrationAccountEmail"),
+    accountName: document.getElementById("integrationAccountName"),
     accountState: document.getElementById("integrationAccountState"),
+    sectionTabs: Array.from(document.querySelectorAll("[data-settings-section]")),
+    sectionPanels: Array.from(document.querySelectorAll("[data-settings-panel]")),
+    profileForm: document.getElementById("accountProfileForm"),
+    displayName: document.getElementById("accountDisplayName"),
+    profileStatus: document.getElementById("accountProfileStatus"),
+    passwordForm: document.getElementById("accountPasswordForm"),
+    newPassword: document.getElementById("accountNewPassword"),
+    confirmPassword: document.getElementById("accountConfirmPassword"),
+    passwordStatus: document.getElementById("accountPasswordStatus"),
+    themeChoices: Array.from(document.querySelectorAll('input[name="accountTheme"]')),
+    systemStatus: document.getElementById("systemSettingsStatus"),
     quota: document.getElementById("integrationQuota"),
     quotaMeta: document.getElementById("integrationQuotaMeta"),
     status: document.getElementById("integrationStatus"),
@@ -106,11 +118,39 @@
 
   function renderSignedInState() {
     const user = currentUser();
+    const profile = window.FirstRollAuth?.currentProfile?.();
+    const preferences = window.FirstRollAuth?.currentPreferences?.();
     refs.signedOut?.classList.toggle("hidden", Boolean(user));
     refs.dashboard?.classList.toggle("hidden", !user);
     if (refs.accountEmail) refs.accountEmail.textContent = user?.email || "Signed-in account";
-    if (refs.accountState) refs.accountState.textContent = user ? "Verified by Supabase" : "Signed out";
+    if (refs.accountName) {
+      refs.accountName.textContent = profile?.display_name
+        || user?.user_metadata?.display_name
+        || "FirstRoll member";
+    }
+    if (refs.accountState) refs.accountState.textContent = user ? "Authenticated by Supabase" : "Signed out";
+    if (refs.displayName && document.activeElement !== refs.displayName) {
+      refs.displayName.value = profile?.display_name || user?.user_metadata?.display_name || "";
+    }
+    const theme = preferences?.theme || window.FirstRollUI?.themePreference?.() || "system";
+    refs.themeChoices.forEach((choice) => {
+      choice.checked = choice.value === theme;
+    });
+    if (preferences?.theme) window.FirstRollUI?.setThemePreference?.(preferences.theme);
     return user;
+  }
+
+  function selectSettingsSection(section) {
+    const selected = section === "system" ? "system" : "account";
+    refs.sectionTabs.forEach((tab) => {
+      const active = tab.dataset.settingsSection === selected;
+      tab.classList.toggle("is-active", active);
+      tab.setAttribute("aria-selected", String(active));
+      tab.tabIndex = active ? 0 : -1;
+    });
+    refs.sectionPanels.forEach((panel) => {
+      panel.classList.toggle("hidden", panel.dataset.settingsPanel !== selected);
+    });
   }
 
   function quotaResetLabel(value) {
@@ -140,8 +180,10 @@
     if (!user || !refs.view?.classList.contains("active")) return;
     const authorisation = await window.FirstRollAuth?.authorisationHeaders?.() || {};
     if (!authorisation.Authorization) return;
-    if (refs.status) refs.status.textContent = "Refreshing account integrations…";
+    if (refs.status) refs.status.textContent = "Refreshing account settings…";
     try {
+      await window.FirstRollAuth?.refreshAccountSettings?.();
+      renderSignedInState();
       const response = await fetch(`${apiBase()}/api/account/integrations`, {
         headers: authorisation,
       });
@@ -168,9 +210,9 @@
           ? `${quota.global.remaining} available across the public demo · resets ${quotaResetLabel(quota.reset_at)}`
           : "The quota service did not return a status.";
       }
-      if (refs.status) refs.status.textContent = "Account integrations are ready.";
+      if (refs.status) refs.status.textContent = "Account settings are ready.";
     } catch (error) {
-      if (refs.status) refs.status.textContent = error?.message || "Account integrations could not be refreshed.";
+      if (refs.status) refs.status.textContent = error?.message || "Account settings could not be refreshed.";
     }
   }
 
@@ -189,9 +231,98 @@
     }
   }
 
+  async function saveProfile(event) {
+    event.preventDefault();
+    const button = refs.profileForm?.querySelector('button[type="submit"]');
+    const displayName = refs.displayName?.value.trim() || "";
+    if (!displayName) {
+      if (refs.profileStatus) refs.profileStatus.textContent = "Enter a display name.";
+      refs.displayName?.focus();
+      return;
+    }
+    if (button) button.disabled = true;
+    if (refs.profileStatus) refs.profileStatus.textContent = "Saving display name…";
+    try {
+      await window.FirstRollAuth?.updateDisplayName?.(displayName);
+      renderSignedInState();
+      if (refs.profileStatus) refs.profileStatus.textContent = "Display name saved.";
+    } catch (error) {
+      if (refs.profileStatus) {
+        refs.profileStatus.textContent = error?.message || "Display name could not be saved.";
+      }
+    } finally {
+      if (button) button.disabled = false;
+    }
+  }
+
+  async function changePassword(event) {
+    event.preventDefault();
+    const button = refs.passwordForm?.querySelector('button[type="submit"]');
+    const password = refs.newPassword?.value || "";
+    const confirmation = refs.confirmPassword?.value || "";
+    if (password.length < 8) {
+      if (refs.passwordStatus) refs.passwordStatus.textContent = "Use at least eight characters.";
+      refs.newPassword?.focus();
+      return;
+    }
+    if (password !== confirmation) {
+      if (refs.passwordStatus) refs.passwordStatus.textContent = "The passwords do not match.";
+      refs.confirmPassword?.focus();
+      return;
+    }
+    if (button) button.disabled = true;
+    if (refs.passwordStatus) refs.passwordStatus.textContent = "Updating password…";
+    try {
+      await window.FirstRollAuth?.updatePassword?.(password);
+      refs.passwordForm?.reset();
+      if (refs.passwordStatus) refs.passwordStatus.textContent = "Password updated.";
+    } catch (error) {
+      if (refs.passwordStatus) {
+        refs.passwordStatus.textContent = error?.message || "Password could not be updated.";
+      }
+    } finally {
+      if (button) button.disabled = false;
+    }
+  }
+
+  async function changeTheme(event) {
+    const choice = event.currentTarget;
+    if (!choice?.checked) return;
+    refs.themeChoices.forEach((input) => { input.disabled = true; });
+    if (refs.systemStatus) refs.systemStatus.textContent = "Saving appearance…";
+    try {
+      const preferences = await window.FirstRollAuth?.updatePreferences?.({ theme: choice.value });
+      window.FirstRollUI?.setThemePreference?.(preferences?.theme || choice.value);
+      if (refs.systemStatus) refs.systemStatus.textContent = "Appearance saved.";
+    } catch (error) {
+      renderSignedInState();
+      if (refs.systemStatus) {
+        refs.systemStatus.textContent = error?.message || "Appearance could not be saved.";
+      }
+    } finally {
+      refs.themeChoices.forEach((input) => { input.disabled = false; });
+    }
+  }
+
   refs.signIn?.addEventListener("click", () => window.FirstRollAuth?.open?.());
   refs.signOut?.addEventListener("click", () => window.FirstRollAuth?.signOut?.());
   refs.refresh?.addEventListener("click", load);
+  refs.sectionTabs.forEach((tab) => {
+    tab.addEventListener("click", () => selectSettingsSection(tab.dataset.settingsSection));
+    tab.addEventListener("keydown", (event) => {
+      if (!["ArrowLeft", "ArrowRight"].includes(event.key)) return;
+      event.preventDefault();
+      const current = refs.sectionTabs.indexOf(tab);
+      const direction = event.key === "ArrowRight" ? 1 : -1;
+      const next = refs.sectionTabs[(current + direction + refs.sectionTabs.length)
+        % refs.sectionTabs.length];
+      selectSettingsSection(next?.dataset.settingsSection);
+      next?.focus();
+    });
+  });
+  refs.profileForm?.addEventListener("submit", saveProfile);
+  refs.passwordForm?.addEventListener("submit", changePassword);
+  refs.themeChoices.forEach((choice) => choice.addEventListener("change", changeTheme));
   refs.deepseekForm?.addEventListener("submit", (event) => {
     saveFromForm(event, "deepseek", refs.deepseekInput);
   });
@@ -212,12 +343,14 @@
     if (!event.detail?.user) clearCredentials();
     load();
   });
+  document.addEventListener("firstroll:account-settings-changed", renderSignedInState);
   document.addEventListener("firstroll:view-changed", (event) => {
     if (event.detail?.view === "settings") load();
   });
 
   renderSignedInState();
   renderCredentialStates();
+  selectSettingsSection("account");
 
   window.FirstRollIntegrations = Object.freeze({
     configured,

@@ -29,6 +29,9 @@ def test_public_mode_keeps_health_and_discovery_status_available(monkeypatch) ->
 
 def test_public_mode_serves_hosted_frontend_configuration(monkeypatch) -> None:
     monkeypatch.setenv("FIRSTROLL_PUBLIC_MODE", "true")
+    monkeypatch.setenv("FIRSTROLL_BUILD_CHANNEL", "live")
+    monkeypatch.setenv("FIRSTROLL_BUILD_NUMBER", "84")
+    monkeypatch.setenv("FIRSTROLL_BUILD_COMMIT", "abc12345")
     client = TestClient(main.app)
 
     response = client.get("/assets/config.js")
@@ -39,6 +42,32 @@ def test_public_mode_serves_hosted_frontend_configuration(monkeypatch) -> None:
     assert "videoAnalysisEnabled: false" in response.text
     assert 'supabaseUrl: ""' in response.text
     assert 'supabasePublishableKey: ""' in response.text
+    assert 'buildId: "v84"' in response.text
+    assert "buildNumber: 84" in response.text
+    assert 'buildChannel: "live"' in response.text
+    assert 'buildCommit: "abc12345"' in response.text
+
+
+def test_hosted_frontend_preview_serves_public_ui_with_next_local_build(monkeypatch) -> None:
+    monkeypatch.setenv("FIRSTROLL_PUBLIC_MODE", "true")
+    monkeypatch.setenv("FIRSTROLL_SERVE_HOSTED_FRONTEND", "true")
+    monkeypatch.delenv("FIRSTROLL_BUILD_NUMBER", raising=False)
+    monkeypatch.delenv("FIRSTROLL_BUILD_CHANNEL", raising=False)
+    monkeypatch.setattr(
+        main,
+        "_git_value",
+        lambda *args: "83" if args[:2] == ("rev-list", "--count") else "abc12345",
+    )
+    client = TestClient(main.app)
+
+    page = client.get("/")
+    config = client.get("/assets/config.js")
+
+    assert page.status_code == 200
+    assert "FirstRoll — Film discovery and analysis" in page.text
+    assert "publicMode: true" in config.text
+    assert 'buildId: "v84"' in config.text
+    assert 'buildChannel: "local"' in config.text
 
 
 def test_public_mode_root_identifies_the_api(monkeypatch) -> None:

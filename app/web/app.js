@@ -2,6 +2,10 @@ const runtimeConfig = Object.freeze({
   apiBase: window.FIRSTROLL_CONFIG?.apiBase || "",
   publicMode: Boolean(window.FIRSTROLL_CONFIG?.publicMode),
   videoAnalysisEnabled: window.FIRSTROLL_CONFIG?.videoAnalysisEnabled !== false,
+  buildId: String(window.FIRSTROLL_CONFIG?.buildId || "").trim(),
+  buildNumber: Number(window.FIRSTROLL_CONFIG?.buildNumber || 0),
+  buildChannel: String(window.FIRSTROLL_CONFIG?.buildChannel || "local").trim().toLowerCase(),
+  buildCommit: String(window.FIRSTROLL_CONFIG?.buildCommit || "unknown").trim(),
 });
 
 const state = {
@@ -32,6 +36,7 @@ const CRITICISM_SOURCES = [
 const RECENT_SEARCHES_KEY = "firstroll.recent-searches";
 const THEME_STORAGE_KEY = "firstroll.theme";
 const MAX_RECENT_SEARCHES = 5;
+const systemThemeMedia = window.matchMedia("(prefers-color-scheme: dark)");
 
 const refs = {
   productViews: {
@@ -42,6 +47,7 @@ const refs = {
   productNav: Array.from(document.querySelectorAll(".nav-link[data-product-view]")),
   productViewTriggers: Array.from(document.querySelectorAll("[data-product-view]")),
   themeToggle: document.getElementById("themeToggle"),
+  buildIdentity: document.getElementById("buildIdentity"),
   discoveryForm: document.getElementById("discoveryForm"),
   filmTitle: document.getElementById("filmTitle"),
   filmYear: document.getElementById("filmYear"),
@@ -102,11 +108,20 @@ const refs = {
   },
 };
 
+window.FirstRollUI = Object.freeze({
+  setThemePreference,
+  themePreference: readThemePreference,
+});
+
 setup();
 
 function setup() {
+  renderBuildIdentity();
   applyRuntimeMode();
   refs.themeToggle.addEventListener("click", toggleTheme);
+  systemThemeMedia.addEventListener?.("change", () => {
+    if (readThemePreference() === "system") setThemePreference("system");
+  });
   syncThemeToggle();
   refs.productViewTriggers.forEach((trigger) => {
     trigger.addEventListener("click", () => setProductView(trigger.dataset.productView));
@@ -148,6 +163,18 @@ function setup() {
   document.addEventListener("firstroll:auth-changed", updateAccountFilmState);
   document.addEventListener("firstroll:account-data-changed", updateAccountFilmState);
   document.addEventListener("firstroll:integration-changed", updateIntegrationDependentState);
+}
+
+function renderBuildIdentity() {
+  if (!refs.buildIdentity || !runtimeConfig.buildId) return;
+  const channel = ["local", "live", "preview"].includes(runtimeConfig.buildChannel)
+    ? runtimeConfig.buildChannel
+    : "local";
+  const channelLabel = channel === "live" ? "LIVE" : channel.toUpperCase();
+  refs.buildIdentity.textContent = `${runtimeConfig.buildId} · ${channelLabel}`;
+  refs.buildIdentity.title = `${channelLabel.toLowerCase()} build ${runtimeConfig.buildId} · commit ${runtimeConfig.buildCommit}`;
+  refs.buildIdentity.classList.remove("hidden");
+  document.documentElement.dataset.buildChannel = channel;
 }
 
 function updateAccountFilmState() {
@@ -235,13 +262,35 @@ function applyRuntimeMode() {
 
 function toggleTheme() {
   const nextTheme = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
-  document.documentElement.dataset.theme = nextTheme;
+  setThemePreference(nextTheme);
+}
+
+function readThemePreference() {
   try {
-    window.localStorage.setItem(THEME_STORAGE_KEY, nextTheme);
+    const stored = window.localStorage.getItem(THEME_STORAGE_KEY);
+    return ["system", "light", "dark"].includes(stored) ? stored : "system";
+  } catch (_) {
+    return "system";
+  }
+}
+
+function setThemePreference(preference) {
+  const selected = ["system", "light", "dark"].includes(preference)
+    ? preference
+    : "system";
+  const resolved = selected === "system"
+    ? (systemThemeMedia.matches ? "dark" : "light")
+    : selected;
+  document.documentElement.dataset.theme = resolved;
+  try {
+    window.localStorage.setItem(THEME_STORAGE_KEY, selected);
   } catch (_) {
     // Theme switching remains available when local browser storage is disabled.
   }
   syncThemeToggle();
+  document.dispatchEvent(new CustomEvent("firstroll:theme-changed", {
+    detail: { preference: selected, resolved },
+  }));
 }
 
 function syncThemeToggle() {
@@ -561,19 +610,20 @@ function filmIdentityChoicesMarkup(films) {
 function confirmDiscoveryFilm(index) {
   const primary = state.discovery.results[index];
   if (!primary) return;
+  const nearby = uniqueFilms(state.discovery.results, [primary]).slice(0, 10);
   refs.resultsTitle.textContent = "Pulled from the shelf";
   refs.resultsMeta.textContent = [
     primary.title,
     filmYearLabel(primary),
     (primary.directors || []).join(", "),
   ].filter(Boolean).join(" / ");
-  renderFilmArchive(primary, [], [], true);
-  loadRelatedFilms(primary, []);
+  renderFilmArchive(primary, [], nearby, true);
+  loadRelatedFilms(primary, nearby);
 }
 
 async function loadRelatedFilms(primary, nearby) {
   try {
-    const data = await fetchRelatedFilmsWithRetry(primary.id);
+    const data = await fetchRelatedFilms(primary.id);
     if (state.discovery.archiveSelectionId !== primary.id) return;
     const directorWorks = uniqueFilms(data.same_director || [], [primary]);
     const sharedCast = uniqueFilms(data.shared_cast || [], [primary]);
@@ -596,48 +646,70 @@ async function loadRelatedFilms(primary, nearby) {
     }
     state.discovery.archive = { primary, directorWorks, relevant: recommended, categories };
     hydrateFilmShelf(primary.id, collections);
+    setFilmShelfStatus("Verified related films ready");
   } catch (error) {
     if (state.discovery.archiveSelectionId !== primary.id) return;
-    showFilmShelfError(error);
+    const fallback = searchFallbackShelfCollections(primary, nearby);
+    if (fallback.some((collection) => collection.films.length)) {
+      state.discovery.archive = {
+        primary,
+        directorWorks: [],
+        relevant: nearby,
+        categories: { nearby },
+      };
+      hydrateFilmShelf(primary.id, fallback);
+      setFilmShelfStatus("Live relations delayed · showing verified search matches");
+    } else {
+      showFilmShelfError(error);
+    }
   }
 }
 
-async function fetchRelatedFilmsWithRetry(filmId, attempts = 2) {
+async function fetchRelatedFilms(filmId) {
   const cached = state.discovery.relatedFilmCache.get(filmId);
   if (cached) return cached;
-  let lastError = new Error("The related-film service did not respond.");
-  for (let attempt = 0; attempt < attempts; attempt += 1) {
-    const controller = new AbortController();
-    const timeout = window.setTimeout(() => controller.abort(), 15000);
-    try {
-      const res = await fetch(
-        `${discoveryApiBase()}/api/discovery/films/${encodeURIComponent(filmId)}/related?limit=12&fast=true`,
-        { signal: controller.signal },
-      );
-      if (!res.ok) throw new Error(await readApiError(res));
-      const data = await res.json();
-      if (data.state === "unavailable") throw new Error("Verified related films are temporarily unavailable.");
-      state.discovery.relatedFilmCache.set(filmId, data);
-      return data;
-    } catch (error) {
-      lastError = error?.name === "AbortError"
-        ? new Error("Verified related films took too long to respond.")
-        : error;
-      if (attempt < attempts - 1) {
-        const loading = refs.discoveryResults.querySelector("[data-closet-loading] strong");
-        if (loading) loading.textContent = `Retrying verified films (${attempt + 2}/${attempts})`;
-        await new Promise((resolve) => window.setTimeout(resolve, 500 * (attempt + 1)));
-      }
-    } finally {
-      window.clearTimeout(timeout);
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), 28000);
+  const progress = window.setTimeout(() => {
+    const loading = refs.discoveryResults.querySelector("[data-closet-loading] strong");
+    if (loading) loading.textContent = "Still checking verified films";
+  }, 10000);
+  try {
+    const res = await fetch(
+      `${discoveryApiBase()}/api/discovery/films/${encodeURIComponent(filmId)}/related?limit=12&fast=true`,
+      { signal: controller.signal },
+    );
+    if (!res.ok) throw new Error(await readApiError(res));
+    const data = await res.json();
+    if (data.state === "unavailable") {
+      throw new Error("Verified related films are temporarily unavailable.");
     }
+    state.discovery.relatedFilmCache.set(filmId, data);
+    return data;
+  } catch (error) {
+    throw error?.name === "AbortError"
+      ? new Error("Verified related films took too long to respond.")
+      : error;
+  } finally {
+    window.clearTimeout(timeout);
+    window.clearTimeout(progress);
   }
-  throw lastError;
 }
 
 function hydrateFilmShelf(primaryId, collections) {
   if (state.discovery.archiveSelectionId !== primaryId) return;
   initialiseClosetViewport({ primaryId, collections }, true);
+}
+
+function setFilmShelfStatus(message) {
+  const header = refs.discoveryResults.querySelector(".closet-header");
+  if (!header) return;
+  let status = header.querySelector("small");
+  if (!status) {
+    status = document.createElement("small");
+    header.append(status);
+  }
+  status.textContent = message;
 }
 
 function showFilmShelfError(error) {
@@ -699,11 +771,15 @@ function renderFilmArchive(
     <aside class="film-closet" aria-label="Related film shelf">
       <div class="closet-header">
         <span>FirstRoll shelf</span>
+        <small>${loading ? "Finding verified related films" : "Verified related films ready"}</small>
       </div>
       ${closetRoomMarkup(loading)}
     </aside>`;
   if (loading) {
-    initialiseClosetViewport({ primaryId: primary.id, collections: [] });
+    initialiseClosetViewport({
+      primaryId: primary.id,
+      collections: searchFallbackShelfCollections(primary, relevant),
+    });
   } else {
     initialiseClosetViewport({
       primaryId: primary.id,
@@ -804,6 +880,15 @@ function buildShelfCollections(primary, directorWorks, relevant, categories, dir
     { wall: "back", shelf: "upper", label: "Production country & related works", films: countryRow },
     { wall: "back", shelf: "top", label: "Genre & metadata affinities", films: recommendedRow },
   ];
+}
+
+function searchFallbackShelfCollections(primary, films) {
+  return [{
+    wall: "back",
+    shelf: "middle",
+    label: "Verified search matches",
+    films: displayableFilms(films).filter((film) => film.id !== primary.id).slice(0, 10),
+  }];
 }
 
 function shelfFilmIdentity(film) {

@@ -8,4 +8,8 @@ window.FIRSTROLL_CONFIG = Object.freeze({
   entraAuthority: "",
   entraSpaClientId: "",
   entraApiScope: "",
+  buildId: "v-next",
+  buildNumber: 0,
+  buildChannel: "local",
+  buildCommit: "working-tree",
 });

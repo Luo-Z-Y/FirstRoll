@@ -39,12 +39,14 @@ def test_supabase_auth_is_bundled_and_deep_study_sends_bearer_tokens() -> None:
     integrations = (WEB / "integrations.js").read_text(encoding="utf-8")
 
     assert 'id="authDialog"' in index
-    assert '"/assets/auth.js?v=20260820-2"' in index
+    assert '"/assets/auth.js?v=20260820-3"' in index
     assert 'from "@supabase/supabase-js"' in auth
     assert 'flowType: "pkce"' in auth
     assert "signInWithPassword" in auth
     assert "client.auth.signUp" in auth
     assert "resetPasswordForEmail" in auth
+    assert "If this is a new account, check your email to confirm it." in auth
+    assert "Already used FirstRoll?" in auth
     assert "signInWithOtp" not in auth
     assert "emailRedirectTo" in auth
     assert "persistSession: true" in auth
@@ -53,13 +55,29 @@ def test_supabase_auth_is_bundled_and_deep_study_sends_bearer_tokens() -> None:
     assert 'headers: { "Content-Type": "application/json", ...authorisation, ...integration }' in app
     assert "deepStudyQuotaMarkup(data.quota)" in app
     assert "account studies remain today" in app
-    assert 'src="/assets/integrations.js?v=20260815-2"' in index
+    assert 'src="/assets/integrations.js?v=20260820-3"' in index
     assert '"X-FirstRoll-DeepSeek-Key"' in integrations
     assert '"X-FirstRoll-YouTube-Key"' in integrations
     assert "localStorage" not in integrations
     assert 'cp "$source_dir/integrations.js"' in build
     assert "FIRSTROLL_SUPABASE_URL" in build
     assert "FIRSTROLL_SUPABASE_PUBLISHABLE_KEY" in build
+
+
+def test_frontend_build_identity_distinguishes_local_and_live_releases() -> None:
+    index = (WEB / "index.html").read_text(encoding="utf-8")
+    app = (WEB / "app.js").read_text(encoding="utf-8")
+    build = (ROOT / "tools" / "build_web.sh").read_text(encoding="utf-8")
+    preview = (ROOT / "tools" / "preview_hosted_web.sh").read_text(encoding="utf-8")
+
+    assert 'id="buildIdentity"' in index
+    assert "renderBuildIdentity" in app
+    assert 'build_channel=live' in build
+    assert 'build_channel=local' in build
+    assert 'build_number=$((build_number + 1))' in build
+    assert 'buildId: "v${build_number}"' in build
+    assert "FIRSTROLL_SERVE_HOSTED_FRONTEND=true" in preview
+    assert "FIRSTROLL_PUBLIC_MODE=true" in preview
 
 
 def test_account_saved_films_are_persistent_and_user_scoped() -> None:
@@ -141,6 +159,16 @@ def test_public_settings_explains_session_keys_and_hosted_douban_boundary() -> N
 
     assert 'id="product-settings"' in index
     assert 'data-product-view="settings"' in index
+    assert 'data-settings-section="account"' in index
+    assert 'data-settings-section="system"' in index
+    assert 'id="accountProfileForm"' in index
+    assert 'id="accountPasswordForm"' in index
+    assert 'name="accountTheme"' in index
+    assert "updateDisplayName" in (WEB / "auth.js").read_text(encoding="utf-8")
+    assert "updatePassword" in (WEB / "auth.js").read_text(encoding="utf-8")
+    assert "updatePreferences" in (WEB / "auth.js").read_text(encoding="utf-8")
+    assert "firstroll_profiles" in (WEB / "auth.js").read_text(encoding="utf-8")
+    assert "firstroll_preferences" in (WEB / "auth.js").read_text(encoding="utf-8")
     assert "cleared on refresh or sign-out" in index
     assert "that study uses your DeepSeek account and provider balance" in index
     assert "FirstRoll’s three-study daily safety limit still applies" in index
@@ -183,9 +211,9 @@ def test_archive_pullout_collapses_before_zoom_can_clip_its_copy() -> None:
     styles = (WEB / "styles.css").read_text(encoding="utf-8")
     app = (WEB / "app.js").read_text(encoding="utf-8")
 
-    assert "/assets/styles.css?v=20260820-6" in index
-    assert "/assets/app.js?v=20260820-2" in index
-    assert "/assets/closet3d.js?v=20260815-3" in index
+    assert "/assets/styles.css?v=20260820-9" in index
+    assert "/assets/app.js?v=20260820-5" in index
+    assert "/assets/closet3d.js?v=20260820-4" in index
     assert 'class="archive-pullout-shell"' in app
     assert "container-type: inline-size" in styles
     assert "@container (max-width: 520px)" in styles
@@ -198,6 +226,13 @@ def test_archive_pullout_collapses_before_zoom_can_clip_its_copy() -> None:
     assert "overflow-wrap: break-word" in styles
     assert ".archive-pullout-copy button" in styles
     assert "max-width: 100%" in styles
+
+
+def test_supabase_dialog_hides_the_unused_entra_form() -> None:
+    styles = (WEB / "styles.css").read_text(encoding="utf-8")
+
+    assert ".auth-dialog form.auth-provider-entra { display: none; }" in styles
+    assert 'body[data-auth-provider="entra"] form.auth-provider-entra { display: grid; }' in styles
 
 
 def test_single_wall_shelf_uses_five_rows_of_real_films() -> None:
@@ -218,9 +253,15 @@ def test_single_wall_shelf_uses_five_rows_of_real_films() -> None:
     assert "candidate_cap = min(168, max(40, limit * 5))" in discovery
     assert "self._get_shelf_entities(selected_ids)" in discovery
     assert "RELATED_POSTER_FALLBACK_LIMIT = 8" in discovery
-    assert "fetchRelatedFilmsWithRetry" in app
+    assert "fetchRelatedFilms" in app
+    assert "28000" in app
+    assert "Still checking verified films" in app
+    assert "searchFallbackShelfCollections" in app
+    assert "Live relations delayed · showing verified search matches" in app
+    assert "clearLiveCollections" in runtime
+    assert "this.shelfPlaques" in runtime
     assert "hydrateFilmShelf" in app
-    assert "initialiseClosetViewport({ primaryId: primary.id, collections: [] })" in app
+    assert "collections: searchFallbackShelfCollections(primary, relevant)" in app
     assert "window.FirstRollCloset.update(detail)" in app
     assert "showFilmShelfError" in app
     assert "No distinct verified films were returned" in app
@@ -230,7 +271,7 @@ def test_single_wall_shelf_uses_five_rows_of_real_films() -> None:
     assert "renderFilmArchive(primary, [], uniqueFilms(nearby" not in app
     assert "!/^Q\\d+$/i.test(text)" in app
     assert "closet-help" not in app
-    assert app.count('wall: "back"') == 5
+    assert app.count('wall: "back"') >= 5
     assert 'wall: "left"' not in app
     assert 'wall: "right"' not in app
     assert 'shelf: "middle",\n      label: `${director} & related works`' in app

@@ -2,6 +2,7 @@ import asyncio
 import json
 import os
 import re
+import subprocess
 import tempfile
 from pathlib import Path
 from uuid import uuid4
@@ -71,6 +72,65 @@ def public_mode_enabled() -> bool:
     return environment_flag("FIRSTROLL_PUBLIC_MODE")
 
 
+def hosted_frontend_preview_enabled() -> bool:
+    """Serve the hosted UI from FastAPI for an exact local production preview."""
+    return environment_flag("FIRSTROLL_SERVE_HOSTED_FRONTEND")
+
+
+def _git_value(*args: str) -> str:
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(Path(__file__).resolve().parents[2]), *args],
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=2,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return ""
+    return result.stdout.strip()
+
+
+def frontend_build_identity() -> dict[str, str | int]:
+    """Return a comparable UI build identity for live and local frontends.
+
+    A live build uses the Git commit count. A local preview deliberately uses
+    the next number, making it clear that the working copy is the candidate
+    which will follow the currently deployed release.
+    """
+    configured_channel = os.getenv("FIRSTROLL_BUILD_CHANNEL", "").strip().casefold()
+    default_channel = (
+        "local"
+        if hosted_frontend_preview_enabled() or not public_mode_enabled()
+        else "live"
+    )
+    channel = configured_channel or default_channel
+    if channel not in {"local", "live", "preview"}:
+        channel = default_channel
+
+    configured_number = os.getenv("FIRSTROLL_BUILD_NUMBER", "").strip()
+    git_count = _git_value("rev-list", "--count", "HEAD")
+    raw_number = configured_number or git_count or "0"
+    try:
+        build_number = max(0, int(raw_number))
+    except ValueError:
+        build_number = 0
+    if not configured_number and channel == "local":
+        build_number += 1
+
+    commit = (
+        os.getenv("FIRSTROLL_BUILD_COMMIT", "").strip()
+        or _git_value("rev-parse", "--short=8", "HEAD")
+        or "unknown"
+    )
+    return {
+        "buildId": f"v{build_number}",
+        "buildNumber": build_number,
+        "buildChannel": channel,
+        "buildCommit": commit,
+    }
+
+
 def video_analysis_enabled() -> bool:
     return environment_flag(
         "FIRSTROLL_VIDEO_ANALYSIS_ENABLED",
@@ -137,6 +197,7 @@ def web_runtime_config() -> Response:
         entra_authority = ""
         entra_spa_client_id = ""
         entra_api_scope = ""
+    build = frontend_build_identity()
     content = (
         "window.FIRSTROLL_CONFIG = Object.freeze({\n"
         '  apiBase: "",\n'
@@ -148,6 +209,10 @@ def web_runtime_config() -> Response:
         f"  entraAuthority: {json.dumps(entra_authority)},\n"
         f"  entraSpaClientId: {json.dumps(entra_spa_client_id)},\n"
         f"  entraApiScope: {json.dumps(entra_api_scope)},\n"
+        f"  buildId: {json.dumps(build['buildId'])},\n"
+        f"  buildNumber: {build['buildNumber']},\n"
+        f"  buildChannel: {json.dumps(build['buildChannel'])},\n"
+        f"  buildCommit: {json.dumps(build['buildCommit'])},\n"
         "});\n"
     )
     return Response(
@@ -389,7 +454,7 @@ def health() -> dict[str, str]:
 
 @app.get("/", response_class=FileResponse)
 def web_app() -> Response:
-    if public_mode_enabled():
+    if public_mode_enabled() and not hosted_frontend_preview_enabled():
         return JSONResponse(
             {
                 "service": "FirstRoll API",

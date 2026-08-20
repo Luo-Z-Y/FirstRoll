@@ -36,6 +36,29 @@ FastAPI Container App. Spaceship remains the DNS provider.
 
 ## Local production checks
 
+For day-to-day UI work, run the hosted frontend mode rather than the private
+local edition:
+
+```bash
+./tools/preview_hosted_web.sh
+```
+
+Open `http://127.0.0.1:4173`. This uses the same public-mode feature boundary
+and the same `app/web` source as `firstroll.app`, but serves the browser and API
+from one localhost origin. To test account features too, provide `SUPABASE_URL`
+and `SUPABASE_PUBLISHABLE_KEY` before starting the script.
+
+The header carries a comparable build identity:
+
+- `vN · LIVE` is the Git commit count deployed by Azure;
+- `vN+1 · LOCAL` is the next development candidate on localhost;
+- hovering the label shows the short Git commit.
+
+`tools/build_web.sh` generates this metadata in `assets/config.js`; FastAPI
+generates the same fields for local previews. Do not edit a generated `dist`
+file to change the label. A normal commit and Azure deployment advances the
+live build number automatically.
+
 Build the static site with a temporary API address:
 
 ```bash
