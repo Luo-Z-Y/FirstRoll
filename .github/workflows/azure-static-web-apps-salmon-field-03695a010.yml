@@ -17,6 +17,9 @@ jobs:
     steps:
       - uses: actions/checkout@v3
         with:
+          # Build numbers use the repository's commit count. Azure's default
+          # one-commit checkout would make every deployment appear as v1.
+          fetch-depth: 0
           submodules: true
           lfs: false
       - name: Build And Deploy

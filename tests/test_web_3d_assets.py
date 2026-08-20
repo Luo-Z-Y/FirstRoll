@@ -69,6 +69,12 @@ def test_frontend_build_identity_distinguishes_local_and_live_releases() -> None
     app = (WEB / "app.js").read_text(encoding="utf-8")
     build = (ROOT / "tools" / "build_web.sh").read_text(encoding="utf-8")
     preview = (ROOT / "tools" / "preview_hosted_web.sh").read_text(encoding="utf-8")
+    deployment = (
+        ROOT
+        / ".github"
+        / "workflows"
+        / "azure-static-web-apps-salmon-field-03695a010.yml"
+    ).read_text(encoding="utf-8")
 
     assert 'id="buildIdentity"' in index
     assert "renderBuildIdentity" in app
@@ -78,6 +84,7 @@ def test_frontend_build_identity_distinguishes_local_and_live_releases() -> None
     assert 'buildId: "v${build_number}"' in build
     assert "FIRSTROLL_SERVE_HOSTED_FRONTEND=true" in preview
     assert "FIRSTROLL_PUBLIC_MODE=true" in preview
+    assert "fetch-depth: 0" in deployment
 
 
 def test_account_saved_films_are_persistent_and_user_scoped() -> None:
