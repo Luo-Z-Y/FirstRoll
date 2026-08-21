@@ -182,6 +182,10 @@ class DeepSeekStudyService:
             "available_models": models,
         }
 
+    def prompt_character_count(self, packet: EvidencePacket) -> int:
+        sources = self._theory_source_records(packet)
+        return len(self._system_prompt()) + len(self._user_prompt(packet, sources))
+
     def generate(
         self,
         film: dict[str, Any],
@@ -244,7 +248,19 @@ class DeepSeekStudyService:
             trace.skip("packet_assembly")
             packet = evidence_packet
         trace.set_count("theory_sources", len(packet.theory_sources))
+        theory_selection = packet.retrieval.get("theory_selection", {})
+        trace.set_count(
+            "theory_candidates", int(theory_selection.get("candidate_items", 0))
+        )
+        trace.set_count("theory_omitted", int(theory_selection.get("omitted_items", 0)))
         trace.set_count("critical_claims", len(packet.critical_claims))
+        critical_selection = packet.retrieval.get("critical_selection", {})
+        trace.set_count(
+            "critical_candidates", int(critical_selection.get("candidate_items", 0))
+        )
+        trace.set_count(
+            "critical_omitted", int(critical_selection.get("omitted_items", 0))
+        )
         trace.set_count("attributed_sources", len(packet.attributed_sources))
         attributed_selection = packet.retrieval.get("attributed_selection", {})
         trace.set_count(
@@ -263,18 +279,7 @@ class DeepSeekStudyService:
         key = api_key or self._api_key()
         critical_claims = packet.critical_claims
         with trace.stage("prompt_serialisation"):
-            sources: list[dict[str, Any]] = [
-                {
-                    "id": item.evidence_id,
-                    "evidence_type": item.evidence_type,
-                    "title": item.title,
-                    "page": self._page_from_locator(item.locator),
-                    "locator": item.locator,
-                    "excerpt": item.content,
-                    "permitted_claims": item.permitted_claims,
-                }
-                for item in packet.theory_sources
-            ]
+            sources = self._theory_source_records(packet)
             messages: list[dict[str, str]] = [
                 {"role": "system", "content": self._system_prompt()},
                 {
@@ -365,6 +370,7 @@ class DeepSeekStudyService:
                             "quality_failures": quality,
                         },
                         ensure_ascii=False,
+                        separators=(",", ":"),
                     ),
                 },
             ]
@@ -518,15 +524,20 @@ class DeepSeekStudyService:
             raise StudyGenerationError("Add a DeepSeek API key in FirstRoll Settings first.")
         return key
 
-    @staticmethod
-    def _source_record(index: int, passage: dict[str, Any]) -> dict[str, Any]:
-        return {
-            "id": f"S{index}",
-            "concept": str(passage.get("concept") or "Film form"),
-            "title": str(passage.get("title") or "Local source"),
-            "page": passage.get("page"),
-            "excerpt": str(passage.get("excerpt") or ""),
-        }
+    @classmethod
+    def _theory_source_records(cls, packet: EvidencePacket) -> list[dict[str, Any]]:
+        return [
+            {
+                "id": item.evidence_id,
+                "evidence_type": item.evidence_type,
+                "title": item.title,
+                "page": cls._page_from_locator(item.locator),
+                "locator": item.locator,
+                "excerpt": item.content,
+                "permitted_claims": item.permitted_claims,
+            }
+            for item in packet.theory_sources
+        ]
 
     @staticmethod
     def _page_from_locator(locator: str | None) -> int | None:
@@ -592,24 +603,68 @@ Return 4 to 6 sections in the order they should appear in a continuous essay. Ea
         packet: EvidencePacket,
         sources: list[dict[str, Any]],
     ) -> str:
+        def compact(value: Any) -> str:
+            return json.dumps(value, ensure_ascii=False, separators=(",", ":"))
+        film_record = {
+            key: value
+            for key, value in packet.film_record.items()
+            if key != "crew_sources" and value not in (None, "", [], {})
+        }
+        source_records = [
+            {
+                key: source.get(key)
+                for key in ("id", "title", "page", "locator", "excerpt")
+                if source.get(key) not in (None, "")
+            }
+            for source in sources
+        ]
+        critical_records = [
+            {
+                key: value
+                for key, value in claim.model_dump(exclude_none=True).items()
+                if key
+                in {
+                    "claim_id",
+                    "source_id",
+                    "critic_claim",
+                    "scene_or_sequence",
+                    "described_observation",
+                    "techniques",
+                    "interpretation",
+                    "alternative_reading",
+                    "lens_tags",
+                    "short_source_excerpt",
+                    "extraction_confidence",
+                }
+                and value not in ("", [], {})
+            }
+            for claim in packet.critical_claims
+        ]
+        attributed_records = [
+            {
+                key: value
+                for key, value in source.model_dump(exclude_none=True).items()
+                if key
+                in {
+                    "evidence_id",
+                    "evidence_type",
+                    "title",
+                    "content",
+                    "locator",
+                    "source_url",
+                    "language",
+                }
+                and value not in ("", [], {})
+            }
+            for source in packet.attributed_sources
+        ]
         return (
             f"STUDY FOCUS\n{packet.focus}\n\n"
-            f"FILM RECORD\n{json.dumps(packet.film_record, ensure_ascii=False, indent=2)}\n\n"
-            f"LOCAL SOURCES\n{json.dumps(sources, ensure_ascii=False, indent=2)}\n\n"
-            "ATTRIBUTED CRITICAL CLAIMS\n"
-            + json.dumps(
-                [claim.model_dump() for claim in packet.critical_claims],
-                ensure_ascii=False,
-                indent=2,
-            )
-            + "\n\nEVIDENCE BOUNDARIES\n"
-            + json.dumps(packet.boundaries, ensure_ascii=False, indent=2)
-            + "\n\nATTRIBUTED SOURCE TEXT\n"
-            + json.dumps(
-                [source.model_dump() for source in packet.attributed_sources],
-                ensure_ascii=False,
-                indent=2,
-            )
+            f"FILM RECORD\n{compact(film_record)}\n\n"
+            f"LOCAL SOURCES\n{compact(source_records)}\n\n"
+            f"ATTRIBUTED CRITICAL CLAIMS\n{compact(critical_records)}\n\n"
+            f"EVIDENCE BOUNDARIES\n{compact(packet.boundaries)}\n\n"
+            f"ATTRIBUTED SOURCE TEXT\n{compact(attributed_records)}"
         )
 
     @staticmethod

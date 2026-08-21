@@ -62,9 +62,12 @@ def test_packet_metrics_expose_only_aggregate_shape() -> None:
 
     metrics = safe_packet_metrics(packet)
 
-    assert metrics["theory_candidates"] == 12
+    assert metrics["retrieval_candidates"] == 12
+    assert metrics["theory_candidates"] == 1
     assert metrics["theory_sources"] == 1
-    assert metrics["theory_unselected"] == 11
+    assert metrics["theory_omitted"] == 0
+    assert metrics["critical_candidates"] == 0
+    assert metrics["critical_omitted"] == 0
     assert metrics["attributed_candidates"] == 0
     assert metrics["attributed_omitted"] == 0
     assert metrics["theory_characters"] == len(PRIVATE_PASSAGE)

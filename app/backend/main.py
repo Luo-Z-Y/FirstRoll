@@ -336,7 +336,15 @@ def prepare_film_study(
             videos=video_bundle.videos if video_bundle else [],
         )
     trace.set_count("theory_sources", len(packet.theory_sources))
+    theory_selection = packet.retrieval.get("theory_selection", {})
+    trace.set_count("theory_candidates", int(theory_selection.get("candidate_items", 0)))
+    trace.set_count("theory_omitted", int(theory_selection.get("omitted_items", 0)))
     trace.set_count("critical_claims", len(packet.critical_claims))
+    critical_selection = packet.retrieval.get("critical_selection", {})
+    trace.set_count(
+        "critical_candidates", int(critical_selection.get("candidate_items", 0))
+    )
+    trace.set_count("critical_omitted", int(critical_selection.get("omitted_items", 0)))
     trace.set_count("attributed_sources", len(packet.attributed_sources))
     attributed_selection = packet.retrieval.get("attributed_selection", {})
     trace.set_count(

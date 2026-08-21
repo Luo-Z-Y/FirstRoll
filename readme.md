@@ -120,11 +120,15 @@ The original GPL-3.0 licence and contributor attribution remain applicable. See
 ### Deep Study
 
 - Configure a DeepSeek key from the local Settings page.
-- Build a typed evidence packet from the film record, retrieved theory, full cached review text
-  and attributed text attached to relevant videos.
+- Build a typed evidence packet from the film record, up to eight focus-ranked theory passages,
+  twelve deduplicated critic claims and twelve provenance-ranked review/video excerpts. Per-layer
+  item/character budgets and explicit omission reasons prevent first-in source order or abundant
+  criticism from silently dominating synthesis.
 - Attach redacted monotonic observability for cache, retrieval, packet, prompt, model and validation
   stages using only allow-listed statuses, durations and aggregate counts; prompts, evidence text,
   credentials, responses and exceptions have no measurement field.
+- Serialise the selected packet into compact prompt records without dropping inspectable evidence
+  from the returned study object.
 - Generate four to six sections with separate fields for:
   - critic reports;
   - theory explanations;

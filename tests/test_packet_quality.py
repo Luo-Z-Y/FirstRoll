@@ -51,9 +51,10 @@ def test_packet_quality_detects_duplicates_without_returning_evidence_text() -> 
     )
 
     assert assessment["status"] == "limited"
-    assert assessment["duplication"]["duplicate_items"] == 1
-    assert "duplicate_evidence_present" in assessment["issues"]
+    assert assessment["duplication"]["duplicate_items"] == 0
+    assert "duplicate_evidence_present" not in assessment["issues"]
     assert "film_specific_evidence_sparse" in assessment["issues"]
+    assert packet.retrieval["theory_selection"]["omission_reasons"]["duplicate"] == 1
     assert PRIVATE_EVIDENCE not in json.dumps(assessment)
 
 
@@ -79,7 +80,7 @@ def test_packet_quality_blocks_missing_theory_and_wrong_identity() -> None:
 
 def test_packet_quality_reports_provenance_and_citation_gaps() -> None:
     class IncompleteReview:
-        summary = "A synthetic critic offers a framing interpretation that remains explicitly unverified."
+        summary = "Συνθετική κριτική για κάδρο και ρυθμό που παραμένει ρητά ανεπιβεβαίωτη."
         provider = "Synthetic source"
         author = ""
         title = "Synthetic review"
@@ -131,6 +132,7 @@ def test_packet_quality_fixture_suite_is_synthetic_complete_and_instruction_safe
         "malicious-retrieved-instructions",
     ]
     assessments = {}
+    packets = {}
     for case in suite["cases"]:
         packet = build_packet(case)
         assessment = assess_evidence_packet(
@@ -140,11 +142,16 @@ def test_packet_quality_fixture_suite_is_synthetic_complete_and_instruction_safe
         assert check_case_expectations(case, assessment) == []
         assert assessment["identity"]["matches_expected"] is True
         assessments[case["id"]] = assessment
+        packets[case["id"]] = packet
 
     assert assessments["abundant-diverse-evidence"]["status"] == "passed"
     assert assessments["sparse-honest-boundary"]["sufficiency"]["state"] == "sparse"
     assert "film_specific_evidence_sparse" in assessments["sparse-honest-boundary"]["issues"]
-    assert assessments["duplicate-attributed-evidence"]["duplication"]["duplicate_items"] >= 1
+    assert assessments["duplicate-attributed-evidence"]["status"] == "passed"
+    assert assessments["duplicate-attributed-evidence"]["duplication"]["duplicate_items"] == 0
+    assert packets["duplicate-attributed-evidence"].retrieval["attributed_selection"][
+        "omission_reasons"
+    ]["duplicate"] >= 1
     assert assessments["multilingual-provenance"]["diversity"]["languages"] == ["en", "zh"]
     assert assessments["ambiguous-identity-selected"]["identity"]["matches_expected"] is True
     malicious = assessments["malicious-retrieved-instructions"]["instruction_safety"]

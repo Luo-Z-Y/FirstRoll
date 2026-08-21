@@ -21,6 +21,7 @@ if str(ROOT) not in sys.path:
 
 from app.backend import main  # noqa: E402
 from app.backend.evidence import EvidencePacket  # noqa: E402
+from app.backend.packet_quality import assess_evidence_packet  # noqa: E402
 from app.backend.study_observability import StudyTrace  # noqa: E402
 
 
@@ -93,6 +94,7 @@ def load_case_specs(cases_path: Path, reference_path: Path) -> list[dict[str, An
                 "case_id": case_id,
                 "film_id": film_id,
                 "question": str(case.get("question") or ""),
+                "expected_identity": dict(case.get("expected") or {}),
                 "redaction_values": [
                     str(case.get("query") or ""),
                     str(case.get("question") or ""),
@@ -107,13 +109,17 @@ def load_case_specs(cases_path: Path, reference_path: Path) -> list[dict[str, An
 
 
 def safe_packet_metrics(packet: EvidencePacket) -> dict[str, int]:
+    theory = packet.retrieval.get("theory_selection", {})
+    critical = packet.retrieval.get("critical_selection", {})
     attributed = packet.retrieval.get("attributed_selection", {})
-    theory_candidates = int(packet.retrieval.get("candidate_count", 0))
     return {
-        "theory_candidates": theory_candidates,
+        "retrieval_candidates": int(packet.retrieval.get("candidate_count", 0)),
+        "theory_candidates": int(theory.get("candidate_items", 0)),
         "theory_sources": len(packet.theory_sources),
-        "theory_unselected": max(0, theory_candidates - len(packet.theory_sources)),
+        "theory_omitted": int(theory.get("omitted_items", 0)),
+        "critical_candidates": int(critical.get("candidate_items", 0)),
         "critical_claims": len(packet.critical_claims),
+        "critical_omitted": int(critical.get("omitted_items", 0)),
         "attributed_candidates": int(attributed.get("candidate_items", 0)),
         "attributed_sources": len(packet.attributed_sources),
         "attributed_omitted": int(attributed.get("omitted_items", 0)),
@@ -179,6 +185,10 @@ def packet_sample(
         trace.finish("completed")
         observability = trace.snapshot()
         stages = stage_map(observability)
+        packet_metrics = safe_packet_metrics(prepared["packet"])
+        packet_metrics["synthesis_prompt_characters"] = (
+            main.study_service.prompt_character_count(prepared["packet"])
+        )
         return {
             "sample_kind": sample_kind,
             "sample_index": sample_index,
@@ -187,7 +197,11 @@ def packet_sample(
             "retrieval_method": safe_retrieval_method(
                 prepared["reading"].get("method")
             ),
-            "packet_metrics": safe_packet_metrics(prepared["packet"]),
+            "packet_metrics": packet_metrics,
+            "packet_quality": assess_evidence_packet(
+                prepared["packet"],
+                expected_identity=spec.get("expected_identity"),
+            ),
             "observability": observability,
         }
     except Exception as exc:
@@ -266,6 +280,52 @@ def packet_metric_summary(samples: Sequence[dict[str, Any]]) -> dict[str, Any]:
             "maximum": max(values),
         }
     return result
+
+
+def packet_quality_summary(samples: Sequence[dict[str, Any]]) -> dict[str, Any]:
+    assessments = [
+        sample["packet_quality"]
+        for sample in samples
+        if sample.get("status") == "completed"
+        and isinstance(sample.get("packet_quality"), dict)
+    ]
+    statuses = Counter(str(item.get("status")) for item in assessments)
+    issues = Counter(issue for item in assessments for issue in item.get("issues", []))
+    return {
+        "assessed_samples": len(assessments),
+        "status_counts": dict(sorted(statuses.items())),
+        "issue_counts": dict(sorted(issues.items())),
+        "mean_provenance_completeness": round(
+            statistics.mean(item["provenance"]["completeness_ratio"] for item in assessments),
+            4,
+        )
+        if assessments
+        else None,
+        "mean_duplicate_ratio": round(
+            statistics.mean(item["duplication"]["duplicate_ratio"] for item in assessments),
+            4,
+        )
+        if assessments
+        else None,
+        "maximum_duplicate_ratio": max(
+            (item["duplication"]["duplicate_ratio"] for item in assessments),
+            default=None,
+        ),
+        "mean_focus_relevance": round(
+            statistics.mean(item["focus_relevance"]["relevance_ratio"] for item in assessments),
+            4,
+        )
+        if assessments
+        else None,
+        "flagged_instruction_items": sum(
+            item["instruction_safety"]["flagged_items"] for item in assessments
+        ),
+        "uncontained_instruction_samples": sum(
+            item["instruction_safety"]["flagged_items"] > 0
+            and not item["instruction_safety"]["containment_boundary"]
+            for item in assessments
+        ),
+    }
 
 
 def embedding_warmup_summary(samples: Sequence[dict[str, Any]]) -> dict[str, Any]:
@@ -572,7 +632,7 @@ def main_cli() -> int:
 
     all_samples = all_cold + all_warm
     report = {
-        "schema_version": 2,
+        "schema_version": 3,
         "suite_id": "firstroll-pre-agent-packet-v1",
         "system": "fixed_workflow_packet_preparation",
         "recorded_at": datetime.now(timezone.utc).isoformat(),
@@ -608,6 +668,7 @@ def main_cli() -> int:
             "cold_stages": stage_summary(all_cold),
             "warm_stages": stage_summary(all_warm),
             "packet_metrics": packet_metric_summary(all_samples),
+            "packet_quality": packet_quality_summary(all_samples),
             "embedding_warmup": {
                 "parent_process": parent_embedding_warmup,
                 "cold_processes": embedding_warmup_summary(all_cold),
