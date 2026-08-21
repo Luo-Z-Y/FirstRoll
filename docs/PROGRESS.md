@@ -1,5 +1,45 @@
 # FirstRoll Project Progress
 
+### 21 August 2026 — Protected branches and human production approval
+
+Delivered:
+
+1. Replaced direct-to-`master` agent publication with short-lived feature, fix, documentation or
+   chore branches, required pull requests and automatic branch deletion after merge. A permanent
+   `local` or `develop` branch is explicitly prohibited.
+2. Protected `master` for administrators and other writers: changes require a current pull request,
+   the GitHub Actions `checks` result and resolved conversations; force pushes and deletion are
+   blocked.
+3. Added a required repository-owner review to the branch-restricted GitHub `production`
+   environment. A green merge may build and seal a release, but agents must stop at the pending gate
+   and cannot approve or bypass production on the user's behalf.
+4. Added a pull-request delivery checklist, workflow contract coverage and seven-day artefact
+   retention so the owner has time to inspect an immutable candidate before approval.
+5. Updated the README and hosting runbook with the branch, merge, approval and post-deployment
+   verification sequence.
+
+Acceptance evidence:
+
+- all 186 automated tests, action-workflow validation, the hosted frontend build, npm audit and
+  repository whitespace checks pass;
+- GitHub reports enforced administrator protection, strict required `checks`, pull-request-only
+  `master`, blocked force-push/deletion and automatic merged-branch cleanup;
+- the `production` environment reports one required owner reviewer, permits only `master` and keeps
+  the Azure token outside repository-wide secrets;
+- the implementation itself travels through a short-lived branch and green pull request, while its
+  deployment pauses for separate human approval.
+
+Known constraint:
+
+- the sole repository owner can approve their own environment deployment, so this is a deliberate
+  human release-intent gate rather than independent two-person review; add another trusted reviewer
+  if collaborative production ownership is introduced.
+
+Next actionable work:
+
+1. Add an automated post-deployment HTTP/build-identity smoke check that runs after human approval
+   and reports a direct rollback target without weakening the gate.
+
 ### 21 August 2026 — Launch-independent localhost test account
 
 Delivered:

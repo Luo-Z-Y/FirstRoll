@@ -87,7 +87,8 @@ jobs:
           name: production-frontend-${{ github.event.workflow_run.head_sha }}
           path: dist/
           if-no-files-found: error
-          retention-days: 1
+          # Leave enough time for the repository owner to inspect and approve the release.
+          retention-days: 7
 
   deploy:
     needs: build
