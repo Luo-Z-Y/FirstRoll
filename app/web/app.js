@@ -13,11 +13,17 @@ const state = {
   url: null,
   meta: null,
   analysis: null,
+  productView: "discovery",
+  viewScroll: { discovery: 0, analyse: 0, settings: 0 },
   discovery: {
     results: [],
     selectedFilm: null,
+    detailFilmId: null,
     archive: null,
     archiveSelectionId: null,
+    lastQuery: null,
+    resultStage: "idle",
+    shelfState: "idle",
     mode: "unknown",
     activeCriticismProvider: null,
     recentSearches: [],
@@ -39,6 +45,13 @@ const CRITICISM_SOURCES = [
 
 const RECENT_SEARCHES_KEY = "firstroll.recent-searches";
 const THEME_STORAGE_KEY = "firstroll.theme";
+const DISCOVERY_SESSION_KEY = "firstroll.discovery-session";
+const PRODUCT_SESSION_KEY = "firstroll.product-session";
+const SESSION_SCHEMA_VERSION = 1;
+const DISCOVERY_SESSION_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+const DISCOVERY_SESSION_MAX_BYTES = 500_000;
+const DISCOVERY_SESSION_STAGES = new Set(["loading", "choices", "empty", "archive"]);
+const SHELF_SESSION_STATES = new Set(["idle", "loading", "ready", "partial"]);
 const MAX_RECENT_SEARCHES = 5;
 const systemThemeMedia = window.matchMedia("(prefers-color-scheme: dark)");
 
@@ -139,6 +152,9 @@ function setup() {
   refs.recentSearches.addEventListener("click", onRecentSearchClick);
   state.discovery.recentSearches = readRecentSearches();
   renderRecentSearches(state.discovery.recentSearches);
+  restoreDiscoverySession();
+  restoreProductSession();
+  window.addEventListener("pagehide", persistCurrentSession);
 
   refs.sampleInterval.addEventListener("input", () => {
     refs.sampleIntervalOut.value = `${Number(refs.sampleInterval.value).toFixed(2)}s`;
@@ -305,8 +321,11 @@ function syncThemeToggle() {
   refs.themeToggle.setAttribute("aria-pressed", String(dark));
 }
 
-function setProductView(viewKey) {
+function setProductView(viewKey, options = {}) {
   if (!refs.productViews[viewKey]) return;
+  if (options.captureCurrent !== false && refs.productViews[state.productView]) {
+    state.viewScroll[state.productView] = Math.max(0, Number(window.scrollY) || 0);
+  }
   Object.entries(refs.productViews).forEach(([key, section]) => {
     section.classList.toggle("active", key === viewKey);
   });
@@ -315,10 +334,272 @@ function setProductView(viewKey) {
     button.classList.toggle("active", active);
     button.setAttribute("aria-current", active ? "page" : "false");
   });
+  state.productView = viewKey;
+  if (options.persist !== false) persistProductSession();
   document.dispatchEvent(new CustomEvent("firstroll:view-changed", {
     detail: { view: viewKey },
   }));
-  window.scrollTo({ top: 0, behavior: "smooth" });
+  const scrollTop = options.restoreScroll === false
+    ? 0
+    : Math.max(0, Number(state.viewScroll[viewKey]) || 0);
+  window.requestAnimationFrame(() => {
+    window.scrollTo({ top: scrollTop, behavior: "auto" });
+  });
+}
+
+function persistCurrentSession() {
+  state.viewScroll[state.productView] = Math.max(0, Number(window.scrollY) || 0);
+  persistProductSession();
+  persistDiscoverySession();
+}
+
+function persistProductSession() {
+  try {
+    window.sessionStorage.setItem(PRODUCT_SESSION_KEY, JSON.stringify({
+      version: SESSION_SCHEMA_VERSION,
+      view: state.productView,
+      scroll: state.viewScroll,
+    }));
+  } catch (_) {
+    // Navigation remains usable when per-tab browser storage is disabled.
+  }
+}
+
+function restoreProductSession() {
+  let stored = null;
+  try {
+    stored = JSON.parse(window.sessionStorage.getItem(PRODUCT_SESSION_KEY) || "null");
+  } catch (_) {
+    stored = null;
+  }
+  if (stored?.version === SESSION_SCHEMA_VERSION && stored.scroll) {
+    Object.keys(state.viewScroll).forEach((view) => {
+      const value = Number(stored.scroll[view]);
+      state.viewScroll[view] = Number.isFinite(value) && value >= 0 ? value : 0;
+    });
+  }
+  const view = stored?.version === SESSION_SCHEMA_VERSION && refs.productViews[stored.view]
+    ? stored.view
+    : "discovery";
+  setProductView(view, { captureCurrent: false, persist: false });
+}
+
+function normaliseDiscoveryQuery(query = {}) {
+  return {
+    title: String(query.title || query.q || "").trim().slice(0, 160),
+    year: String(query.year || "").trim().slice(0, 4),
+    director: String(query.director || "").trim().slice(0, 120),
+  };
+}
+
+function isStoredFilm(film) {
+  if (!film || typeof film !== "object" || Array.isArray(film)) return false;
+  if (typeof film.id !== "string" || !film.id.trim()) return false;
+  const alternativeTitles = Array.isArray(film.alternative_titles)
+    ? film.alternative_titles
+    : [];
+  return [film.title, film.original_title, ...alternativeTitles]
+    .some((value) => typeof value === "string" && value.trim());
+}
+
+function discoverySessionFilm(film) {
+  if (!isStoredFilm(film)) return null;
+  const alternativeTitles = Array.isArray(film.alternative_titles)
+    ? film.alternative_titles
+      .filter((value) => typeof value === "string" && value.trim())
+      .slice(0, 20)
+    : [];
+  const directors = Array.isArray(film.directors)
+    ? film.directors
+      .filter((value) => typeof value === "string" && value.trim())
+      .slice(0, 12)
+    : [];
+  const releaseYears = Array.isArray(film.release_years)
+    ? film.release_years.map(normaliseFilmYear).filter((value) => value !== null).slice(0, 12)
+    : [];
+  const posterUrl = safeHttpUrl(film.poster_url);
+  const posterSourceUrl = safeHttpUrl(film.poster_source?.url);
+  const runtime = Number(film.runtime_minutes);
+  return {
+    id: String(film.id).trim().slice(0, 180),
+    provider_id: String(film.provider_id || "").trim().slice(0, 120),
+    title: String(film.title || "").trim().slice(0, 240),
+    original_title: String(film.original_title || "").trim().slice(0, 240),
+    alternative_titles: alternativeTitles,
+    year: normaliseFilmYear(film.year),
+    release_years: releaseYears,
+    runtime_minutes: Number.isFinite(runtime) && runtime > 0 ? runtime : null,
+    directors,
+    poster_url: posterUrl || null,
+    poster_source: film.poster_source?.name ? {
+      name: String(film.poster_source.name).trim().slice(0, 120),
+      url: posterSourceUrl || null,
+    } : null,
+  };
+}
+
+function clearDiscoverySession() {
+  try {
+    window.sessionStorage.removeItem(DISCOVERY_SESSION_KEY);
+  } catch (_) {
+    // There is nothing else to clear when per-tab browser storage is disabled.
+  }
+}
+
+function sessionByteLength(value) {
+  return new TextEncoder().encode(value).byteLength;
+}
+
+function persistDiscoverySession() {
+  const query = normaliseDiscoveryQuery(state.discovery.lastQuery || {});
+  if (!query.title || !DISCOVERY_SESSION_STAGES.has(state.discovery.resultStage)) {
+    clearDiscoverySession();
+    return;
+  }
+  const primary = discoverySessionFilm(state.discovery.archive?.primary);
+  const archive = primary ? {
+    primary,
+    directorWorks: (state.discovery.archive.directorWorks || [])
+      .map(discoverySessionFilm)
+      .filter(Boolean)
+      .slice(0, 12),
+    relevant: (state.discovery.archive.relevant || [])
+      .map(discoverySessionFilm)
+      .filter(Boolean)
+      .slice(0, 10),
+  } : null;
+  const snapshot = {
+    version: SESSION_SCHEMA_VERSION,
+    savedAt: Date.now(),
+    query,
+    mode: state.discovery.mode,
+    stage: state.discovery.resultStage,
+    shelfState: state.discovery.shelfState,
+    results: state.discovery.results
+      .map(discoverySessionFilm)
+      .filter(Boolean)
+      .slice(0, 20),
+    archive,
+    detailFilmId: state.discovery.detailFilmId,
+  };
+  try {
+    const serialised = JSON.stringify(snapshot);
+    if (sessionByteLength(serialised) > DISCOVERY_SESSION_MAX_BYTES) {
+      clearDiscoverySession();
+      return;
+    }
+    window.sessionStorage.setItem(DISCOVERY_SESSION_KEY, serialised);
+  } catch (_) {
+    // Search remains available when per-tab browser storage is disabled or full.
+  }
+}
+
+function readDiscoverySession() {
+  try {
+    const serialised = window.sessionStorage.getItem(DISCOVERY_SESSION_KEY);
+    if (!serialised) return null;
+    if (sessionByteLength(serialised) > DISCOVERY_SESSION_MAX_BYTES) {
+      clearDiscoverySession();
+      return null;
+    }
+    const snapshot = JSON.parse(serialised);
+    const age = Date.now() - Number(snapshot?.savedAt || 0);
+    const query = normaliseDiscoveryQuery(snapshot?.query || {});
+    const results = Array.isArray(snapshot?.results)
+      ? snapshot.results.map(discoverySessionFilm).filter(Boolean).slice(0, 20)
+      : [];
+    const rawArchive = snapshot?.archive;
+    const primary = discoverySessionFilm(rawArchive?.primary);
+    const archive = primary ? {
+      primary,
+      directorWorks: Array.isArray(rawArchive.directorWorks)
+        ? rawArchive.directorWorks.map(discoverySessionFilm).filter(Boolean).slice(0, 12)
+        : [],
+      relevant: Array.isArray(rawArchive.relevant)
+        ? rawArchive.relevant.map(discoverySessionFilm).filter(Boolean).slice(0, 10)
+        : [],
+    } : null;
+    if (
+      snapshot?.version !== SESSION_SCHEMA_VERSION
+      || age < -60_000
+      || age > DISCOVERY_SESSION_MAX_AGE_MS
+      || !query.title
+      || !DISCOVERY_SESSION_STAGES.has(snapshot.stage)
+      || (snapshot.stage === "archive" && !archive)
+    ) {
+      clearDiscoverySession();
+      return null;
+    }
+    return {
+      query,
+      results,
+      archive,
+      mode: String(snapshot.mode || "unknown"),
+      stage: snapshot.stage,
+      shelfState: SHELF_SESSION_STATES.has(snapshot.shelfState)
+        ? snapshot.shelfState
+        : "idle",
+      detailFilmId: typeof snapshot.detailFilmId === "string"
+        ? snapshot.detailFilmId
+        : null,
+    };
+  } catch (_) {
+    clearDiscoverySession();
+    return null;
+  }
+}
+
+function restoreDiscoverySession() {
+  const snapshot = readDiscoverySession();
+  if (!snapshot) return false;
+  refs.filmTitle.value = snapshot.query.title;
+  refs.filmYear.value = snapshot.query.year;
+  refs.filmDirector.value = snapshot.query.director;
+  refs.discoveryResultsSection.classList.remove("hidden");
+  refs.filmDetail.classList.add("hidden");
+  state.discovery.lastQuery = snapshot.query;
+  state.discovery.results = snapshot.results;
+  state.discovery.mode = snapshot.mode;
+  state.discovery.resultStage = snapshot.stage;
+  state.discovery.shelfState = snapshot.shelfState;
+  state.discovery.detailFilmId = snapshot.detailFilmId;
+  state.discovery.selectedFilm = null;
+
+  if (snapshot.stage === "loading") {
+    refs.resultsTitle.textContent = `Finding “${snapshot.query.title}”`;
+    refs.resultsMeta.textContent = "";
+    refs.discoveryResults.innerHTML = fetchProgressMarkup(
+      "Restoring the latest film search…",
+    );
+    window.queueMicrotask(() => refs.discoveryForm.requestSubmit());
+    return true;
+  }
+  if (snapshot.stage === "archive" && snapshot.archive) {
+    const { primary, directorWorks, relevant } = snapshot.archive;
+    setArchiveHeading(primary);
+    renderFilmArchive(
+      primary,
+      directorWorks,
+      relevant,
+      snapshot.shelfState === "loading",
+    );
+    state.discovery.shelfState = snapshot.shelfState;
+    if (snapshot.shelfState === "partial") markDirectorShelfPartial(primary.id);
+    persistDiscoverySession();
+    if (snapshot.shelfState === "loading") {
+      void loadRelatedFilms(primary, relevant);
+    }
+    if (snapshot.detailFilmId) {
+      void loadFilmDetail(snapshot.detailFilmId, { scroll: false });
+    }
+    return true;
+  }
+  renderDiscoveryResults({
+    results: snapshot.results,
+    query: snapshot.query,
+    mode: snapshot.mode,
+  });
+  return true;
 }
 
 function discoveryApiBase() {
@@ -456,9 +737,10 @@ async function onDiscoverySearch(event) {
   const params = new URLSearchParams({ q: title });
   const year = refs.filmYear.value.trim();
   const director = refs.filmDirector.value.trim();
+  const query = normaliseDiscoveryQuery({ title, year, director });
   if (year) params.set("year", year);
   if (director) params.set("director", director);
-  saveRecentSearch({ title, year, director });
+  saveRecentSearch(query);
 
   state.discovery.searchController?.abort();
   cancelShelfRequests();
@@ -466,14 +748,21 @@ async function onDiscoverySearch(event) {
   const controller = new AbortController();
   state.discovery.searchRequestId = requestId;
   state.discovery.searchController = controller;
+  state.discovery.results = [];
+  state.discovery.selectedFilm = null;
+  state.discovery.detailFilmId = null;
+  state.discovery.archive = null;
+  state.discovery.archiveSelectionId = null;
+  state.discovery.lastQuery = query;
+  state.discovery.resultStage = "loading";
+  state.discovery.shelfState = "idle";
+  persistDiscoverySession();
 
   refs.discoverySubmit.setAttribute("aria-busy", "true");
   refs.discoverySubmit.querySelector("span").textContent = "Searching…";
   refs.discoveryResultsSection.classList.remove("hidden");
   refs.filmDetail.classList.add("hidden");
   refs.discoveryResults.innerHTML = fetchProgressMarkup("Matching title, year and filmmaker identity…");
-  state.discovery.archive = null;
-  state.discovery.archiveSelectionId = null;
   refs.resultsTitle.textContent = `Finding “${title}”`;
   refs.resultsMeta.textContent = "";
 
@@ -485,11 +774,13 @@ async function onDiscoverySearch(event) {
     if (!res.ok) throw new Error(await readApiError(res));
     const data = await res.json();
     if (requestId !== state.discovery.searchRequestId) return;
-    state.discovery.results = Array.isArray(data.results) ? data.results : [];
     state.discovery.mode = data.mode || "unknown";
+    state.discovery.lastQuery = normaliseDiscoveryQuery(data.query || query);
     renderDiscoveryResults(data);
   } catch (err) {
     if (err?.name === "AbortError" || requestId !== state.discovery.searchRequestId) return;
+    state.discovery.resultStage = "error";
+    clearDiscoverySession();
     refs.resultsTitle.textContent = "Discovery is unavailable";
     refs.discoveryResults.innerHTML = `<div class="no-results">${escapeHtml(err.message)} Check that the FirstRoll backend is running, then try again.</div>`;
   } finally {
@@ -595,21 +886,33 @@ function onRecentSearchClick(event) {
 
 function renderDiscoveryResults(data) {
   const films = Array.isArray(data.results) ? data.results : [];
-  const query = data.query || {};
+  const query = normaliseDiscoveryQuery(data.query || state.discovery.lastQuery || {});
+  state.discovery.results = films;
+  state.discovery.lastQuery = query;
   refs.resultsTitle.textContent = films.length ? "Pulled from the shelf" : "Nothing on this shelf";
   refs.resultsMeta.textContent = [query.title, query.year, query.director].filter(Boolean).join(" / ");
   if (!films.length) {
+    state.discovery.archive = null;
+    state.discovery.archiveSelectionId = null;
+    state.discovery.resultStage = "empty";
+    state.discovery.shelfState = "idle";
     refs.discoveryResults.innerHTML = `
       <div class="no-results">
         No exact match was found. Check the release year or remove the director filter, then search again.
       </div>`;
+    persistDiscoverySession();
     return;
   }
 
   if (films.length > 1) {
+    state.discovery.archive = null;
+    state.discovery.archiveSelectionId = null;
+    state.discovery.resultStage = "choices";
+    state.discovery.shelfState = "idle";
     refs.resultsTitle.textContent = "Which film did you mean?";
     refs.resultsMeta.textContent = `${films.length} possible matches`;
     refs.discoveryResults.innerHTML = filmIdentityChoicesMarkup(films);
+    persistDiscoverySession();
     return;
   }
 
@@ -659,19 +962,25 @@ function filmIdentityChoicesMarkup(films) {
     </section>`;
 }
 
-function confirmDiscoveryFilm(index) {
-  const primary = state.discovery.results[index];
-  if (!primary) return;
-  cancelShelfRequests();
-  const nearby = uniqueFilms(state.discovery.results, [primary]).slice(0, 10);
+function setArchiveHeading(primary) {
   refs.resultsTitle.textContent = "Pulled from the shelf";
   refs.resultsMeta.textContent = [
     primary.title,
     filmYearLabel(primary),
     displayCrew(primary.directors || [], ""),
   ].filter(Boolean).join(" / ");
+}
+
+function confirmDiscoveryFilm(index) {
+  const primary = state.discovery.results[index];
+  if (!primary) return;
+  cancelShelfRequests();
+  const nearby = uniqueFilms(state.discovery.results, [primary]).slice(0, 10);
+  state.discovery.selectedFilm = null;
+  state.discovery.detailFilmId = null;
+  setArchiveHeading(primary);
   renderFilmArchive(primary, [], nearby, true);
-  loadRelatedFilms(primary, nearby);
+  void loadRelatedFilms(primary, nearby);
 }
 
 async function loadRelatedFilms(primary, nearby) {
@@ -790,6 +1099,8 @@ function setDirectorShelfLoading(primaryId) {
   const retry = shelf.querySelector("[data-retry-director-shelf]");
   if (status) status.textContent = "Finding other verified films by this director…";
   retry?.classList.add("hidden");
+  state.discovery.shelfState = "loading";
+  persistDiscoverySession();
 }
 
 function hydrateDirectorShelf(primaryId, directorWorks) {
@@ -812,6 +1123,21 @@ function hydrateDirectorShelf(primaryId, directorWorks) {
   }
   retry?.classList.add("hidden");
   shelf.classList.remove("is-loading", "has-partial-data");
+  state.discovery.shelfState = "ready";
+  persistDiscoverySession();
+}
+
+function markDirectorShelfPartial(primaryId) {
+  const shelf = refs.discoveryResults.querySelector("[data-director-shelf]");
+  if (!shelf || shelf.dataset.primaryFilmId !== primaryId) return;
+  shelf.classList.remove("is-loading");
+  shelf.classList.add("has-partial-data");
+  const status = shelf.querySelector("[data-film-shelf-status]");
+  const retry = shelf.querySelector("[data-retry-director-shelf]");
+  if (status) {
+    status.textContent = "Showing the selected film. Try loading the director’s other films again.";
+  }
+  retry?.classList.remove("hidden");
 }
 
 function showFilmShelfFallback(primaryId, error) {
@@ -825,14 +1151,9 @@ function showFilmShelfFallback(primaryId, error) {
   const count = shelf.querySelector("[data-film-shelf-count]");
   if (stage && primary) stage.innerHTML = directorShelfFilmsMarkup(primary, films, false);
   if (count) count.textContent = `${films.length} ${films.length === 1 ? "film" : "films"}`;
-  shelf.classList.remove("is-loading");
-  shelf.classList.add("has-partial-data");
-  const status = shelf.querySelector("[data-film-shelf-status]");
-  const retry = shelf.querySelector("[data-retry-director-shelf]");
-  if (status) {
-    status.textContent = "Showing the selected film. Try loading the director’s other films again.";
-  }
-  retry?.classList.remove("hidden");
+  markDirectorShelfPartial(primaryId);
+  state.discovery.shelfState = "partial";
+  persistDiscoverySession();
 }
 
 function retryDirectorShelf() {
@@ -856,6 +1177,8 @@ function renderFilmArchive(primary, directorWorks, relevant, loading) {
   const duration = formatFilmDuration(primary.runtime_minutes);
   state.discovery.archiveSelectionId = primary.id;
   state.discovery.archive = { primary, directorWorks, relevant };
+  state.discovery.resultStage = "archive";
+  state.discovery.shelfState = loading ? "loading" : "ready";
   refs.discoveryResults.innerHTML = `
     <div class="archive-pullout-shell">
       <div class="archive-pullout">
@@ -875,6 +1198,7 @@ function renderFilmArchive(primary, directorWorks, relevant, loading) {
       </div>
     </div>
     ${directorShelfMarkup(primary, directorWorks, director, loading)}`;
+  persistDiscoverySession();
 }
 
 function formatFilmDuration(minutes) {
@@ -1032,15 +1356,21 @@ function selectArchiveFilm(filmId) {
   cancelShelfRequests();
   const remaining = uniqueFilms(available, [selected]);
   state.discovery.selectedFilm = null;
+  state.discovery.detailFilmId = null;
   refs.filmDetail.classList.add("hidden");
   renderFilmArchive(selected, [], remaining, true);
-  loadRelatedFilms(selected, remaining);
+  void loadRelatedFilms(selected, remaining);
 }
 
-async function loadFilmDetail(filmId) {
+async function loadFilmDetail(filmId, options = {}) {
+  state.discovery.detailFilmId = filmId;
+  state.discovery.selectedFilm = null;
+  persistDiscoverySession();
   refs.filmDetail.classList.remove("hidden");
   refs.filmDetail.innerHTML = fetchProgressMarkup("Building the film dossier…");
-  refs.filmDetail.scrollIntoView({ behavior: "smooth", block: "start" });
+  if (options.scroll !== false) {
+    refs.filmDetail.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
   try {
     const res = await fetch(`${discoveryApiBase()}/api/discovery/films/${encodeURIComponent(filmId)}`);
     if (!res.ok) throw new Error(await readApiError(res));
@@ -1050,8 +1380,12 @@ async function loadFilmDetail(filmId) {
       data.film.critical_research?.bundles || {},
     );
     renderFilmDetail(data.film);
+    persistDiscoverySession();
     loadFilmReception(data.film);
   } catch (err) {
+    state.discovery.selectedFilm = null;
+    state.discovery.detailFilmId = null;
+    persistDiscoverySession();
     refs.filmDetail.innerHTML = `<button class="detail-close" type="button" data-detail-close aria-label="Close">×</button><div class="no-results">${escapeHtml(err.message)}</div>`;
   }
 }
@@ -1281,8 +1615,11 @@ function reviewCard(review) {
 
 async function onFilmDetailClick(event) {
   if (event.target.closest("[data-detail-close]")) {
+    state.discovery.selectedFilm = null;
+    state.discovery.detailFilmId = null;
     refs.filmDetail.classList.add("hidden");
     refs.filmDetail.innerHTML = "";
+    persistDiscoverySession();
     return;
   }
   if (event.target.closest("[data-analyse-film]")) {

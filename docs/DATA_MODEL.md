@@ -1,14 +1,15 @@
 # FirstRoll Data Model
 
 **Status:** Current implementation and staged identity-neutral migration
-**Last reconciled:** 20 August 2026
+**Last reconciled:** 21 August 2026
 
 FirstRoll deliberately uses different stores for different privacy and durability requirements. The
 hosted edition persists account identity, profile, preferences, saved films and quota counters in Supabase. The replacement
 quota model is ordinary PostgreSQL and keys usage by identity provider plus immutable subject, so
 it can work with either Supabase Auth or Entra External ID. The local edition persists private
 books, derived search data, connector settings and acquired research under `.firstroll/`.
-Film discovery caches and current hosted study results are process memory.
+Film discovery caches and current hosted study results are process memory. The browser keeps one
+bounded Discover workspace in per-tab session storage solely to survive view changes and refresh.
 
 ## Storage Inventory
 
@@ -25,7 +26,22 @@ Film discovery caches and current hosted study results are process memory.
 | `.firstroll/criticism/*.json` | Local | Yes | Attributed provider reviews and structured critic claims | Yes |
 | `.firstroll/videos/*.json` | Local | Yes | Accepted video catalogue, descriptions and available captions | Yes |
 | Discovery/reception dictionaries | Local and hosted | No | TMDb or Wikidata/Wikipedia details, related-film and reception cache | In memory only |
+| Browser `sessionStorage` | Local and hosted browser | Per tab, ≤24 hours | Public Discover query/candidates/shelf, active product view, scroll offsets and optional dossier film ID | Not applicable; browser-managed |
 | `StudyRunStore` | Hosted | No | Owner UUID, status and final study for a maximum of ten minutes | In memory only |
+
+## Per-tab Discover continuity
+
+`firstroll.discovery-session` is a versioned browser snapshot capped at 500 KB. It stores only the
+current public query, at most twenty candidate summaries, twelve director-film summaries, ten nearby
+summaries, shelf state and an optional canonical film ID for reopening a dossier. The companion
+`firstroll.product-session` record stores the active product view and three scroll offsets. Both use
+`sessionStorage`, not account tables or `localStorage`.
+
+The browser rejects snapshots with the wrong schema, malformed film identity, excessive age or an
+oversized serialised body. Completed shelves restore without provider requests; a refresh during an
+in-flight search reissues the latest query. Dossier content, reviews, criticism, study output,
+credentials, authentication tokens and account records are excluded. The records disappear with the
+tab session and are not cross-device persistence.
 
 ## Supabase Postgres
 

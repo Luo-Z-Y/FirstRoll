@@ -60,6 +60,11 @@ The original GPL-3.0 licence and contributor attribution remain applicable. See
   this browser-only convenience data is never attached to a FirstRoll account. Discovery follows a
   latest-search-wins contract: starting another query aborts the previous title and shelf requests,
   and stale responses cannot replace the newly selected film.
+- Keep the current Discover workspace while moving between Discover, Analyse and Settings, including
+  each view's scroll position. A versioned per-tab `sessionStorage` snapshot restores the query,
+  identity choices or hydrated shelf after refresh without repeating a completed search. It contains
+  public film summaries and an optional open-dossier ID only—never credentials, reviews, studies or
+  account data—and expires after twenty-four hours or when the tab session ends.
 - Confirm the intended film before opening the shelf whenever several records share or closely match
   a title; each choice exposes its year, director, original title and poster instead of trusting the
   provider's first-ranked result.

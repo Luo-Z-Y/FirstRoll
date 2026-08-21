@@ -30,6 +30,7 @@ public API.
 | 016 | Decouple quota persistence from browser identity tokens | Accepted, deployment staged | Provider portability versus a protected backend database credential |
 | 017 | Keep Supabase Auth and add RLS-owned account data | Accepted | Low-cost persistence versus an additional managed platform boundary |
 | 018 | Use TMDb as the optional primary catalogue with an open fallback | Accepted | Rich, fast metadata versus one optional credential and attribution duty |
+| 019 | Keep transient Discover continuity in per-tab session storage | Accepted | Refresh resilience versus bounded browser-local staleness |
 
 ## ADR-001: Evolve pyCinemetrics with preserved attribution
 
@@ -682,6 +683,56 @@ adapter if enterprise requirements justify AWS Data Exchange access.
 4. [x] Add dossier attribution and provider-policy tests.
 5. [ ] Record live p50/p95 catalogue latency after a token is configured and the hosted cache has
    observed representative same-title and non-English-title searches.
+
+## ADR-019: Keep transient Discover continuity in per-tab session storage
+
+**Status:** Accepted
+**Date:** 21 August 2026
+**Decider:** FirstRoll maintainer
+
+### Context
+
+Discover results previously existed only in JavaScript memory. Product-view buttons did not need to
+replace the DOM, but a refresh always lost the query, selected shelf and browsing position. Saving
+this transient workspace to an account would require authentication and create unnecessary durable
+records; putting the complete result in a URL would be large and expose provider payloads through
+history and sharing.
+
+### Decision
+
+Keep one versioned Discover snapshot and product-navigation record in `sessionStorage`. Persist only
+public query and film-summary data, shelf readiness, an optional dossier film ID, active product view
+and scroll offsets. Cap the snapshot at 500 KB, reject data older than twenty-four hours and restore a
+completed shelf synchronously without repeating provider calls. If refresh interrupts a request,
+restore the form and reissue only the latest query.
+
+Do not store dossier bodies, criticism, reviews, studies, credentials, authentication tokens or
+account data. Treat the snapshot as same-tab continuity rather than durable or cross-device history.
+
+### Options considered
+
+| Option | Assessment |
+|---|---|
+| JavaScript memory only | Keeps view switches cheap but cannot survive refresh |
+| `localStorage` workspace | Survives browser restarts but leaves stale catalogue payloads indefinitely |
+| URL-encoded state | Shareable, but too large for hydrated shelves and leaks data into history |
+| Account-backed workspace | Cross-device, but requires sign-in and creates an unjustified durable-data boundary |
+| Bounded `sessionStorage` | Survives refresh, clears with the tab session and needs no backend write; accepted |
+
+### Consequences
+
+- Discover, Analyse and Settings preserve their DOM and scroll position when switching.
+- A refreshed tab returns to its active view with the prior Discover shelf available behind it.
+- Completed search and related-film requests are not repeated solely because of refresh.
+- Open dossier content is fetched again from its canonical ID rather than copied into browser storage.
+- Schema, age, shape and size guards turn corrupt or obsolete snapshots into a clean initial state.
+
+### Action items
+
+1. [x] Persist and restore query, ambiguity choices, shelves and optional dossier identity.
+2. [x] Preserve active product view and per-view scroll offsets.
+3. [x] Add refresh and three-view Chromium acceptance coverage.
+4. [ ] Revisit only if users need explicit cross-device projects rather than transient continuity.
 
 ## How to Add or Change a Decision
 

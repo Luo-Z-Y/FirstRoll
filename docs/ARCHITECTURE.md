@@ -131,7 +131,7 @@ future-enterprise path, but ADR-017 removes it from the production critical path
 
 | Component | Responsibility | Does not own |
 |---|---|---|
-| `app/web` | Search, disambiguation, resilient native director shelf, password-account UI, RLS-backed saved films, evidence views, progress rendering and clip upload UI | Provider secrets, cross-account authorisation, evidence validation or quota decisions |
+| `app/web` | Search, disambiguation, per-tab Discover continuity, resilient native director shelf, password-account UI, RLS-backed saved films, evidence views, progress rendering and clip upload UI | Provider secrets, cross-account authorisation, durable study storage, evidence validation or quota decisions |
 | `main.py` | HTTP boundary, mode gates, authentication calls, quota ordering, request validation and error mapping | Provider parsing rules or model-quality policy |
 | `tmdb_discovery.py` | Official TMDb candidate hydration, provider-qualified routing, IMDb/Wikidata identity bridges and open-catalogue failover | Critical interpretation, browser-held catalogue secrets or silent first-result selection |
 | `discovery.py` | Key-free Wikidata/Wikipedia identity fallback, overview reconciliation and related films | Critical interpretation or creator intention |
@@ -172,6 +172,21 @@ TMDb's director credits already contain poster paths for the shelf, avoiding per
 The open fallback retains separate fast and enriched shelf caches; a provider-local page found from
 a title is accepted only when its structured title, year and director agree with the canonical
 record.
+
+#### Browser session continuity
+
+After each stable discovery transition, the browser writes a versioned, size-bounded snapshot to
+per-tab `sessionStorage`. The snapshot contains the public query, candidate summaries, selected shelf
+summaries, shelf readiness and an optional open-dossier film ID. It excludes dossier bodies,
+criticism, studies, credentials and account data. A completed shelf restores synchronously after a
+refresh without repeating search or related-film requests; an interrupted loading snapshot safely
+reissues only its latest query. Invalid, oversized, incompatible or older-than-twenty-four-hour
+snapshots are discarded.
+
+Product navigation changes only the active section. It neither rebuilds nor empties Discover, and
+per-view scroll offsets are restored when moving among Discover, Analyse and Settings. This state is
+session continuity, not durable account persistence: closing the tab session clears it, and no state
+is synchronised across devices.
 
 ### Catalogue provider decision matrix
 

@@ -247,7 +247,7 @@ def test_archive_pullout_collapses_before_zoom_can_clip_its_copy() -> None:
     app = (WEB / "app.js").read_text(encoding="utf-8")
 
     assert "/assets/styles.css?v=20260821-5" in index
-    assert "/assets/app.js?v=20260821-7" in index
+    assert "/assets/app.js?v=20260821-8" in index
     assert "closet3d.js" not in index
     assert 'class="archive-pullout-shell"' in app
     assert "container-type: inline-size" in styles
@@ -276,6 +276,33 @@ def test_recent_searches_can_be_removed_individually_or_cleared() -> None:
     assert ".recent-search-item" in styles
     assert ".recent-search-dismiss" in styles
     assert ".recent-search-clear" in styles
+
+
+def test_discovery_workspace_survives_refresh_and_product_navigation() -> None:
+    app = (WEB / "app.js").read_text(encoding="utf-8")
+    index = (WEB / "index.html").read_text(encoding="utf-8")
+
+    assert "/assets/app.js?v=20260821-8" in index
+    assert 'const DISCOVERY_SESSION_KEY = "firstroll.discovery-session"' in app
+    assert 'const PRODUCT_SESSION_KEY = "firstroll.product-session"' in app
+    assert "window.sessionStorage.setItem(DISCOVERY_SESSION_KEY" in app
+    assert ".map(discoverySessionFilm)" in app
+    session_film = app[
+        app.index("function discoverySessionFilm"):
+        app.index("function clearDiscoverySession")
+    ]
+    assert "critical_research" not in session_film
+    assert "reviews" not in session_film
+    assert "study" not in session_film
+    assert "sessionByteLength(serialised) > DISCOVERY_SESSION_MAX_BYTES" in app
+    assert "restoreDiscoverySession();" in app
+    assert 'window.addEventListener("pagehide", persistCurrentSession)' in app
+    assert 'snapshot.stage === "archive"' in app
+    assert "renderFilmArchive(" in app
+    assert "void loadFilmDetail(snapshot.detailFilmId, { scroll: false })" in app
+    assert "state.viewScroll[state.productView]" in app
+    assert "persistProductSession();" in app
+    assert 'window.scrollTo({ top: scrollTop, behavior: "auto" })' in app
 
 
 def test_new_discovery_search_aborts_stale_search_and_shelf_work() -> None:
@@ -314,9 +341,11 @@ def test_director_shelf_renders_immediately_then_enriches_posters() -> None:
     assert "data-retry-director-shelf" in app
     assert "retryDirectorShelf" in app
     assert "showFilmShelfFallback" in app
+    partial = app[app.index("function markDirectorShelfPartial"):app.index("function retryDirectorShelf")]
     fallback = app[app.index("function showFilmShelfFallback"):app.index("function retryDirectorShelf")]
     assert "directorShelfFilmsMarkup(primary, films, false)" in fallback
-    assert "Showing the selected film." in fallback
+    assert "markDirectorShelfPartial(primaryId)" in fallback
+    assert "Showing the selected film." in partial
     assert "shelfRequestId: 0" in app
     assert "requestId !== state.discovery.shelfRequestId" in app
     assert "window.setTimeout(() => controller.abort(), fast ? 25000 : 90000)" in app

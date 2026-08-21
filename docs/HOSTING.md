@@ -329,6 +329,8 @@ rate limits can still make this optional source temporarily unavailable.
 - `https://firstroll.app` serves the interface and native shelf assets without waiting for the backend.
 - The backend root identifies itself as the FirstRoll API.
 - Search begins working after the backend wakes.
+- A completed Discover shelf survives refresh and switching among Discover, Analyse and Settings
+  through bounded per-tab session storage without repeating completed provider requests.
 - `/api/settings` and `/api/library/status` return HTTP 404 in public mode.
 - `/api/analyze` returns HTTP 503 in public mode.
 - `/api/auth/me` returns HTTP 401 without a session and the signed-in account with a valid session.

@@ -32,6 +32,44 @@ Next actionable work:
 1. Keep authentication acceptance tests exercising both local launch commands whenever the runtime
    configuration or web bootstrap changes.
 
+### 21 August 2026 — Refresh-safe Discover workspace
+
+Delivered:
+
+1. Added a versioned, 500 KB-capped per-tab Discover snapshot containing the latest public query,
+   candidate summaries, selected native shelf, shelf readiness and optional open-dossier film ID.
+2. Restored completed shelves synchronously for up to twenty-four hours without repeating search or
+   related-film requests. A refresh that interrupts loading reissues only the latest query, while
+   malformed, stale or incompatible snapshots are discarded.
+3. Kept Discover mounted while moving among Discover, Analyse and Settings, and preserved each
+   product view's scroll offset plus the active view across refresh.
+4. Excluded dossier bodies, reviews, criticism, studies, credentials, authentication tokens and
+   account records from session storage; an open dossier is re-fetched by canonical ID.
+5. Recorded ADR-019 and reconciled the README, architecture and data-model boundaries.
+
+Acceptance evidence:
+
+- all 185 automated tests, Ruff, frontend JavaScript syntax, npm audit and repository whitespace
+  checks pass;
+- live local Chromium verification loads all four *Resurrection* shelf covers, switches through
+  Analyse and Settings while the complete hidden Discover DOM remains unchanged, then refreshes on
+  Settings and restores the same active view, query and four-card shelf;
+- the refreshed page makes no repeated discovery-search or related-film request; returning to
+  Discover restores its prior scroll region with all four images loaded, no horizontal overflow and
+  no console errors.
+
+Known constraints:
+
+- continuity belongs to one browser-tab session and is intentionally neither cross-device nor durable
+  account history;
+- reopening a previously open dossier still depends on the API because only its canonical film ID is
+  stored.
+
+Next actionable work:
+
+1. Keep this snapshot boundary summary-only if future Discover modules add private or generated
+   content; durable projects require a separate explicit data model.
+
 ### 21 August 2026 — TMDb primary catalogue with open failover
 
 Delivered:
@@ -1195,7 +1233,7 @@ Status vocabulary:
 |---|---|---|
 | Film discovery | Complete | Optional TMDb primary catalogue, open Wikidata/Wikipedia failover, attributed dossier enrichment and the native director shelf |
 | Public video resources | Complete | Persistent cumulative catalogue; typed tabs; bounded uploader-description and public YouTube-caption extraction |
-| Product navigation | Complete | Discover and Analyse modes; Study consolidated into Discover |
+| Product navigation | Complete | Discover, Analyse and Settings preserve per-tab view content and scroll; Study remains consolidated into Discover |
 | Theme support | Complete | System-aware light/dark themes with a locally persisted accessible toggle |
 | Local settings | Complete | Write-only connector credentials plus local add, remove and index controls for the private library |
 | Private library catalogue | Complete | Seven existing film-study PDFs retained; managed uploads and non-destructive removal; paths and content withheld from public APIs |
