@@ -361,6 +361,11 @@ omitted and truncated item totals, input/selected/omitted character totals, fixe
 and bounded omission-reason counts. It contains no titles, authors, URLs or source text and is not a
 new cache. This makes packet shape measurable without persisting private evidence.
 
+`evals/packet_quality_cases.json` contains invented films and synthetic source prose only. Its
+versioned result retains aggregate counts/ratios, issue codes, evidence-type/language labels and a
+fixture fingerprint; result-schema validation rejects film, focus, title, prompt, passage, review and
+source-text fields. Neither fixture nor result reads `.firstroll` or creates a runtime store.
+
 ## Process-Memory Records
 
 ### `StudyRunStore`

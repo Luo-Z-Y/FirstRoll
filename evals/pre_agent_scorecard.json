@@ -110,6 +110,23 @@
       "warm_budget_ms": 2000,
       "packet_metrics_match_baseline": true,
       "embedding_warmup_p95_ms": 10155.338
+    },
+    "packet_quality_baseline": {
+      "result_path": "evals/results/packet-quality-baseline-2026-08-21.json",
+      "source_revision": "6acdcb082857a25136936a09a7f41aeafd1c7fe5",
+      "fixture_fingerprint": "9c2c10d2c5504fa9",
+      "case_count": 6,
+      "assessed_cases": 6,
+      "expectation_failure_count": 0,
+      "passed_packets": 4,
+      "limited_packets": 2,
+      "failed_packets": 0,
+      "mean_provenance_completeness": 1.0,
+      "mean_duplicate_ratio": 0.0333,
+      "mean_focus_relevance": 0.9445,
+      "flagged_instruction_items": 2,
+      "contained_instruction_cases": 1,
+      "model_calls": 0
     }
   },
   "user_journeys": [
@@ -400,12 +417,12 @@
     {
       "id": "S07",
       "name": "Establish packet-quality fixtures",
-      "status": "next"
+      "status": "complete"
     },
     {
       "id": "S08",
       "name": "Improve packet selection quality",
-      "status": "queued"
+      "status": "next"
     },
     {
       "id": "S09",

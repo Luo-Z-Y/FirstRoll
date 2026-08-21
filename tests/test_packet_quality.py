@@ -77,6 +77,47 @@ def test_packet_quality_blocks_missing_theory_and_wrong_identity() -> None:
     }
 
 
+def test_packet_quality_reports_provenance_and_citation_gaps() -> None:
+    class IncompleteReview:
+        summary = "A synthetic critic offers a framing interpretation that remains explicitly unverified."
+        provider = "Synthetic source"
+        author = ""
+        title = "Synthetic review"
+        url = ""
+        language = "und"
+
+    packet = EvidencePacket.from_retrieval(
+        {"title": "Example", "year": 2024, "directors": ["Director"]},
+        {
+            "method": "test",
+            "candidate_count": 2,
+            "passages": [
+                {
+                    "title": "Framework",
+                    "page": 1,
+                    "language": "en",
+                    "excerpt": "Framing can be compared through figure position, boundaries and offscreen relations.",
+                }
+            ],
+        },
+        "framing",
+        reviews=[IncompleteReview()],
+    )
+    invalid_theory = packet.theory_sources[0].model_copy(update={"evidence_id": "invalid"})
+    packet = packet.model_copy(update={"theory_sources": [invalid_theory]})
+
+    assessment = assess_evidence_packet(packet)
+
+    assert assessment["status"] == "failed"
+    assert assessment["provenance"]["completeness_ratio"] == 0.5
+    assert assessment["citation_readiness"]["valid"] is False
+    assert set(assessment["issues"]) >= {
+        "citation_ids_invalid",
+        "provenance_incomplete",
+        "unknown_evidence_language",
+    }
+
+
 def test_packet_quality_fixture_suite_is_synthetic_complete_and_instruction_safe() -> None:
     suite = json.loads((ROOT / "evals" / "packet_quality_cases.json").read_text(encoding="utf-8"))
 

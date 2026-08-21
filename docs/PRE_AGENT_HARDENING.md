@@ -1,6 +1,6 @@
 # Pre-Agent Product Hardening
 
-**Status:** active; Steps 1–6 complete and Step 7 is next
+**Status:** active; Steps 1–7 complete and Step 8 is next
 
 **Machine-readable scorecard:** [`evals/pre_agent_scorecard.json`](../evals/pre_agent_scorecard.json)
 
@@ -152,16 +152,20 @@ records 35/35 completed samples, cold-process P95 of 361.549 ms (96.3895% below 
 of 182.709 ms and packet-shape metrics identical to baseline. Encoder initialisation remains a
 separately reported roughly ten-second background startup cost rather than being hidden.
 
-### Step 7 — Establish packet-quality fixtures — next
+### Step 7 — Establish packet-quality fixtures — complete
 
 Add a separate packet suite for abundant, sparse, duplicate, multilingual, ambiguous and malicious
 retrieved content without altering the five frozen Agent-comparison cases. Define deterministic
 provenance, duplication, citation and instruction-containment checks.
 
 **Acceptance:** packet quality is assessable before synthesis and every fixture is safe to commit;
-private source text is represented only by synthetic substitutes or aggregate metadata.
+private source text is represented only by synthetic substitutes or aggregate metadata. The reviewed
+[`packet-quality-baseline-2026-08-21.json`](../evals/results/packet-quality-baseline-2026-08-21.json)
+records six expectation-complete synthetic cases, 100% provenance, two contained malicious items and
+zero model calls. Four packets pass; the duplicate and honestly sparse cases remain limited for Step
+8 rather than being concealed.
 
-### Step 8 — Improve packet selection quality
+### Step 8 — Improve packet selection quality — next
 
 Implement focus-aware selection, canonical deduplication, justified source diversity, complete
 applicable provenance, explicit omission reasons and per-layer token budgets.

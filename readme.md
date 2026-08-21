@@ -1004,7 +1004,7 @@ fallback behaviour; these are tracked separately from the new FirstRoll modules.
 | Evidence-grounded Deep Study | Complete | Typed theory, criticism, review and video-text evidence; Pydantic output, citation validation and quality gate |
 | Bounded research Agent core | Implemented | LangGraph control flow, bounded reducers, deterministic tool authorisation, fake-service scenarios and optional checkpointing; production route integration remains gated |
 | Authenticated research progress | Implemented | Allow-listed SSE lifecycle events, separate owner-scoped result retrieval and secret/evidence redaction tests; final interactive browser observation remains pending |
-| Pre-Agent product hardening | Active — Steps 1–6 complete | UI hardening and measured baselines are complete; background semantic prewarm removes the cold packet stall without changing packet shape; quality fixtures are next |
+| Pre-Agent product hardening | Active — Steps 1–7 complete | UI and latency hardening plus a six-case redacted pre-synthesis quality baseline are complete; packet selection quality is next |
 | Clip analysis web migration | Complete | Scene, shot, colour, object and export workflow |
 | Clip-to-study evidence bridge | Queued | Feed measured scenes, shots and timecodes into synthesis after the active hardening sequence |
 | Creator primary-source layer | Partial | Discovered interview descriptions and public YouTube captions are stored and cited; verified speaker attribution and dedicated interview search remain planned |
@@ -1032,8 +1032,10 @@ The latest reviewed complete-workflow and packet-only results are
 [`baseline-2026-08-21.json`](evals/results/baseline-2026-08-21.json) and
 [`packet-baseline-2026-08-21.json`](evals/results/packet-baseline-2026-08-21.json), with the measured
 prewarm candidate in
-[`packet-latency-prewarm-2026-08-21.json`](evals/results/packet-latency-prewarm-2026-08-21.json); the
-latest responsive hierarchy and state/accessibility audits are
+[`packet-latency-prewarm-2026-08-21.json`](evals/results/packet-latency-prewarm-2026-08-21.json),
+and the synthetic pre-synthesis quality baseline is
+[`packet-quality-baseline-2026-08-21.json`](evals/results/packet-quality-baseline-2026-08-21.json);
+the latest responsive hierarchy and state/accessibility audits are
 [`ui-hierarchy-2026-08-21.json`](evals/results/ui-hierarchy-2026-08-21.json) and
 [`ui-states-accessibility-2026-08-21.json`](evals/results/ui-states-accessibility-2026-08-21.json).
 The source of truth for each result family is its reviewed JSON artefact, not a screenshot or copied

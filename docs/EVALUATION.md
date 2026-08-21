@@ -138,6 +138,39 @@ do not change. This is a latency-path change, not a retrieval-quality claim. A s
 background readiness can still wait on the same single-flight model load; disabling
 `FIRSTROLL_PREWARM_EMBEDDINGS` restores deferred loading.
 
+## Synthetic Packet-Quality Baseline
+
+[`packet-quality-baseline-2026-08-21.json`](../evals/results/packet-quality-baseline-2026-08-21.json)
+uses six commit-safe cases from [`packet_quality_cases.json`](../evals/packet_quality_cases.json):
+abundant/diverse, honestly sparse, duplicate criticism, multilingual provenance, explicitly selected
+ambiguous identity and malicious retrieved instructions. It evaluates the packet before synthesis and
+loads no private source or model.
+
+| Measure | Result |
+|---|---:|
+| Cases assessed / expectation failures | 6 / 0 |
+| Packet status | 4 passed · 2 limited · 0 failed |
+| Mean provenance completeness | 100% |
+| Mean duplicate ratio | 3.33% |
+| Mean lexical focus relevance | 94.45% |
+| Malicious instruction items flagged / contained cases | 2 / 1 |
+| Model calls | 0 |
+
+The sparse case is limited by `film_specific_evidence_sparse`; it is not padded into apparent
+sufficiency. The duplicate case is limited by `duplicate_evidence_present` with a 20% case-level
+ratio. Multilingual `en`/`zh` evidence and the chosen same-title identity pass. Both malicious items
+are detected while the packet's explicit boundary keeps them untrusted and unable to authorise tools
+or change policy.
+
+The result contains counts, ratios, allow-listed issue codes and language/evidence-type labels only—
+no film identity values, focus, title, prompt, review or source text. These deterministic proxies do
+not establish factual film-analysis correctness or filmmaker usefulness. Run the suite with:
+
+```bash
+uv run python tools/evaluate_packet_quality.py \
+  --output evals/results/packet-quality-YYYY-MM-DD.json
+```
+
 ## Latest UI Hierarchy Checkpoint
 
 [`ui-hierarchy-2026-08-21.json`](../evals/results/ui-hierarchy-2026-08-21.json) records a local Chrome

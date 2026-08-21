@@ -183,6 +183,30 @@ def test_pre_agent_scorecard_freezes_steps_journeys_and_entry_targets() -> None:
         "packet_metrics"
     ]
 
+    quality_checkpoint = scorecard["measured_checkpoints"]["packet_quality_baseline"]
+    quality_result = json.loads(
+        (ROOT / quality_checkpoint["result_path"]).read_text(encoding="utf-8")
+    )
+    assert quality_checkpoint["source_revision"] == quality_result["source_revision"]
+    assert quality_checkpoint["fixture_fingerprint"] == quality_result["fixture_fingerprint"]
+    assert quality_checkpoint["case_count"] == quality_result["aggregate"]["case_count"]
+    assert quality_checkpoint["assessed_cases"] == quality_result["aggregate"][
+        "assessed_cases"
+    ]
+    assert quality_checkpoint["passed_packets"] == quality_result["aggregate"][
+        "packet_status_counts"
+    ]["passed"]
+    assert quality_checkpoint["limited_packets"] == quality_result["aggregate"][
+        "packet_status_counts"
+    ]["limited"]
+    assert quality_checkpoint["mean_duplicate_ratio"] == quality_result["aggregate"][
+        "mean_duplicate_ratio"
+    ]
+    assert quality_checkpoint["flagged_instruction_items"] == quality_result["aggregate"][
+        "flagged_instruction_items"
+    ]
+    assert quality_checkpoint["model_calls"] == quality_result["aggregate"]["model_calls"]
+
     assert scorecard["latency_stages"] == list(STUDY_STAGE_NAMES)
 
     journey_ids = [journey["id"] for journey in scorecard["user_journeys"]]
