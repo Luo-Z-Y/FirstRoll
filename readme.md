@@ -35,6 +35,7 @@ environment configuration, acceptance checks and operational limits.
 | Understand why the major architectural choices were made | [Architecture Decisions](docs/DECISIONS.md) |
 | Read the current versioned benchmark and update protocol | [Evaluation](docs/EVALUATION.md) |
 | Follow the flexible fixed-workflow steps before Agent work | [Pre-Agent Product Hardening](docs/PRE_AGENT_HARDENING.md) |
+| Complete the private filmmaker packet-rating gate | [Human Evidence-Packet Review](docs/HUMAN_PACKET_REVIEW.md) |
 | Install and run the private local edition | [Local Setup](docs/LOCAL_SETUP.md) |
 | Operate the public Azure deployment | [Public Beta Hosting](docs/HOSTING.md) |
 | Review provider, copyright and model-use boundaries | [Data Sources](docs/DATA_SOURCES.md) |
@@ -941,6 +942,7 @@ FirstRoll/
 │   ├── DECISIONS.md
 │   ├── EVALUATION.md
 │   ├── HOSTING.md
+│   ├── HUMAN_PACKET_REVIEW.md
 │   ├── LOCAL_SETUP.md
 │   ├── PRE_AGENT_HARDENING.md
 │   ├── PROGRESS.md
@@ -1014,7 +1016,7 @@ fallback behaviour; these are tracked separately from the new FirstRoll modules.
 | Evidence-grounded Deep Study | Complete | Typed theory, criticism, review and video-text evidence; Pydantic output, citation validation and quality gate |
 | Bounded research Agent core | Implemented | LangGraph control flow, bounded reducers, deterministic tool authorisation, fake-service scenarios and optional checkpointing; production route integration remains gated |
 | Authenticated research progress | Implemented | Allow-listed SSE lifecycle events, separate owner-scoped result retrieval and secret/evidence redaction tests; final interactive browser observation remains pending |
-| Pre-Agent product hardening | Active — Steps 1–10 complete | UI, latency, packet and transparency gates pass; bounded concise synthesis exceeds paired latency/quality targets; integrated baseline freeze is next |
+| Pre-Agent product hardening | Active — Steps 1–10 complete | All 16 machine targets pass; the private five-case human packet review is the sole pending target before the integrated baseline freeze |
 | Clip analysis web migration | Complete | Scene, shot, colour, object and export workflow |
 | Clip-to-study evidence bridge | Queued | Feed measured scenes, shots and timecodes into synthesis after the active hardening sequence |
 | Creator primary-source layer | Partial | Discovered interview descriptions and public YouTube captions are stored and cited; verified speaker attribution and dedicated interview search remain planned |
@@ -1037,6 +1039,17 @@ it never calls DeepSeek or stores packet text. Run
 `uv run python tools/evaluate_packet_quality.py --output evals/results/packet-quality-YYYY-MM-DD.json`
 to assess the separate synthetic abundant, sparse, duplicate, multilingual, ambiguous-identity and
 malicious-instruction fixtures before synthesis.
+
+The final human packet gate must run locally because it deliberately displays selected private
+passages in the terminal. Resumable scores and notes remain under Git-ignored
+`.firstroll/evaluations/`, while its redacted aggregate contains scores only. Agents cannot supply the
+human ratings or attestation.
+
+```bash
+uv run python tools/review_evidence_packets.py
+uv run python tools/check_pre_agent_gate.py \
+  --output evals/results/pre-agent-machine-gate-YYYY-MM-DD.json
+```
 
 The latest reviewed complete-workflow and packet-only results are
 [`baseline-2026-08-21.json`](evals/results/baseline-2026-08-21.json) and

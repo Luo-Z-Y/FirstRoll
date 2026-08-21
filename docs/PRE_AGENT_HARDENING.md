@@ -214,7 +214,11 @@ fixtures, human packet rubric and final fixed workflow evaluation. Review every 
 private data before committing it.
 
 **Acceptance:** all scorecard targets pass, no P0/P1 defect remains and the newest reviewed JSON
-artefact, documentation and progress evidence agree.
+artefact, documentation and progress evidence agree. The current
+[`pre-agent-machine-gate-2026-08-21.json`](../evals/results/pre-agent-machine-gate-2026-08-21.json)
+passes all 16 machine-assessable targets with zero failure. `human_packet_pass_ratio` is the sole
+pending target, so Step 11 and Agent entry remain blocked. The repository owner must complete
+[Human Evidence-Packet Review](HUMAN_PACKET_REVIEW.md) against the current stable revision.
 
 ### Step 12 — Make the Agent go/no-go decision
 

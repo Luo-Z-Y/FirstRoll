@@ -195,6 +195,17 @@
       "model_calls": 5,
       "total_tokens": 38875,
       "provider_reliability_claim": false
+    },
+    "pre_agent_machine_gate": {
+      "result_path": "evals/results/pre-agent-machine-gate-2026-08-21.json",
+      "source_revision": "703e1add4d71ad7af2dc5860dae6bf4e5f228aa4",
+      "required_targets": 17,
+      "passed_targets": 16,
+      "failed_targets": 0,
+      "pending_targets": 1,
+      "all_machine_targets_passed": true,
+      "agent_entry_ready": false,
+      "pending_target": "human_packet_pass_ratio"
     }
   },
   "user_journeys": [
