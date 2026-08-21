@@ -1038,6 +1038,17 @@ it never calls DeepSeek or stores packet text. Run
 to assess the separate synthetic abundant, sparse, duplicate, multilingual, ambiguous-identity and
 malicious-instruction fixtures before synthesis.
 
+The final human packet gate must run locally because it deliberately displays selected private
+passages in the terminal. Resumable scores and notes remain under Git-ignored
+`.firstroll/evaluations/`, while its redacted aggregate contains scores only. Agents cannot supply the
+human ratings or attestation.
+
+```bash
+uv run python tools/review_evidence_packets.py
+uv run python tools/check_pre_agent_gate.py \
+  --output evals/results/pre-agent-machine-gate-YYYY-MM-DD.json
+```
+
 The latest reviewed complete-workflow and packet-only results are
 [`baseline-2026-08-21.json`](evals/results/baseline-2026-08-21.json) and
 [`packet-baseline-2026-08-21.json`](evals/results/packet-baseline-2026-08-21.json), with the measured
