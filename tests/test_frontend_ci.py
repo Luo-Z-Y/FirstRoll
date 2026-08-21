@@ -64,6 +64,7 @@ def test_deployment_secret_is_isolated_from_repository_build_code() -> None:
     assert "actions/upload-artifact@" in build_job
     assert "actions/download-artifact@" in deploy_job
     assert "artifact-ids: ${{ needs.build.outputs.artifact-id }}" in deploy_job
+    assert "merge-multiple: true" in deploy_job
     assert deploy_job.count("AZURE_STATIC_WEB_APPS_API_TOKEN_SALMON_FIELD_03695A010") == 1
     assert "app_location: dist" in deploy_job
     assert "skip_app_build: true" in deploy_job
