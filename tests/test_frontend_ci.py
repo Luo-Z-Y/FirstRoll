@@ -10,6 +10,10 @@ DEPLOYMENT = (
 ).read_text(encoding="utf-8")
 BUILD = (ROOT / "tools" / "build_web.sh").read_text(encoding="utf-8")
 DEPENDABOT = (ROOT / ".github" / "dependabot.yml").read_text(encoding="utf-8")
+AGENT_POLICY = (ROOT / "AGENTS.md").read_text(encoding="utf-8")
+PULL_REQUEST_TEMPLATE = (ROOT / ".github" / "pull_request_template.md").read_text(
+    encoding="utf-8"
+)
 ACTION_REFERENCE = re.compile(r"^\s*(?:-\s+)?uses:\s+[^@\s]+@([^\s#]+)", re.MULTILINE)
 FULL_COMMIT_SHA = re.compile(r"[0-9a-f]{40}")
 
@@ -73,3 +77,18 @@ def test_deployment_secret_is_isolated_from_repository_build_code() -> None:
     assert "permissions:\n  contents: read" in DEPLOYMENT
     assert "persist-credentials: false" in DEPLOYMENT
     assert_uses_immutable_actions(DEPLOYMENT)
+
+
+def test_agent_workflow_requires_protected_prs_and_human_deployment_approval() -> None:
+    agent_policy = " ".join(AGENT_POLICY.split())
+    pull_request_template = " ".join(PULL_REQUEST_TEMPLATE.split())
+
+    assert "Never commit or push directly to `master`" in agent_policy
+    assert "short-lived branch" in agent_policy
+    assert "permanent `local`, `develop`" in agent_policy
+    assert "opening a pull request into protected `master`" in agent_policy
+    assert "must not approve it, bypass it or weaken the gate" in agent_policy
+    assert "directly to `origin/master`" not in agent_policy
+    assert "does **not** approve production" in pull_request_template
+    assert "separate human approval" in pull_request_template
+    assert "retention-days: 7" in DEPLOYMENT

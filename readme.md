@@ -943,13 +943,17 @@ node --check app/web/app.js
 git diff --check
 ```
 
-Pull-request CI uses a read-only, non-persisted GitHub token, audits the locked frontend dependency
-graph and builds without Azure credentials. Production frontend deployment starts only after a
-successful `master` push run and checks that the approved SHA is still current. An uncredentialled
-runner seals the validated `dist` directory as an immutable artifact; a separate runner checks out no
-repository code and gives the branch-restricted `production` token only to the pinned Azure upload
-action. External actions are full-SHA pinned and reviewed weekly by Dependabot; pull-request code is
-never deployed to an Azure preview environment.
+Development uses short-lived `feat/...`, `fix/...`, `docs/...` or `chore/...` branches rather than
+direct work on production-backed `master`; there is no permanent `local` or `develop` branch. Push a
+branch for read-only CI, then merge it into protected `master` through a current, green pull request.
+Pull-request code receives no Azure credential and is never deployed to an Azure preview environment.
+
+After a merge, successful `master` CI checks that the approved SHA is still current and an
+uncredentialled runner seals the validated `dist` directory as a seven-day immutable artefact. A
+separate runner checks out no repository code and waits at the protected `production` environment.
+Only a human repository-owner approval releases its branch-restricted token to the pinned Azure
+upload action; an agent merge is never production approval. External actions are full-SHA pinned and
+reviewed weekly by Dependabot.
 
 The current verification baseline and its update protocol are recorded in
 [Evaluation](docs/EVALUATION.md); dated delivery evidence remains in

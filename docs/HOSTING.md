@@ -129,15 +129,19 @@ visitor-facing website.
 ## 2. Operate the Azure Static Web Apps frontend
 
 The active Static Web App deploys through
-`.github/workflows/azure-static-web-apps-salmon-field-03695a010.yml`. The production workflow accepts
-only a successful `CI` run caused by a push to this repository's `master` branch. Pull requests run
-the same frontend audit, syntax checks, contract tests and build without receiving a deployment
-credential; FirstRoll deliberately does not create Azure preview deployments from pull-request code.
-Use `./tools/preview_hosted_web.sh` for a local hosted-mode preview.
+`.github/workflows/azure-static-web-apps-salmon-field-03695a010.yml`. Protected `master` is the
+production source: development happens on short-lived branches, required CI runs without deployment
+credentials and only a current, green pull request may merge. FirstRoll deliberately has no permanent
+`local` or `develop` branch and creates no Azure preview deployment from pull-request code. Use
+`./tools/preview_hosted_web.sh` for a local hosted-mode preview.
+
+A successful CI run for the merge commit may build a production candidate, but it cannot deploy
+immediately. The credentialled job waits at the protected GitHub `production` environment until the
+repository owner manually approves that exact run.
 
 | Setting | Value |
 |---|---|
-| Trigger | successful `CI` push run on `master` |
+| Trigger | successful CI for a pull-request merge into protected `master` |
 | Checked-out revision | exact CI-approved SHA, verified as the current `master` head |
 | App location | `dist`; pre-built before the deployment credential is used |
 | API location | empty; FastAPI is a separate service |
@@ -156,10 +160,11 @@ The workflow supplies these public build values:
 The Azure deployment token is rotated into the branch-restricted GitHub `production` environment as
 `AZURE_STATIC_WEB_APPS_API_TOKEN_SALMON_FIELD_03695A010`; it is not a repository-wide secret. Never
 place that token in source code or a public build variable. The uncredentialled build job validates
-`dist` and seals it in an immutable, one-day GitHub Actions artifact. A separate deployment runner
-checks out no repository code, downloads that artifact by its run-scoped ID and gives the token only
-to the final pinned Azure action. `skip_app_build` prevents that action from running repository build
-code while credentialled.
+`dist` and seals it in an immutable, seven-day GitHub Actions artefact, leaving time for manual
+review. A separate deployment runner checks out no repository code, downloads that artefact by its
+run-scoped ID and waits for the required owner approval before the token is released to the final
+pinned Azure action. `skip_app_build` prevents that action from running repository build code while
+credentialled.
 
 Both workflows grant `GITHUB_TOKEN` only read access to repository contents, do not persist checkout
 credentials and pin every external action to a full commit SHA. Repository Actions policy enforces
@@ -167,10 +172,20 @@ SHA pinning and permits only GitHub-owned actions plus the explicitly allow-list
 Azure actions. Dependabot checks the npm lock and action pins weekly; production dependency audit
 failures at high severity block CI and deployment.
 
-Every push to `master` runs CI first. A successful current revision starts one serialised production
-job; a failed, cancelled, pull-request, foreign-repository or stale run cannot deploy. After a
-production job succeeds, verify `https://firstroll.app` because custom-domain DNS and CDN caching are
-separate from the build job. The frontend should appear independently of the API's deployment state.
+The protected delivery sequence is:
+
+1. create a short-lived branch from current `origin/master` and test locally;
+2. push the branch, open a pull request and wait for the required `checks` job;
+3. merge only when the branch is current, checks pass and conversations are resolved;
+4. inspect the sealed production candidate in GitHub Actions and manually approve the `production`
+   environment deployment;
+5. verify `https://firstroll.app` and its `buildCommit` after Azure reports success.
+
+Failed, cancelled, pull-request, foreign-repository and already-stale CI runs cannot reach the
+approval gate. Agents may create and merge a green pull request, but must stop and report the pending
+production run rather than approving or bypassing it. Custom-domain DNS and CDN caching remain
+separate from the build job, and the frontend should appear independently of the API's deployment
+state.
 
 ## 3. Connect Supabase authentication
 
