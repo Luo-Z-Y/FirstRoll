@@ -297,6 +297,17 @@ Do not use `*` as the allowed origin. The exact frontend origin will later carry
 tokens to the API. Add the Azure-generated hostname only if it intentionally remains a supported
 visitor origin.
 
+## Optional primary film catalogue
+
+Set `TMDB_BEARER_TOKEN` on the backend container to use the official TMDb catalogue for discovery,
+posters and structured crew data. Do not expose it through the static frontend build. With no token,
+the deployed API continues to use Wikidata/Wikipedia. A configured TMDb timeout fails over to that
+open path and reports degraded provider state.
+
+TMDb requires attribution, including the non-endorsement notice displayed by FirstRoll, and its free
+API terms are for non-commercial use. Review and obtain appropriate commercial permission before a
+revenue-generating deployment.
+
 ## Optional public video provider
 
 YouTube search can use a server-side YouTube Data API v3 key. Add `YOUTUBE_API_KEY` to the Container

@@ -1,5 +1,46 @@
 # FirstRoll Project Progress
 
+### 21 August 2026 — TMDb primary catalogue with open failover
+
+Delivered:
+
+1. Added the official TMDb API as an optional primary discovery catalogue, configured through the
+   local Settings page or the backend-only `TMDB_BEARER_TOKEN` environment variable.
+2. Replaced the serial metadata pattern with one movie search plus at most eight candidate detail
+   hydrations across four workers. Each detail call appends credits, external IDs, alternative titles
+   and release dates, then local code revalidates title, year and director before display.
+3. Added provider-qualified `tmdb:{id}` routing and retained IMDb/Wikidata external IDs for exact
+   reconciliation by criticism, video and research adapters. Same-title ambiguity still requires an
+   explicit browser choice.
+4. Kept Wikidata/Wikipedia as the automatic key-free fallback. A missing token is a normal fallback;
+   a configured-provider failure is surfaced as degraded failover rather than silently hidden.
+5. Built the TMDb director shelf from verified person movie credits without per-film detail calls,
+   added dynamic overview provenance and the required TMDb non-endorsement notice.
+6. Recorded ADR-018 and reconciled architecture, API, data-source, data-model, setup, README and
+   Obsidian business-logic documentation.
+
+Acceptance evidence:
+
+- all 184 automated tests pass; the 53 focused discovery/settings/browser-asset checks, Ruff,
+  JavaScript syntax and repository whitespace checks also pass;
+- contract tests cover candidate hydration and filtering, detailed crew provenance, IMDb/Wikidata
+  links, same-director filmography, absent-token fallback and configured-provider timeout failover;
+- the adapter caps response bodies at 4 MB, uses a ten-second request deadline, allow-lists TMDb API
+  paths and keeps the bearer token server-side;
+- no live latency number is claimed because this machine has no configured TMDb token. ADR-018 keeps
+  live p50/p95 measurement as an explicit post-configuration action rather than inventing a result.
+
+Known constraints:
+
+- TMDb non-commercial use requires attribution, and monetisation requires a commercial-terms review;
+- search detail caches are process-local and rebuild after a backend restart;
+- the official IMDb API remains a future licensed enterprise adapter rather than a dependency.
+
+Next actionable work:
+
+1. Add a TMDb Read Access Token, run representative English, translated-title and same-title cases,
+   and record cold/warm p50 and p95 search latency in the evaluation fixture.
+
 ### 21 August 2026 — Complete shelf covers and unobscured release years
 
 Delivered:
@@ -1120,7 +1161,7 @@ Status vocabulary:
 
 | Area | Status | Current evidence |
 |---|---|---|
-| Film discovery | Complete | Wikidata identity search, attributed dossier enrichment and a real Blender/Three.js related-film shelf |
+| Film discovery | Complete | Optional TMDb primary catalogue, open Wikidata/Wikipedia failover, attributed dossier enrichment and the native director shelf |
 | Public video resources | Complete | Persistent cumulative catalogue; typed tabs; bounded uploader-description and public YouTube-caption extraction |
 | Product navigation | Complete | Discover and Analyse modes; Study consolidated into Discover |
 | Theme support | Complete | System-aware light/dark themes with a locally persisted accessible toggle |

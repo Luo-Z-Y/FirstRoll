@@ -54,7 +54,8 @@ The original GPL-3.0 licence and contributor attribution remain applicable. See
 
 ### Discover and study
 
-- Search by title, year and director through key-free Wikidata.
+- Search by title, year and director through the official TMDb catalogue when configured, with
+  Wikidata/Wikipedia as an automatic key-free fallback.
 - Reuse up to five locally stored recent searches, remove individual entries or clear the history;
   this browser-only convenience data is never attached to a FirstRoll account. Discovery follows a
   latest-search-wins contract: starting another query aborts the previous title and shelf requests,
@@ -62,7 +63,8 @@ The original GPL-3.0 licence and contributor attribution remain applicable. See
 - Confirm the intended film before opening the shelf whenever several records share or closely match
   a title; each choice exposes its year, director, original title and poster instead of trusting the
   provider's first-ranked result.
-- Read an attributed Wikipedia overview and poster after Wikidata resolves the film.
+- Read an attributed catalogue overview, poster and field-level crew provenance. TMDb results retain
+  their IMDb and Wikidata external IDs so later research adapters can resolve the same work safely.
 - Browse a native HTML/CSS director shelf with up to twelve front-facing film cases. The selected
   film appears immediately alongside five loading placeholders, so the shelf never waits for WebGL,
   a 3D model or the related-film provider before becoming useful. A bounded fast request adds
@@ -175,7 +177,7 @@ flowchart TB
     end
 
     subgraph EXTERNAL["External evidence and synthesis"]
-        IDENTITY["Wikidata · Wikipedia"]
+        IDENTITY["TMDb primary<br/>Wikidata · Wikipedia fallback<br/>IMDb identity bridge"]
         CRITICISM["Crossref · Douban<br/>Letterboxd · Guardian"]
         VIDEOS["YouTube · Bilibili"]
         DEEPSEEK["DeepSeek API<br/>structured synthesis"]
@@ -275,15 +277,54 @@ This separation is why a fetched review remains readable when DeepSeek is unavai
 returns malformed structured output. A provider failure also affects only its own tab; it
 does not erase evidence cached from another provider.
 
-### Wikidata: canonical film identity
+### Film catalogue: TMDb primary, open fallback
 
-Wikidata is the first lookup because it offers key-free, CC0 structured metadata. FirstRoll:
+FirstRoll uses provider-qualified canonical IDs rather than pretending that one vendor owns a film's
+identity. With a configured `TMDB_BEARER_TOKEN`, the official TMDb API is the primary catalogue:
+
+1. `/search/movie` retrieves a bounded candidate set using title and optional release-year filters;
+2. at most eight candidates are hydrated through `/movie/{id}` with `credits`, `external_ids`,
+   `alternative_titles` and `release_dates` appended;
+3. up to four hydration calls run concurrently, avoiding serial candidate latency while keeping the
+   provider budget bounded;
+4. year and director constraints are revalidated locally, and title similarity ranks the survivors;
+5. more than one surviving film still triggers explicit user confirmation; and
+6. the selected identity is stored as `tmdb:{id}`, with IMDb and Wikidata IDs retained as bridges for
+   Douban, Letterboxd and other evidence providers.
+
+TMDb also supplies attributed posters, backdrops, runtime, genres and structured crew roles. Director
+filmographies come from the verified director person's movie credits, so the shelf does not issue one
+detail request per related film. Search costs one request plus at most eight parallel detail requests;
+the result and dossier are cached in process memory.
+
+If TMDb is unconfigured or its search request fails, `HybridDiscoveryService` uses the existing open
+Wikidata/Wikipedia path. A live failure is surfaced as degraded mode rather than hidden; an absent
+token is a normal key-free fallback. TMDb is therefore a quality and latency upgrade, not a single
+point of failure. This product uses the TMDB API but is not endorsed or certified by TMDB.
+
+### Why not IMDb or OMDb as the default?
+
+IMDb's official real-time GraphQL API is authoritative and can return selected title and credit
+fields, but access is licensed through AWS Data Exchange and requires an AWS account, subscription,
+API key and SigV4 credentials. That operational and commercial boundary is disproportionate for the
+current distributable beta. Scraping IMDb pages would be brittle and is deliberately not the
+fallback. An enterprise IMDb adapter can be added behind the same provider-qualified interface later.
+
+OMDb is easy to call by title or IMDb ID, but it has shallower crew/poster coverage and its published
+usage restrictions are a poor foundation for a growing hosted catalogue. TMDb therefore offers the
+best current trade-off between response speed, structured film depth, official application access
+and implementation cost. Non-commercial TMDb use still requires attribution; a revenue-generating
+FirstRoll deployment must review TMDb's commercial terms.
+
+### Wikidata and Wikipedia: key-free fallback
+
+Wikidata remains the open fallback because it offers key-free, CC0 structured metadata. FirstRoll:
 
 1. searches items with `wbsearchentities`;
 2. retrieves candidate entities with `wbgetentities`;
 3. rejects items that do not look like films;
 4. filters or ranks by title, release year and director; and
-5. retains the Wikidata QID as FirstRoll's canonical external identity.
+5. retains a provider-qualified `wikidata:{QID}` identity for fallback results.
 
 The entity claims supply release date, runtime, director, writer, producer, cinematographer,
 editor, genre, country, poster filename and IMDb ID when present. Related entity labels are fetched in
@@ -291,7 +332,7 @@ batches. The IMDb ID is especially useful for resolving the same film safely in 
 services. If Wikidata is unavailable, a small, explicitly labelled demo catalogue keeps the
 interface usable in degraded mode; it is never presented as a live match.
 
-### Wikipedia: overview, poster and crew reconciliation
+### Wikipedia fallback: overview, poster and crew reconciliation
 
 Wikipedia enrichment happens only after Wikidata supplies an English Wikipedia sitelink.
 FirstRoll calls the Wikipedia REST summary endpoint, retains the article URL and CC BY-SA
@@ -828,7 +869,8 @@ FirstRoll/
 │   ├── backend/
 │   │   ├── algorithms/          # inherited and adapted pyCinemetrics analysis
 │   │   ├── criticism.py         # Research/criticism adapters, schemas and private cache
-│   │   ├── discovery.py         # Wikidata/Wikipedia discovery
+│   │   ├── discovery.py         # Wikidata/Wikipedia fallback discovery
+│   │   ├── tmdb_discovery.py    # TMDb primary adapter and hybrid provider router
 │   │   ├── evidence.py          # typed synthesis boundary
 │   │   ├── library.py           # private document catalogue
 │   │   ├── library_index.py     # chunking, embeddings and hybrid retrieval
@@ -906,7 +948,7 @@ fallback behaviour; these are tracked separately from the new FirstRoll modules.
 
 | Milestone | Status | Outcome |
 |---|---|---|
-| Film discovery and dossier | Complete | Key-free identity, context and visible research routes |
+| Film discovery and dossier | Complete | Official TMDb primary catalogue, key-free open fallback, explicit ambiguity confirmation and identity bridges |
 | Azure public beta | Deployed | Azure Static Web Apps frontend and Azure Container Apps FastAPI service with Supabase authentication and bounded Deep Study |
 | Private RAG foundation | Complete | Token chunking, FTS5, local vectors, hybrid retrieval and citations |
 | Attributed criticism | Complete | Crossref, Douban, Letterboxd and Guardian retrieval with structured critic claims |

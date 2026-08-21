@@ -9,6 +9,19 @@ from typing import Any
 
 
 CONNECTORS: dict[str, dict[str, Any]] = {
+    "tmdb": {
+        "name": "TMDb catalogue",
+        "secret_key": "tmdb_bearer_token",
+        "environment_key": "TMDB_BEARER_TOKEN",
+        "state": "available",
+        "description": (
+            "Primary official film catalogue for fast title matching, posters, credits and "
+            "IMDb/Wikidata identity links. Wikidata remains the key-free fallback."
+        ),
+        "credential_label": "Read Access Token",
+        "documentation_url": "https://developer.themoviedb.org/docs/authentication-application",
+        "testable": True,
+    },
     "deepseek": {
         "name": "DeepSeek",
         "secret_key": "deepseek_api_key",

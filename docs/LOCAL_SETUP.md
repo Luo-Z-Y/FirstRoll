@@ -2,14 +2,16 @@
 
 FirstRoll is a local-first web application. Each user runs one private copy of the
 backend and frontend on their own computer, then opens it in an ordinary browser.
-There is no shared FirstRoll website and no film-discovery API key is required.
+The key-free film catalogue works without a discovery credential. An optional TMDb Read Access
+Token improves search speed, posters and crew coverage.
 
 ## What Runs Where
 
 ```text
 Browser → http://127.0.0.1:8000 → FirstRoll FastAPI app
                                    ├── polished web interface
-                                   ├── key-free Wikidata discovery
+                                   ├── optional TMDb primary catalogue
+                                   ├── key-free Wikidata/Wikipedia fallback
                                    └── local video-analysis pipeline
 ```
 
@@ -23,10 +25,11 @@ It is not exposed to the local network or public internet.
 - Python 3.11 or 3.12
 - [`uv`](https://docs.astral.sh/uv/getting-started/installation/)
 - FFmpeg for video analysis
-- An internet connection for live Wikidata search
+- An internet connection for live catalogue search
 - Sufficient disk space for Python computer-vision packages and bundled model files
 
-The bundled offline catalogue remains searchable if Wikidata is temporarily unavailable.
+The open catalogue remains available without TMDb; a small bundled catalogue covers a complete
+network outage.
 
 ## 1. Install the System Tools
 
@@ -95,7 +98,8 @@ process. Do not start a second frontend server.
 ## 5. Confirm It Works
 
 1. Search for a film using title, year and optionally director.
-2. Confirm that the source badge reads `Wikidata · ready`.
+2. Confirm that discovery reports `TMDb · ready` when configured, or
+   `TMDb · credentials required` followed by `Wikidata · ready` in key-free mode.
 3. Open a film dossier and inspect its source link and evidence boundary.
 4. Open **Analyse**, choose a short video clip and generate an analysis.
 
@@ -247,6 +251,16 @@ backend currently expect the same local origin.
 
 Check the internet connection and try again. FirstRoll automatically falls back to its
 small bundled offline catalogue for supported sample films.
+
+### Enable the higher-quality TMDb catalogue
+
+Create a TMDb application credential and copy its **API Read Access Token**. In local mode, open
+**Settings → TMDb catalogue**, paste the token and run the connection test. Hosted deployments set
+`TMDB_BEARER_TOKEN` only on the backend service; never put it in static frontend variables.
+
+The token is optional. After it is saved, the same search interface automatically uses TMDb and
+retains IMDb/Wikidata external IDs. Clearing it returns discovery to the open fallback. TMDb requires
+attribution and separate review for commercial use.
 
 ### Video analysis fails but discovery works
 

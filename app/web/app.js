@@ -1072,6 +1072,11 @@ function renderFilmDetail(film) {
   const reviews = Array.isArray(film.reviews) ? film.reviews : [];
   const sourceUrl = safeHttpUrl(film.source?.url);
   const overviewSourceUrl = safeHttpUrl(film.overview_source?.url);
+  const overviewSourceName = String(film.overview_source?.name || "Source");
+  const overviewSourceLicence = String(film.overview_source?.licence || "");
+  const tmdbNotice = String(film.source?.name || "").toLocaleLowerCase() === "tmdb"
+    ? '<p class="detail-attribution">This product uses the TMDB API but is not endorsed or certified by TMDB.</p>'
+    : "";
   const criticalResearch = film.critical_research || {};
   const doubanStatus = criticalResearch.providers?.douban || {};
   const letterboxdStatus = criticalResearch.providers?.letterboxd || {};
@@ -1100,7 +1105,8 @@ function renderFilmDetail(film) {
         <h2>${escapeHtml(film.title || "Untitled")}</h2>
         ${originalTitle}
         <p class="detail-overview">${escapeHtml(film.overview || "No synopsis is available from this source.")}</p>
-        ${overviewSourceUrl ? `<p class="detail-attribution">Overview: <a href="${escapeHtml(overviewSourceUrl)}" target="_blank" rel="noopener noreferrer">Wikipedia · CC BY-SA ↗</a></p>` : ""}
+        ${overviewSourceUrl ? `<p class="detail-attribution">Overview: <a href="${escapeHtml(overviewSourceUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(overviewSourceName)}${overviewSourceLicence ? ` · ${escapeHtml(overviewSourceLicence)}` : ""} ↗</a></p>` : ""}
+        ${tmdbNotice}
         <div class="detail-actions">
           ${runtimeConfig.videoAnalysisEnabled
             ? '<button class="detail-action primary" type="button" data-analyse-film>Analyse a clip</button>'

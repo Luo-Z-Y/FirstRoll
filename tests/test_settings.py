@@ -7,6 +7,26 @@ from pathlib import Path
 from app.backend.settings import LocalSettingsStore
 
 
+def test_tmdb_is_available_as_the_primary_catalogue_connector() -> None:
+    previous = os.environ.pop("TMDB_BEARER_TOKEN", None)
+    try:
+        with tempfile.TemporaryDirectory() as directory:
+            store = LocalSettingsStore(Path(directory) / "settings.json")
+            tmdb = next(
+                connector
+                for connector in store.public_connectors()
+                if connector["id"] == "tmdb"
+            )
+
+            assert tmdb["state"] == "available"
+            assert tmdb["environment_key"] == "TMDB_BEARER_TOKEN"
+            assert tmdb["configured"] is False
+            assert tmdb["testable"] is True
+    finally:
+        if previous is not None:
+            os.environ["TMDB_BEARER_TOKEN"] = previous
+
+
 def test_deepseek_is_available_for_local_key_storage() -> None:
     with tempfile.TemporaryDirectory() as directory:
         store = LocalSettingsStore(Path(directory) / "settings.json")

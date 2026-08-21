@@ -103,20 +103,27 @@ All routes in this table return 404 in public mode and 403 to a non-loopback loc
 Supported catalogue formats are PDF, EPUB, Markdown and text. The current indexer extracts PDF
 content; other formats can be catalogued but are not counted as indexable documents.
 
+Implemented connector IDs are `tmdb`, `deepseek`, `douban`, `letterboxd` and `youtube`; `nyt` and
+`guardian` are declared but their credential tests remain planned. The `tmdb` connector accepts one
+Read Access Token and can also be controlled by backend environment variable `TMDB_BEARER_TOKEN`.
+
 ### Film discovery and dossier
 
 | Method | Path | Access | Parameters | Success response |
 |---|---|---|---|---|
-| GET | `/api/discovery/search` | Public | `q` 1–160 chars; optional `year` 1888–2100; optional `director` ≤120 chars | Candidate films with identity evidence |
+| GET | `/api/discovery/search` | Public | `q` 1–160 chars; optional `year` 1888–2100; optional `director` ≤120 chars | Candidate films from TMDb when configured, otherwise the open fallback, with identity evidence and provider policy |
 | GET | `/api/discovery/films/{film_id}` | Public | Canonical path ID | Full dossier; local mode adds library/retrieval, both modes add cached criticism/video bundles |
 | GET | `/api/discovery/films/{film_id}/related` | Public | `limit` 1–60, default 12; `fast` boolean, default true; `director_only` boolean, default false. `fast=false` enables cached, batched poster enrichment | Same-director and relationship groups for the native filmography shelf |
 | GET | `/api/discovery/films/{film_id}/reception` | Public | Canonical path ID | Available Douban/Letterboxd scores, optional equal-weight aggregate, provider state and up to three awards |
 
 Search can return more than one candidate. The browser must require an explicit user choice before
 opening a dossier or starting Deep Study; the API does not silently promote the first same-title
-result. Director-only poster enrichment batches supported Wikipedia article images. A Letterboxd
-page discovered without an IMDb claim is used only when its structured title, release year and
-director match the canonical film.
+result. IDs are opaque, provider-qualified paths: current values begin with `tmdb:` or `wikidata:`.
+TMDb results include available `external_ids.imdb` and `external_ids.wikidata` values. A configured
+TMDb search hydrates at most eight candidates through at most four concurrent detail calls; year and
+director filters are rechecked locally. Missing TMDb credentials use Wikidata/Wikipedia normally,
+while a live TMDb failure marks the response `mode=degraded` and records
+`provider_policy=wikidata_failover`.
 
 Example:
 
@@ -129,10 +136,11 @@ GET /api/discovery/search?q=The%20Thing&year=1982&director=John%20Carpenter
   "query": "The Thing",
   "results": [
     {
-      "id": "wikidata:Q210756",
+      "id": "tmdb:1091",
       "title": "The Thing",
       "year": 1982,
-      "directors": ["John Carpenter"]
+      "directors": ["John Carpenter"],
+      "external_ids": {"imdb": "tt0084787", "wikidata": "Q210756"}
     }
   ]
 }

@@ -41,7 +41,7 @@ flowchart LR
     end
 
     subgraph Providers["External providers"]
-        FilmData["Wikidata · Wikipedia"]
+        FilmData["TMDb primary<br/>Wikidata · Wikipedia fallback<br/>IMDb identity bridge"]
         Criticism["Crossref · Douban · Letterboxd · Guardian"]
         Video["YouTube · Bilibili"]
         DeepSeek["DeepSeek API"]
@@ -80,7 +80,7 @@ Spaceship DNS records and deployed website content remain outside Terraform.
 | Capability | Local private edition | Hosted public beta |
 |---|---|---|
 | Web delivery | FastAPI serves the interface and API on `127.0.0.1:8000` | Azure Static Web Apps serves the interface; Azure Container Apps serves the API |
-| Film discovery | Public Wikidata/Wikipedia adapters | Same adapters |
+| Film discovery | TMDb primary when configured; Wikidata/Wikipedia key-free fallback | Same server-side provider policy; credentials never enter the browser bundle |
 | Criticism and videos | Public adapters plus optional local credentials and persistent private caches | Public/hosted adapters; personal DeepSeek and YouTube keys may be request-scoped in one signed-in tab |
 | Private document library | Enabled | Not published; local routes return 404 |
 | Hybrid PDF retrieval | Local SQLite FTS5 and Sentence Transformers | Replaced by bounded first-party study frameworks |
@@ -124,7 +124,8 @@ future-enterprise path, but ADR-017 removes it from the production critical path
 |---|---|---|
 | `app/web` | Search, disambiguation, resilient native director shelf, password-account UI, RLS-backed saved films, evidence views, progress rendering and clip upload UI | Provider secrets, cross-account authorisation, evidence validation or quota decisions |
 | `main.py` | HTTP boundary, mode gates, authentication calls, quota ordering, request validation and error mapping | Provider parsing rules or model-quality policy |
-| `discovery.py` | Canonical film identity, credits, posters, overview reconciliation and related films | Critical interpretation or creator intention |
+| `tmdb_discovery.py` | Official TMDb candidate hydration, provider-qualified routing, IMDb/Wikidata identity bridges and open-catalogue failover | Critical interpretation, browser-held catalogue secrets or silent first-result selection |
+| `discovery.py` | Key-free Wikidata/Wikipedia identity fallback, overview reconciliation and related films | Critical interpretation or creator intention |
 | `criticism.py` | Provider-specific acquisition, identity checks, attributed review models and private cache | Direct film observation |
 | `video_sources.py` | Public video discovery, classification, deduplication, captions/descriptions and private cache | Copyright adjudication or verified speaker identity by default |
 | `library.py` | Private document catalogue and managed-file metadata | Text extraction or ranking |
@@ -142,21 +143,36 @@ future-enterprise path, but ADR-017 removes it from the production critical path
 
 ```text
 title/year/director query
-→ Wikidata candidates
-→ title, year and director identity evidence
+→ HybridDiscoveryService checks TMDb configuration
+→ TMDb /search/movie candidate IDs when configured
+→ at most eight /movie/{id} hydrations, four concurrent, with credits + external IDs appended
+→ local title, release-year and director validation
+→ Wikidata/Wikipedia fallback when TMDb is absent or its search fails
 → explicit user choice when more than one candidate remains
-→ fast, canonical-ID director filmography
-→ cached, cancellable background poster hydration through one Wikipedia batch
-→ strict title/year/director verification for any identity-derived Letterboxd fallback
-→ Wikidata/Wikipedia dossier
+→ provider-qualified tmdb:{id} or wikidata:{QID} identity
+→ IMDb/Wikidata external-ID bridge for secondary-provider reconciliation
+→ fast director filmography from TMDb person credits or the canonical Wikidata relationship
+→ attributed TMDb dossier, or Wikidata/Wikipedia fallback dossier
 → optional ratings, criticism, video and related-film enrichment
 ```
 
 Film identity is selected before Deep Study. The model never decides silently between same-title
-films. The fast shelf and enriched shelf have separate process-memory cache entries. Poster hydration
-uses lightweight film summaries rather than full cast and award expansion; a provider-local page
-found from a title is accepted only when its structured title, year and director agree with the
-canonical record.
+films. TMDb detail calls run concurrently rather than serially, but the candidate cap and ten-second
+per-request deadline bound provider cost. Search and detail results share a process-memory cache.
+TMDb's director credits already contain poster paths for the shelf, avoiding per-film detail calls.
+The open fallback retains separate fast and enriched shelf caches; a provider-local page found from
+a title is accepted only when its structured title, year and director agree with the canonical
+record.
+
+### Catalogue provider decision matrix
+
+| Option | Metadata quality | Runtime/setup | Cost/access | Decision |
+|---|---|---|---|---|
+| TMDb official API | Strong search, posters, runtime, credits and external IDs | Simple bearer token; application-oriented REST; parallelisable | Free non-commercial use with attribution; commercial use requires review | Primary when configured |
+| Wikidata + Wikipedia | Uneven crew completeness but open, attributable records | Key-free; existing adapter; occasional query latency | CC0/CC BY-SA | Automatic fallback |
+| IMDb official API | High-authority title and credit graph | AWS Data Exchange subscription, SigV4 and multiple AWS identifiers | Licensed/commercial boundary | Future enterprise adapter |
+| OMDb | Convenient title/IMDb lookup; shallower credits and poster access | Simple key | Published use restrictions and patron-only poster API | Rejected as primary |
+| IMDb HTML scraping | Markup-dependent and difficult to attribute reliably | High maintenance and blocking risk | Not an official application interface | Rejected |
 
 ### Local Deep Study
 

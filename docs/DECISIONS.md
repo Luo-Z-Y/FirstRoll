@@ -15,7 +15,7 @@ public API.
 | 001 | Evolve pyCinemetrics with preserved attribution | Accepted | Faster foundation versus inherited complexity |
 | 002 | Local-first private edition plus constrained hosted beta | Accepted | Private depth versus public convenience |
 | 003 | Split static frontend and FastAPI service across Azure and Render | Superseded by ADR-015 | Explicit boundary and fast shell versus multi-platform configuration |
-| 004 | Use Wikidata identity and explicit ambiguity confirmation | Accepted | Correct identity versus one-click speed |
+| 004 | Use Wikidata identity and explicit ambiguity confirmation | Superseded by ADR-018 | Correct identity versus one-click speed |
 | 005 | Use bounded provider adapters, not unconstrained LLM browsing | Accepted | Provenance and control versus breadth |
 | 006 | Type evidence by epistemic role | Accepted | Honest uncertainty versus simpler prose generation |
 | 007 | Keep private RAG in local SQLite FTS5 and embeddings | Accepted | Privacy and portability versus shared hosted search |
@@ -29,6 +29,7 @@ public API.
 | 015 | Consolidate hosting on Azure and stage Entra External ID | Partially superseded by ADR-017 | Simpler cloud boundary versus customer-tenant and quota migration work |
 | 016 | Decouple quota persistence from browser identity tokens | Accepted, deployment staged | Provider portability versus a protected backend database credential |
 | 017 | Keep Supabase Auth and add RLS-owned account data | Accepted | Low-cost persistence versus an additional managed platform boundary |
+| 018 | Use TMDb as the optional primary catalogue with an open fallback | Accepted | Rich, fast metadata versus one optional credential and attribution duty |
 
 ## ADR-001: Evolve pyCinemetrics with preserved attribution
 
@@ -138,7 +139,7 @@ The Container Apps migration is complete and `api.firstroll.app` has passed the 
 
 ## ADR-004: Use Wikidata identity and explicit ambiguity confirmation
 
-**Status:** Accepted  
+**Status:** Superseded by ADR-018
 **Date:** 15 August 2026
 
 ### Context
@@ -625,6 +626,62 @@ not a production dependency.
 3. [x] Add saved-film controls to dossiers and Settings.
 4. [x] Apply `supabase/migrations/202608200002_persistent_accounts.sql` to production.
 5. [ ] Run two-account isolation, refresh-session and password-recovery acceptance tests.
+
+## ADR-018: Use TMDb as the optional primary catalogue with an open fallback
+
+**Status:** Accepted
+**Date:** 21 August 2026
+**Decider:** FirstRoll maintainer
+
+### Context
+
+Wikidata and Wikipedia keep FirstRoll distributable without a catalogue credential, but film crew
+coverage, poster availability and query latency are uneven. The catalogue must improve dossier
+quality without making discovery depend on HTML scraping, an LLM choice or one mandatory vendor.
+Same-title films must still interrupt for user confirmation, and secondary evidence adapters need a
+stable IMDb identity whenever one exists.
+
+### Decision
+
+Use the official TMDb API as the primary catalogue only when a server-side Read Access Token is
+configured. Search a bounded set of movie candidates, hydrate at most eight through four concurrent
+detail requests with credits and external IDs appended, then deterministically validate title, year
+and director. Keep the browser's explicit ambiguity confirmation. Key results as `tmdb:{id}` and
+retain IMDb/Wikidata external IDs as reconciliation bridges.
+
+Route `wikidata:` records to the existing adapter. If TMDb is unconfigured, use the open adapter as
+the normal key-free path. If a configured TMDb search fails, expose degraded mode and fail over to
+Wikidata/Wikipedia. Do not scrape IMDb. Preserve an interface boundary for a future licensed IMDb
+adapter if enterprise requirements justify AWS Data Exchange access.
+
+### Options considered
+
+| Option | Quality and latency | Access and maintenance | Outcome |
+|---|---|---|---|
+| TMDb official API | Rich search, posters, credits and identity links; candidate calls parallelise well | One bearer token; attribution and commercial-use review required | Accepted primary |
+| Wikidata/Wikipedia only | Open and key-free, but uneven credits and occasional slow relationship queries | Existing CC0/CC BY-SA adapter | Accepted fallback |
+| IMDb official API | Authoritative real-time GraphQL title graph | AWS Data Exchange subscription, API key, SigV4 credentials and licensed access | Defer as enterprise adapter |
+| OMDb | Simple lookup but shallower crew/poster coverage | API key plus published usage restrictions | Reject as primary |
+| IMDb page scraping | Potentially broad visible data | Brittle markup, blocking and unclear application contract | Reject |
+
+### Consequences
+
+- Most configured searches gain high-quality posters, synopses, runtime and field-level crew data.
+- Search uses one catalogue request plus at most eight concurrent detail requests; the cap protects
+  latency and provider load while supplying directors for every displayed candidate.
+- TMDb becomes an optional operational dependency, not a system-wide availability dependency.
+- FirstRoll must display TMDb attribution and review commercial terms before monetising the product.
+- A provider-qualified film ID replaces the assumption that every canonical ID is a Wikidata QID.
+- IMDb and Wikidata external IDs remain evidence-routing hints, never proof of creator intention.
+
+### Action items
+
+1. [x] Add the TMDb settings connector and server-side connection test.
+2. [x] Add bounded parallel search hydration, deterministic filters and director filmography.
+3. [x] Add provider-qualified routing and Wikidata/Wikipedia failover.
+4. [x] Add dossier attribution and provider-policy tests.
+5. [ ] Record live p50/p95 catalogue latency after a token is configured and the hosted cache has
+   observed representative same-title and non-English-title searches.
 
 ## How to Add or Change a Decision
 

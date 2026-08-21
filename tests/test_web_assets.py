@@ -24,6 +24,15 @@ def test_director_shelf_uses_native_browser_assets_only() -> None:
     assert not (WEB / "vendor" / "three").exists()
 
 
+def test_dossier_attributes_tmdb_without_mislabelling_its_overview() -> None:
+    app = (WEB / "app.js").read_text(encoding="utf-8")
+
+    assert "overviewSourceName" in app
+    assert "overviewSourceLicence" in app
+    assert "This product uses the TMDB API but is not endorsed or certified by TMDB." in app
+    assert "Wikipedia · CC BY-SA ↗" not in app
+
+
 def test_supabase_auth_is_bundled_and_deep_study_sends_bearer_tokens() -> None:
     index = (WEB / "index.html").read_text(encoding="utf-8")
     auth = (WEB / "auth.js").read_text(encoding="utf-8")

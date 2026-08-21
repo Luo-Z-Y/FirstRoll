@@ -8,8 +8,9 @@ to send to an LLM.
 
 | Source | FirstRoll role | Required | LLM boundary |
 | --- | --- | --- | --- |
-| Wikidata | Title, year, director and structured identity | Yes, with offline fallback | CC0 structured data may enter the identity context |
-| Wikipedia | Attributed overview and article link | No | CC BY-SA text must retain attribution and licence information |
+| TMDb API | Primary title search, posters, synopsis, runtime, credits and IMDb/Wikidata identity links when configured | No; open fallback remains available | Catalogue fields may enter identity context; display TMDb attribution and review commercial terms before monetisation |
+| Wikidata | Key-free fallback title, year, director and structured identity | Yes, with offline fallback | CC0 structured data may enter the identity context |
+| Wikipedia | Fallback attributed overview, crew reconciliation and article link | No | CC BY-SA text must retain attribution and licence information |
 | Wikimedia Commons | Optional image referenced by a Wikidata item | No | Check the individual file licence before reuse |
 | Curated offline catalogue | Demonstration and network fallback | No | May be used inside FirstRoll |
 | Douban MCP | Optional Chinese-language review summaries and attributed critic claims | No | Selected summaries may enter DeepSeek claim extraction only after an explicit user action |
@@ -20,11 +21,42 @@ to send to an LLM.
 | User-provided documents | Private, page-cited study retrieval | No | Allowed only when the user has the necessary rights; documents and derived index remain local |
 | DeepSeek | Grounded synthesis over selected evidence | No | Receives the film record, user focus and retrieved excerpts only after the user selects Generate study |
 
-## Why Wikidata Is the Default
+## Catalogue Selection Policy
+
+TMDb is the primary catalogue when `TMDB_BEARER_TOKEN` is configured because its official
+application API supplies stronger candidate posters, synopses, runtime, crew roles and external
+identity links in a predictable schema. FirstRoll makes one search request and hydrates at most eight
+candidates through four concurrent detail calls. It then rechecks release year and director locally;
+the model never selects an ambiguous film.
+
+The token remains in the backend environment or the local mode-0600 secret store. It is never sent
+to the browser. TMDb records carry provider-qualified `tmdb:{id}` keys plus available IMDb and
+Wikidata IDs. FirstRoll displays: “This product uses the TMDB API but is not endorsed or certified by
+TMDB.” TMDb permits free non-commercial use with attribution but requires separate commercial-use
+review; current deployments must not infer a commercial licence from technical API access.
+
+If the token is absent, Wikidata/Wikipedia is the normal key-free path. If a configured TMDb search
+times out or fails, the response records degraded failover before using the open path. An optional
+provider therefore improves quality without controlling availability.
+
+## Why IMDb Is an Identity Bridge, Not the Default API
+
+The official IMDb real-time API is available through AWS Data Exchange and supports GraphQL search
+and selected title/credit fields. It also requires an AWS account, an approved IMDb subscription,
+API and dataset identifiers and SigV4 credentials. FirstRoll retains IMDb title IDs from TMDb or
+Wikidata for exact secondary-provider reconciliation, but does not scrape IMDb HTML or impose that
+licensed AWS boundary on every installation. A future enterprise adapter can implement the same
+provider-qualified contract.
+
+OMDb is not selected as the primary catalogue: it offers convenient title/IMDb lookups but has
+shallower crew and poster coverage, and its published usage conditions are a poor match for a hosted
+catalogue foundation.
+
+## Why Wikidata Remains the Open Fallback
 
 Wikidata provides key-free structured identity data under CC0. It is suitable for the
-first task FirstRoll must solve: matching a title, year and director without tying the
-product to a proprietary API account.
+availability task FirstRoll must preserve: matching a title, year and director without tying every
+installation to a proprietary API account.
 
 Wikidata is not treated as proof of a creator's intentions. Film dossiers label it as an
 identity source, preserve the source entity URL, and leave criticism and interpretation

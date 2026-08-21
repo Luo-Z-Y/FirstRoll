@@ -24,7 +24,7 @@ Film discovery caches and current hosted study results are process memory.
 | `.firstroll/settings.json` | Local | Yes | Optional connector secrets not supplied by environment | Yes |
 | `.firstroll/criticism/*.json` | Local | Yes | Attributed provider reviews and structured critic claims | Yes |
 | `.firstroll/videos/*.json` | Local | Yes | Accepted video catalogue, descriptions and available captions | Yes |
-| Discovery/reception dictionaries | Local and hosted | No | Wikidata/Wikipedia detail, related-film and reception cache | In memory only |
+| Discovery/reception dictionaries | Local and hosted | No | TMDb or Wikidata/Wikipedia details, related-film and reception cache | In memory only |
 | `StudyRunStore` | Hosted | No | Owner UUID, status and final study for a maximum of ten minutes | In memory only |
 
 ## Supabase Postgres
@@ -306,7 +306,7 @@ File key: sanitised film ID plus provider
 
 | Field | Type | Meaning |
 |---|---|---|
-| `film_id` | string | Canonical FirstRoll/Wikidata identity |
+| `film_id` | string | Provider-qualified FirstRoll identity, currently `tmdb:{id}` or `wikidata:{QID}` |
 | `provider` | string | Normalised provider name |
 | `provider_film_id` | string | Matched provider identity |
 | `provider_film_title` | string | Provider title used for human verification |
@@ -356,8 +356,10 @@ resumable Agent threads.
 
 ### Discovery and reception caches
 
-Wikidata/Wikipedia details, related-film results and reception summaries are cached in dictionaries
-for process lifetime. They are accelerators, not records of truth, and are repopulated after restart.
+TMDb and Wikidata/Wikipedia details, related-film results and reception summaries are cached in
+dictionaries for process lifetime. They are accelerators, not records of truth, and are repopulated
+after restart. TMDb records retain external IMDb and Wikidata IDs for cross-provider reconciliation;
+the provider-qualified FirstRoll ID remains the cache and downstream-bundle key.
 
 ## Data-Lifecycle Rules
 

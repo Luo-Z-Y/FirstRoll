@@ -28,7 +28,7 @@ from app.backend.criticism import (
     build_bundle,
 )
 from app.backend.auth import AuthConfigurationError, AuthenticationError, configured_auth_verifier
-from app.backend.discovery import DiscoveryService
+from app.backend.discovery import DiscoveryProviderError, DiscoveryService
 from app.backend.evidence import EvidencePacket
 from app.backend.library import MAX_DOCUMENT_BYTES, SUPPORTED_SUFFIXES, LocalLibraryCatalogue
 from app.backend.library_index import LocalLibraryIndex
@@ -46,6 +46,7 @@ from app.backend.research_stream import (
     public_progress_message,
 )
 from app.backend.settings import CONNECTORS, LocalSettingsStore
+from app.backend.tmdb_discovery import HybridDiscoveryService, TmdbDiscoveryService
 from app.backend.study_service import DeepSeekStudyService, StudyGenerationError
 from app.backend.video_sources import (
     BilibiliPublicVideoAdapter,
@@ -198,7 +199,8 @@ if allowed_origins:
     )
 
 settings_store = LocalSettingsStore()
-discovery_service = DiscoveryService()
+tmdb_discovery_service = TmdbDiscoveryService(settings_store)
+discovery_service = HybridDiscoveryService(tmdb_discovery_service, DiscoveryService())
 library_catalogue = LocalLibraryCatalogue()
 library_index = LocalLibraryIndex()
 study_service = DeepSeekStudyService(settings_store)
@@ -681,8 +683,10 @@ async def test_connector(connector_id: str, request: Request) -> dict:
             return await run_in_threadpool(letterboxd_adapter.test_connection)
         if connector_id == "youtube":
             return await run_in_threadpool(youtube_video_adapter.test_connection)
+        if connector_id == "tmdb":
+            return await run_in_threadpool(tmdb_discovery_service.test_connection)
         raise HTTPException(status_code=501, detail="This optional connector is not implemented yet.")
-    except (StudyGenerationError, CriticismError, VideoSourceError) as exc:
+    except (StudyGenerationError, CriticismError, VideoSourceError, DiscoveryProviderError) as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
 
