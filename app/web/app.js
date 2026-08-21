@@ -36,6 +36,8 @@ const state = {
     searchController: null,
     shelfRequestId: 0,
     shelfRequestControllers: new Set(),
+    studyRequestId: 0,
+    studyController: null,
   },
 };
 
@@ -153,6 +155,7 @@ function setup() {
     selectArchiveFilm(event.detail?.filmId);
   });
   refs.filmDetail.addEventListener("click", onFilmDetailClick);
+  refs.filmDetail.addEventListener("keydown", onFilmDetailKeydown);
   refs.recentSearches.addEventListener("click", onRecentSearchClick);
   state.discovery.recentSearches = readRecentSearches();
   renderRecentSearches(state.discovery.recentSearches);
@@ -180,6 +183,7 @@ function setup() {
 
   refs.tabs.forEach((tab) => {
     tab.addEventListener("click", () => setActiveView(tab.dataset.view));
+    tab.addEventListener("keydown", onAnalysisTabKeydown);
   });
 
   setFeatureButtonsEnabled(false);
@@ -252,13 +256,32 @@ function renderSavedFilms(films) {
 }
 
 async function onSavedFilmsClick(event) {
+  const retry = event.target.closest("[data-retry-saved-films]");
+  if (retry) {
+    retry.disabled = true;
+    try {
+      await window.FirstRollAuth?.refreshSavedFilms?.();
+      renderSavedFilms(window.FirstRollAuth?.savedFilms?.() || []);
+    } catch (error) {
+      console.warn("Saved films could not be refreshed", error);
+      retry.disabled = false;
+    }
+    return;
+  }
   const button = event.target.closest("[data-remove-saved-film]");
   if (!button) return;
   button.disabled = true;
   try {
     await window.FirstRollAuth?.removeSavedFilm?.(button.dataset.removeSavedFilm);
   } catch (error) {
-    refs.accountSavedFilms.innerHTML = `<p class="study-error">Saved film could not be removed: ${escapeHtml(error?.message || "Unknown error")}</p>`;
+    console.warn("Saved film could not be removed", error);
+    refs.accountSavedFilms.innerHTML = `<div class="interface-state is-error is-compact" role="alert" tabindex="-1" data-interface-state>
+      <span>Saved films</span>
+      <h4>The film could not be removed.</h4>
+      <p>Your account data is unchanged. Refresh the saved-film list, then try the removal again.</p>
+      <button type="button" data-retry-saved-films>Refresh saved films</button>
+    </div>`;
+    focusInterfaceState(refs.accountSavedFilms);
   } finally {
     button.disabled = false;
   }
@@ -617,6 +640,19 @@ function fetchProgressMarkup(message) {
   </div>`;
 }
 
+function focusElement(element, options = {}) {
+  if (!element) return;
+  window.queueMicrotask(() => {
+    if (element.isConnected) {
+      element.focus({ preventScroll: options.preventScroll === true });
+    }
+  });
+}
+
+function focusInterfaceState(container, selector = "[data-interface-state]") {
+  focusElement(container?.querySelector(selector));
+}
+
 const RESEARCH_PROGRESS_KINDS = new Set([
   "film_resolving",
   "film_needs_choice",
@@ -738,6 +774,7 @@ async function onDiscoverySearch(event) {
     return;
   }
 
+  cancelDeepStudyRequest();
   const params = new URLSearchParams({ q: title });
   const year = refs.filmYear.value.trim();
   const director = refs.filmDirector.value.trim();
@@ -763,6 +800,7 @@ async function onDiscoverySearch(event) {
   persistDiscoverySession();
 
   refs.discoverySubmit.setAttribute("aria-busy", "true");
+  refs.discoveryResultsSection.setAttribute("aria-busy", "true");
   refs.discoverySubmit.querySelector("span").textContent = "Searching…";
   refs.discoveryResultsSection.classList.remove("hidden");
   refs.filmDetail.classList.add("hidden");
@@ -783,14 +821,22 @@ async function onDiscoverySearch(event) {
     renderDiscoveryResults(data);
   } catch (err) {
     if (err?.name === "AbortError" || requestId !== state.discovery.searchRequestId) return;
+    console.warn("Discovery request did not complete", err);
     state.discovery.resultStage = "error";
     clearDiscoverySession();
     refs.resultsTitle.textContent = "Discovery is unavailable";
-    refs.discoveryResults.innerHTML = `<div class="no-results">${escapeHtml(err.message)} Check that the FirstRoll backend is running, then try again.</div>`;
+    refs.discoveryResults.innerHTML = `<div class="interface-state is-error" role="alert" tabindex="-1" data-interface-state>
+      <span>Catalogue connection</span>
+      <h3>Film search could not finish.</h3>
+      <p>Your query is still in the form. Check the FirstRoll connection, then try the same search again.</p>
+      <button type="button" data-retry-discovery>Try search again</button>
+    </div>`;
+    focusInterfaceState(refs.discoveryResults);
   } finally {
     if (state.discovery.searchController === controller) {
       state.discovery.searchController = null;
       refs.discoverySubmit.removeAttribute("aria-busy");
+      refs.discoveryResultsSection.setAttribute("aria-busy", "false");
       refs.discoverySubmit.querySelector("span").textContent = "Search films";
     }
   }
@@ -900,11 +946,16 @@ function renderDiscoveryResults(data) {
     state.discovery.archiveSelectionId = null;
     state.discovery.resultStage = "empty";
     state.discovery.shelfState = "idle";
+    const hasFilters = Boolean(query.year || query.director);
     refs.discoveryResults.innerHTML = `
-      <div class="no-results">
-        No exact match was found. Check the release year or remove the director filter, then search again.
+      <div class="interface-state" role="status" tabindex="-1" data-interface-state>
+        <span>Identity check complete</span>
+        <h3>No exact film matched.</h3>
+        <p>${hasFilters ? "Keep the title and remove the optional year and director filters, or edit the query." : "Check the title spelling or try an original-language title."}</p>
+        ${hasFilters ? '<button type="button" data-relax-discovery-filters>Search by title only</button>' : '<button type="button" data-edit-discovery-query>Edit the title</button>'}
       </div>`;
     persistDiscoverySession();
+    focusInterfaceState(refs.discoveryResults);
     return;
   }
 
@@ -917,6 +968,7 @@ function renderDiscoveryResults(data) {
     refs.resultsMeta.textContent = `${films.length} possible matches`;
     refs.discoveryResults.innerHTML = filmIdentityChoicesMarkup(films);
     persistDiscoverySession();
+    focusInterfaceState(refs.discoveryResults, "#identityConfirmationTitle");
     return;
   }
 
@@ -928,7 +980,7 @@ function filmIdentityChoicesMarkup(films) {
     <section class="identity-confirmation" aria-labelledby="identityConfirmationTitle">
       <div class="identity-confirmation-intro">
         <p class="eyebrow">Confirm film identity</p>
-        <h3 id="identityConfirmationTitle">Choose the correct edition</h3>
+        <h3 id="identityConfirmationTitle" tabindex="-1">Choose the correct edition</h3>
         <p>Check the year, filmmaker and original title before FirstRoll builds the dossier.</p>
       </div>
       <div class="identity-choice-grid">
@@ -984,6 +1036,7 @@ function confirmDiscoveryFilm(index) {
   state.discovery.detailFilmId = null;
   setArchiveHeading(primary);
   renderFilmArchive(primary, [], nearby, true);
+  focusElement(refs.resultsTitle);
   void loadRelatedFilms(primary, nearby);
 }
 
@@ -1232,7 +1285,7 @@ function normaliseFilmYear(value) {
 function criterionCaseMarkup(film) {
   const title = escapeHtml(film.title || "Untitled");
   return `
-    <div class="criterion-object" aria-label="${title} selected archive edition">
+    <div class="criterion-object" role="img" aria-label="${title} selected archive edition">
       <div class="criterion-disc" aria-hidden="true">
         <i></i><b>FIRSTROLL</b><small>${escapeHtml(film.year || "FILM")}</small>
       </div>
@@ -1328,6 +1381,21 @@ function displayableFilms(films) {
 }
 
 async function onFilmResultClick(event) {
+  if (event.target.closest("[data-retry-discovery]")) {
+    refs.discoveryForm.requestSubmit();
+    return;
+  }
+  if (event.target.closest("[data-relax-discovery-filters]")) {
+    refs.filmYear.value = "";
+    refs.filmDirector.value = "";
+    refs.discoveryForm.requestSubmit();
+    return;
+  }
+  if (event.target.closest("[data-edit-discovery-query]")) {
+    refs.filmTitle.focus();
+    refs.filmTitle.select();
+    return;
+  }
   const identityChoice = event.target.closest("[data-confirm-film-index]");
   if (identityChoice) {
     confirmDiscoveryFilm(Number(identityChoice.dataset.confirmFilmIndex));
@@ -1358,6 +1426,7 @@ function selectArchiveFilm(filmId) {
   const selected = available.find((film) => film.id === filmId);
   if (!selected) return;
   cancelShelfRequests();
+  cancelDeepStudyRequest();
   const remaining = uniqueFilms(available, [selected]);
   state.discovery.selectedFilm = null;
   state.discovery.detailFilmId = null;
@@ -1367,10 +1436,12 @@ function selectArchiveFilm(filmId) {
 }
 
 async function loadFilmDetail(filmId, options = {}) {
+  cancelDeepStudyRequest();
   state.discovery.detailFilmId = filmId;
   state.discovery.selectedFilm = null;
   persistDiscoverySession();
   refs.filmDetail.classList.remove("hidden");
+  refs.filmDetail.setAttribute("aria-busy", "true");
   refs.filmDetail.innerHTML = fetchProgressMarkup("Building the film dossier…");
   if (options.scroll !== false) {
     refs.filmDetail.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -1389,13 +1460,24 @@ async function loadFilmDetail(filmId, options = {}) {
     if (options.scroll !== false) {
       window.requestAnimationFrame(() => {
         refs.filmDetail.scrollIntoView({ behavior: "smooth", block: "start" });
+        refs.filmDetail.querySelector("[data-dossier-heading]")?.focus({ preventScroll: true });
       });
     }
   } catch (err) {
+    console.warn("Film dossier request did not complete", err);
     state.discovery.selectedFilm = null;
-    state.discovery.detailFilmId = null;
+    state.discovery.detailFilmId = filmId;
     persistDiscoverySession();
-    refs.filmDetail.innerHTML = `<button class="detail-close" type="button" data-detail-close aria-label="Close">×</button><div class="no-results">${escapeHtml(err.message)}</div>`;
+    refs.filmDetail.innerHTML = `<button class="detail-close" type="button" data-detail-close aria-label="Close film dossier">×</button>
+      <div class="interface-state is-error" role="alert" tabindex="-1" data-interface-state>
+        <span>Film dossier</span>
+        <h3>The selected film could not be opened.</h3>
+        <p>The verified film ID is unchanged. Check the catalogue connection, then retry this dossier.</p>
+        <button type="button" data-retry-film-detail="${escapeHtml(filmId)}">Try opening again</button>
+      </div>`;
+    focusInterfaceState(refs.filmDetail);
+  } finally {
+    refs.filmDetail.setAttribute("aria-busy", "false");
   }
 }
 
@@ -1452,7 +1534,7 @@ function renderFilmDetail(film) {
       ${backdrop}
       <div class="detail-copy">
         <p class="eyebrow">Study dossier / ${escapeHtml(filmYearLabel(film))}</p>
-        <h2>${escapeHtml(film.title || "Untitled")}</h2>
+        <h2 tabindex="-1" data-dossier-heading>${escapeHtml(film.title || "Untitled")}</h2>
         ${originalTitle}
         <div class="detail-actions">
           ${runtimeConfig.videoAnalysisEnabled
@@ -1503,7 +1585,7 @@ function renderFilmDetail(film) {
         </div>
         <button type="button" data-load-film-videos>${videoBundle ? "Find more videos" : "Find relevant videos"}</button>
       </div>
-      <div data-film-videos-output>
+      <div data-film-videos-output aria-busy="false">
         ${videoBundle
           ? filmVideosMarkup(videoBundle)
           : videoProviderStatusMarkup(film.video_sources?.providers)}
@@ -1522,8 +1604,8 @@ function renderFilmDetail(film) {
           criticismSourceAvailability,
         )}
       </div>
-      <div data-critical-output>
-        ${activeCriticalBundle ? criticalResearchMarkup(activeCriticalBundle) : ""}
+      <div id="dossier-criticism-panel" role="tabpanel" aria-label="Selected criticism source" data-critical-output aria-busy="false">
+        ${activeCriticalBundle ? criticalResearchMarkup(activeCriticalBundle) : '<p class="module-empty">No criticism source is loaded yet. Choose a provider above to fetch attributed material for this exact film.</p>'}
       </div>
     </section>
     <section id="dossier-study" class="deep-study">
@@ -1533,12 +1615,13 @@ function renderFilmDetail(film) {
           <h3>Deep Study</h3>
           <p>Choose a formal focus, then build an inspectable reading from the evidence currently available.</p>
         </div>
+        <button class="study-cancel hidden" type="button" data-cancel-study>Stop waiting</button>
       </div>
       <div class="study-prompt-row">
         <textarea data-study-question rows="2" maxlength="500" aria-label="Optional focus for Deep Study" placeholder="Optional focus — for example: spatial hierarchy, cutting rhythm, or point of view"></textarea>
         <button type="button" data-generate-study>Generate study</button>
       </div>
-      <div class="deep-study-output" data-study-output></div>
+      <div class="deep-study-output" data-study-output aria-busy="false"></div>
     </section>
     ${reviews.length ? `<div class="reviews-section"><h3>Perspectives</h3><div class="review-grid">${reviews.map(reviewCard).join("")}</div></div>` : ""}`;
   updateDeepStudyAuthState();
@@ -1551,7 +1634,9 @@ function videoProviderStatusMarkup(providers = {}) {
   }
   const youtubeReady = providers?.youtube?.state === "ready";
   const bilibiliReady = providers?.bilibili?.state === "ready";
-  if (youtubeReady && bilibiliReady) return "";
+  if (youtubeReady && bilibiliReady) {
+    return '<p class="module-empty">Video search is ready. Choose “Find relevant videos” to retrieve identity-matched viewing context.</p>';
+  }
   if (!youtubeReady && bilibiliReady) {
     return '<p class="module-empty">YouTube search is not configured on this server yet. Bilibili results remain available, with strict film-identity matching.</p>';
   }
@@ -1680,11 +1765,17 @@ function reviewCard(review) {
 
 async function onFilmDetailClick(event) {
   if (event.target.closest("[data-detail-close]")) {
+    cancelDeepStudyRequest();
     state.discovery.selectedFilm = null;
     state.discovery.detailFilmId = null;
     refs.filmDetail.classList.add("hidden");
     refs.filmDetail.innerHTML = "";
     persistDiscoverySession();
+    return;
+  }
+  const detailRetry = event.target.closest("[data-retry-film-detail]");
+  if (detailRetry) {
+    await loadFilmDetail(detailRetry.dataset.retryFilmDetail);
     return;
   }
   if (event.target.closest("[data-analyse-film]")) {
@@ -1702,9 +1793,25 @@ async function onFilmDetailClick(event) {
     await toggleSavedFilm(saveButton);
     return;
   }
+  if (event.target.closest("[data-cancel-study]")) {
+    cancelDeepStudyRequest({ announce: true });
+    return;
+  }
+  const studyRetry = event.target.closest("[data-retry-study]");
+  if (studyRetry) {
+    const studyButton = refs.filmDetail.querySelector("[data-generate-study]");
+    if (studyButton) await generateDeepStudy(studyButton);
+    return;
+  }
   const studyButton = event.target.closest("[data-generate-study]");
   if (studyButton) {
     await generateDeepStudy(studyButton);
+    return;
+  }
+  const videoRetry = event.target.closest("[data-retry-film-videos]");
+  if (videoRetry) {
+    const videoButton = refs.filmDetail.querySelector("[data-load-film-videos]");
+    if (videoButton) await loadFilmVideos(videoButton);
     return;
   }
   const videoButton = event.target.closest("[data-load-film-videos]");
@@ -1722,6 +1829,15 @@ async function onFilmDetailClick(event) {
     await selectCriticismSource(criticismSourceButton);
     return;
   }
+  const criticismRetry = event.target.closest("[data-retry-criticism]");
+  if (criticismRetry) {
+    const provider = criticismRetry.dataset.retryCriticism;
+    const providerButton = refs.filmDetail.querySelector(
+      `[data-criticism-source="${CSS.escape(provider)}"]`,
+    );
+    if (providerButton) await loadProviderCriticism(providerButton, provider);
+    return;
+  }
   const criticismRefreshButton = event.target.closest("[data-refresh-criticism]");
   if (criticismRefreshButton) {
     await loadProviderCriticism(
@@ -1734,6 +1850,25 @@ async function onFilmDetailClick(event) {
   if (structureButton) {
     await structureProviderCriticism(structureButton.dataset.structureCriticism, structureButton);
   }
+}
+
+function onFilmDetailKeydown(event) {
+  const tab = event.target.closest('[role="tab"]');
+  const tablist = tab?.closest('[role="tablist"]');
+  if (!tab || !tablist || !["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) {
+    return;
+  }
+  const tabs = Array.from(tablist.querySelectorAll('[role="tab"]:not(:disabled)'));
+  const current = tabs.indexOf(tab);
+  if (current < 0 || !tabs.length) return;
+  event.preventDefault();
+  const nextIndex = event.key === "Home"
+    ? 0
+    : event.key === "End"
+      ? tabs.length - 1
+      : (current + (event.key === "ArrowRight" ? 1 : -1) + tabs.length) % tabs.length;
+  tabs[nextIndex].focus();
+  tabs[nextIndex].click();
 }
 
 async function toggleSavedFilm(button) {
@@ -1765,6 +1900,7 @@ async function loadFilmVideos(button) {
   const originalLabel = button.textContent;
   button.disabled = true;
   button.textContent = "Searching…";
+  output.setAttribute("aria-busy", "true");
   output.innerHTML = fetchProgressMarkup(videoButtonProgressLabel(Boolean(film.video_sources?.bundle)));
   try {
     const authorisation = await window.FirstRollAuth?.authorisationHeaders?.() || {};
@@ -1778,11 +1914,20 @@ async function loadFilmVideos(button) {
     film.video_sources = film.video_sources || {};
     film.video_sources.bundle = data.video_sources;
     output.innerHTML = filmVideosMarkup(data.video_sources);
+    focusInterfaceState(output);
     button.textContent = "Find more videos";
   } catch (error) {
-    output.innerHTML = `<p class="video-source-error">Video search failed: ${escapeHtml(error.message)}</p>`;
+    console.warn("Video source request did not complete", error);
+    output.innerHTML = `<div class="interface-state is-error is-compact" role="alert" tabindex="-1" data-interface-state>
+      <span>Viewing context</span>
+      <h4>Video search could not finish.</h4>
+      <p>The film dossier is unchanged. Check the provider connection, then retry the identity-matched search.</p>
+      <button type="button" data-retry-film-videos>Try video search again</button>
+    </div>`;
     button.textContent = originalLabel;
+    focusInterfaceState(output);
   } finally {
+    output.setAttribute("aria-busy", "false");
     button.disabled = false;
   }
 }
@@ -1795,10 +1940,15 @@ function videoButtonProgressLabel(expanding) {
 
 function filmVideosMarkup(bundle) {
   const videos = Array.isArray(bundle?.videos) ? bundle.videos : [];
-  if (!videos.length) return `<p class="module-empty">No confidently matched videos were returned.</p>`;
+  if (!videos.length) return `<div class="interface-state is-compact" role="status" tabindex="-1" data-interface-state>
+    <span>Viewing context</span>
+    <h4>No identity-matched videos were found.</h4>
+    <p>Nothing has been added to the evidence layer. You can retry later without changing the dossier.</p>
+    <button type="button" data-retry-film-videos>Try video search again</button>
+  </div>`;
   const categories = [...new Set(videos.map((video) => video.category || "other"))];
   return `${videoCategoryTabsMarkup(categories)}
-  <div class="film-video-grid" role="tabpanel" data-video-category-panel>
+  <div id="dossier-video-panel" class="film-video-grid" role="tabpanel" aria-labelledby="video-category-tab-0" data-video-category-panel>
     ${videos.map(filmVideoCardMarkup).join("")}
   </div>
   <p class="video-source-boundary">${escapeHtml(bundle.notice || "Third-party videos are attributed but their claims are not verified by FirstRoll.")}</p>`;
@@ -1807,7 +1957,7 @@ function filmVideosMarkup(bundle) {
 function videoCategoryTabsMarkup(categories) {
   const tabs = ["all", ...categories];
   return `<div class="critical-provider-actions video-category-tabs" role="tablist" aria-label="Video categories">
-    ${tabs.map((category, index) => `<button type="button" role="tab" class="${index === 0 ? "is-active" : ""}" aria-selected="${index === 0}" tabindex="${index === 0 ? "0" : "-1"}" data-video-category="${escapeHtml(category)}">${escapeHtml(category === "all" ? "All" : videoCategoryLabel(category))}</button>`).join("")}
+    ${tabs.map((category, index) => `<button id="video-category-tab-${index}" type="button" role="tab" class="${index === 0 ? "is-active" : ""}" aria-selected="${index === 0}" aria-controls="dossier-video-panel" tabindex="${index === 0 ? "0" : "-1"}" data-video-category="${escapeHtml(category)}">${escapeHtml(category === "all" ? "All" : videoCategoryLabel(category))}</button>`).join("")}
   </div>`;
 }
 
@@ -1821,6 +1971,7 @@ function selectVideoCategory(button) {
     tab.setAttribute("aria-selected", String(active));
     tab.setAttribute("tabindex", active ? "0" : "-1");
   });
+  output.querySelector("[data-video-category-panel]")?.setAttribute("aria-labelledby", button.id);
   output.querySelectorAll("[data-video-category-card]").forEach((card) => {
     card.hidden = selected !== "all" && card.dataset.videoCategoryCard !== selected;
   });
@@ -1895,6 +2046,7 @@ async function loadProviderCriticism(button, providerOverride = null) {
   button.disabled = true;
   button.textContent = button.dataset.criticismSource ? `${providerLabel} · Fetching` : "Refreshing…";
   if (state.discovery.activeCriticismProvider === provider) {
+    output.setAttribute("aria-busy", "true");
     output.innerHTML = fetchProgressMarkup(`Fetching ${providerLabel}…`);
   }
   try {
@@ -1919,10 +2071,18 @@ async function loadProviderCriticism(button, providerOverride = null) {
       await structureProviderCriticism(provider, structureButton);
     }
   } catch (error) {
+    console.warn("Criticism source request did not complete", error);
     if (state.discovery.activeCriticismProvider === provider) {
-      output.innerHTML = `<p class="study-error">Source retrieval failed: ${escapeHtml(error.message)}</p>`;
+      output.innerHTML = `<div class="interface-state is-error is-compact" role="alert" tabindex="-1" data-interface-state>
+        <span>${escapeHtml(providerLabel)} criticism</span>
+        <h4>This source could not be fetched.</h4>
+        <p>Other evidence remains available. Retry this provider without changing the selected film.</p>
+        <button type="button" data-retry-criticism="${escapeHtml(provider)}">Try ${escapeHtml(providerLabel)} again</button>
+      </div>`;
+      focusInterfaceState(output);
     }
   } finally {
+    output.setAttribute("aria-busy", "false");
     button.disabled = false;
     button.textContent = originalLabel;
   }
@@ -1942,6 +2102,7 @@ async function structureProviderCriticism(provider, button = null) {
     status.textContent = "Reviews are cached. DeepSeek is structuring them in small validated batches…";
   }
   if (state.discovery.activeCriticismProvider === provider) {
+    output.setAttribute("aria-busy", "true");
     output.querySelector("[data-active-fetch-progress]")?.remove();
     output.insertAdjacentHTML("afterbegin", fetchProgressMarkup("DeepSeek is structuring the fetched reviews…"));
   }
@@ -1960,19 +2121,26 @@ async function structureProviderCriticism(provider, button = null) {
       output.innerHTML = criticalResearchMarkup(bundle);
     }
   } catch (error) {
+    console.warn("Criticism structuring did not complete", error);
     if (state.discovery.activeCriticismProvider !== provider) return;
     output.querySelector("[data-active-fetch-progress]")?.remove();
     const currentStatus = output.querySelector(`[data-structure-status="${provider}"]`);
     if (currentStatus) {
       currentStatus.className = "critical-stage-status is-error";
-      currentStatus.textContent = `Reviews remain available. DeepSeek structuring failed: ${error.message}`;
+      currentStatus.setAttribute("role", "alert");
+      currentStatus.setAttribute("tabindex", "-1");
+      currentStatus.textContent = "Reviews remain available, but DeepSeek could not return validated claims. Retry once or continue with the attributed source text.";
+      focusElement(currentStatus);
     } else {
-      output.insertAdjacentHTML("afterbegin", `<p class="critical-stage-status is-error">Reviews and previous claims remain available. DeepSeek refresh failed: ${escapeHtml(error.message)}</p>`);
+      output.insertAdjacentHTML("afterbegin", '<p class="critical-stage-status is-error" role="alert" tabindex="-1" data-interface-state>Reviews and previous claims remain available, but DeepSeek could not return validated claims. Retry once or continue with the attributed source text.</p>');
+      focusInterfaceState(output);
     }
     if (button) {
       button.disabled = false;
       button.textContent = "Retry DeepSeek";
     }
+  } finally {
+    output.setAttribute("aria-busy", "false");
   }
 }
 
@@ -2031,11 +2199,12 @@ function criticismSourceTabsMarkup(bundles, activeProvider, availability) {
       || availability[source.route] === true,
   );
   if (!visibleSources.length) return "";
+  const selectedProvider = activeProvider || visibleSources[0].route;
   return `<div class="critical-provider-actions" role="tablist" aria-label="Criticism sources">
     ${visibleSources.map((source) => {
       const loaded = Boolean(criticismBundleForRoute(bundles, source.route));
-      const active = source.route === activeProvider;
-      return `<button type="button" role="tab" class="${active ? "is-active" : ""} ${loaded ? "is-loaded" : ""}" aria-selected="${active}" data-criticism-source="${escapeHtml(source.route)}">${escapeHtml(source.label)}</button>`;
+      const active = source.route === selectedProvider;
+      return `<button id="criticism-tab-${escapeHtml(source.route)}" type="button" role="tab" class="${active ? "is-active" : ""} ${loaded ? "is-loaded" : ""}" aria-selected="${active}" aria-controls="dossier-criticism-panel" tabindex="${active ? "0" : "-1"}" data-criticism-source="${escapeHtml(source.route)}">${escapeHtml(source.label)}</button>`;
     }).join("")}
   </div>`;
 }
@@ -2049,7 +2218,16 @@ function updateCriticismSourceTabs(activeProvider) {
     button.classList.toggle("is-active", active);
     button.classList.toggle("is-loaded", loaded);
     button.setAttribute("aria-selected", String(active));
+    button.setAttribute("tabindex", active ? "0" : "-1");
   });
+  const activeTab = refs.filmDetail.querySelector(
+    `[data-criticism-source="${CSS.escape(activeProvider)}"]`,
+  );
+  const panel = refs.filmDetail.querySelector("#dossier-criticism-panel");
+  if (activeTab && panel) {
+    panel.setAttribute("aria-labelledby", activeTab.id);
+    panel.removeAttribute("aria-label");
+  }
 }
 
 function rawReviewMarkup(reviews, provider, open) {
@@ -2079,22 +2257,101 @@ function criticalClaimMarkup(claim, review, provider) {
   </article>`;
 }
 
+function studyResponseError(response, detail) {
+  const error = new Error(detail || `Deep Study returned HTTP ${response.status}.`);
+  error.status = response.status;
+  error.retryAfter = response.headers.get("Retry-After") || "";
+  return error;
+}
+
+function deepStudyFailureMarkup(error) {
+  const message = String(error?.message || "").toLocaleLowerCase();
+  let title = "Deep Study could not complete.";
+  let guidance = "Your film, evidence and focus are unchanged. Retry once; if the problem repeats, narrow the focus or try again later.";
+  if (error?.status === 429 || message.includes("allowance") || message.includes("quota")) {
+    title = "The study allowance is unavailable right now.";
+    guidance = "No result was stored. Keep this focus and try again after the allowance resets or use an approved personal provider key.";
+  } else if (error?.status === 401 || message.includes("sign in")) {
+    title = "Sign in is required for this study.";
+    guidance = "Sign in again, then retry the same focus. The current film dossier remains open.";
+  } else if (message.includes("valid study") || message.includes("invalid study")) {
+    title = "DeepSeek did not return a valid study.";
+    guidance = "The evidence remains intact. Retry once; if validation fails again, use a narrower formal question.";
+  } else if (error instanceof TypeError || message.includes("connection")) {
+    title = "The study connection was interrupted.";
+    guidance = "Check the connection and retry. A provider request that had already started may still count towards external usage.";
+  }
+  return `<div class="interface-state is-error is-inverse" role="alert" tabindex="-1" data-interface-state>
+    <span>Study stopped safely</span>
+    <h4>${escapeHtml(title)}</h4>
+    <p>${escapeHtml(guidance)}</p>
+    <button type="button" data-retry-study>Try Deep Study again</button>
+  </div>`;
+}
+
+function cancelDeepStudyRequest(options = {}) {
+  const controller = state.discovery.studyController;
+  if (!controller) return false;
+  controller.abort();
+  state.discovery.studyController = null;
+  state.discovery.studyRequestId += 1;
+  const output = refs.filmDetail.querySelector("[data-study-output]");
+  const generateButton = refs.filmDetail.querySelector("[data-generate-study]");
+  const cancelButton = refs.filmDetail.querySelector("[data-cancel-study]");
+  if (generateButton) {
+    generateButton.disabled = false;
+    generateButton.textContent = "Generate study";
+  }
+  cancelButton?.classList.add("hidden");
+  output?.setAttribute("aria-busy", "false");
+  if (options.announce && output) {
+    output.innerHTML = `<div class="interface-state is-inverse" role="status" tabindex="-1" data-interface-state>
+      <span>Browser request stopped</span>
+      <h4>You stopped waiting for this study.</h4>
+      <p>Your film, evidence and focus remain here. A provider request already in progress may still finish and consume external quota.</p>
+      <button type="button" data-retry-study>Start the study again</button>
+    </div>`;
+    focusInterfaceState(output);
+  }
+  return true;
+}
+
 async function generateDeepStudy(button) {
   const film = state.discovery.selectedFilm;
   const output = refs.filmDetail.querySelector("[data-study-output]");
+  const cancelButton = refs.filmDetail.querySelector("[data-cancel-study]");
   const question = refs.filmDetail.querySelector("[data-study-question]")?.value.trim() || null;
   if (!film || !output) return;
   const authorisation = await window.FirstRollAuth?.authorisationHeaders?.() || {};
   if (runtimeConfig.publicMode && !authorisation.Authorization) {
     window.FirstRollAuth?.open?.();
-    output.innerHTML = '<p class="study-error">Sign in by email to use Deep Study.</p>';
+    output.innerHTML = `<div class="interface-state is-error is-inverse" role="alert" tabindex="-1" data-interface-state>
+      <span>Account required</span>
+      <h4>Sign in to use Deep Study.</h4>
+      <p>The selected film and focus remain ready. Complete sign-in, then generate the study again.</p>
+    </div>`;
+    focusInterfaceState(output);
     return;
   }
+
+  cancelDeepStudyRequest();
+  const requestId = state.discovery.studyRequestId + 1;
+  const controller = new AbortController();
+  state.discovery.studyRequestId = requestId;
+  state.discovery.studyController = controller;
   button.disabled = true;
   button.textContent = "Studying…";
+  cancelButton?.classList.remove("hidden");
+  output.setAttribute("aria-busy", "true");
   output.innerHTML = fetchProgressMarkup("Reading the film record against your cited sources…");
+  const currentRequest = () => (
+    state.discovery.studyRequestId === requestId
+    && state.discovery.selectedFilm?.id === film.id
+  );
+
   try {
     const integration = window.FirstRollIntegrations?.requestHeaders?.("deepseek") || {};
+    let data;
     if (runtimeConfig.publicMode) {
       const streamResponse = await fetch(
         `${discoveryApiBase()}/api/discovery/films/${encodeURIComponent(film.id)}/study/stream`,
@@ -2102,39 +2359,54 @@ async function generateDeepStudy(button) {
           method: "POST",
           headers: { "Content-Type": "application/json", ...authorisation, ...integration },
           body: JSON.stringify({ question }),
+          signal: controller.signal,
         },
       );
-      if (!streamResponse.ok) throw new Error(await readApiError(streamResponse));
+      if (!streamResponse.ok) {
+        throw studyResponseError(streamResponse, await readApiError(streamResponse));
+      }
       const runId = streamResponse.headers.get("X-FirstRoll-Run-ID");
       if (!runId) throw new Error("The research run did not return an identifier.");
       await consumeResearchProgress(streamResponse, runId, (progress) => {
-        output.innerHTML = fetchProgressMarkup(progress.message);
+        if (currentRequest()) output.innerHTML = fetchProgressMarkup(progress.message);
       });
       const resultResponse = await fetch(
         `${discoveryApiBase()}/api/research/runs/${encodeURIComponent(runId)}`,
-        { headers: authorisation },
+        { headers: authorisation, signal: controller.signal },
       );
-      if (!resultResponse.ok) throw new Error(await readApiError(resultResponse));
-      const data = await resultResponse.json();
-      output.innerHTML = `${deepStudyQuotaMarkup(data.quota)}${deepStudyMarkup(data.study || {})}`;
-      return;
+      if (!resultResponse.ok) {
+        throw studyResponseError(resultResponse, await readApiError(resultResponse));
+      }
+      data = await resultResponse.json();
+    } else {
+      const response = await fetch(
+        `${discoveryApiBase()}/api/discovery/films/${encodeURIComponent(film.id)}/study`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...authorisation, ...integration },
+          body: JSON.stringify({ question }),
+          signal: controller.signal,
+        },
+      );
+      if (!response.ok) throw studyResponseError(response, await readApiError(response));
+      data = await response.json();
     }
-    const response = await fetch(
-      `${discoveryApiBase()}/api/discovery/films/${encodeURIComponent(film.id)}/study`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...authorisation, ...integration },
-        body: JSON.stringify({ question }),
-      },
-    );
-    if (!response.ok) throw new Error(await readApiError(response));
-    const data = await response.json();
+    if (!currentRequest()) return;
     output.innerHTML = `${deepStudyQuotaMarkup(data.quota)}${deepStudyMarkup(data.study || {})}`;
+    focusElement(output.querySelector("[data-study-result]"));
   } catch (error) {
-    output.innerHTML = `<p class="study-error">${escapeHtml(error.message)}</p>`;
+    if (error?.name === "AbortError" || !currentRequest()) return;
+    console.warn("Deep Study request did not complete", error);
+    output.innerHTML = deepStudyFailureMarkup(error);
+    focusInterfaceState(output);
   } finally {
-    button.disabled = false;
-    button.textContent = "Generate study";
+    if (currentRequest()) {
+      state.discovery.studyController = null;
+      button.disabled = false;
+      button.textContent = "Generate study";
+      cancelButton?.classList.add("hidden");
+      output.setAttribute("aria-busy", "false");
+    }
   }
 }
 
@@ -2173,7 +2445,7 @@ function deepStudyMarkup(study) {
       <strong>${escapeHtml(qualityLabel)}</strong>
       <span>${escapeHtml(Math.round((quality.score || 0) * 100))}% specificity · ${quality.repair_attempted ? "one audit pass used" : "first draft passed"}</span>
     </div>
-    <article class="study-essay">
+    <article class="study-essay" tabindex="-1" data-study-result>
       <header><span>${escapeHtml(study.model || "DeepSeek")} · evidence-grounded essay</span><h4>${escapeHtml(study.title || "Film study")}</h4></header>
       <p class="study-essay-lede">${escapeHtml(study.central_argument || "No central argument was returned.")}</p>
       <div class="study-essay-body">
@@ -2217,7 +2489,11 @@ function studyEssayParagraphMarkup(section, sourceMap, attributedSourceMap, qual
 async function readApiError(response) {
   try {
     const body = await response.json();
-    return body.detail || `HTTP ${response.status}`;
+    if (typeof body.detail === "string" && body.detail.trim()) return body.detail;
+    if (typeof body.detail?.message === "string" && body.detail.message.trim()) {
+      return body.detail.message;
+    }
+    return `HTTP ${response.status}`;
   } catch (_) {
     return `HTTP ${response.status}`;
   }
@@ -2259,10 +2535,31 @@ function escapeHtml(value) {
 }
 
 function setActiveView(viewKey) {
-  refs.tabs.forEach((tab) => tab.classList.toggle("active", tab.dataset.view === viewKey));
+  refs.tabs.forEach((tab) => {
+    const active = tab.dataset.view === viewKey;
+    tab.classList.toggle("active", active);
+    tab.setAttribute("aria-selected", String(active));
+    tab.setAttribute("tabindex", active ? "0" : "-1");
+  });
   Object.entries(refs.views).forEach(([key, view]) => {
     view.classList.toggle("active", key === viewKey);
   });
+}
+
+function onAnalysisTabKeydown(event) {
+  if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+  const current = refs.tabs.indexOf(event.currentTarget);
+  if (current < 0) return;
+  event.preventDefault();
+  const nextIndex = event.key === "Home"
+    ? 0
+    : event.key === "End"
+      ? refs.tabs.length - 1
+      : (current + (event.key === "ArrowRight" ? 1 : -1) + refs.tabs.length)
+        % refs.tabs.length;
+  const next = refs.tabs[nextIndex];
+  setActiveView(next.dataset.view);
+  next.focus();
 }
 
 function onFileSelected(event) {
@@ -2345,7 +2642,7 @@ async function onAnalyze() {
     setFeatureButtonsEnabled(true);
   } catch (err) {
     console.error(err);
-    setStatus(`Analysis failed: ${err.message}`);
+    setStatus("Analysis could not complete. Check the backend connection, then choose Generate scene analysis to retry.", "error");
     setProgress(0);
   } finally {
     refs.analyzeBtn.disabled = false;
@@ -3021,8 +3318,9 @@ function kpi(label, value) {
   return `<article class="kpi-card"><p class="kpi-label">${label}</p><p class="kpi-value">${value}</p></article>`;
 }
 
-function setStatus(text) {
+function setStatus(text, kind = "") {
   refs.statusText.textContent = text;
+  refs.statusText.classList.toggle("is-error", kind === "error");
 }
 
 function setProgress(percent) {

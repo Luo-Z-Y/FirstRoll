@@ -20,7 +20,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/assets/styles.css?v=20260821-6" />
+  <link rel="stylesheet" href="/assets/styles.css?v=20260821-7" />
 </head>
 <body data-api-base="">
   <div class="app-shell">
@@ -88,21 +88,21 @@
         </form>
 
         <div class="search-support">
-          <div id="recentSearches" class="recent-searches" aria-label="Recent searches"></div>
+          <div id="recentSearches" class="recent-searches" role="region" aria-label="Recent searches"></div>
           <p id="discoveryConnection" class="connection-state hidden" aria-live="polite"></p>
         </div>
 
-        <section id="discoveryResultsSection" class="results-section hidden" aria-live="polite">
+        <section id="discoveryResultsSection" class="results-section hidden" aria-labelledby="resultsTitle" aria-busy="false">
           <div class="section-heading">
             <div>
-              <h2 id="resultsTitle">Search results</h2>
+              <h2 id="resultsTitle" tabindex="-1">Search results</h2>
             </div>
-            <p id="resultsMeta" class="section-meta"></p>
+            <p id="resultsMeta" class="section-meta" role="status" aria-live="polite"></p>
           </div>
           <div id="discoveryResults" class="film-archive"></div>
         </section>
 
-        <section id="filmDetail" class="film-detail hidden" aria-live="polite"></section>
+        <section id="filmDetail" class="film-detail hidden" aria-busy="false"></section>
       </section>
 
       <section id="product-analyse" class="product-view">
@@ -174,7 +174,7 @@
             </div>
 
             <div class="status-wrap">
-              <p id="statusText"></p>
+              <p id="statusText" role="status" aria-live="polite"></p>
               <div class="progress-track" aria-hidden="true"><div id="progressBar" class="progress-bar"></div></div>
             </div>
             <video id="previewVideo" controls playsinline muted></video>
@@ -182,25 +182,25 @@
 
           <section class="analysis-panel card">
             <nav class="view-tabs" role="tablist" aria-label="Analysis sections">
-              <button class="tab active" data-view="overview">Overview</button>
-              <button class="tab" data-view="shotdata">Shot data</button>
-              <button class="tab" data-view="color">Colour</button>
-              <button class="tab" data-view="objects">Objects</button>
+              <button id="analysisTabOverview" class="tab active" type="button" role="tab" aria-selected="true" aria-controls="view-overview" tabindex="0" data-view="overview">Overview</button>
+              <button id="analysisTabShotData" class="tab" type="button" role="tab" aria-selected="false" aria-controls="view-shotdata" tabindex="-1" data-view="shotdata">Shot data</button>
+              <button id="analysisTabColour" class="tab" type="button" role="tab" aria-selected="false" aria-controls="view-color" tabindex="-1" data-view="color">Colour</button>
+              <button id="analysisTabObjects" class="tab" type="button" role="tab" aria-selected="false" aria-controls="view-objects" tabindex="-1" data-view="objects">Objects</button>
             </nav>
 
-            <section id="view-overview" class="view active" aria-live="polite">
+            <section id="view-overview" class="view active" role="tabpanel" aria-labelledby="analysisTabOverview" aria-live="polite">
               <div id="overviewPlaceholder" class="placeholder">No analysis yet.</div>
               <div id="overviewContent" class="hidden"></div>
             </section>
-            <section id="view-shotdata" class="view">
+            <section id="view-shotdata" class="view" role="tabpanel" aria-labelledby="analysisTabShotData">
               <div id="shotdataPlaceholder" class="placeholder">No analysis yet.</div>
               <div id="shotdataContent" class="hidden"></div>
             </section>
-            <section id="view-color" class="view">
+            <section id="view-color" class="view" role="tabpanel" aria-labelledby="analysisTabColour">
               <div id="colorPlaceholder" class="placeholder">No analysis yet.</div>
               <div id="colorContent" class="hidden"></div>
             </section>
-            <section id="view-objects" class="view">
+            <section id="view-objects" class="view" role="tabpanel" aria-labelledby="analysisTabObjects">
               <div id="objectsPlaceholder" class="placeholder">No analysis yet.</div>
               <div id="objectsContent" class="hidden"></div>
               <div id="llmDraftWrap" class="hidden">
@@ -402,8 +402,8 @@
       <h2 id="authHeading">Welcome back</h2>
       <p id="authDescription">Sign in to use Deep Study and open your saved films on any device.</p>
       <div class="auth-mode-switch" role="tablist" aria-label="Account action">
-        <button class="is-active" type="button" role="tab" aria-selected="true" data-auth-mode="sign-in">Sign in</button>
-        <button type="button" role="tab" aria-selected="false" data-auth-mode="sign-up">Create account</button>
+        <button class="is-active" type="button" role="tab" aria-selected="true" tabindex="0" data-auth-mode="sign-in">Sign in</button>
+        <button type="button" role="tab" aria-selected="false" tabindex="-1" data-auth-mode="sign-up">Create account</button>
       </div>
     </div>
     <div class="auth-provider-copy auth-provider-entra">
@@ -432,8 +432,8 @@
     <p id="authMessage" class="auth-message" role="status" aria-live="polite"></p>
   </dialog>
 
-  <video id="analysisVideo" preload="metadata" class="hidden-asset"></video>
-  <canvas id="analysisCanvas" width="160" height="90" class="hidden-asset"></canvas>
+  <video id="analysisVideo" preload="metadata" class="hidden-asset" aria-hidden="true" tabindex="-1"></video>
+  <canvas id="analysisCanvas" width="160" height="90" class="hidden-asset" aria-hidden="true"></canvas>
   <script src="/assets/config.js"></script>
   <script>
     const authProvider = window.FIRSTROLL_CONFIG?.authProvider || "supabase";
@@ -456,14 +456,14 @@
     if (localTestReady || (window.FIRSTROLL_CONFIG?.publicMode && (entraReady || supabaseReady))) {
       const authScript = document.createElement("script");
       authScript.src = localTestReady
-        ? "/assets/local-auth.js?v=20260820-2"
+        ? "/assets/local-auth.js?v=20260821-3"
         : (entraReady
           ? "/assets/entra-auth.js?v=20260820-1"
-          : "/assets/auth.js?v=20260820-4");
+          : "/assets/auth.js?v=20260821-5");
       document.body.append(authScript);
     }
   </script>
-  <script src="/assets/integrations.js?v=20260820-6"></script>
-  <script src="/assets/app.js?v=20260821-10"></script>
+  <script src="/assets/integrations.js?v=20260821-7"></script>
+  <script src="/assets/app.js?v=20260821-11"></script>
 </body>
 </html>

@@ -229,7 +229,10 @@
       }
       if (refs.status) refs.status.textContent = "Account settings are ready.";
     } catch (error) {
-      if (refs.status) refs.status.textContent = error?.message || "Account settings could not be refreshed.";
+      console.warn("Account settings could not be refreshed", error);
+      if (refs.status) {
+        refs.status.textContent = "Account settings could not be refreshed. Check the connection, then choose Refresh.";
+      }
     }
   }
 
@@ -327,12 +330,19 @@
   refs.sectionTabs.forEach((tab) => {
     tab.addEventListener("click", () => selectSettingsSection(tab.dataset.settingsSection));
     tab.addEventListener("keydown", (event) => {
-      if (!["ArrowLeft", "ArrowRight"].includes(event.key)) return;
+      if (!["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"].includes(event.key)) {
+        return;
+      }
       event.preventDefault();
       const current = refs.sectionTabs.indexOf(tab);
-      const direction = event.key === "ArrowRight" ? 1 : -1;
-      const next = refs.sectionTabs[(current + direction + refs.sectionTabs.length)
-        % refs.sectionTabs.length];
+      const forward = ["ArrowRight", "ArrowDown"].includes(event.key);
+      const nextIndex = event.key === "Home"
+        ? 0
+        : event.key === "End"
+          ? refs.sectionTabs.length - 1
+          : (current + (forward ? 1 : -1) + refs.sectionTabs.length)
+            % refs.sectionTabs.length;
+      const next = refs.sectionTabs[nextIndex];
       selectSettingsSection(next?.dataset.settingsSection);
       next?.focus();
     });

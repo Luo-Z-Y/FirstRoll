@@ -75,6 +75,12 @@ The original GPL-3.0 licence and contributor attribution remain applicable. See
   on narrow screens and provides numbered links through viewing context, attributed criticism and
   Deep Study. A final loaded-dossier scroll prevents a changing shelf from leaving the requested film
   below the viewport.
+- Preserve the current query, film and evidence when an asynchronous operation fails. Search,
+  dossier, video, criticism and study states provide a specific safe explanation and an explicit
+  retry; Deep Study also offers **Stop waiting**, while warning that an already-started provider call
+  may still consume external quota. Focus moves to each terminal state or completed result, busy
+  regions announce progress, tablists support arrows/Home/End and primary controls meet WCAG AA
+  contrast in both themes.
 - Read an attributed catalogue overview, poster and field-level crew provenance. TMDb results retain
   their IMDb and Wikidata external IDs so later research adapters can resolve the same work safely.
 - Browse a native HTML/CSS director shelf with up to twelve front-facing film cases. The selected
