@@ -17,6 +17,18 @@ def test_ambiguous_search_requires_explicit_film_identity_confirmation() -> None
     assert "renderFilmArchive(primary, [], nearby, true)" in app
     assert "loadRelatedFilms(primary, nearby)" in app
     assert "function filmYearLabel(film)" in app
-    assert '`${matchedYear} release · first release ${years[0]}`' in app
+    assert "function normaliseFilmYear(value)" in app
+    assert 'value === null || value === undefined || value === ""' in app
+    assert "year >= 1888 && year <= 2100" in app
+    assert 'return years[0] ? String(years[0]) : "Year unknown"' in app
+    assert "release · first release" not in app
+    assert 'years.join(" / ")' not in app
     assert ".identity-choice-grid" in styles
     assert ".identity-choice:focus-visible" in styles
+
+
+def test_raw_wikidata_ids_are_not_presented_as_people() -> None:
+    app = (WEB / "app.js").read_text(encoding="utf-8")
+
+    assert r'.filter((value) => !/^Q\d+$/i.test(value))' in app
+    assert 'displayCrew(primary.directors || [], "Director not supplied")' in app

@@ -337,9 +337,8 @@ body[data-auth-provider="entra"] .auth-provider-entra { display: block; }
 body[data-auth-provider="entra"] form.auth-provider-entra { display: grid; }
 
 .integrations-view { padding: clamp(52px, 8vw, 104px) 0 90px; }
-.integrations-hero { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(260px, 0.65fr); align-items: end; gap: 48px; margin-bottom: 38px; padding-bottom: 34px; border-bottom: 1px solid var(--line); }
+.integrations-hero { display: grid; grid-template-columns: minmax(0, 1fr); align-items: end; margin-bottom: 38px; padding-bottom: 34px; border-bottom: 1px solid var(--line); }
 .integrations-hero h1 { max-width: 900px; margin: 17px 0 0; font: 400 clamp(3.8rem, 7.6vw, 7.4rem)/0.86 "Bebas Neue", sans-serif; letter-spacing: 0.005em; text-transform: uppercase; }
-.integrations-hero > p { max-width: 540px; margin: 0; color: var(--muted); font-size: clamp(1rem, 1.45vw, 1.25rem); line-height: 1.55; }
 .integration-gate { max-width: 760px; margin: 72px auto; padding: clamp(28px, 5vw, 58px); text-align: center; }
 .integration-gate h2 { margin: 14px 0 10px; font: 400 clamp(2.5rem, 5vw, 4.5rem)/0.95 "Bebas Neue", sans-serif; text-transform: uppercase; }
 .integration-gate > p:not(.eyebrow) { max-width: 570px; margin: 0 auto 26px; color: var(--muted); line-height: 1.6; }
@@ -594,23 +593,76 @@ html[data-theme="dark"] .theme-icon-moon { opacity: 1; transform: rotate(0) scal
   letter-spacing: 0.08em;
 }
 
-.recent-searches button {
-  display: grid;
-  gap: 1px;
+.recent-search-item {
+  display: inline-flex;
+  align-items: stretch;
   border: 1px solid var(--line);
   border-radius: 999px;
-  padding: 6px 12px;
   background: var(--control-fill);
   box-shadow: 0 1px 2px rgba(39, 30, 20, 0.05);
-  text-align: left;
-  cursor: pointer;
   transition: color 220ms var(--ease-fluid), border-color 220ms var(--ease-fluid), background-color 220ms var(--ease-fluid), box-shadow 260ms var(--ease-fluid), transform 320ms var(--ease-spring);
 }
 
-.recent-searches button strong { font-size: 0.7rem; }
-.recent-searches button small { color: var(--ink-soft); font: 0.53rem "IBM Plex Mono", monospace; }
-.recent-searches button:hover { border-color: rgba(185, 65, 46, 0.42); color: var(--red); background: var(--control-fill-hover); box-shadow: var(--control-shadow); transform: translateY(-1px); }
-.recent-searches button:hover small { color: inherit; }
+.recent-search-item:hover {
+  border-color: rgba(185, 65, 46, 0.42);
+  color: var(--red);
+  background: var(--control-fill-hover);
+  box-shadow: var(--control-shadow);
+  transform: translateY(-1px);
+}
+
+.recent-search-query,
+.recent-search-dismiss,
+.recent-search-clear {
+  border: 0;
+  color: inherit;
+  background: transparent;
+  cursor: pointer;
+}
+
+.recent-search-query {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+  padding: 6px 4px 6px 12px;
+  text-align: left;
+}
+
+.recent-search-query strong { font-size: 0.7rem; }
+.recent-search-query small { color: var(--ink-soft); font: 0.53rem "IBM Plex Mono", monospace; }
+.recent-search-item:hover .recent-search-query small { color: inherit; }
+
+.recent-search-dismiss {
+  display: grid;
+  width: 28px;
+  min-height: 28px;
+  margin: 2px 2px 2px 0;
+  padding: 0;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--ink-soft);
+  font-size: 1rem;
+  line-height: 1;
+  transition: color 180ms var(--ease-fluid), background-color 180ms var(--ease-fluid), transform 220ms var(--ease-spring);
+}
+
+.recent-search-dismiss:hover { color: var(--paper); background: var(--red); transform: scale(1.04); }
+.recent-search-dismiss:active { transform: scale(0.92); }
+
+.recent-search-clear {
+  align-self: center;
+  padding: 6px 5px;
+  color: var(--ink-soft);
+  font: 0.56rem "IBM Plex Mono", monospace;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  transition: color 180ms var(--ease-fluid);
+}
+
+.recent-search-clear:hover { color: var(--red); }
+.recent-search-query:focus-visible,
+.recent-search-dismiss:focus-visible,
+.recent-search-clear:focus-visible { outline: 2px solid var(--red); outline-offset: 2px; }
 
 .connection-state {
   margin: 0;
@@ -864,9 +916,8 @@ html[data-theme="dark"] .theme-icon-moon { opacity: 1; transform: rotate(0) scal
 }
 
 .criterion-cover img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-.criterion-series, .criterion-number { position: absolute; z-index: 2; font: 0.48rem "IBM Plex Mono", monospace; letter-spacing: 0.1em; text-transform: uppercase; }
+.criterion-series { position: absolute; z-index: 2; font: 0.48rem "IBM Plex Mono", monospace; letter-spacing: 0.1em; text-transform: uppercase; }
 .criterion-series { top: 13px; left: 13px; }
-.criterion-number { right: 13px; bottom: 10px; writing-mode: vertical-rl; }
 
 .criterion-disc {
   position: absolute;
@@ -930,7 +981,7 @@ html[data-theme="dark"] .theme-icon-moon { opacity: 1; transform: rotate(0) scal
   position: relative;
   min-width: 0;
   overflow: hidden;
-  min-height: 620px;
+  min-height: 720px;
   border: 1px solid #090908;
   color: #eee7da;
   background: #080907;
@@ -944,8 +995,7 @@ html[data-theme="dark"] .theme-icon-moon { opacity: 1; transform: rotate(0) scal
   right: 20px;
   left: 20px;
   display: flex;
-  justify-content: space-between;
-  gap: 18px;
+  justify-content: flex-start;
   align-items: baseline;
   padding: 10px 12px 11px;
   border: 1px solid rgba(238, 231, 218, 0.18);
@@ -955,7 +1005,6 @@ html[data-theme="dark"] .theme-icon-moon { opacity: 1; transform: rotate(0) scal
   pointer-events: none;
 }
 .closet-header span { flex: 0 0 auto; font: 1.4rem "Bebas Neue", sans-serif; letter-spacing: 0.08em; text-transform: uppercase; }
-.closet-header small { min-width: 0; flex: 1 1 auto; overflow: hidden; color: rgba(238, 231, 218, 0.7); font: 0.52rem/1.45 "IBM Plex Mono", monospace; text-align: right; text-overflow: ellipsis; white-space: nowrap; }
 
 .closet-viewport {
   position: absolute;
@@ -1991,9 +2040,8 @@ html[data-theme="dark"] .critical-provider-actions button.is-active.is-loaded::a
   .criterion-object { width: min(100%, 310px); min-height: 300px; margin: 0 auto; }
   .archive-pullout-copy { padding: 8px 4px 0; }
   .archive-pullout-copy h3 { font-size: clamp(2.65rem, 13vw, 3.6rem); }
-  .film-closet { min-height: 520px; }
+  .film-closet { min-height: 620px; }
   .closet-header { right: 14px; left: 14px; }
-  .closet-header small { display: none; }
   .closet-hud { right: 14px; bottom: 12px; left: 14px; }
   .closet-coordinate { display: none; }
   .detail-hero { min-height: 500px; padding: 28px 22px; }

@@ -2,6 +2,7 @@ from uuid import uuid4
 
 import pytest
 from fastapi.testclient import TestClient
+from starlette.requests import Request
 
 from app.backend import main
 from app.backend.auth import (
@@ -12,6 +13,59 @@ from app.backend.auth import (
     configured_auth_verifier,
 )
 from app.backend.video_sources import FilmVideoBundle
+
+
+def test_local_test_account_is_strictly_limited_to_the_loopback_preview(
+    monkeypatch,
+) -> None:
+    monkeypatch.setenv("FIRSTROLL_SERVE_HOSTED_FRONTEND", "true")
+
+    def request(host: str, client: str) -> Request:
+        return Request(
+            {
+                "type": "http",
+                "method": "GET",
+                "scheme": "http",
+                "path": "/api/auth/me",
+                "query_string": b"",
+                "headers": [(b"host", host.encode())],
+                "client": (client, 51000),
+                "server": (host, 4173),
+            }
+        )
+
+    assert main.local_test_request(request("127.0.0.1:4173", "127.0.0.1")) is True
+    assert main.local_test_request(request("localhost:4173", "::1")) is True
+    assert main.local_test_request(request("firstroll.app", "127.0.0.1")) is False
+    assert main.local_test_request(request("127.0.0.1:4173", "203.0.113.5")) is False
+
+
+def test_local_test_account_authenticates_without_supabase_and_has_unlimited_quota(
+    monkeypatch,
+) -> None:
+    monkeypatch.setenv("FIRSTROLL_PUBLIC_MODE", "true")
+    monkeypatch.setattr(main, "local_test_request", lambda _request: True)
+
+    class QuotaMustNotRun:
+        def status(self, _identity):
+            raise AssertionError("The persistent quota service must not run for localhost testing.")
+
+    monkeypatch.setattr(main, "quota_client", QuotaMustNotRun())
+    client = TestClient(main.app)
+    headers = {"Authorization": f"Bearer {main.LOCAL_TEST_ACCOUNT_TOKEN}"}
+
+    identity = client.get("/api/auth/me", headers=headers)
+    integrations = client.get("/api/account/integrations", headers=headers)
+
+    assert identity.status_code == 200
+    assert identity.json()["user"] == {
+        "id": main.LOCAL_TEST_ACCOUNT_ID,
+        "email": "luo_zhiyang@outlook.com",
+        "role": "authenticated",
+        "provider": "local",
+    }
+    assert integrations.status_code == 200
+    assert integrations.json()["deep_study"]["quota"]["unlimited"] is True
 
 
 def test_supabase_auth_verifier_accepts_a_verified_authenticated_user() -> None:

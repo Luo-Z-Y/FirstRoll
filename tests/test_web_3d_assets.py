@@ -39,7 +39,7 @@ def test_supabase_auth_is_bundled_and_deep_study_sends_bearer_tokens() -> None:
     integrations = (WEB / "integrations.js").read_text(encoding="utf-8")
 
     assert 'id="authDialog"' in index
-    assert '"/assets/auth.js?v=20260820-3"' in index
+    assert '"/assets/auth.js?v=20260820-4"' in index
     assert 'from "@supabase/supabase-js"' in auth
     assert 'flowType: "pkce"' in auth
     assert "signInWithPassword" in auth
@@ -54,8 +54,35 @@ def test_supabase_auth_is_bundled_and_deep_study_sends_bearer_tokens() -> None:
     assert "authorisation.Authorization" in app
     assert 'headers: { "Content-Type": "application/json", ...authorisation, ...integration }' in app
     assert "deepStudyQuotaMarkup(data.quota)" in app
+
+
+def test_loopback_preview_uses_a_separate_persistent_unlimited_test_account() -> None:
+    index = (WEB / "index.html").read_text(encoding="utf-8")
+    local_auth = (WEB / "local-auth.js").read_text(encoding="utf-8")
+    app = (WEB / "app.js").read_text(encoding="utf-8")
+    main = (ROOT / "app" / "backend" / "main.py").read_text(encoding="utf-8")
+    integrations = (WEB / "integrations.js").read_text(encoding="utf-8")
+    build = (ROOT / "tools" / "build_web.sh").read_text(encoding="utf-8")
+
+    assert "localTestAccountEmail" in index
+    assert '"/assets/local-auth.js?v=20260820-2"' in index
+    assert '["localhost", "127.0.0.1", "::1"]' in index
+    assert 'localTestAccountEmail: ""' in build
+    assert 'cp "$source_dir/local-auth.js"' in build
+    assert "firstroll.local-test" in local_auth
+    assert "firstroll-local-test-account" in local_auth
+    assert "window.localStorage" in local_auth
+    assert "saveFilm" in local_auth
+    assert "updateDisplayName" in local_auth
+    assert "updatePreferences" in local_auth
+    assert "local_test_request" in main
+    assert "ipaddress.ip_address(host).is_loopback" in main
+    assert '"unlimited": True' in main
+    assert "Unlimited studies on this local test account" in integrations
+    assert "Local development account" in integrations
+    assert "This loopback test account has no FirstRoll daily quota" in integrations
     assert "account studies remain today" in app
-    assert 'src="/assets/integrations.js?v=20260820-3"' in index
+    assert 'src="/assets/integrations.js?v=20260820-6"' in index
     assert '"X-FirstRoll-DeepSeek-Key"' in integrations
     assert '"X-FirstRoll-YouTube-Key"' in integrations
     assert "localStorage" not in integrations
@@ -218,9 +245,9 @@ def test_archive_pullout_collapses_before_zoom_can_clip_its_copy() -> None:
     styles = (WEB / "styles.css").read_text(encoding="utf-8")
     app = (WEB / "app.js").read_text(encoding="utf-8")
 
-    assert "/assets/styles.css?v=20260820-9" in index
-    assert "/assets/app.js?v=20260820-5" in index
-    assert "/assets/closet3d.js?v=20260820-4" in index
+    assert "/assets/styles.css?v=20260821-2" in index
+    assert "/assets/app.js?v=20260821-2" in index
+    assert "/assets/closet3d.js?v=20260821-1" in index
     assert 'class="archive-pullout-shell"' in app
     assert "container-type: inline-size" in styles
     assert "@container (max-width: 520px)" in styles
@@ -235,6 +262,21 @@ def test_archive_pullout_collapses_before_zoom_can_clip_its_copy() -> None:
     assert "max-width: 100%" in styles
 
 
+def test_recent_searches_can_be_removed_individually_or_cleared() -> None:
+    app = (WEB / "app.js").read_text(encoding="utf-8")
+    styles = (WEB / "styles.css").read_text(encoding="utf-8")
+
+    assert "persistRecentSearches" in app
+    assert "window.localStorage.removeItem(RECENT_SEARCHES_KEY)" in app
+    assert 'data-remove-recent-search="${index}"' in app
+    assert "data-clear-recent-searches" in app
+    assert "Remove ${escapeHtml(search.title)} from recent searches" in app
+    assert "state.discovery.recentSearches.filter" in app
+    assert ".recent-search-item" in styles
+    assert ".recent-search-dismiss" in styles
+    assert ".recent-search-clear" in styles
+
+
 def test_supabase_dialog_hides_the_unused_entra_form() -> None:
     styles = (WEB / "styles.css").read_text(encoding="utf-8")
 
@@ -242,7 +284,7 @@ def test_supabase_dialog_hides_the_unused_entra_form() -> None:
     assert 'body[data-auth-provider="entra"] form.auth-provider-entra { display: grid; }' in styles
 
 
-def test_single_wall_shelf_uses_five_rows_of_real_films() -> None:
+def test_director_shelf_uses_front_facing_poster_cases() -> None:
     app = (WEB / "app.js").read_text(encoding="utf-8")
     runtime = (WEB / "closet3d.js").read_text(encoding="utf-8")
     styles = (WEB / "styles.css").read_text(encoding="utf-8")
@@ -251,39 +293,42 @@ def test_single_wall_shelf_uses_five_rows_of_real_films() -> None:
         encoding="utf-8"
     )
 
-    assert "const rowSize = 10" in app
     assert "displayableFilms" in app
-    assert "related?limit=12&fast=true" in app
-    assert "usedFilmIds" in app
-    assert "usedFilmEditions" in app
-    assert "shelfFilmIdentity" in app
+    assert "related?limit=12&fast=false&director_only=true" in app
+    assert "buildShelfCollections(primary, directorWorks, director)" in app
+    director_shelf = app[app.index("function buildShelfCollections"):app.index("function displayableFilms")]
+    assert "const films = displayableFilms(directorWorks)" in director_shelf
+    assert "shared_cast" not in director_shelf
     assert "candidate_cap = min(168, max(40, limit * 5))" in discovery
+    assert "candidate_cap = min(48, max(limit * 2, limit))" in discovery
+    assert "if cast_ids and not director_only:" in discovery
     assert "self._get_shelf_entities(selected_ids)" in discovery
     assert "RELATED_POSTER_FALLBACK_LIMIT = 8" in discovery
     assert "fetchRelatedFilms" in app
     assert "28000" in app
     assert "Still checking verified films" in app
-    assert "searchFallbackShelfCollections" in app
-    assert "Live relations delayed · showing verified search matches" in app
+    assert "searchFallbackShelfCollections" not in app
+    assert "Live relations delayed · showing verified search matches" not in app
     assert "clearLiveCollections" in runtime
-    assert "this.shelfPlaques" in runtime
+    assert "this.shelfPlaques" not in runtime
     assert "hydrateFilmShelf" in app
-    assert "collections: searchFallbackShelfCollections(primary, relevant)" in app
+    assert "collections: []" in app
     assert "window.FirstRollCloset.update(detail)" in app
     assert "showFilmShelfError" in app
-    assert "No distinct verified films were returned" in app
+    assert "No other verified films by this director were returned" in app
     assert "collections.some((collection) => collection.films.length < 10)" not in app
     assert "videoProviderStatusMarkup" in app
     assert "Douban is not connected on this hosted server yet" in app
     assert "renderFilmArchive(primary, [], uniqueFilms(nearby" not in app
     assert "!/^Q\\d+$/i.test(text)" in app
     assert "closet-help" not in app
-    assert app.count('wall: "back"') >= 5
+    assert app.count('wall: "back"') == 1
     assert 'wall: "left"' not in app
     assert 'wall: "right"' not in app
-    assert 'shelf: "middle",\n      label: `${director} & related works`' in app
-    assert 'shelf: "lower", label: "Shared cast & related works"' in app
-    assert "const SHELF_ROW_SIZE = 10" in runtime
+    assert 'shelf: "middle",\n    label: `${director} films`' in app
+    assert "Shared cast & related works" not in app
+    assert "const SHELF_ROW_SIZE = 12" in runtime
+    assert "const DISPLAY_COLUMNS = 4" in runtime
     assert "SHELF_VERTICAL_CENTRE = 2.27" in runtime
     assert "DEFAULT_CAMERA_POSITION = new THREE.Vector3(0, SHELF_VERTICAL_CENTRE, 0.12)" in runtime
     assert "DEFAULT_CAMERA_PITCH = 0" in runtime
@@ -298,28 +343,34 @@ def test_single_wall_shelf_uses_five_rows_of_real_films() -> None:
     assert "bottom: 0.61" in runtime
     assert "top: 3.93" in runtime
     assert "middle: 2.27" in runtime
-    assert "middle: 1.91" in runtime
-    assert "top: 3.57" in runtime
-    assert "2.4, 0.12" in runtime
-    assert "const gap = 0.035" in runtime
-    assert "const depth = 0.13" in runtime
-    assert "amount * 0.13" in runtime
+    assert "upper: 3.10" in runtime
+    assert "lower: 1.44" in runtime
+    assert "new THREE.Vector3(offset, rowHeights[rowIndex], -3.52)" in runtime
+    assert "const gap = 0.085" in runtime
+    assert "const depth = 0.095" in runtime
+    assert "amount * 0.035" in runtime
     assert "wireframe: true" not in runtime
     assert "firstroll_ambient_case" not in runtime
     assert "updateCaseCaption" in runtime
     assert "uniqueFilmCount" in runtime
-    assert "canvas.height = 96" in runtime
+    assert "canvas.height = 1152" in runtime
     assert "closet-loading-cases" in app
     assert "closet-loading-case" in styles
     assert "hasShelfCollections" in runtime
     assert "finishLoading" in runtime
-    assert "faceWidth / faceHeight" in runtime
+    assert runtime.count('if (this.hasShelfCollections()) {') == 2
+    assert "const faceAspect = faceWidth / faceHeight" in runtime
     assert "loadPosterTexture" in runtime
     assert 'textContent = "Loading film artwork"' not in runtime
-    assert "this.loadPosterTexture(film.poster_url).then" in runtime
+    assert "this.loadPosterTexture(film.poster_url, faceAspect).then" in runtime
+    assert "posterPromise" in runtime
+    assert "loadedPosterCount" in runtime
+    assert "createCoverBaseTexture" in runtime
+    assert "createCoverLabelTexture" in runtime
+    assert "createSpineTexture" not in runtime
     assert "async update(payload)" in runtime
     assert 'setCrossOrigin("anonymous")' in runtime
-    assert "texture.repeat.set(0.46, 1)" in runtime
+    assert "texture.repeat.set(targetAspect / imageAspect, 1)" in runtime
     assert "All five rows remain empty in the asset" in blender_builder
     assert "firstroll_ambient_case" not in blender_builder
     assert 'build_side_shelves("left", materials)' not in blender_builder

@@ -1,6 +1,7 @@
 import json
 import os
 import tempfile
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -26,6 +27,8 @@ FILM = {
     "credits": {"directors": ["Apichatpong Weerasethakul"]},
 }
 
+CHECKED_AT = datetime.now(timezone.utc).isoformat()
+
 
 def test_youtube_search_keeps_only_relevant_safe_video_ids() -> None:
     previous = os.environ.pop("YOUTUBE_API_KEY", None)
@@ -42,6 +45,11 @@ def test_youtube_search_keeps_only_relevant_safe_video_ids() -> None:
                             {
                                 "id": "abcdefghijk",
                                 "contentDetails": {"duration": "PT48M12S"},
+                                "status": {
+                                    "uploadStatus": "processed",
+                                    "privacyStatus": "public",
+                                    "embeddable": True,
+                                },
                             }
                         ]
                     }
@@ -68,6 +76,13 @@ def test_youtube_search_keeps_only_relevant_safe_video_ids() -> None:
                             "id": {"videoId": "zyxwvutsrqp"},
                             "snippet": {"title": "Unrelated cooking lesson", "description": ""},
                         },
+                        {
+                            "id": {"videoId": "lmnopqrstuv"},
+                            "snippet": {
+                                "title": "Memoria 2021 official trailer",
+                                "description": "Film trailer",
+                            },
+                        },
                     ]
                 }
 
@@ -79,6 +94,7 @@ def test_youtube_search_keeps_only_relevant_safe_video_ids() -> None:
             assert videos[0].duration_seconds == 2892
             assert videos[0].category == "interview"
             assert videos[0].embed_url == "https://www.youtube-nocookie.com/embed/abcdefghijk"
+            assert videos[0].availability_checked_at
     finally:
         if previous is not None:
             os.environ["YOUTUBE_API_KEY"] = previous
@@ -120,6 +136,27 @@ def test_bilibili_parses_server_rendered_public_results() -> None:
     assert videos[0].embed_url.startswith("https://player.bilibili.com/player.html?")
     assert videos[0].duration_seconds == 3723
     assert videos[0].category == "interview"
+
+
+def test_bilibili_rejects_a_search_result_whose_video_page_is_unavailable() -> None:
+    title = json.dumps("《Memoria 记忆》(2021) 预告", ensure_ascii=True)[1:-1]
+    body = (
+        '"http:\\u002F\\u002Fwww.bilibili.com\\u002Fvideo\\u002Fav123",'
+        f'"BV1Ab411c7De","{title}","电影预告","",42,"电影","2:10"'
+    )
+    detail_urls: list[str] = []
+
+    def detail_transport(url: str) -> str:
+        detail_urls.append(url)
+        return "非常抱歉，本视频可能由于以下原因导致无法正常播放：视频链接失效"
+
+    videos = BilibiliPublicVideoAdapter(
+        transport=lambda _: body,
+        detail_transport=detail_transport,
+    ).search(FILM)
+
+    assert videos == []
+    assert detail_urls == ["https://www.bilibili.com/video/BV1Ab411c7De/"]
 
 
 def test_video_service_survives_one_provider_failure() -> None:
@@ -216,7 +253,7 @@ def test_missing_search_duration_uses_bounded_public_detail_metadata() -> None:
 
     def detail_transport(url: str) -> str:
         detail_urls.append(url)
-        return '<script>window.__INITIAL_STATE__={"duration":8160}</script>'
+        return '<script>window.__INITIAL_STATE__={"bvid":"BV1Ab411c7Df","duration":8160}</script>'
 
     videos = BilibiliPublicVideoAdapter(
         transport=lambda _: body,
@@ -254,7 +291,7 @@ def test_exact_localised_title_finds_full_film_despite_distribution_year_label()
 
     def detail_transport(url: str) -> str:
         details.append(url)
-        return '<title>世界的主人</title><script>{"duration":10294}</script>'
+        return '<title>世界的主人</title><script>{"bvid":"BV1iHZcBgEzm","duration":10294}</script>'
 
     videos = BilibiliPublicVideoAdapter(
         transport=search_transport,
@@ -323,6 +360,7 @@ def _fixture_video(video_id: str, title: str) -> FilmVideo:
         embed_url=f"https://www.youtube-nocookie.com/embed/{video_id}",
         category="video_essay",
         relevance="title",
+        availability_checked_at=CHECKED_AT,
     )
 
 
@@ -384,6 +422,36 @@ def test_refresh_deduplicates_existing_platform_video_id() -> None:
         assert "0 added by this search" in refreshed.notice
 
 
+def test_cached_video_is_hidden_after_availability_check_expires() -> None:
+    stale = _fixture_video("abcdefghijk", "Memoria film essay").model_copy(
+        update={
+            "availability_checked_at": (
+                datetime.now(timezone.utc) - timedelta(hours=7)
+            ).isoformat()
+        }
+    )
+
+    class EmptyAdapter:
+        def status(self) -> dict:
+            return {"state": "ready"}
+
+    with tempfile.TemporaryDirectory() as directory:
+        store = FilmVideoStore(Path(directory) / "videos")
+        store.save(
+            FilmVideoBundle(
+                film_id="wikidata:Q67087116",
+                query="Memoria",
+                fetched_at=CHECKED_AT,
+                videos=[stale],
+                providers=["YouTube"],
+                notice="fixture",
+            )
+        )
+        service = FilmVideoService(EmptyAdapter(), EmptyAdapter(), store)  # type: ignore[arg-type]
+
+        assert service.cached_for_display("wikidata:Q67087116") is None
+
+
 def test_refresh_revalidates_persisted_bilibili_full_film_cards() -> None:
     class EmptyAdapter:
         def search(self, film: dict, limit: int = 12) -> list[FilmVideo]:
@@ -407,6 +475,7 @@ def test_refresh_revalidates_persisted_bilibili_full_film_cards() -> None:
         duration_seconds=69322,
         category="full_film",
         relevance="title",
+        availability_checked_at=CHECKED_AT,
     )
     reaction = FilmVideo(
         platform="Bilibili",
@@ -417,6 +486,7 @@ def test_refresh_revalidates_persisted_bilibili_full_film_cards() -> None:
         duration_seconds=7171,
         category="full_film",
         relevance="title",
+        availability_checked_at=CHECKED_AT,
     )
 
     with tempfile.TemporaryDirectory() as directory:

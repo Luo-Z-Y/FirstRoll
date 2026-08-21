@@ -1,5 +1,28 @@
 # FirstRoll Project Progress
 
+### 21 August 2026 — Clearable local search history
+
+Delivered:
+
+1. Added an independent close control to every recent-search chip without nesting interactive
+   buttons or changing the chip's search-again behaviour.
+2. Added a compact clear-all action and removed the local-storage key when the history becomes empty.
+3. Kept individual removal, complete clearing and later search additions synchronised between the
+   rendered list, in-memory discovery state and browser-local persistence.
+4. Updated the README to document the browser-only history controls and the director-only,
+   front-facing poster shelf.
+
+Acceptance evidence:
+
+- frontend JavaScript syntax, the 170-test automated suite and repository whitespace checks pass;
+- live browser inspection confirms five independently labelled dismiss controls, one clear-all control,
+  no nested buttons and the intended compact visual treatment.
+
+Privacy boundary:
+
+- recent searches remain in the current browser's local storage and are not saved to a FirstRoll
+  account or sent to the backend as history records.
+
 ### 20 August 2026 — README dual-runtime architecture graph
 
 Delivered:

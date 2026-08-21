@@ -287,7 +287,7 @@ class DiscoveryService:
             self._letterboxd_poster_request if request_json is None else None
         )
         self._detail_cache: dict[str, dict[str, Any]] = {}
-        self._related_cache: dict[tuple[str, int], dict[str, Any]] = {}
+        self._related_cache: dict[tuple[str, int, bool], dict[str, Any]] = {}
 
     def status(self) -> dict[str, Any]:
         return {
@@ -371,16 +371,17 @@ class DiscoveryService:
         limit: int = 12,
         *,
         fast: bool = False,
+        director_only: bool = False,
     ) -> dict[str, Any]:
-        """Return films related by director, cast, country and genre for the closet."""
+        """Return director films, optionally with broader relation groups."""
         limit = max(1, min(limit, 60))
         if film_id.startswith("demo:"):
-            return self._demo_related(film_id, limit)
+            return self._demo_related(film_id, limit, director_only=director_only)
 
         qid = film_id.removeprefix("wikidata:")
         if not self._valid_qid(qid):
             raise LookupError("The film identifier is not recognised by the Wikidata adapter.")
-        cache_key = (qid, limit)
+        cache_key = (qid, limit, director_only)
         if fast and cache_key in self._related_cache:
             return self._related_cache[cache_key]
         if qid not in self._detail_cache:
@@ -418,7 +419,7 @@ class DiscoveryService:
   BIND(\"same_director\" AS ?relation)
   BIND(wd:{director_id} AS ?shared)
 }}"""]
-        if cast_ids:
+        if cast_ids and not director_only:
             unions.append(f"""{{
   {{ SELECT DISTINCT ?film ?shared WHERE {{
     VALUES ?shared {{ {' '.join(f'wd:{value}' for value in cast_ids)} }}
@@ -427,7 +428,7 @@ class DiscoveryService:
   BIND(3 AS ?rank)
   BIND(\"shared_cast\" AS ?relation)
 }}""")
-        if country_ids:
+        if country_ids and not director_only:
             unions.append(f"""{{
   {{ SELECT DISTINCT ?film ?shared WHERE {{
     VALUES ?shared {{ {' '.join(f'wd:{value}' for value in country_ids)} }}
@@ -436,7 +437,7 @@ class DiscoveryService:
   BIND(2 AS ?rank)
   BIND(\"same_country\" AS ?relation)
 }}""")
-        if genre_ids:
+        if genre_ids and not director_only:
             unions.append(f"""{{
   {{ SELECT DISTINCT ?film ?shared WHERE {{
     VALUES ?shared {{ {' '.join(f'wd:{value}' for value in genre_ids)} }}
@@ -445,8 +446,12 @@ class DiscoveryService:
   BIND(1 AS ?rank)
   BIND(\"shared_genre\" AS ?relation)
 }}""")
-        candidate_cap = min(168, max(40, limit * 5)) if fast else 168
-        query_limit = min(168, max(candidate_cap, limit * 8))
+        if director_only:
+            candidate_cap = min(48, max(limit * 2, limit))
+            query_limit = min(48, max(candidate_cap, limit * 3))
+        else:
+            candidate_cap = min(168, max(40, limit * 5)) if fast else 168
+            query_limit = min(168, max(candidate_cap, limit * 8))
         query = f"""
 SELECT DISTINCT ?film ?relation ?shared ?rank WHERE {{
   {' UNION '.join(unions)}
@@ -494,7 +499,7 @@ LIMIT {query_limit}
             "recommended": [],
         }
         assigned_by_group: dict[str, set[str]] = {name: set() for name in groups}
-        poster_fallbacks_remaining = RELATED_POSTER_FALLBACK_LIMIT
+        poster_fallbacks_remaining = limit if director_only else RELATED_POSTER_FALLBACK_LIMIT
         for candidate_id in candidate_ids:
             entity = entities.get(candidate_id)
             if not entity or not self._looks_like_film(entity):
@@ -503,16 +508,17 @@ LIMIT {query_limit}
             claims = entity.get("claims", {})
             candidate_country_ids = self._entity_ids(claims, "P495")
             candidate_genre_ids = self._entity_ids(claims, "P136")
-            if shared_country := next(
-                (value for value in country_ids if value in candidate_country_ids),
-                None,
-            ):
-                candidate_relations.append(("same_country", shared_country))
-            if shared_genre := next(
-                (value for value in genre_ids if value in candidate_genre_ids),
-                None,
-            ):
-                candidate_relations.append(("shared_genre", shared_genre))
+            if not director_only:
+                if shared_country := next(
+                    (value for value in country_ids if value in candidate_country_ids),
+                    None,
+                ):
+                    candidate_relations.append(("same_country", shared_country))
+                if shared_genre := next(
+                    (value for value in genre_ids if value in candidate_genre_ids),
+                    None,
+                ):
+                    candidate_relations.append(("shared_genre", shared_genre))
             candidate = self._normalise_entity(entity)
             if fast:
                 if any(relation == "same_director" for relation, _ in candidate_relations):
@@ -568,6 +574,14 @@ LIMIT {query_limit}
             if not isinstance(batch, dict):
                 raise DiscoveryProviderError("Wikidata returned an unexpected response.")
             entities.update(batch)
+        director_ids = {
+            director_id
+            for entity in entities.values()
+            for director_id in self._entity_ids(entity.get("claims", {}), "P57")
+        }
+        director_labels = self._get_labels(sorted(director_ids))
+        for entity in entities.values():
+            entity["_related_labels"] = director_labels
         return entities
 
     def _search_wikidata(
@@ -773,7 +787,7 @@ LIMIT {query_limit}
         cinematographers = self._labelled_claims(claims, "P344", labels)
         editors = self._labelled_claims(claims, "P1040", labels)
         cast = self._labelled_claims(claims, "P161", labels)
-        image_name = self._string_value(claims, "P18")
+        poster_name = self._string_value(claims, "P3383")
         imdb_id = self._string_value(claims, "P345")
         wikipedia_title = entity.get("sitelinks", {}).get("enwiki", {}).get("title")
         awards = self._significant_awards(claims, labels, descriptions)
@@ -797,8 +811,16 @@ LIMIT {query_limit}
             "countries": self._labelled_claims(claims, "P495", labels),
             "cast": cast,
             "poster_url": (
-                f"{WIKIMEDIA_FILE_URL}/{quote(image_name)}?width=500"
-                if image_name
+                f"{WIKIMEDIA_FILE_URL}/{quote(poster_name)}?width=500"
+                if poster_name
+                else None
+            ),
+            "poster_source": (
+                {
+                    "name": "Wikidata film poster",
+                    "url": f"{WIKIDATA_ENTITY_URL}/{qid}",
+                }
+                if poster_name
                 else None
             ),
             "backdrop_url": None,
@@ -903,6 +925,12 @@ LIMIT {query_limit}
         wikipedia_url: str | None = None
         if wikipedia_title:
             wikipedia_url = f"https://en.wikipedia.org/wiki/{quote(str(wikipedia_title).replace(' ', '_'))}"
+        self._discard_unverified_poster(film)
+        poster_source = film.get("poster_source") or {}
+        self._enrich_letterboxd_poster(
+            film,
+            replace_existing=poster_source.get("name") == "Wikipedia article image",
+        )
         if wikipedia_title and self._wikipedia_summary:
             try:
                 summary = self._wikipedia_summary(str(wikipedia_title))
@@ -928,9 +956,6 @@ LIMIT {query_limit}
             except DiscoveryProviderError:
                 infobox = {}
             self._apply_wikipedia_infobox(film, infobox, wikipedia_url)
-        if not film.get("poster_url"):
-            self._enrich_letterboxd_poster(film)
-
         title = str(film.get("title") or "this film")
         directors = film.get("directors") or []
         director = directors[0] if directors else "the director"
@@ -1038,6 +1063,11 @@ LIMIT {query_limit}
         *,
         external_fallback: bool = False,
     ) -> None:
+        self._discard_unverified_poster(film)
+        if film.get("poster_url"):
+            return
+        if external_fallback:
+            self._enrich_letterboxd_poster(film)
         if film.get("poster_url"):
             return
         wikipedia_title = film.get("_wikipedia_title")
@@ -1051,12 +1081,30 @@ LIMIT {query_limit}
             except DiscoveryProviderError:
                 summary = {}
             self._apply_wikipedia_image(film, summary, wikipedia_url)
-        if external_fallback and not film.get("poster_url"):
-            self._enrich_letterboxd_poster(film)
 
-    def _enrich_letterboxd_poster(self, film: dict[str, Any]) -> None:
+    @staticmethod
+    def _discard_unverified_poster(film: dict[str, Any]) -> None:
+        """Remove legacy generic images that were cached before poster provenance existed."""
+        if not film.get("poster_url"):
+            return
+        source = film.get("poster_source")
+        if isinstance(source, dict) and str(source.get("name") or "").strip():
+            return
+        film["poster_url"] = None
+        film["poster_source"] = None
+
+    def _enrich_letterboxd_poster(
+        self,
+        film: dict[str, Any],
+        *,
+        replace_existing: bool = False,
+    ) -> None:
         imdb_id = str(film.get("external_ids", {}).get("imdb") or "").strip()
-        if film.get("poster_url") or not self._poster_request or not imdb_id:
+        if (
+            (film.get("poster_url") and not replace_existing)
+            or not self._poster_request
+            or not imdb_id
+        ):
             return
         try:
             poster = self._poster_request(imdb_id)
@@ -1182,7 +1230,13 @@ LIMIT {query_limit}
             "sources": [self._demo_status().as_dict()],
         }
 
-    def _demo_related(self, film_id: str, limit: int) -> dict[str, Any]:
+    def _demo_related(
+        self,
+        film_id: str,
+        limit: int,
+        *,
+        director_only: bool = False,
+    ) -> dict[str, Any]:
         film = next((item for item in DEMO_FILMS if item["id"] == film_id), None)
         if not film:
             raise LookupError("Film not found in the offline catalogue.")
@@ -1206,9 +1260,9 @@ LIMIT {query_limit}
             "director": next(iter(directors), None),
             "same_director": same_director,
             "shared_cast": [],
-            "same_country": relevant,
-            "recommended": relevant,
-            "relevant": relevant,
+            "same_country": [] if director_only else relevant,
+            "recommended": [] if director_only else relevant,
+            "relevant": [] if director_only else relevant,
             "category_labels": {
                 "cast": [],
                 "countries": (film.get("countries") or [])[:3],
@@ -1417,7 +1471,11 @@ LIMIT {query_limit}
         property_id: str,
         labels: dict[str, str],
     ) -> list[str]:
-        return [labels.get(qid, qid) for qid in DiscoveryService._entity_ids(claims, property_id)]
+        return [
+            labels[qid]
+            for qid in DiscoveryService._entity_ids(claims, property_id)
+            if labels.get(qid)
+        ]
 
     @staticmethod
     def _best_text(values: dict[str, Any]) -> str:

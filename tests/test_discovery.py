@@ -10,6 +10,7 @@ def fake_wikidata(params: dict[str, Any]) -> dict[str, Any]:
         return {
             "entities": {
                 "Q200": {"id": "Q200", "labels": {"en": {"value": "Example Director"}}},
+                "Q201": {"id": "Q201", "labels": {"en": {"value": "Related Director"}}},
                 "Q300": {"id": "Q300", "labels": {"en": {"value": "Drama"}}},
                 "Q400": {"id": "Q400", "labels": {"en": {"value": "Singapore"}}},
                 "Q500": {"id": "Q500", "labels": {"en": {"value": "Example Actor"}}},
@@ -48,7 +49,13 @@ def fake_wikidata_with_related(params: dict[str, Any]) -> dict[str, Any]:
                     "P345": [claim_string("tt7654321")],
                 },
             ),
-            "Q102": ("Actor Reunion", {"P161": [claim_entity("Q500")]}),
+            "Q102": (
+                "Actor Reunion",
+                {
+                    "P57": [claim_entity("Q201")],
+                    "P161": [claim_entity("Q500")],
+                },
+            ),
             "Q103": ("Singapore Story", {"P495": [claim_entity("Q400")]}),
             "Q104": ("Another Drama", {"P136": [claim_entity("Q300")]}),
         }
@@ -93,6 +100,52 @@ def claim_quantity(amount: str) -> dict[str, Any]:
 
 def claim_string(value: str) -> dict[str, Any]:
     return {"mainsnak": {"datavalue": {"value": value}}}
+
+
+def test_wikidata_generic_image_is_not_used_as_a_film_poster() -> None:
+    service = DiscoveryService(request_json=fake_wikidata)
+    film = service._normalise_entity(
+        {
+            "id": "Q100",
+            "labels": {"en": {"value": "Example Film"}},
+            "claims": {
+                "P18": [claim_string("Example cast press photograph.jpg")],
+            },
+        }
+    )
+
+    assert film["poster_url"] is None
+    assert film["poster_source"] is None
+
+
+def test_wikidata_dedicated_film_poster_is_used() -> None:
+    service = DiscoveryService(request_json=fake_wikidata)
+    film = service._normalise_entity(
+        {
+            "id": "Q100",
+            "labels": {"en": {"value": "Example Film"}},
+            "claims": {
+                "P3383": [claim_string("Example Film theatrical poster.jpg")],
+            },
+        }
+    )
+
+    assert "Example%20Film%20theatrical%20poster.jpg" in film["poster_url"]
+    assert film["poster_source"]["name"] == "Wikidata film poster"
+
+
+def test_unresolved_wikidata_ids_are_not_exposed_as_people() -> None:
+    service = DiscoveryService(request_json=fake_wikidata)
+    film = service._normalise_entity(
+        {
+            "id": "Q100",
+            "labels": {"en": {"value": "Example Film"}},
+            "claims": {"P57": [claim_entity("Q999")]},
+        }
+    )
+
+    assert film["directors"] == []
+    assert film["credits"]["directors"] == []
 
 
 def unavailable(_: dict[str, Any]) -> dict[str, Any]:
@@ -167,6 +220,55 @@ def test_related_films_use_a_bounded_public_poster_fallback() -> None:
     )
 
 
+def test_director_only_related_films_skip_other_relations_and_load_posters() -> None:
+    queries: list[str] = []
+    requested_imdb_ids: list[str] = []
+
+    def sparql_request(query: str) -> dict[str, Any]:
+        queries.append(query)
+        return {
+            "results": {
+                "bindings": [sparql_relation("Q101", "same_director", "Q200")]
+            }
+        }
+
+    def poster_request(imdb_id: str) -> dict[str, str]:
+        requested_imdb_ids.append(imdb_id)
+        return {
+            "image": (
+                "https://a.ltrbxd.com/resized/film-poster/7/6/5/"
+                "7654321-earlier-example-0-600-0-900-crop.jpg"
+            ),
+            "url": f"https://letterboxd.com/imdb/{imdb_id}/",
+        }
+
+    service = DiscoveryService(
+        request_json=fake_wikidata_with_related,
+        sparql_json=sparql_request,
+        poster_request=poster_request,
+    )
+    service.search("Example Film")
+    requested_imdb_ids.clear()
+
+    result = service.related(
+        "wikidata:Q100",
+        limit=12,
+        fast=False,
+        director_only=True,
+    )
+
+    assert "wdt:P57" in queries[-1]
+    assert "wdt:P161" not in queries[-1]
+    assert "wdt:P495" not in queries[-1]
+    assert "wdt:P136" not in queries[-1]
+    assert [film["title"] for film in result["same_director"]] == ["Earlier Example"]
+    assert requested_imdb_ids == ["tt7654321"]
+    assert result["same_director"][0]["poster_url"].startswith("https://a.ltrbxd.com/")
+    assert result["shared_cast"] == []
+    assert result["same_country"] == []
+    assert result["recommended"] == []
+
+
 def test_related_films_are_grouped_by_cast_country_and_genre() -> None:
     service = DiscoveryService(
         request_json=fake_wikidata_with_related,
@@ -207,7 +309,10 @@ def test_fast_related_films_skip_secondary_enrichment_and_are_cached() -> None:
         request_json=tracked_request,
         sparql_json=lambda _: {
             "results": {
-                "bindings": [sparql_relation("Q101", "same_director", "Q200")]
+                "bindings": [
+                    sparql_relation("Q101", "same_director", "Q200"),
+                    sparql_relation("Q102", "shared_cast", "Q500"),
+                ]
             }
         },
         poster_request=lambda imdb_id: poster_requests.append(imdb_id) or None,
@@ -221,10 +326,11 @@ def test_fast_related_films_skip_secondary_enrichment_and_are_cached() -> None:
     second = service.related("wikidata:Q100", limit=12, fast=True)
 
     assert first is second
-    assert requests_after_first == 1
+    assert requests_after_first == 2
     assert len(entity_requests) == requests_after_first
     assert poster_requests == []
     assert first["same_director"][0]["directors"] == ["Example Director"]
+    assert first["shared_cast"][0]["directors"] == ["Related Director"]
     assert "Q101" not in service._detail_cache
 
 
@@ -255,6 +361,55 @@ def test_search_uses_portrait_wikipedia_image_when_wikidata_has_no_poster() -> N
 
     assert result["results"][0]["poster_url"].endswith("/Example.jpg")
     assert result["results"][0]["poster_source"]["name"] == "Wikipedia article image"
+
+
+def test_search_prefers_identity_bound_poster_over_wikipedia_image() -> None:
+    service = DiscoveryService(
+        request_json=fake_wikidata,
+        wikipedia_summary=lambda _: {
+            "originalimage": {
+                "source": "https://upload.wikimedia.org/example-publicity-photo.jpg",
+                "width": 800,
+                "height": 1200,
+            }
+        },
+        poster_request=lambda _: {
+            "image": (
+                "https://a.ltrbxd.com/resized/film-poster/1/2/3/"
+                "123-example-film-0-600-0-900-crop.jpg"
+            ),
+            "url": "https://letterboxd.com/film/example-film/",
+        },
+    )
+
+    result = service.search("Example Film", year=2024)
+
+    poster = result["results"][0]
+    assert "/resized/film-poster/" in poster["poster_url"]
+    assert poster["poster_source"]["name"] == "Letterboxd public film page"
+
+
+def test_legacy_unattributed_image_is_replaced_by_verified_poster() -> None:
+    service = DiscoveryService(
+        request_json=fake_wikidata,
+        poster_request=lambda _: {
+            "image": (
+                "https://a.ltrbxd.com/resized/film-poster/1/2/3/"
+                "123-example-film-0-600-0-900-crop.jpg"
+            ),
+            "url": "https://letterboxd.com/film/example-film/",
+        },
+    )
+    film = {
+        "poster_url": "https://commons.wikimedia.org/legacy-publicity-photo.jpg",
+        "poster_source": None,
+        "external_ids": {"imdb": "tt1234567"},
+    }
+
+    service._enrich_poster(film, external_fallback=True)
+
+    assert "/resized/film-poster/" in film["poster_url"]
+    assert film["poster_source"]["name"] == "Letterboxd public film page"
 
 
 def test_search_falls_back_to_public_letterboxd_poster_by_imdb_identity() -> None:

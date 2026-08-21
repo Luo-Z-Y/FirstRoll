@@ -115,6 +115,7 @@ mkdir -p "$output_dir/assets"
 cp "$source_dir/index.html" "$output_dir/index.html"
 cp "$source_dir/app.js" "$output_dir/assets/app.js"
 cp "$source_dir/integrations.js" "$output_dir/assets/integrations.js"
+cp "$source_dir/local-auth.js" "$output_dir/assets/local-auth.js"
 cp "$source_dir/closet3d.js" "$output_dir/assets/closet3d.js"
 cp "$source_dir/favicon.svg" "$output_dir/assets/favicon.svg"
 cp "$source_dir/styles.css" "$output_dir/assets/styles.css"
@@ -144,6 +145,7 @@ window.FIRSTROLL_CONFIG = Object.freeze({
   entraAuthority: "${entra_authority}",
   entraSpaClientId: "${entra_spa_client_id}",
   entraApiScope: "${entra_api_scope}",
+  localTestAccountEmail: "",
   buildId: "v${build_number}",
   buildNumber: ${build_number},
   buildChannel: "${build_channel}",

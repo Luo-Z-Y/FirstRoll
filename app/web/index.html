@@ -20,7 +20,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/assets/styles.css?v=20260820-9" />
+  <link rel="stylesheet" href="/assets/styles.css?v=20260821-2" />
   <script type="importmap">
     {
       "imports": {
@@ -214,7 +214,6 @@
             <p class="eyebrow">FirstRoll settings</p>
             <h1 id="integrationsTitle">Your account. Your system.</h1>
           </div>
-          <p>Manage personal account details separately from the appearance and provider connections used by FirstRoll.</p>
         </header>
 
         <section id="integrationSignedOut" class="integration-gate card">
@@ -328,7 +327,7 @@
                 </div>
                 <span class="integration-badge">Use your own API</span>
               </header>
-              <p>Generate Deep Study with FirstRoll’s demo allowance, or paste your own DeepSeek API key. When a personal key is present, that study uses your DeepSeek account and provider balance; FirstRoll’s three-study daily safety limit still applies.</p>
+              <p id="deepseekAllowanceCopy">Generate Deep Study with FirstRoll’s demo allowance, or paste your own DeepSeek API key. When a personal key is present, that study uses your DeepSeek account and provider balance; FirstRoll’s three-study daily safety limit still applies.</p>
               <form id="deepseekSessionForm" class="session-key-form">
                 <label for="deepseekSessionKey">Personal DeepSeek API key</label>
                 <div>
@@ -446,16 +445,22 @@
       && window.FIRSTROLL_CONFIG?.supabaseUrl
       && window.FIRSTROLL_CONFIG?.supabasePublishableKey
     );
-    if (window.FIRSTROLL_CONFIG?.publicMode && (entraReady || supabaseReady)) {
+    const localTestReady = (
+      ["localhost", "127.0.0.1", "::1"].includes(window.location.hostname)
+      && window.FIRSTROLL_CONFIG?.localTestAccountEmail
+    );
+    if (window.FIRSTROLL_CONFIG?.publicMode && (localTestReady || entraReady || supabaseReady)) {
       const authScript = document.createElement("script");
-      authScript.src = entraReady
-        ? "/assets/entra-auth.js?v=20260820-1"
-        : "/assets/auth.js?v=20260820-3";
+      authScript.src = localTestReady
+        ? "/assets/local-auth.js?v=20260820-2"
+        : (entraReady
+          ? "/assets/entra-auth.js?v=20260820-1"
+          : "/assets/auth.js?v=20260820-4");
       document.body.append(authScript);
     }
   </script>
-  <script src="/assets/integrations.js?v=20260820-3"></script>
-  <script src="/assets/app.js?v=20260820-5"></script>
-  <script type="module" src="/assets/closet3d.js?v=20260820-4"></script>
+  <script src="/assets/integrations.js?v=20260820-6"></script>
+  <script src="/assets/app.js?v=20260821-2"></script>
+  <script type="module" src="/assets/closet3d.js?v=20260821-1"></script>
 </body>
 </html>

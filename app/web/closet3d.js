@@ -7,7 +7,8 @@ const CAMERA_BOUNDS = { minX: -0.82, maxX: 0.82, minZ: -3.28, maxZ: 3.82 };
 const SHELF_VERTICAL_CENTRE = 2.27;
 const DEFAULT_CAMERA_POSITION = new THREE.Vector3(0, SHELF_VERTICAL_CENTRE, 0.12);
 const DEFAULT_CAMERA_PITCH = 0;
-const SHELF_ROW_SIZE = 10;
+const SHELF_ROW_SIZE = 12;
+const DISPLAY_COLUMNS = 4;
 
 let activeViewer = null;
 
@@ -24,8 +25,8 @@ class FirstRollClosetViewer {
     this.clock = new THREE.Clock();
     this.model = null;
     this.filmCases = [];
-    this.shelfPlaques = [];
     this.posterTextureCache = new Map();
+    this.loadedPosterCount = 0;
     this.collectionKey = null;
     this.collectionLoadPromise = null;
     this.loadingFinished = false;
@@ -74,7 +75,7 @@ class FirstRollClosetViewer {
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0x080705);
     this.scene.fog = new THREE.FogExp2(0x0b0907, 0.018);
-    this.camera = new THREE.PerspectiveCamera(55, 1, 0.05, 28);
+    this.camera = new THREE.PerspectiveCamera(50, 1, 0.05, 28);
     this.camera.position.copy(DEFAULT_CAMERA_POSITION);
     this.updateCameraRotation();
     this.updateHud();
@@ -104,8 +105,10 @@ class FirstRollClosetViewer {
       if (this.destroyed) return;
       this.root.dataset.liveCaseCount = String(this.filmCases.length);
       this.renderer.render(this.scene, this.camera);
-      this.root.classList.add("is-ready");
-      if (this.hasShelfCollections()) await this.finishLoading();
+      if (this.hasShelfCollections()) {
+        this.root.classList.add("is-ready");
+        await this.finishLoading();
+      }
     } catch (error) {
       console.error("FirstRoll shelf model failed to load", error);
       this.showError("The 3D archive model could not be loaded.");
@@ -158,7 +161,10 @@ class FirstRollClosetViewer {
   async addLiveCollections() {
     const collections = this.payload.collections || [];
     const shelfFilms = collections.flatMap((collection) => collection.films || []);
-    const collectionKey = shelfFilms.map((film) => film?.id).filter(Boolean).join("|");
+    const collectionKey = shelfFilms
+      .map((film) => `${film?.id || ""}:${film?.poster_url || ""}`)
+      .filter(Boolean)
+      .join("|");
     const shelfEditions = shelfFilms.map((film) => {
       const title = String(film.title || film.original_title || "")
         .normalize("NFKC")
@@ -173,12 +179,11 @@ class FirstRollClosetViewer {
     if (collectionKey === this.collectionKey) return this.collectionLoadPromise;
     if (this.collectionLoadPromise) await this.collectionLoadPromise;
     if (this.destroyed || collectionKey === this.collectionKey) return this.collectionLoadPromise;
-    if (this.filmCases.length || this.shelfPlaques.length) this.clearLiveCollections();
+    if (this.filmCases.length) this.clearLiveCollections();
     this.collectionKey = collectionKey;
     this.collectionLoadPromise = Promise.all(collections.map(async (collection) => {
       if (!collection.films?.length) return;
       await this.addFilmRow(collection);
-      this.addShelfPlaque(collection);
     }));
     await this.collectionLoadPromise;
     this.root.dataset.liveCaseCount = String(this.filmCases.length);
@@ -197,9 +202,9 @@ class FirstRollClosetViewer {
       });
     };
     this.filmCases.forEach(dispose);
-    this.shelfPlaques.forEach(dispose);
     this.filmCases = [];
-    this.shelfPlaques = [];
+    this.loadedPosterCount = 0;
+    this.root.dataset.loadedPosterCount = "0";
     this.hoveredCase = null;
     this.collectionKey = null;
     this.collectionLoadPromise = null;
@@ -212,50 +217,64 @@ class FirstRollClosetViewer {
     await this.addLiveCollections();
     if (this.destroyed) return;
     this.renderer.render(this.scene, this.camera);
-    this.root.classList.add("is-ready");
-    if (this.hasShelfCollections()) await this.finishLoading();
+    if (this.hasShelfCollections()) {
+      this.root.classList.add("is-ready");
+      await this.finishLoading();
+    }
   }
 
   async addFilmRow(collection) {
     const films = collection.films.filter((film) => film?.id && film?.title).slice(0, SHELF_ROW_SIZE);
     const shelfHeights = { bottom: 0.61, lower: 1.44, middle: 2.27, upper: 3.10, top: 3.93 };
-    const baseY = shelfHeights[collection.shelf] || shelfHeights.lower;
-    const available = 2.78;
-    const gap = 0.035;
-    const width = Math.min(
-      0.205,
-      Math.max(0.12, (available - gap * Math.max(0, films.length - 1)) / films.length),
+    const rowCount = Math.min(3, Math.max(1, Math.ceil(films.length / DISPLAY_COLUMNS)));
+    const baseRowSize = Math.floor(films.length / rowCount);
+    const largerRows = films.length % rowCount;
+    const rowSizes = Array.from(
+      { length: rowCount },
+      (_, rowIndex) => baseRowSize + (rowIndex < largerRows ? 1 : 0),
     );
-    const span = films.length * width + Math.max(0, films.length - 1) * gap;
-
-    const filmCases = films.map((film, index) => {
-      let position;
-      let rotationY = 0;
-      let pullDirection;
-      const rowCentre = 0;
-      const offset = rowCentre - span / 2 + width / 2 + index * (width + gap);
-      if (collection.wall === "back") {
-        position = new THREE.Vector3(offset, baseY, -3.62);
-        pullDirection = new THREE.Vector3(0, 0, 1);
-      } else {
-        const side = collection.wall === "left" ? -1 : 1;
-        position = new THREE.Vector3(side * 0.79, baseY, offset);
-        rotationY = side < 0 ? Math.PI / 2 : -Math.PI / 2;
-        pullDirection = new THREE.Vector3(-side, 0, 0);
+    const rowHeights = {
+      1: [shelfHeights.middle],
+      2: [shelfHeights.upper, shelfHeights.lower],
+      3: [shelfHeights.upper, shelfHeights.middle, shelfHeights.lower],
+    }[rowCount];
+    const filmCases = [];
+    let filmIndex = 0;
+    rowSizes.forEach((rowSize, rowIndex) => {
+      const available = 2.72;
+      const gap = 0.085;
+      const width = Math.min(
+        0.54,
+        Math.max(0.38, (available - gap * Math.max(0, rowSize - 1)) / rowSize),
+      );
+      const height = Math.min(0.78, width * 1.48);
+      const span = rowSize * width + Math.max(0, rowSize - 1) * gap;
+      for (let column = 0; column < rowSize; column += 1) {
+        const film = films[filmIndex];
+        const offset = -span / 2 + width / 2 + column * (width + gap);
+        const position = new THREE.Vector3(offset, rowHeights[rowIndex], -3.52);
+        filmCases.push(this.createFilmCase(
+          film,
+          filmIndex,
+          width,
+          height,
+          position,
+          new THREE.Vector3(0, 0, 1),
+        ));
+        filmIndex += 1;
       }
-      return this.createFilmCase(film, index, width, position, rotationY, pullDirection);
     });
     filmCases.forEach((filmCase) => {
       this.scene.add(filmCase);
       this.filmCases.push(filmCase);
     });
+    await Promise.all(filmCases.map((filmCase) => filmCase.userData.posterPromise));
   }
 
-  createFilmCase(film, index, width, position, rotationY, pullDirection) {
+  createFilmCase(film, index, width, height, position, pullDirection) {
     const group = new THREE.Group();
     group.name = `Selectable case — ${film.title || "Untitled"}`;
     group.position.copy(position);
-    group.rotation.y = rotationY;
     group.userData = {
       film,
       filmId: film.id,
@@ -266,39 +285,51 @@ class FirstRollClosetViewer {
       selectableCase: true,
     };
 
-    const height = 0.64;
-    const depth = 0.13;
-    const faceWidth = width * 0.82;
-    const faceHeight = height * 0.91;
-    if (film.poster_url) {
-      this.loadPosterTexture(film.poster_url).then((posterTexture) => {
-        if (!posterTexture || this.destroyed) return;
+    const depth = 0.095;
+    const faceWidth = width * 0.9;
+    const faceHeight = height * 0.93;
+    const faceAspect = faceWidth / faceHeight;
+    const coverGeometry = new THREE.PlaneGeometry(faceWidth, faceHeight);
+    const base = new THREE.Mesh(
+      coverGeometry,
+      new THREE.MeshStandardMaterial({
+        map: this.createCoverBaseTexture(index, faceAspect),
+        roughness: 0.62,
+        metalness: 0.0,
+      }),
+    );
+    base.position.z = depth / 2 + 0.006;
+    base.userData.caseOwner = group;
+    group.add(base);
+
+    group.userData.posterPromise = film.poster_url
+      ? this.loadPosterTexture(film.poster_url, faceAspect).then((posterTexture) => {
+        if (!posterTexture || this.destroyed || !group.parent) return;
         const poster = new THREE.Mesh(
-          new THREE.PlaneGeometry(faceWidth, faceHeight),
-          new THREE.MeshStandardMaterial({ map: posterTexture, roughness: 0.62, metalness: 0.0 }),
+          coverGeometry.clone(),
+          new THREE.MeshStandardMaterial({ map: posterTexture, roughness: 0.54, metalness: 0.0 }),
         );
-        poster.position.z = depth / 2 + 0.005;
+        poster.position.z = depth / 2 + 0.009;
         poster.userData.caseOwner = group;
         group.add(poster);
-      });
-    }
-    const insertTexture = this.createSpineTexture(
-      film,
-      index,
-      false,
-      faceWidth / faceHeight,
+        this.loadedPosterCount += 1;
+        this.root.dataset.loadedPosterCount = String(this.loadedPosterCount);
+      })
+      : Promise.resolve();
+
+    const label = new THREE.Mesh(
+      coverGeometry.clone(),
+      new THREE.MeshBasicMaterial({
+        map: this.createCoverLabelTexture(film, faceAspect),
+        transparent: true,
+        depthWrite: false,
+        toneMapped: false,
+      }),
     );
-    const insertMaterial = new THREE.MeshStandardMaterial({
-      map: insertTexture,
-      roughness: 0.58,
-      metalness: 0.0,
-      transparent: false,
-      depthWrite: true,
-    });
-    const insert = new THREE.Mesh(new THREE.PlaneGeometry(faceWidth, faceHeight), insertMaterial);
-    insert.position.z = depth / 2 + 0.008;
-    insert.userData.caseOwner = group;
-    group.add(insert);
+    label.position.z = depth / 2 + 0.013;
+    label.renderOrder = 4;
+    label.userData.caseOwner = group;
+    group.add(label);
 
     const shellMaterial = new THREE.MeshPhysicalMaterial({
       color: 0xf2f0e8,
@@ -307,7 +338,7 @@ class FirstRollClosetViewer {
       transmission: 0.16,
       thickness: 0.035,
       transparent: true,
-      opacity: 0.22,
+      opacity: 0.18,
       clearcoat: 0.9,
       clearcoatRoughness: 0.16,
     });
@@ -323,17 +354,21 @@ class FirstRollClosetViewer {
       transparent: true,
       opacity: 0.72,
     });
-    const hinge = new THREE.Mesh(new THREE.BoxGeometry(Math.max(0.018, width * 0.12), height * 0.96, depth * 1.02), hingeMaterial);
-    hinge.position.x = -width * 0.44;
+    const hinge = new THREE.Mesh(
+      new THREE.BoxGeometry(Math.max(0.018, width * 0.075), height * 0.97, depth * 1.03),
+      hingeMaterial,
+    );
+    hinge.position.x = -width * 0.465;
     hinge.userData.caseOwner = group;
     group.add(hinge);
 
     return group;
   }
 
-  loadPosterTexture(url) {
+  loadPosterTexture(url, targetAspect) {
     if (!url) return Promise.resolve(null);
-    if (this.posterTextureCache.has(url)) return this.posterTextureCache.get(url);
+    const cacheKey = `${url}|${targetAspect.toFixed(3)}`;
+    if (this.posterTextureCache.has(cacheKey)) return this.posterTextureCache.get(cacheKey);
     const promise = new Promise((resolve) => {
       let settled = false;
       const finish = (texture) => {
@@ -343,120 +378,108 @@ class FirstRollClosetViewer {
         if (texture) {
           texture.colorSpace = THREE.SRGBColorSpace;
           texture.anisotropy = Math.min(8, this.renderer.capabilities.getMaxAnisotropy());
-          texture.repeat.set(0.46, 1);
-          texture.offset.set(0.27, 0);
+          const imageAspect = texture.image?.width && texture.image?.height
+            ? texture.image.width / texture.image.height
+            : targetAspect;
+          if (imageAspect > targetAspect) {
+            texture.repeat.set(targetAspect / imageAspect, 1);
+            texture.offset.set((1 - texture.repeat.x) / 2, 0);
+          } else {
+            texture.repeat.set(1, imageAspect / targetAspect);
+            texture.offset.set(0, (1 - texture.repeat.y) / 2);
+          }
         }
         resolve(texture || null);
       };
       const timeout = window.setTimeout(() => finish(null), 6000);
       new THREE.TextureLoader().setCrossOrigin("anonymous").load(url, finish, undefined, () => finish(null));
     });
-    this.posterTextureCache.set(url, promise);
+    this.posterTextureCache.set(cacheKey, promise);
     return promise;
   }
 
-  createSpineTexture(film, index, hasPoster = false, faceAspect = 0.25) {
+  createCoverBaseTexture(index, faceAspect) {
     const canvas = document.createElement("canvas");
-    canvas.height = 1024;
-    // Match the canvas to the physical insert so its lettering is not geometrically squeezed.
+    canvas.height = 1152;
     canvas.width = Math.round(canvas.height * faceAspect);
     const context = canvas.getContext("2d");
     const tone = CASE_TONES[index % CASE_TONES.length];
-    if (hasPoster) {
-      const veil = context.createLinearGradient(0, 0, canvas.width, 0);
-      veil.addColorStop(0, "rgba(8,6,5,.78)");
-      veil.addColorStop(0.22, "rgba(8,6,5,.30)");
-      veil.addColorStop(0.78, "rgba(8,6,5,.38)");
-      veil.addColorStop(1, "rgba(8,6,5,.82)");
-      context.fillStyle = veil;
-      context.fillRect(0, 0, canvas.width, canvas.height);
-    } else {
-      context.fillStyle = tone;
-      context.fillRect(0, 0, canvas.width, canvas.height);
-    }
-    const gloss = context.createLinearGradient(0, 0, canvas.width, 0);
-    gloss.addColorStop(0, "rgba(255,255,255,.34)");
-    gloss.addColorStop(0.18, "rgba(255,255,255,.04)");
-    gloss.addColorStop(0.78, "rgba(0,0,0,.12)");
-    gloss.addColorStop(1, "rgba(255,255,255,.18)");
-    context.fillStyle = gloss;
+    const background = context.createLinearGradient(0, 0, canvas.width, canvas.height);
+    background.addColorStop(0, tone);
+    background.addColorStop(1, "#11130f");
+    context.fillStyle = background;
     context.fillRect(0, 0, canvas.width, canvas.height);
-    context.strokeStyle = "rgba(255,248,229,.65)";
-    context.lineWidth = 7;
-    context.strokeRect(12, 12, canvas.width - 24, canvas.height - 24);
-
-    context.save();
-    context.translate(canvas.width / 2, canvas.height / 2);
-    context.rotate(-Math.PI / 2);
+    context.strokeStyle = "rgba(255,248,229,.5)";
+    context.lineWidth = 8;
+    context.strokeRect(18, 18, canvas.width - 36, canvas.height - 36);
+    context.fillStyle = "rgba(255,248,232,.22)";
+    context.font = "700 180px serif";
     context.textAlign = "center";
     context.textBaseline = "middle";
-    context.fillStyle = "#fff8e8";
-    const fullTitle = String(film.title || "Untitled").toUpperCase();
-    const title = fullTitle.length > 30 ? `${fullTitle.slice(0, 29).trimEnd()}…` : fullTitle;
-    let titleSize = 72;
-    do {
-      context.font = `700 ${titleSize}px sans-serif`;
-      titleSize -= 2;
-    } while (context.measureText(title).width > 740 && titleSize > 48);
-    context.fillText(title, 35, -8);
-    context.font = "600 40px monospace";
-    context.fillStyle = "rgba(255,248,232,.82)";
-    context.fillText(String(film.year || "FILM"), -395, -8);
-    context.restore();
-
-    context.fillStyle = "rgba(255,248,232,.86)";
-    context.font = "700 28px monospace";
-    context.textAlign = "center";
-    context.fillText("FR", canvas.width / 2, 62);
+    context.fillText("FR", canvas.width / 2, canvas.height * 0.43);
     const texture = new THREE.CanvasTexture(canvas);
     texture.colorSpace = THREE.SRGBColorSpace;
     texture.anisotropy = Math.min(8, this.renderer.capabilities.getMaxAnisotropy());
     return texture;
   }
 
-  addShelfPlaque(collection) {
+  createCoverLabelTexture(film, faceAspect) {
     const canvas = document.createElement("canvas");
-    canvas.width = 2048;
-    // The texture and physical fascia share an aspect ratio, keeping captions natural.
-    canvas.height = 96;
+    canvas.height = 1152;
+    canvas.width = Math.round(canvas.height * faceAspect);
     const context = canvas.getContext("2d");
-    context.fillStyle = "#b69762";
-    context.fillRect(0, 0, canvas.width, canvas.height);
-    context.fillStyle = "rgba(255,249,226,.2)";
-    context.fillRect(0, 0, canvas.width, 8);
-    context.strokeStyle = "#4a331a";
-    context.lineWidth = 4;
-    context.strokeRect(6, 6, canvas.width - 12, canvas.height - 12);
-    context.fillStyle = "#17130e";
-    context.textBaseline = "middle";
-    const label = String(collection.label || "Film collection");
-    let labelSize = 52;
-    do {
-      context.font = `700 ${labelSize}px sans-serif`;
-      labelSize -= 2;
-    } while (context.measureText(label).width > 1660 && labelSize > 36);
-    context.fillText(label, 56, 49);
-    context.textAlign = "right";
-    context.font = "700 44px sans-serif";
-    context.fillText(String(collection.films.length), 1980, 49);
+    const veil = context.createLinearGradient(0, canvas.height * 0.52, 0, canvas.height);
+    veil.addColorStop(0, "rgba(5,6,5,0)");
+    veil.addColorStop(0.34, "rgba(5,6,5,.62)");
+    veil.addColorStop(1, "rgba(5,6,5,.96)");
+    context.fillStyle = veil;
+    context.fillRect(0, canvas.height * 0.52, canvas.width, canvas.height * 0.48);
+    context.fillStyle = "rgba(250,246,238,.88)";
+    context.font = "600 30px monospace";
+    context.textAlign = "left";
+    context.textBaseline = "top";
+    context.fillText("FIRSTROLL", 42, 38);
+    this.drawCoverTitle(context, String(film.title || "Untitled"), canvas.width);
+    context.fillStyle = "rgba(250,246,238,.76)";
+    context.font = "500 36px monospace";
+    context.fillText(String(film.year || ""), 42, canvas.height - 74);
     const texture = new THREE.CanvasTexture(canvas);
     texture.colorSpace = THREE.SRGBColorSpace;
-    const plaque = new THREE.Mesh(
-      new THREE.PlaneGeometry(collection.wall === "back" ? 2.62 : 2.4, 0.12),
-      new THREE.MeshStandardMaterial({ map: texture, roughness: 0.5, metalness: 0.2 }),
-    );
     texture.anisotropy = Math.min(8, this.renderer.capabilities.getMaxAnisotropy());
-    const plaqueHeights = { bottom: 0.25, lower: 1.08, middle: 1.91, upper: 2.74, top: 3.57 };
-    const y = plaqueHeights[collection.shelf] || plaqueHeights.lower;
-    if (collection.wall === "back") {
-      plaque.position.set(0, y, -3.39);
-    } else {
-      const side = collection.wall === "left" ? -1 : 1;
-      plaque.position.set(side * 0.56, y, 0);
-      plaque.rotation.y = side < 0 ? Math.PI / 2 : -Math.PI / 2;
+    return texture;
+  }
+
+  drawCoverTitle(context, title, width) {
+    const words = title.toUpperCase().split(/\s+/).filter(Boolean);
+    let fontSize = 70;
+    let lines = [];
+    const maxWidth = width - 84;
+    do {
+      context.font = `700 ${fontSize}px "Bebas Neue", sans-serif`;
+      lines = [];
+      let current = "";
+      words.forEach((word) => {
+        const candidate = current ? `${current} ${word}` : word;
+        if (current && context.measureText(candidate).width > maxWidth) {
+          lines.push(current);
+          current = word;
+        } else {
+          current = candidate;
+        }
+      });
+      if (current) lines.push(current);
+      fontSize -= 2;
+    } while (lines.length > 2 && fontSize >= 48);
+    if (lines.length > 2) {
+      lines = [lines[0], `${lines.slice(1).join(" ").slice(0, 18).trimEnd()}…`];
     }
-    this.scene.add(plaque);
-    this.shelfPlaques.push(plaque);
+    context.fillStyle = "#faf6ee";
+    context.textAlign = "left";
+    context.textBaseline = "alphabetic";
+    context.font = `700 ${fontSize + 2}px "Bebas Neue", sans-serif`;
+    const lineHeight = fontSize * 0.94;
+    const startY = context.canvas.height - 170 - (lines.length - 1) * lineHeight;
+    lines.forEach((line, index) => context.fillText(line, 42, startY + index * lineHeight));
   }
 
   bindEvents() {
@@ -643,7 +666,7 @@ class FirstRollClosetViewer {
         : THREE.MathUtils.damp(data.hoverAmount, data.targetHover, 13, delta);
       data.hoverAmount = amount;
       filmCase.position.copy(data.basePosition).addScaledVector(data.pullDirection, amount * 0.13);
-      filmCase.scale.setScalar(1);
+      filmCase.scale.setScalar(1 + amount * 0.035);
     });
   }
 

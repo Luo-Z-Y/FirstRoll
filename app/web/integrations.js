@@ -35,6 +35,7 @@
     deepseekForm: document.getElementById("deepseekSessionForm"),
     deepseekInput: document.getElementById("deepseekSessionKey"),
     deepseekState: document.getElementById("deepseekSessionState"),
+    deepseekAllowanceCopy: document.getElementById("deepseekAllowanceCopy"),
     deepseekClear: document.getElementById("deepseekSessionClear"),
     youtubeForm: document.getElementById("youtubeSessionForm"),
     youtubeInput: document.getElementById("youtubeSessionKey"),
@@ -128,7 +129,14 @@
         || user?.user_metadata?.display_name
         || "FirstRoll member";
     }
-    if (refs.accountState) refs.accountState.textContent = user ? "Authenticated by Supabase" : "Signed out";
+    if (refs.accountState) {
+      const provider = user?.provider === "local"
+        ? "Local development account"
+        : (window.FIRSTROLL_CONFIG?.authProvider === "entra"
+          ? "Authenticated by Microsoft Entra"
+          : "Authenticated by Supabase");
+      refs.accountState.textContent = user ? provider : "Signed out";
+    }
     if (refs.displayName && document.activeElement !== refs.displayName) {
       refs.displayName.value = profile?.display_name || user?.user_metadata?.display_name || "";
     }
@@ -190,6 +198,11 @@
       if (!response.ok) throw new Error(await readApiError(response));
       const payload = await response.json();
       const quota = payload.deep_study?.quota;
+      if (refs.deepseekAllowanceCopy) {
+        refs.deepseekAllowanceCopy.textContent = quota?.unlimited
+          ? "Generate Deep Study with FirstRoll’s local platform connection, or paste your own DeepSeek API key. This loopback test account has no FirstRoll daily quota. A personal key still uses your own DeepSeek account and provider balance."
+          : "Generate Deep Study with FirstRoll’s demo allowance, or paste your own DeepSeek API key. When a personal key is present, that study uses your DeepSeek account and provider balance; FirstRoll’s three-study daily safety limit still applies.";
+      }
       platformState.deepseek = payload.deep_study?.platform_enabled === true;
       platformState.youtube = payload.youtube?.platform_enabled === true;
       platformState.douban = payload.douban?.platform_enabled === true;
@@ -201,13 +214,17 @@
       }
       if (refs.accountEmail) refs.accountEmail.textContent = payload.user?.email || user.email || "Signed-in account";
       if (refs.quota) {
-        refs.quota.textContent = quota
-          ? `${quota.user.remaining} of ${quota.user.limit} account studies remain today`
+        refs.quota.textContent = quota?.unlimited
+          ? "Unlimited studies on this local test account"
+          : quota
+            ? `${quota.user.remaining} of ${quota.user.limit} account studies remain today`
           : "Allowance unavailable";
       }
       if (refs.quotaMeta) {
-        refs.quotaMeta.textContent = quota
-          ? `${quota.global.remaining} available across the public demo · resets ${quotaResetLabel(quota.reset_at)}`
+        refs.quotaMeta.textContent = quota?.unlimited
+          ? "Loopback-only development allowance · persistent data stays in this browser"
+          : quota
+            ? `${quota.global.remaining} available across the public demo · resets ${quotaResetLabel(quota.reset_at)}`
           : "The quota service did not return a status.";
       }
       if (refs.status) refs.status.textContent = "Account settings are ready.";

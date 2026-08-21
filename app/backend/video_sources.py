@@ -6,7 +6,8 @@ import json
 import os
 import re
 import unicodedata
-from datetime import datetime, timezone
+from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime, timedelta, timezone
 from difflib import SequenceMatcher
 from pathlib import Path
 from typing import Any, Callable, Literal
@@ -61,6 +62,7 @@ class FilmVideo(BaseModel):
     relevance: Literal["title", "director", "title_and_director"]
     text_tracks: list[VideoTextTrack] = Field(default_factory=list, max_length=3)
     text_checked_at: str | None = None
+    availability_checked_at: str | None = None
 
 
 class FilmVideoBundle(BaseModel):
@@ -84,6 +86,8 @@ VIDEO_CATEGORY_PRIORITY = {
     "scene_extract": 6,
     "other": 7,
 }
+
+VIDEO_AVAILABILITY_TTL = timedelta(hours=6)
 
 
 class YouTubeVideoAdapter:
@@ -150,17 +154,21 @@ class YouTubeVideoAdapter:
             if relevance is None:
                 continue
             candidates.append((video_id, snippet, relevance))
-        durations = self._video_durations(
+        details = self._video_details(
             [video_id for video_id, _, _ in candidates],
             key,
         )
+        checked_at = datetime.now(timezone.utc).isoformat()
         results: list[FilmVideo] = []
         for video_id, snippet, relevance in candidates:
+            video_details = details.get(video_id)
+            if video_details is None:
+                continue
             title = html.unescape(str(snippet.get("title") or "")).strip()
             description = html.unescape(str(snippet.get("description") or "")).strip()
             thumbnails = snippet.get("thumbnails")
             thumbnail = _youtube_thumbnail(thumbnails)
-            duration_seconds = durations.get(video_id)
+            duration_seconds = video_details["duration_seconds"]
             results.append(
                 FilmVideo(
                     platform="YouTube",
@@ -175,29 +183,37 @@ class YouTubeVideoAdapter:
                     duration_seconds=duration_seconds,
                     category=_video_category(title, description, duration_seconds),
                     relevance=relevance,
+                    availability_checked_at=checked_at,
                 )
             )
             if len(results) >= limit:
                 break
         return results
 
-    def _video_durations(self, video_ids: list[str], key: str) -> dict[str, int]:
+    def _video_details(self, video_ids: list[str], key: str) -> dict[str, dict[str, Any]]:
         if not video_ids:
             return {}
-        url = f"{self.videos_api_url}?{urlencode({'part': 'contentDetails', 'id': ','.join(video_ids), 'key': key})}"
+        url = f"{self.videos_api_url}?{urlencode({'part': 'contentDetails,status', 'id': ','.join(video_ids), 'key': key})}"
         payload = self.transport(url)
         items = payload.get("items") if isinstance(payload, dict) else []
-        durations: dict[str, int] = {}
+        details_by_id: dict[str, dict[str, Any]] = {}
         for item in items if isinstance(items, list) else []:
             if not isinstance(item, dict):
                 continue
             video_id = str(item.get("id") or "")
-            details = item.get("contentDetails")
-            duration = str(details.get("duration") or "") if isinstance(details, dict) else ""
+            content_details = item.get("contentDetails")
+            status = item.get("status")
+            if not _youtube_status_is_playable(status):
+                continue
+            duration = (
+                str(content_details.get("duration") or "")
+                if isinstance(content_details, dict)
+                else ""
+            )
             seconds = _iso8601_duration_seconds(duration)
-            if video_id and seconds is not None:
-                durations[video_id] = seconds
-        return durations
+            if video_id:
+                details_by_id[video_id] = {"duration_seconds": seconds}
+        return details_by_id
 
     @classmethod
     def _request_json(cls, url: str) -> dict[str, Any]:
@@ -240,6 +256,10 @@ class BilibiliPublicVideoAdapter:
     ) -> None:
         self.transport = transport or self._request_html
         self.detail_transport = detail_transport or self._request_video_html
+        # Unit callers can inject only search HTML to test parsing. Production
+        # and callers that provide a detail transport validate every accepted
+        # result against its current public video page.
+        self.validate_results = transport is None or detail_transport is not None
 
     def status(self) -> dict[str, Any]:
         return {
@@ -254,6 +274,7 @@ class BilibiliPublicVideoAdapter:
         results: list[FilmVideo] = []
         seen: set[str] = set()
         detail_requests = 0
+        detail_pages: dict[str, str] = {}
         queries = _bilibili_video_queries(film)
         for query in queries:
             body = self.transport(f"{self.search_url}?{urlencode({'keyword': query})}")
@@ -262,10 +283,12 @@ class BilibiliPublicVideoAdapter:
                 video_id = match.group("bvid")
                 if video_id in seen:
                     continue
+                seen.add(video_id)
                 title = _decode_javascript_string(match.group("title"))
                 description = _decode_javascript_string(match.group("description"))
                 tail_end = matches[index + 1].start() if index + 1 < len(matches) else match.end() + 900
                 duration_seconds, tags = _bilibili_tail_metadata(body[match.end() : tail_end])
+                detail_body: str | None = None
                 if (
                     duration_seconds is None
                     and detail_requests < 3
@@ -276,6 +299,7 @@ class BilibiliPublicVideoAdapter:
                         detail_body = self.detail_transport(
                             f"https://www.bilibili.com/video/{video_id}/"
                         )
+                        detail_pages[video_id] = detail_body
                         duration_seconds = _bilibili_detail_duration(detail_body)
                     except VideoSourceError:
                         pass
@@ -300,7 +324,6 @@ class BilibiliPublicVideoAdapter:
                     picture = ""
                 clean_title = re.sub(r"<[^>]+>", "", title).strip()
                 clean_description = re.sub(r"<[^>]+>", "", description).strip()
-                seen.add(video_id)
                 results.append(
                     FilmVideo(
                         platform="Bilibili",
@@ -319,10 +342,38 @@ class BilibiliPublicVideoAdapter:
                         relevance=relevance,
                     )
                 )
-        return sorted(
+        ordered = sorted(
             results,
             key=lambda video: VIDEO_CATEGORY_PRIORITY[video.category],
-        )[:limit]
+        )
+        if self.validate_results:
+            ordered = self._available_results(
+                ordered[: max(limit * 2, 16)],
+                detail_pages,
+            )
+        return ordered[:limit]
+
+    def _available_results(
+        self,
+        videos: list[FilmVideo],
+        detail_pages: dict[str, str],
+    ) -> list[FilmVideo]:
+        checked_at = datetime.now(timezone.utc).isoformat()
+
+        def validate(video: FilmVideo) -> FilmVideo | None:
+            try:
+                body = detail_pages.get(video.video_id) or self.detail_transport(video.url)
+            except VideoSourceError:
+                return None
+            if not _bilibili_page_is_available(body, video.video_id):
+                return None
+            return video.model_copy(update={"availability_checked_at": checked_at})
+
+        # Detail pages are independent and slow provider requests. A small
+        # fixed worker pool keeps the endpoint bounded without hammering the
+        # public host or making visitors wait for every check serially.
+        with ThreadPoolExecutor(max_workers=4, thread_name_prefix="bilibili-check") as pool:
+            return [video for video in pool.map(validate, videos) if video is not None]
 
     @classmethod
     def _request_html(cls, url: str) -> str:
@@ -372,7 +423,7 @@ class BilibiliPublicVideoAdapter:
             method="GET",
         )
         try:
-            with urlopen(request, timeout=20) as response:
+            with urlopen(request, timeout=8) as response:
                 final = urlparse(response.geturl())
                 if final.scheme != "https" or final.hostname != "www.bilibili.com":
                     raise VideoSourceError("Bilibili redirected outside its public video host.")
@@ -538,6 +589,12 @@ class FilmVideoService:
         youtube_api_key: str | None = None,
     ) -> FilmVideoBundle:
         existing = self.store.load(film_id)
+        existing_videos = [
+            video
+            for video in (existing.videos if existing else [])
+            if _availability_is_fresh(video)
+        ]
+        expired_count = len(existing.videos if existing else []) - len(existing_videos)
         fresh_videos: list[FilmVideo] = []
         providers: list[str] = []
         failures: list[str] = []
@@ -553,7 +610,7 @@ class FilmVideoService:
             if found:
                 providers.append(name)
                 fresh_videos.extend(found)
-        videos = _merge_videos(existing.videos if existing else [], fresh_videos)
+        videos = _merge_videos(existing_videos, fresh_videos)
         videos = _revalidate_videos(film, videos)
         videos = self.text_extractor.enrich(videos)
         if not videos:
@@ -564,7 +621,7 @@ class FilmVideoService:
             )
         provider_names = list(existing.providers) if existing else []
         provider_names.extend(name for name in providers if name not in provider_names)
-        added_count = len(videos) - len(existing.videos if existing else [])
+        added_count = len(videos) - len(existing_videos)
         bundle = FilmVideoBundle(
             film_id=film_id,
             query=_film_video_query(film),
@@ -572,12 +629,27 @@ class FilmVideoService:
             videos=videos,
             providers=provider_names,
             notice=(
-                f"Local catalogue: {len(videos)} videos; {max(0, added_count)} added by this search. "
-                "Previously accepted results are retained and new matches are deduplicated. "
+                f"Verified catalogue: {len(videos)} video{'s' if len(videos) != 1 else ''}; "
+                f"{max(0, added_count)} added by this search; "
+                f"{expired_count} expired result{'s' if expired_count != 1 else ''} removed. "
+                "Availability is checked before display and expires after six hours. "
                 "FirstRoll does not verify every claim made in third-party videos."
             ),
         )
         self.store.save(bundle)
+        return bundle
+
+    def cached_for_display(self, film_id: str) -> FilmVideoBundle | None:
+        """Return only recently availability-checked cached embeds."""
+        bundle = self.store.load(film_id)
+        if bundle is None:
+            return None
+        videos = [video for video in bundle.videos if _availability_is_fresh(video)]
+        if not videos:
+            return None
+        if videos != bundle.videos:
+            bundle = bundle.model_copy(update={"videos": videos})
+            self.store.save(bundle)
         return bundle
 
     def enrich_cached(self, film_id: str) -> FilmVideoBundle | None:
@@ -716,6 +788,22 @@ def _bilibili_video_queries(film: dict[str, Any]) -> tuple[str, ...]:
     return tuple(dict.fromkeys(query for query in bases if query))[:10]
 
 
+def _availability_is_fresh(
+    video: FilmVideo,
+    now: datetime | None = None,
+) -> bool:
+    if not video.availability_checked_at:
+        return False
+    try:
+        checked_at = datetime.fromisoformat(video.availability_checked_at.replace("Z", "+00:00"))
+    except ValueError:
+        return False
+    if checked_at.tzinfo is None:
+        checked_at = checked_at.replace(tzinfo=timezone.utc)
+    current = now or datetime.now(timezone.utc)
+    return timedelta(0) <= current - checked_at <= VIDEO_AVAILABILITY_TTL
+
+
 def _merge_videos(
     existing: list[FilmVideo],
     fresh: list[FilmVideo],
@@ -731,6 +819,10 @@ def _merge_videos(
                 update={
                     "text_tracks": video.text_tracks or previous.text_tracks,
                     "text_checked_at": video.text_checked_at or previous.text_checked_at,
+                    "availability_checked_at": (
+                        video.availability_checked_at
+                        or previous.availability_checked_at
+                    ),
                 }
             )
         videos_by_key[key] = video
@@ -829,6 +921,17 @@ def _video_relevance(
     if director_match:
         return "director"
     return None
+
+
+def _youtube_status_is_playable(value: Any) -> bool:
+    """Accept only processed, public videos whose owner permits embedding."""
+    if not isinstance(value, dict):
+        return False
+    return (
+        value.get("uploadStatus") == "processed"
+        and value.get("privacyStatus") == "public"
+        and value.get("embeddable") is True
+    )
 
 
 def _youtube_thumbnail(value: Any) -> str | None:
@@ -1110,6 +1213,28 @@ def _explicit_full_film_marker(text: str) -> bool:
             "正片",
         )
     )
+
+
+def _bilibili_page_is_available(value: str, video_id: str) -> bool:
+    body = html.unescape(value)
+    unavailable_markers = (
+        "本视频可能由于以下原因导致无法正常播放",
+        "视频链接失效",
+        "视频内容不和谐",
+        "up主自主删除",
+        "侵犯他人著作权",
+        "视频不见了哟",
+        "稿件不可见",
+        "视频已失效",
+        "视频已删除",
+    )
+    lowered = body.casefold()
+    if any(marker in lowered for marker in unavailable_markers):
+        return False
+    error = re.search(r'"error"\s*:\s*\{[^{}]{0,300}"code"\s*:\s*(-?\d+)', body)
+    if error and error.group(1) != "0":
+        return False
+    return video_id in body
 
 
 def _bilibili_detail_duration(value: str) -> int | None:

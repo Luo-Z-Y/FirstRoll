@@ -510,13 +510,21 @@ function saveRecentSearch(search) {
       .map((value) => String(value || "").trim().toLocaleLowerCase())
       .join("\u0000") !== identity),
   ].slice(0, MAX_RECENT_SEARCHES);
+  persistRecentSearches(nextSearches);
+  state.discovery.recentSearches = nextSearches;
+  renderRecentSearches(nextSearches);
+}
+
+function persistRecentSearches(searches) {
   try {
-    window.localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(nextSearches));
+    if (searches.length) {
+      window.localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(searches));
+    } else {
+      window.localStorage.removeItem(RECENT_SEARCHES_KEY);
+    }
   } catch (_) {
     // Search remains available even when local browser storage is disabled.
   }
-  state.discovery.recentSearches = nextSearches;
-  renderRecentSearches(nextSearches);
 }
 
 function renderRecentSearches(searches = readRecentSearches()) {
@@ -526,11 +534,30 @@ function renderRecentSearches(searches = readRecentSearches()) {
     ${searches.map((search, index) => {
       const details = [search.year, search.director].filter(Boolean).join(" · ");
       const accessibleDetails = details ? `, ${details}` : "";
-      return `<button type="button" data-recent-search="${index}" aria-label="Search again for ${escapeHtml(search.title)}${escapeHtml(accessibleDetails)}"><strong>${escapeHtml(search.title)}</strong>${details ? `<small>${escapeHtml(details)}</small>` : ""}</button>`;
-    }).join("")}` : "";
+      return `<span class="recent-search-item">
+        <button class="recent-search-query" type="button" data-recent-search="${index}" aria-label="Search again for ${escapeHtml(search.title)}${escapeHtml(accessibleDetails)}"><strong>${escapeHtml(search.title)}</strong>${details ? `<small>${escapeHtml(details)}</small>` : ""}</button>
+        <button class="recent-search-dismiss" type="button" data-remove-recent-search="${index}" aria-label="Remove ${escapeHtml(search.title)} from recent searches"><span aria-hidden="true">×</span></button>
+      </span>`;
+    }).join("")}
+    <button class="recent-search-clear" type="button" data-clear-recent-searches>Clear all</button>` : "";
 }
 
 function onRecentSearchClick(event) {
+  const removeButton = event.target.closest("[data-remove-recent-search]");
+  if (removeButton) {
+    const index = Number(removeButton.dataset.removeRecentSearch);
+    const nextSearches = state.discovery.recentSearches.filter((_, itemIndex) => itemIndex !== index);
+    persistRecentSearches(nextSearches);
+    state.discovery.recentSearches = nextSearches;
+    renderRecentSearches(nextSearches);
+    return;
+  }
+  if (event.target.closest("[data-clear-recent-searches]")) {
+    persistRecentSearches([]);
+    state.discovery.recentSearches = [];
+    renderRecentSearches([]);
+    return;
+  }
   const button = event.target.closest("[data-recent-search]");
   if (!button) return;
   const search = state.discovery.recentSearches[Number(button.dataset.recentSearch)];
@@ -578,7 +605,7 @@ function filmIdentityChoicesMarkup(films) {
           const originalTitle = film.original_title && film.original_title !== title
             ? film.original_title
             : "";
-          const directors = (film.directors || []).join(", ") || "Director not supplied";
+          const directors = displayCrew(film.directors || [], "Director not supplied");
           const year = filmYearLabel(film);
           const accessibleIdentity = [title, year, directors].filter(Boolean).join(", ");
           return `
@@ -615,7 +642,7 @@ function confirmDiscoveryFilm(index) {
   refs.resultsMeta.textContent = [
     primary.title,
     filmYearLabel(primary),
-    (primary.directors || []).join(", "),
+    displayCrew(primary.directors || [], ""),
   ].filter(Boolean).join(" / ");
   renderFilmArchive(primary, [], nearby, true);
   loadRelatedFilms(primary, nearby);
@@ -626,42 +653,20 @@ async function loadRelatedFilms(primary, nearby) {
     const data = await fetchRelatedFilms(primary.id);
     if (state.discovery.archiveSelectionId !== primary.id) return;
     const directorWorks = uniqueFilms(data.same_director || [], [primary]);
-    const sharedCast = uniqueFilms(data.shared_cast || [], [primary]);
-    const sameCountry = uniqueFilms(data.same_country || [], [primary]);
-    const recommended = uniqueFilms(
-      [...(data.recommended || []), ...(data.relevant || []), ...nearby],
-      [primary],
+    const director = firstCrewName(
+      [data.director, ...(primary.directors || [])],
+      "this director",
     );
-    const categories = {
-      sharedCast,
-      sameCountry,
-      recommended,
-      nearby: uniqueFilms(nearby, [primary]),
-      labels: data.category_labels || {},
-    };
-    const director = data.director || (primary.directors || [])[0] || "this director";
-    const collections = buildShelfCollections(primary, directorWorks, recommended, categories, director);
+    const collections = buildShelfCollections(primary, directorWorks, director);
     if (!collections.some((collection) => collection.films.length)) {
-      throw new Error("No distinct verified films were returned for this shelf.");
+      throw new Error("No other verified films by this director were returned.");
     }
-    state.discovery.archive = { primary, directorWorks, relevant: recommended, categories };
+    state.discovery.archive = { primary, directorWorks, relevant: nearby, categories: {} };
     hydrateFilmShelf(primary.id, collections);
-    setFilmShelfStatus("Verified related films ready");
+    setFilmShelfStatus("ready");
   } catch (error) {
     if (state.discovery.archiveSelectionId !== primary.id) return;
-    const fallback = searchFallbackShelfCollections(primary, nearby);
-    if (fallback.some((collection) => collection.films.length)) {
-      state.discovery.archive = {
-        primary,
-        directorWorks: [],
-        relevant: nearby,
-        categories: { nearby },
-      };
-      hydrateFilmShelf(primary.id, fallback);
-      setFilmShelfStatus("Live relations delayed · showing verified search matches");
-    } else {
-      showFilmShelfError(error);
-    }
+    showFilmShelfError(error);
   }
 }
 
@@ -676,7 +681,7 @@ async function fetchRelatedFilms(filmId) {
   }, 10000);
   try {
     const res = await fetch(
-      `${discoveryApiBase()}/api/discovery/films/${encodeURIComponent(filmId)}/related?limit=12&fast=true`,
+      `${discoveryApiBase()}/api/discovery/films/${encodeURIComponent(filmId)}/related?limit=12&fast=false&director_only=true`,
       { signal: controller.signal },
     );
     if (!res.ok) throw new Error(await readApiError(res));
@@ -702,14 +707,8 @@ function hydrateFilmShelf(primaryId, collections) {
 }
 
 function setFilmShelfStatus(message) {
-  const header = refs.discoveryResults.querySelector(".closet-header");
-  if (!header) return;
-  let status = header.querySelector("small");
-  if (!status) {
-    status = document.createElement("small");
-    header.append(status);
-  }
-  status.textContent = message;
+  const root = refs.discoveryResults.querySelector("[data-closet-viewport]");
+  if (root) root.dataset.status = message;
 }
 
 function showFilmShelfError(error) {
@@ -739,15 +738,12 @@ function renderFilmArchive(
   directorName = null,
   categories = {},
 ) {
-  const director = directorName || (primary.directors || [])[0] || "this director";
-  const duration = formatFilmDuration(primary.runtime_minutes);
-  const shelfCollections = buildShelfCollections(
-    primary,
-    directorWorks,
-    relevant,
-    categories,
-    director,
+  const director = firstCrewName(
+    [directorName, ...(primary.directors || [])],
+    "this director",
   );
+  const duration = formatFilmDuration(primary.runtime_minutes);
+  const shelfCollections = buildShelfCollections(primary, directorWorks, director);
   state.discovery.archiveSelectionId = primary.id;
   state.discovery.archive = { primary, directorWorks, relevant, categories };
   refs.discoveryResults.innerHTML = `
@@ -756,7 +752,7 @@ function renderFilmArchive(
         <div class="archive-pullout-label"><span>Selected edition</span><small>FirstRoll Collection</small></div>
         ${criterionCaseMarkup(primary)}
         <div class="archive-pullout-copy">
-          <p>${escapeHtml((primary.directors || []).join(", ") || "Director not supplied")}</p>
+          <p>${escapeHtml(displayCrew(primary.directors || [], "Director not supplied"))}</p>
           <h3>${escapeHtml(primary.title || "Untitled")}</h3>
           <div>
             <span>${escapeHtml(filmYearLabel(primary))}${duration ? ` · ${escapeHtml(duration)}` : ""}</span>
@@ -768,17 +764,16 @@ function renderFilmArchive(
         </div>
       </div>
     </div>
-    <aside class="film-closet" aria-label="Related film shelf">
+    <aside class="film-closet" aria-label="Films directed by ${escapeHtml(director)}">
       <div class="closet-header">
-        <span>FirstRoll shelf</span>
-        <small>${loading ? "Finding verified related films" : "Verified related films ready"}</small>
+        <span>${escapeHtml(director)}</span>
       </div>
       ${closetRoomMarkup(loading)}
     </aside>`;
   if (loading) {
     initialiseClosetViewport({
       primaryId: primary.id,
-      collections: searchFallbackShelfCollections(primary, relevant),
+      collections: [],
     });
   } else {
     initialiseClosetViewport({
@@ -800,22 +795,20 @@ function formatFilmDuration(minutes) {
 function filmYearLabel(film) {
   const years = [...new Set(
     [film?.year, ...(Array.isArray(film?.release_years) ? film.release_years : [])]
-      .map(Number)
-      .filter(Number.isFinite),
+      .map(normaliseFilmYear)
+      .filter((year) => year !== null),
   )].sort((left, right) => left - right);
-  const matchedYear = Number(film?.matched_year);
-  if (Number.isFinite(matchedYear) && years.length > 1 && matchedYear !== years[0]) {
-    return `${matchedYear} release · first release ${years[0]}`;
-  }
-  if (years.length > 1) return `${years.join(" / ")} releases`;
   return years[0] ? String(years[0]) : "Year unknown";
+}
+
+function normaliseFilmYear(value) {
+  if (value === null || value === undefined || value === "") return null;
+  const year = Number(value);
+  return Number.isInteger(year) && year >= 1888 && year <= 2100 ? year : null;
 }
 
 function criterionCaseMarkup(film) {
   const title = escapeHtml(film.title || "Untitled");
-  const catalogueNumber = String(film.provider_id || film.id || "FR")
-    .replace(/[^a-z0-9]/gi, "")
-    .slice(-8);
   return `
     <div class="criterion-object" aria-label="${title} selected archive edition">
       <div class="criterion-disc" aria-hidden="true">
@@ -827,77 +820,21 @@ function criterionCaseMarkup(film) {
           ${film.poster_url
             ? `<img src="${escapeHtml(film.poster_url)}" alt="Poster for ${title}" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()" />`
             : ""}
-          <span class="criterion-number">FR-${escapeHtml(catalogueNumber || "0001")}</span>
         </div>
       </div>
     </div>`;
 }
 
-function buildShelfCollections(primary, directorWorks, relevant, categories, director) {
-  const rowSize = 10;
-  const directorFilms = displayableFilms(directorWorks);
-  const castFilms = displayableFilms(categories.sharedCast || []);
-  const countryFilms = displayableFilms(categories.sameCountry || []);
-  const recommended = displayableFilms(categories.recommended || relevant);
-  const nearby = displayableFilms(categories.nearby || relevant);
-  const realFilmPool = displayableFilms([
-    ...directorFilms,
-    ...castFilms,
-    ...countryFilms,
-    ...recommended,
-    ...nearby,
-  ]);
-  const usedFilmIds = new Set([primary.id]);
-  const usedFilmEditions = new Set([shelfFilmIdentity(primary)]);
-  const fillRow = (preferred) => {
-    const row = [];
-    for (const film of displayableFilms([...preferred, ...realFilmPool])) {
-      const identity = shelfFilmIdentity(film);
-      if (usedFilmIds.has(film.id) || usedFilmEditions.has(identity)) continue;
-      usedFilmIds.add(film.id);
-      usedFilmEditions.add(identity);
-      row.push(film);
-      if (row.length === rowSize) break;
-    }
-    return row;
-  };
-  // Allocate the most constrained categories first. Every row shares these ledgers, so a
-  // film can never reappear elsewhere on the same shelf when a preferred category runs short.
-  const directorRow = fillRow(directorFilms);
-  const castRow = fillRow(castFilms);
-  const countryRow = fillRow(countryFilms);
-  const recommendedRow = fillRow(recommended);
-  const nearbyRow = fillRow(nearby);
-  return [
-    { wall: "back", shelf: "bottom", label: "Nearby & relevant works", films: nearbyRow },
-    {
-      wall: "back",
-      shelf: "middle",
-      label: `${director} & related works`,
-      films: directorRow,
-    },
-    { wall: "back", shelf: "lower", label: "Shared cast & related works", films: castRow },
-    { wall: "back", shelf: "upper", label: "Production country & related works", films: countryRow },
-    { wall: "back", shelf: "top", label: "Genre & metadata affinities", films: recommendedRow },
-  ];
-}
-
-function searchFallbackShelfCollections(primary, films) {
+function buildShelfCollections(primary, directorWorks, director) {
+  const films = displayableFilms(directorWorks)
+    .filter((film) => film.id !== primary.id)
+    .slice(0, 12);
   return [{
     wall: "back",
     shelf: "middle",
-    label: "Verified search matches",
-    films: displayableFilms(films).filter((film) => film.id !== primary.id).slice(0, 10),
+    label: `${director} films`,
+    films,
   }];
-}
-
-function shelfFilmIdentity(film) {
-  const title = String(film?.title || film?.original_title || "")
-    .normalize("NFKC")
-    .toLocaleLowerCase("en-GB")
-    .replace(/[\p{P}\p{S}\s]+/gu, " ")
-    .trim();
-  return `${title}|${film?.year || "undated"}`;
 }
 
 function displayableFilms(films) {
@@ -1132,15 +1069,24 @@ function videoProviderStatusMarkup(providers = {}) {
   return '<p class="module-empty">Public video providers are not configured on this server yet.</p>';
 }
 
-function displayCrew(values) {
+function displayCrewNames(values) {
   const forbidden = /mw-parser-output|\.mw-|line-height|list-style|margin:|padding:|display:|font-size:|@media|!important|var\(|[{}<>]/i;
   const names = (Array.isArray(values) ? values : [])
     .filter((value) => typeof value === "string")
     .map((value) => value.trim())
     .filter((value) => value.length >= 2 && value.length <= 120)
+    .filter((value) => !/^Q\d+$/i.test(value))
     .filter((value) => /\p{L}/u.test(value) && !forbidden.test(value))
     .filter((value) => (value.match(/[,:;]/g) || []).length <= 2);
-  return [...new Set(names)].join(", ") || "Not supplied";
+  return [...new Set(names)];
+}
+
+function displayCrew(values, fallback = "Not supplied") {
+  return displayCrewNames(values).join(", ") || fallback;
+}
+
+function firstCrewName(values, fallback = "Not supplied") {
+  return displayCrewNames(values)[0] || fallback;
 }
 
 function detailFact(label, value) {
@@ -1684,6 +1630,9 @@ function deepStudyQuotaMarkup(quota) {
   const user = quota?.user;
   const global = quota?.global;
   if (!user || !global) return "";
+  if (quota.unlimited) {
+    return '<p class="study-quota"><strong>Unlimited local testing</strong> · this development account does not consume the public demo allowance</p>';
+  }
   const reset = quota.reset_at
     ? new Date(quota.reset_at).toLocaleTimeString([], {
         hour: "2-digit",

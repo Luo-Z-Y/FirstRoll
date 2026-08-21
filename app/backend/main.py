@@ -1,4 +1,5 @@
 import asyncio
+import ipaddress
 import json
 import os
 import re
@@ -60,6 +61,10 @@ app = FastAPI(
     description="Evidence-grounded film discovery and scene analysis for filmmakers.",
 )
 
+LOCAL_TEST_ACCOUNT_EMAIL = "luo_zhiyang@outlook.com"
+LOCAL_TEST_ACCOUNT_ID = "firstroll-local-luo-zhiyang"
+LOCAL_TEST_ACCOUNT_TOKEN = "firstroll-local-test-account"
+
 
 def environment_flag(name: str, default: bool = False) -> bool:
     raw = os.getenv(name)
@@ -75,6 +80,40 @@ def public_mode_enabled() -> bool:
 def hosted_frontend_preview_enabled() -> bool:
     """Serve the hosted UI from FastAPI for an exact local production preview."""
     return environment_flag("FIRSTROLL_SERVE_HOSTED_FRONTEND")
+
+
+def _loopback_host(value: str | None) -> bool:
+    host = str(value or "").strip().casefold()
+    if host == "localhost":
+        return True
+    try:
+        return ipaddress.ip_address(host).is_loopback
+    except ValueError:
+        return False
+
+
+def local_test_request(request: Request) -> bool:
+    """Permit the development account only on the explicit loopback preview.
+
+    The token is deliberately useless on Azure, Render, or any non-loopback host,
+    even though the browser-side adapter is part of the public source tree.
+    """
+
+    client_host = request.client.host if request.client else ""
+    return bool(
+        hosted_frontend_preview_enabled()
+        and _loopback_host(request.url.hostname)
+        and _loopback_host(client_host)
+    )
+
+
+def local_test_account_email(request: Request) -> str:
+    if not local_test_request(request):
+        return ""
+    return (
+        os.getenv("FIRSTROLL_LOCAL_TEST_EMAIL", LOCAL_TEST_ACCOUNT_EMAIL).strip().casefold()
+        or LOCAL_TEST_ACCOUNT_EMAIL
+    )
 
 
 def _git_value(*args: str) -> str:
@@ -181,7 +220,7 @@ web_directory = Path(__file__).resolve().parents[1] / "web"
 
 
 @app.get("/assets/config.js", include_in_schema=False)
-def web_runtime_config() -> Response:
+def web_runtime_config(request: Request) -> Response:
     public_mode = public_mode_enabled()
     video_analysis = video_analysis_enabled()
     auth_provider = os.getenv("FIRSTROLL_AUTH_PROVIDER", "supabase").strip().casefold()
@@ -198,6 +237,7 @@ def web_runtime_config() -> Response:
         entra_spa_client_id = ""
         entra_api_scope = ""
     build = frontend_build_identity()
+    test_email = local_test_account_email(request)
     content = (
         "window.FIRSTROLL_CONFIG = Object.freeze({\n"
         '  apiBase: "",\n'
@@ -209,6 +249,7 @@ def web_runtime_config() -> Response:
         f"  entraAuthority: {json.dumps(entra_authority)},\n"
         f"  entraSpaClientId: {json.dumps(entra_spa_client_id)},\n"
         f"  entraApiScope: {json.dumps(entra_api_scope)},\n"
+        f"  localTestAccountEmail: {json.dumps(test_email)},\n"
         f"  buildId: {json.dumps(build['buildId'])},\n"
         f"  buildNumber: {build['buildNumber']},\n"
         f"  buildChannel: {json.dumps(build['buildChannel'])},\n"
@@ -278,10 +319,19 @@ def prepare_film_study(
 
 
 def authenticated_user(request: Request) -> dict[str, str | None]:
+    authorisation = request.headers.get("Authorization")
+    if (
+        local_test_request(request)
+        and authorisation == f"Bearer {LOCAL_TEST_ACCOUNT_TOKEN}"
+    ):
+        return {
+            "id": LOCAL_TEST_ACCOUNT_ID,
+            "email": local_test_account_email(request),
+            "role": "authenticated",
+            "provider": "local",
+        }
     try:
-        return auth_verifier.verify_authorisation(
-            request.headers.get("Authorization")
-        ).as_dict()
+        return auth_verifier.verify_authorisation(authorisation).as_dict()
     except AuthConfigurationError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     except AuthenticationError as exc:
@@ -312,6 +362,27 @@ def account_owner_id(user: dict[str, str | None]) -> str:
         subject=str(user.get("id") or ""),
     ).validated()
     return f"{identity.provider}:{identity.subject}"
+
+
+def local_test_user(user: dict[str, str | None]) -> bool:
+    return bool(
+        user.get("provider") == "local"
+        and user.get("id") == LOCAL_TEST_ACCOUNT_ID
+        and str(user.get("email") or "").casefold() == LOCAL_TEST_ACCOUNT_EMAIL
+    )
+
+
+def local_unlimited_quota() -> dict:
+    """Return a UI-compatible allowance without touching persistent quota state."""
+
+    return {
+        "allowed": True,
+        "reason": "local_test_account",
+        "unlimited": True,
+        "user": {"limit": None, "used": 0, "remaining": None},
+        "global": {"limit": None, "used": 0, "remaining": None},
+        "reset_at": None,
+    }
 
 
 def hosted_deep_study_enabled() -> bool:
@@ -681,19 +752,27 @@ def account_integrations(request: Request) -> dict:
     if not public_mode_enabled():
         raise HTTPException(status_code=404, detail="Hosted account integrations are not enabled.")
     user = authenticated_user(request)
-    try:
-        quota = quota_client.status(quota_identity(user, request))
-    except QuotaConfigurationError as exc:
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
-    except QuotaServiceError as exc:
-        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    is_local_test = local_test_user(user)
+    if is_local_test:
+        quota_payload = local_unlimited_quota()
+    else:
+        try:
+            quota_payload = quota_client.status(quota_identity(user, request)).as_dict()
+        except QuotaConfigurationError as exc:
+            raise HTTPException(status_code=503, detail=str(exc)) from exc
+        except QuotaServiceError as exc:
+            raise HTTPException(status_code=502, detail=str(exc)) from exc
     douban = douban_adapter.status()
     return {
         "user": user,
         "deep_study": {
-            "platform_enabled": hosted_deep_study_enabled(),
+            "platform_enabled": (
+                settings_store.secret_state("deepseek").configured
+                if is_local_test
+                else hosted_deep_study_enabled()
+            ),
             "model": study_service.model,
-            "quota": quota.as_dict(),
+            "quota": quota_payload,
             "personal_session_key_supported": True,
         },
         "youtube": {
@@ -779,9 +858,15 @@ def discovery_film_related(
     film_id: str,
     limit: int = Query(default=12, ge=1, le=60),
     fast: bool = Query(default=True),
+    director_only: bool = Query(default=False),
 ) -> dict:
     try:
-        return discovery_service.related(film_id, limit=limit, fast=fast)
+        return discovery_service.related(
+            film_id,
+            limit=limit,
+            fast=fast,
+            director_only=director_only,
+        )
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
@@ -808,7 +893,7 @@ def discovery_film(film_id: str) -> dict:
             "providers": video_service.status(),
             "bundle": (
                 cached_video_bundle.model_dump()
-                if (cached_video_bundle := video_store.load(film_id))
+                if (cached_video_bundle := video_service.cached_for_display(film_id))
                 else None
             ),
         }
@@ -843,9 +928,10 @@ def generate_film_study(
     personal_deepseek_key = personal_provider_key(request, "deepseek")
     if public_mode:
         user = authenticated_user(request)
-        if not hosted_deep_study_boundary_enabled() or (
+        is_local_test = local_test_user(user)
+        if not is_local_test and (not hosted_deep_study_boundary_enabled() or (
             not personal_deepseek_key and not hosted_deep_study_enabled()
-        ):
+        )):
             raise HTTPException(
                 status_code=503,
                 detail="Deep Study is not fully configured on this deployment yet.",
@@ -859,7 +945,7 @@ def generate_film_study(
             study_request.question,
             public_mode=public_mode,
         )
-        if public_mode:
+        if public_mode and not is_local_test:
             quota = quota_client.reserve(quota_identity(user, request))
         result = {
             "film_id": film_id,
@@ -875,8 +961,10 @@ def generate_film_study(
                 "personal_session" if personal_deepseek_key else "firstroll_platform"
             ),
         }
-        if quota is not None:
-            result["quota"] = quota.as_dict()
+        if public_mode:
+            result["quota"] = (
+                local_unlimited_quota() if is_local_test else quota.as_dict()
+            )
         return result
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
@@ -903,10 +991,11 @@ async def stream_film_study(
     """Run Deep Study while streaming only allow-listed, public progress events."""
 
     user = authenticated_user(request)
+    is_local_test = local_test_user(user)
     owner_id = account_owner_id(user)
     public_mode = public_mode_enabled()
     personal_deepseek_key = personal_provider_key(request, "deepseek")
-    if public_mode and (
+    if public_mode and not is_local_test and (
         not hosted_deep_study_boundary_enabled()
         or (not personal_deepseek_key and not hosted_deep_study_enabled())
     ):
@@ -944,7 +1033,7 @@ async def stream_film_study(
             )
 
             quota = None
-            if public_mode:
+            if public_mode and not is_local_test:
                 quota = await run_in_threadpool(
                     quota_client.reserve,
                     quota_identity(user, request),
@@ -967,8 +1056,10 @@ async def stream_film_study(
                     "personal_session" if personal_deepseek_key else "firstroll_platform"
                 ),
             }
-            if quota is not None:
-                payload["quota"] = quota.as_dict()
+            if public_mode:
+                payload["quota"] = (
+                    local_unlimited_quota() if is_local_test else quota.as_dict()
+                )
             study_run_store.complete(run_id, owner_id, payload)
             quality_passed = study.get("quality", {}).get("status") == "passed"
             yield progress.frame(

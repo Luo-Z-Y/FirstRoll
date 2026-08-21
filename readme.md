@@ -55,29 +55,19 @@ The original GPL-3.0 licence and contributor attribution remain applicable. See
 ### Discover and study
 
 - Search by title, year and director through key-free Wikidata.
+- Reuse up to five locally stored recent searches, remove individual entries or clear the history;
+  this browser-only convenience data is never attached to a FirstRoll account.
 - Confirm the intended film before opening the shelf whenever several records share or closely match
   a title; each choice exposes its year, director, original title and poster instead of trusting the
   provider's first-ranked result.
 - Read an attributed Wikipedia overview and poster after Wikidata resolves the film.
-- Explore a real Blender-built GLB film shelf rendered locally with Three.js: drag to look,
-  scroll or use W/S to walk in the rendered facing direction, strafe camera-relatively with A/D, browse
-  separate director and relationship rows
-  on one wall,
-  then hover a transparent jewel case to pull it out and select it as the new edition. Each curated
-  row is deliberately compact at ten cases. All five rows are populated from real Wikidata-backed
-  discovery results; unresolved identifier-only records are omitted rather than displayed as fake or
-  placeholder editions. The GLB room now opens as soon as its first complete frame is ready;
-  related-film cases and poster textures stream into the live scene afterwards instead of holding the
-  interface behind an indexing screen. Hovering a case also replaces the shelf-header hint with
-  its full title, year and director for an uncompressed caption. A shelf-wide allocation ledger keeps
-  every title/year edition unique across all five rows, while proportion-matched spine and fascia
-  textures keep their lettering at natural dimensions. The initial camera opens at close reading
-  distance. Available Wikimedia poster artwork wraps each case after it arrives, while the designed
-  colour spine makes every case immediately readable when artwork is absent or still loading.
-  The shelf-specific Wikidata route bounds candidate hydration, omits expensive secondary enrichment,
-  caches successful results in the backend and reuses them in the browser. Sparse or transiently
-  failed relationship responses report an explicit shelf error; successful data hydrates the already
-  interactive archive in place.
+- Explore a Blender-built GLB shelf rendered locally with Three.js. The shelf now requests only the
+  selected filmmaker's verified directing work and presents up to twelve films as large, front-facing
+  jewel cases in three balanced rows. Verified poster artwork fills each cover; a restrained title and
+  year overlay, plus a designed fallback, keeps every case legible when artwork is unavailable. Drag to
+  look, scroll or use W/S to move, strafe with A/D, hover a case for emphasis and select it as the new
+  edition. The director-only Wikidata route bounds candidate hydration while allowing poster enrichment,
+  and unresolved identifier-only records remain hidden.
 - Compare attributed Douban and Letterboxd community scores and review up to three prominent
   Wikidata awards when those sources provide them.
 - Retrieve matched scholarly abstracts and DOI links through Crossref.
