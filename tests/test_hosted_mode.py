@@ -27,6 +27,46 @@ def test_public_mode_keeps_health_and_discovery_status_available(monkeypatch) ->
     assert "local_library" not in response.json()
 
 
+def test_local_startup_prewarms_embeddings_without_blocking_public_mode(monkeypatch) -> None:
+    class FakeIndex:
+        calls = 0
+
+        def start_embedding_warmup(self):
+            self.calls += 1
+            return {"state": "warming"}
+
+    index = FakeIndex()
+    monkeypatch.setattr(main, "library_index", index)
+    monkeypatch.delenv("FIRSTROLL_PUBLIC_MODE", raising=False)
+    monkeypatch.delenv("FIRSTROLL_PREWARM_EMBEDDINGS", raising=False)
+
+    main.start_local_embedding_warmup()
+
+    assert index.calls == 1
+
+    monkeypatch.setenv("FIRSTROLL_PUBLIC_MODE", "true")
+    main.start_local_embedding_warmup()
+
+    assert index.calls == 1
+
+
+def test_local_embedding_prewarm_can_be_disabled(monkeypatch) -> None:
+    class FakeIndex:
+        calls = 0
+
+        def start_embedding_warmup(self):
+            self.calls += 1
+
+    index = FakeIndex()
+    monkeypatch.setattr(main, "library_index", index)
+    monkeypatch.delenv("FIRSTROLL_PUBLIC_MODE", raising=False)
+    monkeypatch.setenv("FIRSTROLL_PREWARM_EMBEDDINGS", "false")
+
+    main.start_local_embedding_warmup()
+
+    assert index.calls == 0
+
+
 def test_public_mode_serves_hosted_frontend_configuration(monkeypatch) -> None:
     monkeypatch.setenv("FIRSTROLL_PUBLIC_MODE", "true")
     monkeypatch.setenv("FIRSTROLL_BUILD_CHANNEL", "live")

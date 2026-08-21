@@ -8,6 +8,8 @@ from contextlib import nullcontext
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
+from threading import Event, Lock, RLock, Thread
+from time import perf_counter
 from typing import Any, Iterable, Protocol, Sequence
 
 import numpy as np
@@ -35,19 +37,24 @@ class SentenceTransformerEncoder:
             "FIRSTROLL_EMBEDDING_MODEL", DEFAULT_EMBEDDING_MODEL
         )
         self._model: Any = None
+        self._model_lock = Lock()
+        self._encode_lock = Lock()
 
     def encode(self, texts: Sequence[str]) -> np.ndarray:
         if self._model is None:
-            from sentence_transformers import SentenceTransformer
+            with self._model_lock:
+                if self._model is None:
+                    from sentence_transformers import SentenceTransformer
 
-            self._model = SentenceTransformer(self.model_name)
-        values = self._model.encode(
-            list(texts),
-            batch_size=32,
-            convert_to_numpy=True,
-            normalize_embeddings=True,
-            show_progress_bar=len(texts) > 100,
-        )
+                    self._model = SentenceTransformer(self.model_name)
+        with self._encode_lock:
+            values = self._model.encode(
+                list(texts),
+                batch_size=32,
+                convert_to_numpy=True,
+                normalize_embeddings=True,
+                show_progress_bar=len(texts) > 100,
+            )
         return np.asarray(values, dtype=np.float32)
 
 
@@ -144,10 +151,19 @@ class LocalLibraryIndex:
             os.getenv("FIRSTROLL_LIBRARY_INDEX", project_root / ".firstroll/library.sqlite3")
         )
         self.encoder = encoder or SentenceTransformerEncoder()
+        self._warmup_lock = RLock()
+        self._warmup_complete = Event()
+        self._warmup_state = "idle"
+        self._warmup_duration_ms: float | None = None
 
     def status(self) -> dict[str, Any]:
         if not self.path.exists():
-            return {"state": "not_built", "chunk_count": 0, "document_count": 0}
+            return {
+                "state": "not_built",
+                "chunk_count": 0,
+                "document_count": 0,
+                "warmup": self.embedding_warmup_status(),
+            }
         try:
             with sqlite3.connect(self.path) as connection:
                 chunk_count = connection.execute("SELECT count(*) FROM chunk_records").fetchone()[0]
@@ -157,7 +173,12 @@ class LocalLibraryIndex:
                 meta = dict(connection.execute("SELECT key, value FROM index_meta").fetchall())
                 embedding_count = connection.execute("SELECT count(*) FROM embeddings").fetchone()[0]
         except (sqlite3.Error, TypeError):
-            return {"state": "outdated", "chunk_count": 0, "document_count": 0}
+            return {
+                "state": "outdated",
+                "chunk_count": 0,
+                "document_count": 0,
+                "warmup": self.embedding_warmup_status(),
+            }
         return {
             "state": "ready" if meta.get("schema_version") == SCHEMA_VERSION else "outdated",
             "chunk_count": chunk_count,
@@ -171,7 +192,65 @@ class LocalLibraryIndex:
                 "model": meta.get("embedding_model"),
                 "local": True,
             },
+            "warmup": self.embedding_warmup_status(),
         }
+
+    def embedding_warmup_status(self) -> dict[str, Any]:
+        with self._warmup_lock:
+            return {
+                "state": self._warmup_state,
+                "duration_ms": (
+                    round(self._warmup_duration_ms, 3)
+                    if self._warmup_duration_ms is not None
+                    else None
+                ),
+                "background": True,
+            }
+
+    def start_embedding_warmup(self) -> dict[str, Any]:
+        """Load the local query encoder once without delaying API startup."""
+
+        index_status = self.status()
+        if (
+            index_status.get("state") != "ready"
+            or index_status.get("embedding", {}).get("state") != "ready"
+        ):
+            with self._warmup_lock:
+                self._warmup_state = "unavailable"
+                self._warmup_duration_ms = None
+                self._warmup_complete.set()
+            return self.embedding_warmup_status()
+        with self._warmup_lock:
+            if self._warmup_state in {"warming", "ready"}:
+                return self.embedding_warmup_status()
+            self._warmup_state = "warming"
+            self._warmup_duration_ms = None
+            self._warmup_complete.clear()
+        Thread(
+            target=self._run_embedding_warmup,
+            name="firstroll-embedding-warmup",
+            daemon=True,
+        ).start()
+        return self.embedding_warmup_status()
+
+    def wait_for_embedding_warmup(self, timeout: float | None = None) -> dict[str, Any]:
+        status = self.start_embedding_warmup()
+        if status["state"] == "warming":
+            self._warmup_complete.wait(timeout)
+        return self.embedding_warmup_status()
+
+    def _run_embedding_warmup(self) -> None:
+        started = perf_counter()
+        state = "ready"
+        try:
+            self.encoder.encode(("FirstRoll local film-form retrieval warm-up.",))
+        except Exception:
+            state = "failed"
+        duration_ms = (perf_counter() - started) * 1000
+        with self._warmup_lock:
+            self._warmup_state = state
+            self._warmup_duration_ms = duration_ms
+            self._warmup_complete.set()
 
     def build(
         self,

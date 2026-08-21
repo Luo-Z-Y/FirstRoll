@@ -225,6 +225,17 @@ reception_cache: dict[str, dict] = {}
 web_directory = Path(__file__).resolve().parents[1] / "web"
 
 
+def start_local_embedding_warmup() -> None:
+    if public_mode_enabled() or not environment_flag(
+        "FIRSTROLL_PREWARM_EMBEDDINGS", default=True
+    ):
+        return
+    library_index.start_embedding_warmup()
+
+
+app.router.add_event_handler("startup", start_local_embedding_warmup)
+
+
 @app.get("/assets/config.js", include_in_schema=False)
 def web_runtime_config(request: Request) -> Response:
     public_mode = public_mode_enabled()

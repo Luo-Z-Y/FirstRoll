@@ -682,6 +682,7 @@ DEEPSEEK_MODEL=deepseek-v4-pro
 DOUBAN_COOKIE=
 YOUTUBE_API_KEY=
 FIRSTROLL_EMBEDDINGS=1
+FIRSTROLL_PREWARM_EMBEDDINGS=1
 FIRSTROLL_EMBEDDING_MODEL=sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
 FIRSTROLL_LIBRARY_PATH=
 FIRSTROLL_LIBRARY_MANIFEST=
@@ -753,9 +754,13 @@ The current index schema provides:
 - reciprocal-rank fusion and diversity selection;
 - an FTS-only fallback when local embeddings are disabled or unavailable.
 
-The default embedding model supports multilingual semantic similarity and is downloaded
-on the first embedding build. Set `FIRSTROLL_EMBEDDINGS=0` before rebuilding to keep only
-the lexical index.
+The default embedding model supports multilingual semantic similarity and is downloaded on the
+first embedding build. A local application start loads its query encoder once in a background thread
+while Discover remains available, so the first later packet avoids paying model initialisation in the
+request path. The discovery status reports `warming`, `ready`, `failed` or `unavailable`; a failed
+warm-up still leaves lexical retrieval available. Set `FIRSTROLL_PREWARM_EMBEDDINGS=0` to defer model
+loading to the first semantic query, or `FIRSTROLL_EMBEDDINGS=0` before rebuilding to keep only the
+lexical index.
 
 Books, derived chunks, vectors, criticism caches and credentials remain under
 `.firstroll`, which is excluded from Git. Only index material you are entitled to use.
@@ -1043,7 +1048,8 @@ packet/UI targets and Agent entry gate are versioned separately in
 - Letterboxd public-web retrieval is unofficial and may break when markup or access controls
   change; the official API still requires explicitly granted credentials.
 - Guardian search may have no confidently matched review for a film.
-- The first semantic retrieval after process start may pause while the local model loads.
+- Local startup prewarms the semantic query model in the background, but a study requested before
+  the roughly ten-second warm-up completes may still wait for the same single-flight model load.
 - A study may correctly remain labelled insufficient evidence after its one repair pass.
 - Hosted research results currently live in a bounded, process-local ten-minute store; durable
   owner-scoped storage is required before multi-instance or resumable execution.

@@ -12,6 +12,7 @@ sys.path.insert(0, str(ROOT))
 from app.backend.evidence import EvidencePacket
 from tools.benchmark_evidence_packet import (
     assert_report_redacted,
+    embedding_warmup_summary,
     latency_summary,
     packet_metric_summary,
     percentile,
@@ -109,6 +110,24 @@ def test_packet_benchmark_summaries_use_recorded_samples_only() -> None:
     assert stages["packet_assembly"]["status_counts"] == {"completed": 2}
     assert packet["theory_sources"] == {"minimum": 4, "median": 5.0, "maximum": 6}
     assert percentile([10, 20], 0.95) == 19.5
+
+
+def test_embedding_warmup_summary_keeps_initialisation_outside_packet_latency() -> None:
+    summary = embedding_warmup_summary(
+        [
+            {"embedding_warmup": {"state": "ready", "duration_ms": 9000.0}},
+            {"embedding_warmup": {"state": "ready", "duration_ms": 11000.0}},
+            {"status": "completed"},
+        ]
+    )
+
+    assert summary == {
+        "attempted": 2,
+        "state_counts": {"ready": 2},
+        "mean_ms": 10000.0,
+        "p50_ms": 10000.0,
+        "p95_ms": 10900.0,
+    }
 
 
 def test_packet_report_rejects_questions_and_evidence_fields() -> None:

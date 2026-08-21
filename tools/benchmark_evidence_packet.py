@@ -268,6 +268,27 @@ def packet_metric_summary(samples: Sequence[dict[str, Any]]) -> dict[str, Any]:
     return result
 
 
+def embedding_warmup_summary(samples: Sequence[dict[str, Any]]) -> dict[str, Any]:
+    records = [
+        sample["embedding_warmup"]
+        for sample in samples
+        if isinstance(sample.get("embedding_warmup"), dict)
+    ]
+    durations = [
+        float(record["duration_ms"])
+        for record in records
+        if isinstance(record.get("duration_ms"), (int, float))
+    ]
+    states = Counter(str(item.get("state")) for item in records)
+    return {
+        "attempted": len(records),
+        "state_counts": dict(sorted(states.items())),
+        "mean_ms": round(statistics.mean(durations), 3) if durations else None,
+        "p50_ms": percentile(durations, 0.5),
+        "p95_ms": percentile(durations, 0.95),
+    }
+
+
 def configuration_fingerprint() -> dict[str, Any]:
     connectors = main.settings_store.public_connectors()
     index = main.library_index.status()
@@ -288,6 +309,7 @@ def configuration_fingerprint() -> dict[str, Any]:
         "index_schema": index.get("schema_version"),
         "embedding_state": index.get("embedding", {}).get("state"),
         "embedding_model": index.get("embedding", {}).get("model"),
+        "embedding_warmup_state": index.get("warmup", {}).get("state"),
     }
     serialised = json.dumps(value, sort_keys=True, separators=(",", ":"))
     value["sha256"] = hashlib.sha256(serialised.encode("utf-8")).hexdigest()[:16]
@@ -309,6 +331,7 @@ def run_cold_child(
     cases_path: Path,
     reference_path: Path,
     timeout_seconds: int,
+    prewarm_embeddings: bool,
 ) -> dict[str, Any]:
     command = [
         sys.executable,
@@ -322,6 +345,8 @@ def run_cold_child(
         "--reference",
         str(reference_path),
     ]
+    if prewarm_embeddings:
+        command.append("--prewarm-embeddings")
     try:
         completed = subprocess.run(
             command,
@@ -388,6 +413,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--warm-samples", type=int, default=5)
     parser.add_argument("--cold-processes", type=int, default=2)
     parser.add_argument("--child-timeout", type=int, default=300)
+    parser.add_argument(
+        "--prewarm-embeddings",
+        action="store_true",
+        help="Load the local query encoder before measured packet preparation.",
+    )
     parser.add_argument("--case", action="append", dest="case_ids")
     parser.add_argument("--child-case", help=argparse.SUPPRESS)
     parser.add_argument("--sample-index", type=int, default=1, help=argparse.SUPPRESS)
@@ -405,11 +435,28 @@ def child_cli(args: argparse.Namespace, specs: Sequence[dict[str, Any]]) -> int:
             "failure_kind": "ValueError",
         }
     else:
-        sample = packet_sample(
-            matches[0],
-            sample_kind="cold",
-            sample_index=args.sample_index,
-        )
+        embedding_warmup = None
+        if args.prewarm_embeddings:
+            embedding_warmup = main.library_index.wait_for_embedding_warmup(
+                timeout=args.child_timeout
+            )
+        if embedding_warmup and embedding_warmup.get("state") != "ready":
+            sample = {
+                "sample_kind": "cold",
+                "sample_index": args.sample_index,
+                "status": "failed",
+                "failure_stage": "embedding_warmup",
+                "failure_kind": "PacketBenchmarkError",
+                "embedding_warmup": embedding_warmup,
+            }
+        else:
+            sample = packet_sample(
+                matches[0],
+                sample_kind="cold",
+                sample_index=args.sample_index,
+            )
+            if embedding_warmup:
+                sample["embedding_warmup"] = embedding_warmup
     print(json.dumps(sample, ensure_ascii=False, separators=(",", ":")), flush=True)
     return 0 if sample["status"] == "completed" else 1
 
@@ -428,6 +475,11 @@ def main_cli() -> int:
         if missing:
             raise SystemExit(f"Unknown case IDs: {', '.join(sorted(missing))}")
 
+    parent_embedding_warmup = (
+        main.library_index.wait_for_embedding_warmup(timeout=args.child_timeout)
+        if args.prewarm_embeddings
+        else {"state": "not_requested", "duration_ms": None, "background": False}
+    )
     case_reports = []
     all_cold: list[dict[str, Any]] = []
     all_warm: list[dict[str, Any]] = []
@@ -441,6 +493,7 @@ def main_cli() -> int:
                 cases_path=args.cases,
                 reference_path=args.reference,
                 timeout_seconds=args.child_timeout,
+                prewarm_embeddings=args.prewarm_embeddings,
             )
             cold.append(sample)
             print(
@@ -519,7 +572,7 @@ def main_cli() -> int:
 
     all_samples = all_cold + all_warm
     report = {
-        "schema_version": 1,
+        "schema_version": 2,
         "suite_id": "firstroll-pre-agent-packet-v1",
         "system": "fixed_workflow_packet_preparation",
         "recorded_at": datetime.now(timezone.utc).isoformat(),
@@ -535,6 +588,8 @@ def main_cli() -> int:
             "runtime": "local_private_edition",
             "model_calls": 0,
             "film_resolution_timed": False,
+            "embedding_prewarmed": args.prewarm_embeddings,
+            "embedding_warmup_timed_separately": args.prewarm_embeddings,
             "warmups_per_case": 1,
             "warm_samples_per_case": args.warm_samples,
             "cold_processes_per_case": args.cold_processes,
@@ -553,6 +608,10 @@ def main_cli() -> int:
             "cold_stages": stage_summary(all_cold),
             "warm_stages": stage_summary(all_warm),
             "packet_metrics": packet_metric_summary(all_samples),
+            "embedding_warmup": {
+                "parent_process": parent_embedding_warmup,
+                "cold_processes": embedding_warmup_summary(all_cold),
+            },
         },
         "cases": case_reports,
     }
