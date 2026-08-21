@@ -1,0 +1,171 @@
+{
+  "schema_version": 1,
+  "suite_id": "firstroll-pre-agent-machine-gate-v1",
+  "programme_id": "firstroll-pre-agent-hardening-v1",
+  "recorded_at": "2026-08-21T18:54:51.376083+00:00",
+  "source_revision": "703e1add4d71ad7af2dc5860dae6bf4e5f228aa4",
+  "summary": {
+    "required_targets": 17,
+    "passed_targets": 16,
+    "failed_targets": 0,
+    "pending_targets": 1,
+    "all_machine_targets_passed": true,
+    "agent_entry_ready": false
+  },
+  "targets": [
+    {
+      "target_id": "fixed_suite_completion_ratio",
+      "status": "passed",
+      "observed": 1.0,
+      "comparison": "eq",
+      "threshold": 1.0,
+      "evidence_path": "evals/results/baseline-reliability-2026-08-21.json"
+    },
+    {
+      "target_id": "human_packet_pass_ratio",
+      "status": "pending_human_review",
+      "observed": null,
+      "comparison": "gte",
+      "threshold": 0.8,
+      "evidence_path": "local-only human packet review aggregate"
+    },
+    {
+      "target_id": "mean_quality_score_completed",
+      "status": "passed",
+      "observed": 98.65,
+      "comparison": "gte",
+      "threshold": 96.94,
+      "evidence_path": "evals/results/baseline-reliability-2026-08-21.json"
+    },
+    {
+      "target_id": "median_prompt_tokens",
+      "status": "passed",
+      "observed": 6327,
+      "comparison": "lte",
+      "threshold": 8000,
+      "evidence_path": "evals/results/baseline-reliability-2026-08-21.json"
+    },
+    {
+      "target_id": "p95_prompt_tokens",
+      "status": "passed",
+      "observed": 7415.6,
+      "comparison": "lte",
+      "threshold": 12000,
+      "evidence_path": "evals/results/baseline-reliability-2026-08-21.json"
+    },
+    {
+      "target_id": "packet_citation_integrity",
+      "status": "passed",
+      "observed": 1.0,
+      "comparison": "eq",
+      "threshold": 1.0,
+      "evidence_path": "evals/results/baseline-reliability-2026-08-21.json"
+    },
+    {
+      "target_id": "packet_duplicate_ratio",
+      "status": "passed",
+      "observed": 0.0,
+      "comparison": "lt",
+      "threshold": 0.1,
+      "evidence_path": "evals/results/packet-selection-2026-08-21.json"
+    },
+    {
+      "target_id": "packet_provenance_completeness",
+      "status": "passed",
+      "observed": 1.0,
+      "comparison": "eq",
+      "threshold": 1.0,
+      "evidence_path": "evals/results/packet-selection-2026-08-21.json"
+    },
+    {
+      "target_id": "paired_end_to_end_median_reduction",
+      "status": "passed",
+      "observed": 0.169011,
+      "comparison": "gte",
+      "threshold": 0.15,
+      "evidence_path": "evals/results/baseline-reliability-2026-08-21.json"
+    },
+    {
+      "target_id": "paired_end_to_end_p95_regression",
+      "status": "passed",
+      "observed": -0.201406,
+      "comparison": "lte",
+      "threshold": 0.0,
+      "evidence_path": "evals/results/baseline-reliability-2026-08-21.json"
+    },
+    {
+      "target_id": "quality_gate_pass_ratio_completed",
+      "status": "passed",
+      "observed": 1.0,
+      "comparison": "eq",
+      "threshold": 1.0,
+      "evidence_path": "evals/results/baseline-reliability-2026-08-21.json"
+    },
+    {
+      "target_id": "retrieved_instruction_containment",
+      "status": "passed",
+      "observed": 1.0,
+      "comparison": "eq",
+      "threshold": 1.0,
+      "evidence_path": "evals/results/packet-quality-selection-2026-08-21.json"
+    },
+    {
+      "target_id": "stage_observability_ratio",
+      "status": "passed",
+      "observed": 1.0,
+      "comparison": "gte",
+      "threshold": 1.0,
+      "evidence_path": "evals/results/baseline-reliability-2026-08-21.json"
+    },
+    {
+      "target_id": "ui_core_journey_blockers",
+      "status": "passed",
+      "observed": 0,
+      "comparison": "eq",
+      "threshold": 0,
+      "evidence_path": "evals/results/ui-hierarchy-2026-08-21.json"
+    },
+    {
+      "target_id": "ui_critical_accessibility_defects",
+      "status": "passed",
+      "observed": 0,
+      "comparison": "eq",
+      "threshold": 0,
+      "evidence_path": "evals/results/ui-states-accessibility-2026-08-21.json"
+    },
+    {
+      "target_id": "ui_visible_response_p95_ms",
+      "status": "passed",
+      "observed": 12.05,
+      "comparison": "lte",
+      "threshold": 300,
+      "evidence_path": "evals/results/ui-hierarchy-2026-08-21.json"
+    },
+    {
+      "target_id": "warm_packet_prepare_p95_seconds",
+      "status": "passed",
+      "observed": 0.204671,
+      "comparison": "lte",
+      "threshold": 2.0,
+      "evidence_path": "evals/results/packet-selection-2026-08-21.json"
+    }
+  ],
+  "blocking_reasons": [
+    "pending:human_packet_pass_ratio"
+  ],
+  "step_status": {
+    "S01": "complete",
+    "S02": "complete",
+    "S03": "complete",
+    "S04": "complete",
+    "S05": "complete",
+    "S06": "complete",
+    "S07": "complete",
+    "S08": "complete",
+    "S09": "complete",
+    "S10": "complete",
+    "S11": "next",
+    "S12": "blocked_by_entry_gate"
+  },
+  "privacy_scope": "Reads versioned aggregate results and an optional redacted human score only; never loads packets, prompts, private books, source text, vectors or provider caches."
+}

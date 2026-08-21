@@ -1,5 +1,60 @@
 # FirstRoll Project Progress
 
+### 21 August 2026 — Final machine gate passes; human packet review pending
+
+Delivered:
+
+1. Added a deterministic final-gate checker that reads only versioned aggregate results and maps all
+   required scorecard targets to their exact evidence paths, comparisons and thresholds.
+2. Added a local resumable human-review tool for the five real packets. It prints private selected
+   evidence only in the terminal, stores scores/notes with mode `0600` under `.firstroll` and emits a
+   separate score-only aggregate after explicit uppercase `YES` attestation.
+3. Added pass-rule coverage: focus relevance, traceability and filmmaker actionability must each be
+   at least 4, no dimension may be below 3 and at least four of five packets must pass.
+4. Added a private reviewer guide with dimension-specific 1/3/5 anchors, privacy instructions,
+   resume behaviour and the final gate command.
+5. Versioned the machine gate at the tooling source revision without inventing a human result.
+
+Machine-gate result:
+
+| Gate | Observed | Required | Status |
+|---|---:|---:|---|
+| Machine-assessable targets | 16 / 16 | 16 / 16 | Passed |
+| Failed machine targets | 0 | 0 | Passed |
+| Warm packet P95 | 0.204671 s | ≤ 2 s | Passed |
+| Prompt median / P95 | 6,327 / 7,415.6 | ≤ 8,000 / 12,000 | Passed |
+| Provenance / citation / instruction containment | 100% / 100% / 100% | 100% | Passed |
+| Maximum duplicate ratio | 0% | < 10% | Passed |
+| Complete workflow / mean quality | 5 / 5 · 98.65 | 5 / 5 · ≥ 96.94 | Passed |
+| Paired P50 improvement / P95 regression | 16.9011% / −20.1406% | ≥ 15% / ≤ 0% | Passed |
+| Human packet pass ratio | Not supplied | ≥ 80% | **Pending** |
+
+Acceptance evidence:
+
+- all 217 automated tests, scoped Ruff, tool/backend compilation and repository whitespace checks
+  pass;
+- machine gate reports 17 required targets, 16 passed, zero failed and one pending, with
+  `agent_entry_ready: false`;
+- tests prove a five-case attested score-only review at 80% completes the target, while weak core or
+  any sub-3 score fails the case;
+- private reviewer notes cannot enter the redacted aggregate, and a partial review is saved for
+  revision-safe resume rather than treated as acceptance;
+- the committed machine-gate result contains no packet, prompt, private passage, vector, cache or
+  reviewer note.
+
+Blocked:
+
+- Step 11 cannot complete until the repository owner personally inspects and scores all five packets;
+- Step 12 and all Agent development remain blocked while `human_packet_pass_ratio` is pending.
+
+Next actionable work:
+
+1. On current clean `master`, run `uv run python tools/review_evidence_packets.py`, inspect all five
+   packet evidence sets privately, enter the five dimension scores and type `YES` only after personal
+   review.
+2. Rerun `tools/check_pre_agent_gate.py` with the redacted local aggregate; commit the final gate and
+   freeze Step 11 only if at least four cases pass.
+
 ### 21 August 2026 — Bounded synthesis recovery and concise output
 
 Delivered:

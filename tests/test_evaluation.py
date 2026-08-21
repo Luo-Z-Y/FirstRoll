@@ -322,6 +322,18 @@ def test_pre_agent_scorecard_freezes_steps_journeys_and_entry_targets() -> None:
     assert all(case["quality"]["valid_citations"] for case in reliability_result["cases"])
     assert reliability_checkpoint["provider_reliability_claim"] is False
 
+    gate_checkpoint = scorecard["measured_checkpoints"]["pre_agent_machine_gate"]
+    gate_result = json.loads(
+        (ROOT / gate_checkpoint["result_path"]).read_text(encoding="utf-8")
+    )
+    assert gate_checkpoint["source_revision"] == gate_result["source_revision"]
+    assert gate_checkpoint["required_targets"] == gate_result["summary"]["required_targets"]
+    assert gate_checkpoint["passed_targets"] == gate_result["summary"]["passed_targets"]
+    assert gate_checkpoint["failed_targets"] == 0
+    assert gate_checkpoint["pending_targets"] == 1
+    assert gate_checkpoint["agent_entry_ready"] is False
+    assert gate_result["blocking_reasons"] == ["pending:human_packet_pass_ratio"]
+
     assert scorecard["latency_stages"] == list(STUDY_STAGE_NAMES)
 
     journey_ids = [journey["id"] for journey in scorecard["user_journeys"]]

@@ -257,6 +257,25 @@ calls and a transport timeout receives only one call. The live five-case run the
 a twenty-attempt provider-reliability claim. Its redacted result contains no private title or
 120-character private passage fragment.
 
+## Pre-Agent Machine Gate
+
+[`pre-agent-machine-gate-2026-08-21.json`](../evals/results/pre-agent-machine-gate-2026-08-21.json)
+reads the versioned aggregate artefacts only. At revision `703e1ad`, all 16 machine-assessable targets
+pass and none fail: observability, UI response/blockers/accessibility, warm packet latency,
+prompt-token budgets, duplicate/provenance/citation/instruction integrity, five-case completion,
+quality gate and paired P50/P95 targets.
+
+The seventeenth target, `human_packet_pass_ratio >= 0.8`, is `pending_human_review`. Consequently
+`agent_entry_ready` is false and Step 11 remains open. The reviewer must inspect the five real local
+packets and attest personally by following [Human Evidence-Packet Review](HUMAN_PACKET_REVIEW.md).
+The review tool writes private notes only under `.firstroll`; the gate reads only its redacted scores.
+An agent cannot substitute automated or model ratings for this target.
+
+```bash
+uv run python tools/check_pre_agent_gate.py \
+  --output evals/results/pre-agent-machine-gate-YYYY-MM-DD.json
+```
+
 ## Deep Study Transparency Checkpoint
 
 [`deep-study-transparency-2026-08-21.json`](../evals/results/deep-study-transparency-2026-08-21.json)
