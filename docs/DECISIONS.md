@@ -78,8 +78,8 @@ film clips. A public site is still important for access, demonstration and film 
 ### Decision
 
 Maintain two explicit runtime modes. Local mode enables the private library, connector settings and
-clip analysis. Hosted public mode publishes discovery, the 3D shelf and authenticated quota-bounded
-Deep Study, but returns 404/503 for private or expensive local features.
+clip analysis. Hosted public mode publishes discovery, the native director shelf and authenticated
+quota-bounded Deep Study, but returns 404/503 for private or expensive local features.
 
 ### Alternatives considered
 

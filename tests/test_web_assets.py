@@ -5,38 +5,29 @@ ROOT = Path(__file__).resolve().parents[1]
 WEB = ROOT / "app" / "web"
 
 
-def test_blender_closet_glb_is_packaged_as_a_web_asset() -> None:
-    model = WEB / "models" / "firstroll-closet.glb"
-
-    assert model.is_file()
-    assert model.stat().st_size > 100_000
-    assert model.read_bytes()[:4] == b"glTF"
-
-
-def test_webgl_runtime_is_local_and_loaded_by_the_discovery_page() -> None:
+def test_director_shelf_uses_native_browser_assets_only() -> None:
     index = (WEB / "index.html").read_text(encoding="utf-8")
-    runtime = (WEB / "closet3d.js").read_text(encoding="utf-8")
+    app = (WEB / "app.js").read_text(encoding="utf-8")
+    build = (ROOT / "tools" / "build_web.sh").read_text(encoding="utf-8")
 
-    assert 'type="importmap"' in index
-    assert 'src="/assets/closet3d.js' in index
-    assert 'from "three"' in runtime
-    assert "firstroll-closet.glb" in runtime
-    assert "firstroll:select-film" in runtime
-    assert "waitForShelfReveal" in runtime
-    assert 'textContent = "Shelf ready"' in runtime
-    assert "window.setTimeout(resolve, 420)" in runtime
-    assert "window.FirstRollCloset.update(detail)" in (WEB / "app.js").read_text(
-        encoding="utf-8"
-    )
-    assert (WEB / "vendor" / "three" / "LICENSE").is_file()
+    assert 'type="importmap"' not in index
+    assert "closet3d.js" not in index
+    assert "three.module" not in index
+    assert "directorShelfMarkup" in app
+    assert "directorShelfFilmsMarkup" in app
+    assert "data-director-shelf" in app
+    assert "closet3d.js" not in build
+    assert 'cp -R "$source_dir/models"' not in build
+    assert 'cp -R "$source_dir/vendor"' not in build
+    assert not (WEB / "closet3d.js").exists()
+    assert not (WEB / "models").exists()
+    assert not (WEB / "vendor" / "three").exists()
 
 
 def test_supabase_auth_is_bundled_and_deep_study_sends_bearer_tokens() -> None:
     index = (WEB / "index.html").read_text(encoding="utf-8")
     auth = (WEB / "auth.js").read_text(encoding="utf-8")
     app = (WEB / "app.js").read_text(encoding="utf-8")
-    build = (ROOT / "tools" / "build_web.sh").read_text(encoding="utf-8")
-    integrations = (WEB / "integrations.js").read_text(encoding="utf-8")
 
     assert 'id="authDialog"' in index
     assert '"/assets/auth.js?v=20260820-4"' in index
@@ -245,9 +236,9 @@ def test_archive_pullout_collapses_before_zoom_can_clip_its_copy() -> None:
     styles = (WEB / "styles.css").read_text(encoding="utf-8")
     app = (WEB / "app.js").read_text(encoding="utf-8")
 
-    assert "/assets/styles.css?v=20260821-3" in index
-    assert "/assets/app.js?v=20260821-4" in index
-    assert "/assets/closet3d.js?v=20260821-1" in index
+    assert "/assets/styles.css?v=20260821-4" in index
+    assert "/assets/app.js?v=20260821-6" in index
+    assert "closet3d.js" not in index
     assert 'class="archive-pullout-shell"' in app
     assert "container-type: inline-size" in styles
     assert "@container (max-width: 520px)" in styles
@@ -300,102 +291,41 @@ def test_supabase_dialog_hides_the_unused_entra_form() -> None:
     assert 'body[data-auth-provider="entra"] form.auth-provider-entra { display: grid; }' in styles
 
 
-def test_director_shelf_uses_front_facing_poster_cases() -> None:
+def test_director_shelf_renders_immediately_then_enriches_posters() -> None:
     app = (WEB / "app.js").read_text(encoding="utf-8")
-    runtime = (WEB / "closet3d.js").read_text(encoding="utf-8")
     styles = (WEB / "styles.css").read_text(encoding="utf-8")
     discovery = (ROOT / "app" / "backend" / "discovery.py").read_text(encoding="utf-8")
-    blender_builder = (ROOT / "tools" / "build_closet_blender.py").read_text(
-        encoding="utf-8"
-    )
 
     assert "displayableFilms" in app
-    assert "fetchRelatedFilms(primary.id, { fast: true })" in app
-    assert "fetchRelatedFilms(primary.id, { fast: false })" in app
-    assert 'fast=${fast}&director_only=true' in app
-    assert "enrichDirectorShelf" in app
-    assert "Keep the fast shelf and its designed cover fallbacks" in app
-    assert "buildShelfCollections(primary, directorWorks, director)" in app
-    director_shelf = app[app.index("function buildShelfCollections"):app.index("function displayableFilms")]
-    assert "const films = displayableFilms(directorWorks)" in director_shelf
-    assert "shared_cast" not in director_shelf
-    assert "candidate_cap = min(168, max(40, limit * 5))" in discovery
+    assert "displayableFilms([primary, ...directorWorks])" in app
+    assert "directorShelfMarkup(primary, directorWorks, director, loading)" in app
+    assert "directorShelfFilmsMarkup(primary, films, loading)" in app
+    assert "data-film-shelf-status" in app
+    assert "data-retry-director-shelf" in app
+    assert "retryDirectorShelf" in app
+    assert "showFilmShelfFallback" in app
+    fallback = app[app.index("function showFilmShelfFallback"):app.index("function retryDirectorShelf")]
+    assert "directorShelfFilmsMarkup(primary, films, false)" in fallback
+    assert "Showing the selected film." in fallback
+    assert "shelfRequestId: 0" in app
+    assert "requestId !== state.discovery.shelfRequestId" in app
+    assert "window.setTimeout(() => controller.abort(), fast ? 25000 : 60000)" in app
+    assert 'fast ? 25000 : 60000' in app
+    assert 'fast=${fast ? "true" : "false"}&director_only=true' in app
+    assert "enrichDirectorFilmography" in app
+    assert '`${filmId}:${fast ? "fast" : "enriched"}`' in app
+    assert "Director poster enrichment did not complete" in app
+    assert "FirstRollCloset" not in app
+    assert "WebGL" not in app
+    assert "Blender" not in app
+    assert "!/^Q\\d+$/i.test(text)" in app
     assert "candidate_cap = min(48, max(limit * 2, limit))" in discovery
     assert "if cast_ids and not director_only:" in discovery
     assert "self._get_shelf_entities(selected_ids)" in discovery
-    assert "RELATED_POSTER_FALLBACK_LIMIT = 8" in discovery
-    assert "fetchRelatedFilms" in app
-    assert "fast ? 18000 : 65000" in app
-    assert "Loading director shelf" in app
-    assert "searchFallbackShelfCollections" not in app
-    assert "Live relations delayed · showing verified search matches" not in app
-    assert "clearLiveCollections" in runtime
-    assert "this.shelfPlaques" not in runtime
-    assert "hydrateFilmShelf" in app
-    assert "collections: []" in app
-    assert "window.FirstRollCloset.update(detail)" in app
-    assert "showFilmShelfError" in app
-    assert 'querySelector(".film-closet")?.remove()' in app
-    assert 'classList.add("is-shelf-unavailable")' in app
-    assert "Full shelf unavailable" not in app
-    assert ".film-archive.is-shelf-unavailable" in styles
-    assert "No other verified films by this director were returned" in app
-    assert "collections.some((collection) => collection.films.length < 10)" not in app
-    assert "videoProviderStatusMarkup" in app
-    assert "Douban is not connected on this hosted server yet" in app
-    assert "renderFilmArchive(primary, [], uniqueFilms(nearby" not in app
-    assert "!/^Q\\d+$/i.test(text)" in app
-    assert "closet-help" not in app
-    assert app.count('wall: "back"') == 1
-    assert 'wall: "left"' not in app
-    assert 'wall: "right"' not in app
-    assert 'shelf: "middle",\n    label: `${director} films`' in app
-    assert "Shared cast & related works" not in app
-    assert "const SHELF_ROW_SIZE = 12" in runtime
-    assert "const DISPLAY_COLUMNS = 4" in runtime
-    assert "SHELF_VERTICAL_CENTRE = 2.27" in runtime
-    assert "DEFAULT_CAMERA_POSITION = new THREE.Vector3(0, SHELF_VERTICAL_CENTRE, 0.12)" in runtime
-    assert "DEFAULT_CAMERA_PITCH = 0" in runtime
-    assert runtime.count("this.camera.position.copy(DEFAULT_CAMERA_POSITION)") == 2
-    assert "this.camera.getWorldDirection(forward)" in runtime
-    assert "crossVectors(forward, this.camera.up)" in runtime
-    assert "const { forward } = this.movementBasis()" in runtime
-    assert "const { right } = this.movementBasis()" in runtime
-    assert "placeholder: true" not in runtime
-    assert "FirstRoll Archive" not in runtime
-    assert "selectableCase: true" in runtime
-    assert "bottom: 0.61" in runtime
-    assert "top: 3.93" in runtime
-    assert "middle: 2.27" in runtime
-    assert "upper: 3.10" in runtime
-    assert "lower: 1.44" in runtime
-    assert "new THREE.Vector3(offset, rowHeights[rowIndex], -3.52)" in runtime
-    assert "const gap = 0.085" in runtime
-    assert "const depth = 0.095" in runtime
-    assert "amount * 0.035" in runtime
-    assert "wireframe: true" not in runtime
-    assert "firstroll_ambient_case" not in runtime
-    assert "updateCaseCaption" in runtime
-    assert "uniqueFilmCount" in runtime
-    assert "canvas.height = 1152" in runtime
-    assert "closet-loading-cases" in app
-    assert "closet-loading-case" in styles
-    assert "hasShelfCollections" in runtime
-    assert "finishLoading" in runtime
-    assert runtime.count('if (this.hasShelfCollections()) {') == 2
-    assert "const faceAspect = faceWidth / faceHeight" in runtime
-    assert "loadPosterTexture" in runtime
-    assert 'textContent = "Loading film artwork"' not in runtime
-    assert "this.loadPosterTexture(film.poster_url, faceAspect).then" in runtime
-    assert "posterPromise" in runtime
-    assert "loadedPosterCount" in runtime
-    assert "createCoverBaseTexture" in runtime
-    assert "createCoverLabelTexture" in runtime
-    assert "createSpineTexture" not in runtime
-    assert "async update(payload)" in runtime
-    assert 'setCrossOrigin("anonymous")' in runtime
-    assert "texture.repeat.set(targetAspect / imageAspect, 1)" in runtime
-    assert "All five rows remain empty in the asset" in blender_builder
-    assert "firstroll_ambient_case" not in blender_builder
-    assert 'build_side_shelves("left", materials)' not in blender_builder
-    assert 'build_side_shelves("right", materials)' not in blender_builder
+    assert ".director-shelf" in styles
+    assert ".director-film-list" in styles
+    assert ".director-film-card.is-selected" in styles
+    assert ".director-film-slot.is-skeleton" in styles
+    assert "@container (min-width: 660px)" in styles
+    assert ".film-closet" not in styles
+    assert ".closet-webgl" not in styles

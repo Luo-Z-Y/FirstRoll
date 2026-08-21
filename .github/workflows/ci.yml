@@ -70,7 +70,7 @@ jobs:
           tests/test_research_agent_contract.py
           tests/test_research_graph.py
           tests/test_video_sources.py
-          tests/test_web_3d_assets.py
+          tests/test_web_assets.py
           tests/test_frontend_ci.py
       - name: Build hosted frontend
         env:

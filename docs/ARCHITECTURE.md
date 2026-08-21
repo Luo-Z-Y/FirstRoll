@@ -1,7 +1,7 @@
 # FirstRoll Architecture
 
 **Status:** Current implementation  
-**Last reconciled:** 20 August 2026
+**Last reconciled:** 21 August 2026
 
 FirstRoll is a local-first film-study system with an Azure-hosted public beta. “Local-first”
 describes where private books, credentials, derived vectors and uploaded film clips are kept; it does
@@ -17,7 +17,7 @@ flowchart LR
     end
 
     subgraph Azure["Azure public edge"]
-        Static["Static Web Apps<br/>firstroll.app<br/>HTML · CSS · JavaScript · Three.js"]
+        Static["Static Web Apps<br/>firstroll.app<br/>HTML · CSS · JavaScript"]
     end
 
     subgraph ContainerApps["Azure Container Apps"]
@@ -122,7 +122,7 @@ future-enterprise path, but ADR-017 removes it from the production critical path
 
 | Component | Responsibility | Does not own |
 |---|---|---|
-| `app/web` | Search, disambiguation, 3D shelf, password-account UI, RLS-backed saved films, evidence views, progress rendering and clip upload UI | Provider secrets, cross-account authorisation, evidence validation or quota decisions |
+| `app/web` | Search, disambiguation, resilient native director shelf, password-account UI, RLS-backed saved films, evidence views, progress rendering and clip upload UI | Provider secrets, cross-account authorisation, evidence validation or quota decisions |
 | `main.py` | HTTP boundary, mode gates, authentication calls, quota ordering, request validation and error mapping | Provider parsing rules or model-quality policy |
 | `discovery.py` | Canonical film identity, credits, posters, overview reconciliation and related films | Critical interpretation or creator intention |
 | `criticism.py` | Provider-specific acquisition, identity checks, attributed review models and private cache | Direct film observation |

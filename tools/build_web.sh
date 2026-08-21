@@ -116,11 +116,8 @@ cp "$source_dir/index.html" "$output_dir/index.html"
 cp "$source_dir/app.js" "$output_dir/assets/app.js"
 cp "$source_dir/integrations.js" "$output_dir/assets/integrations.js"
 cp "$source_dir/local-auth.js" "$output_dir/assets/local-auth.js"
-cp "$source_dir/closet3d.js" "$output_dir/assets/closet3d.js"
 cp "$source_dir/favicon.svg" "$output_dir/assets/favicon.svg"
 cp "$source_dir/styles.css" "$output_dir/assets/styles.css"
-cp -R "$source_dir/models" "$output_dir/assets/models"
-cp -R "$source_dir/vendor" "$output_dir/assets/vendor"
 
 npm ci --include=dev --ignore-scripts --no-audit --no-fund
 ./node_modules/.bin/esbuild "$source_dir/auth.js" \

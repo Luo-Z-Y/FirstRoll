@@ -24,6 +24,7 @@ const state = {
     relatedFilmCache: new Map(),
     searchRequestId: 0,
     searchController: null,
+    shelfRequestId: 0,
     shelfRequestControllers: new Set(),
   },
 };
@@ -501,6 +502,7 @@ async function onDiscoverySearch(event) {
 }
 
 function cancelShelfRequests() {
+  state.discovery.shelfRequestId += 1;
   state.discovery.shelfRequestControllers.forEach((controller) => controller.abort());
   state.discovery.shelfRequestControllers.clear();
 }
@@ -673,68 +675,99 @@ function confirmDiscoveryFilm(index) {
 }
 
 async function loadRelatedFilms(primary, nearby) {
+  const requestId = state.discovery.shelfRequestId + 1;
+  state.discovery.shelfRequestId = requestId;
+  setDirectorShelfLoading(primary.id);
   try {
-    const data = await fetchRelatedFilms(primary.id, { fast: true });
-    if (!applyDirectorShelf(primary, nearby, data)) {
-      throw new Error("No other verified films by this director were returned.");
-    }
-    void enrichDirectorShelf(primary, nearby);
+    const data = await fetchRelatedFilms(primary.id);
+    if (
+      requestId !== state.discovery.shelfRequestId
+      || state.discovery.archiveSelectionId !== primary.id
+    ) return;
+    applyDirectorShelf(primary, nearby, data);
+    void enrichDirectorFilmography(primary, nearby, requestId);
   } catch (error) {
-    if (state.discovery.archiveSelectionId !== primary.id) return;
-    showFilmShelfError(error);
+    if (
+      requestId !== state.discovery.shelfRequestId
+      || state.discovery.archiveSelectionId !== primary.id
+    ) return;
+    showFilmShelfFallback(primary.id, error);
+  }
+}
+
+async function enrichDirectorFilmography(primary, nearby, requestId) {
+  try {
+    const data = await fetchRelatedFilms(primary.id, false);
+    if (
+      requestId !== state.discovery.shelfRequestId
+      || state.discovery.archiveSelectionId !== primary.id
+    ) return;
+    const current = state.discovery.archive?.directorWorks || [];
+    const enriched = uniqueFilms(data.same_director || [], [primary]);
+    const enrichedById = new Map(enriched.map((film) => [film.id, film]));
+    const merged = current.map((film) => {
+      const update = enrichedById.get(film.id);
+      if (!update) return film;
+      enrichedById.delete(film.id);
+      const next = { ...film, ...update };
+      if (!update.poster_url && film.poster_url) {
+        next.poster_url = film.poster_url;
+        next.poster_source = film.poster_source;
+      }
+      return next;
+    });
+    const additions = [...enrichedById.values()];
+    state.discovery.archive = {
+      primary,
+      directorWorks: [...merged, ...additions],
+      relevant: nearby,
+    };
+    hydrateDirectorShelf(primary.id, state.discovery.archive.directorWorks);
+  } catch (error) {
+    if (
+      requestId === state.discovery.shelfRequestId
+      && state.discovery.archiveSelectionId === primary.id
+    ) {
+      console.debug("Director poster enrichment did not complete", error);
+    }
   }
 }
 
 function applyDirectorShelf(primary, nearby, data) {
-  if (state.discovery.archiveSelectionId !== primary.id) return false;
+  if (state.discovery.archiveSelectionId !== primary.id) return;
   const directorWorks = uniqueFilms(data.same_director || [], [primary]);
-  const director = firstCrewName(
-    [data.director, ...(primary.directors || [])],
-    "this director",
-  );
-  const collections = buildShelfCollections(primary, directorWorks, director);
-  if (!collections.some((collection) => collection.films.length)) return false;
-  state.discovery.archive = { primary, directorWorks, relevant: nearby, categories: {} };
-  hydrateFilmShelf(primary.id, collections);
-  setFilmShelfStatus("ready");
-  return true;
+  state.discovery.archive = { primary, directorWorks, relevant: nearby };
+  hydrateDirectorShelf(primary.id, directorWorks);
 }
 
-async function enrichDirectorShelf(primary, nearby) {
-  try {
-    const data = await fetchRelatedFilms(primary.id, { fast: false });
-    applyDirectorShelf(primary, nearby, data);
-  } catch (_) {
-    // Keep the fast shelf and its designed cover fallbacks when poster providers are slow.
-  }
-}
-
-async function fetchRelatedFilms(filmId, { fast }) {
+async function fetchRelatedFilms(filmId, fast = true) {
   const cacheKey = `${filmId}:${fast ? "fast" : "enriched"}`;
   const cached = state.discovery.relatedFilmCache.get(cacheKey);
   if (cached) return cached;
   const controller = new AbortController();
   state.discovery.shelfRequestControllers.add(controller);
-  const timeout = window.setTimeout(() => controller.abort(), fast ? 18000 : 65000);
-  const progress = window.setTimeout(() => {
-    const loading = refs.discoveryResults.querySelector("[data-closet-loading] strong");
-    if (loading && fast) loading.textContent = "Loading director shelf";
-  }, 7000);
+  const timeout = window.setTimeout(() => controller.abort(), fast ? 25000 : 60000);
+  const progress = fast
+    ? window.setTimeout(() => {
+      const status = refs.discoveryResults.querySelector("[data-film-shelf-status]");
+      if (status) status.textContent = "Still checking the verified director filmography…";
+    }, 7000)
+    : null;
   try {
     const res = await fetch(
-      `${discoveryApiBase()}/api/discovery/films/${encodeURIComponent(filmId)}/related?limit=12&fast=${fast}&director_only=true`,
+      `${discoveryApiBase()}/api/discovery/films/${encodeURIComponent(filmId)}/related?limit=12&fast=${fast ? "true" : "false"}&director_only=true`,
       { signal: controller.signal },
     );
     if (!res.ok) throw new Error(await readApiError(res));
     const data = await res.json();
     if (data.state === "unavailable") {
-      throw new Error("Verified related films are temporarily unavailable.");
+      throw new Error("The verified director filmography did not respond.");
     }
     state.discovery.relatedFilmCache.set(cacheKey, data);
     return data;
   } catch (error) {
     throw error?.name === "AbortError"
-      ? new Error("The director shelf took too long to respond.")
+      ? new Error("The director filmography request timed out.")
       : error;
   } finally {
     state.discovery.shelfRequestControllers.delete(controller);
@@ -743,20 +776,70 @@ async function fetchRelatedFilms(filmId, { fast }) {
   }
 }
 
-function hydrateFilmShelf(primaryId, collections) {
+function setDirectorShelfLoading(primaryId) {
+  const shelf = refs.discoveryResults.querySelector("[data-director-shelf]");
+  if (!shelf || shelf.dataset.primaryFilmId !== primaryId) return;
+  const archive = state.discovery.archive;
+  const primary = archive?.primary;
+  const films = primary ? directorShelfFilms(primary, archive.directorWorks || []) : [];
+  const stage = shelf.querySelector("[data-film-shelf]");
+  if (stage && primary) stage.innerHTML = directorShelfFilmsMarkup(primary, films, true);
+  shelf.classList.add("is-loading");
+  shelf.classList.remove("has-partial-data");
+  const status = shelf.querySelector("[data-film-shelf-status]");
+  const retry = shelf.querySelector("[data-retry-director-shelf]");
+  if (status) status.textContent = "Finding other verified films by this director…";
+  retry?.classList.add("hidden");
+}
+
+function hydrateDirectorShelf(primaryId, directorWorks) {
   if (state.discovery.archiveSelectionId !== primaryId) return;
-  initialiseClosetViewport({ primaryId, collections }, true);
+  const shelf = refs.discoveryResults.querySelector("[data-director-shelf]");
+  if (!shelf || shelf.dataset.primaryFilmId !== primaryId) return;
+  const primary = state.discovery.archive?.primary;
+  if (!primary) return;
+  const films = directorShelfFilms(primary, directorWorks);
+  const stage = shelf.querySelector("[data-film-shelf]");
+  const count = shelf.querySelector("[data-film-shelf-count]");
+  const status = shelf.querySelector("[data-film-shelf-status]");
+  const retry = shelf.querySelector("[data-retry-director-shelf]");
+  if (stage) stage.innerHTML = directorShelfFilmsMarkup(primary, films, false);
+  if (count) count.textContent = `${films.length} ${films.length === 1 ? "film" : "films"}`;
+  if (status) {
+    status.textContent = films.length > 1
+      ? `${films.length} verified films are ready to browse.`
+      : "Only the selected film is currently on this shelf.";
+  }
+  retry?.classList.add("hidden");
+  shelf.classList.remove("is-loading", "has-partial-data");
 }
 
-function setFilmShelfStatus(message) {
-  const root = refs.discoveryResults.querySelector("[data-closet-viewport]");
-  if (root) root.dataset.status = message;
+function showFilmShelfFallback(primaryId, error) {
+  console.warn("Director filmography request did not complete", error);
+  const shelf = refs.discoveryResults.querySelector("[data-director-shelf]");
+  if (!shelf || shelf.dataset.primaryFilmId !== primaryId) return;
+  const archive = state.discovery.archive;
+  const primary = archive?.primary;
+  const films = primary ? directorShelfFilms(primary, archive.directorWorks || []) : [];
+  const stage = shelf.querySelector("[data-film-shelf]");
+  const count = shelf.querySelector("[data-film-shelf-count]");
+  if (stage && primary) stage.innerHTML = directorShelfFilmsMarkup(primary, films, false);
+  if (count) count.textContent = `${films.length} ${films.length === 1 ? "film" : "films"}`;
+  shelf.classList.remove("is-loading");
+  shelf.classList.add("has-partial-data");
+  const status = shelf.querySelector("[data-film-shelf-status]");
+  const retry = shelf.querySelector("[data-retry-director-shelf]");
+  if (status) {
+    status.textContent = "Showing the selected film. Try loading the director’s other films again.";
+  }
+  retry?.classList.remove("hidden");
 }
 
-function showFilmShelfError(error) {
-  console.warn("Director shelf unavailable", error);
-  refs.discoveryResults.querySelector(".film-closet")?.remove();
-  refs.discoveryResults.classList.add("is-shelf-unavailable");
+function retryDirectorShelf() {
+  const archive = state.discovery.archive;
+  if (!archive?.primary) return;
+  cancelShelfRequests();
+  void loadRelatedFilms(archive.primary, archive.relevant || []);
 }
 
 function uniqueFilms(films, excluded = []) {
@@ -768,23 +851,11 @@ function uniqueFilms(films, excluded = []) {
   });
 }
 
-function renderFilmArchive(
-  primary,
-  directorWorks,
-  relevant,
-  loading,
-  directorName = null,
-  categories = {},
-) {
-  refs.discoveryResults.classList.remove("is-shelf-unavailable");
-  const director = firstCrewName(
-    [directorName, ...(primary.directors || [])],
-    "this director",
-  );
+function renderFilmArchive(primary, directorWorks, relevant, loading) {
+  const director = firstCrewName(primary.directors || [], "Director not supplied");
   const duration = formatFilmDuration(primary.runtime_minutes);
-  const shelfCollections = buildShelfCollections(primary, directorWorks, director);
   state.discovery.archiveSelectionId = primary.id;
-  state.discovery.archive = { primary, directorWorks, relevant, categories };
+  state.discovery.archive = { primary, directorWorks, relevant };
   refs.discoveryResults.innerHTML = `
     <div class="archive-pullout-shell">
       <div class="archive-pullout">
@@ -803,23 +874,7 @@ function renderFilmArchive(
         </div>
       </div>
     </div>
-    <aside class="film-closet" aria-label="Films directed by ${escapeHtml(director)}">
-      <div class="closet-header">
-        <span>${escapeHtml(director)}</span>
-      </div>
-      ${closetRoomMarkup(loading)}
-    </aside>`;
-  if (loading) {
-    initialiseClosetViewport({
-      primaryId: primary.id,
-      collections: [],
-    });
-  } else {
-    initialiseClosetViewport({
-      primaryId: primary.id,
-      collections: shelfCollections,
-    });
-  }
+    ${directorShelfMarkup(primary, directorWorks, director, loading)}`;
 }
 
 function formatFilmDuration(minutes) {
@@ -864,16 +919,73 @@ function criterionCaseMarkup(film) {
     </div>`;
 }
 
-function buildShelfCollections(primary, directorWorks, director) {
-  const films = displayableFilms(directorWorks)
-    .filter((film) => film.id !== primary.id)
-    .slice(0, 12);
-  return [{
-    wall: "back",
-    shelf: "middle",
-    label: `${director} films`,
-    films,
-  }];
+function directorShelfFilms(primary, directorWorks) {
+  return displayableFilms([primary, ...directorWorks]).slice(0, 12);
+}
+
+function directorShelfMarkup(primary, directorWorks, director, loading) {
+  const films = directorShelfFilms(primary, directorWorks);
+  const status = loading
+    ? "Finding other verified films by this director…"
+    : `${films.length} verified ${films.length === 1 ? "film" : "films"}.`;
+  return `
+    <aside
+      class="director-shelf${loading ? " is-loading" : ""}"
+      data-director-shelf
+      data-primary-film-id="${escapeHtml(primary.id)}"
+      aria-label="Films directed by ${escapeHtml(director)}"
+    >
+      <header class="director-shelf-head">
+        <div>
+          <span>Director filmography</span>
+          <h3>${escapeHtml(director)}</h3>
+        </div>
+        <small data-film-shelf-count>${films.length} ${films.length === 1 ? "film" : "films"}</small>
+      </header>
+      <div class="director-shelf-stage" data-film-shelf>
+        ${directorShelfFilmsMarkup(primary, films, loading)}
+      </div>
+      <footer class="director-shelf-foot">
+        <p data-film-shelf-status role="status" aria-live="polite">${escapeHtml(status)}</p>
+        <button class="hidden" type="button" data-retry-director-shelf>Try again</button>
+      </footer>
+    </aside>`;
+}
+
+function directorShelfFilmsMarkup(primary, films, loading) {
+  const cards = films.map((film, index) => {
+    const selected = film.id === primary.id;
+    const title = film.title || film.original_title || "Untitled";
+    const year = filmYearLabel(film);
+    const poster = safeHttpUrl(film.poster_url);
+    const opening = selected
+      ? '<article class="director-film-card is-selected" aria-current="true">'
+      : `<button class="director-film-card" type="button" data-select-film-id="${escapeHtml(film.id)}" aria-label="Select ${escapeHtml(title)}, ${escapeHtml(year)}">`;
+    const closing = selected ? "</article>" : "</button>";
+    return `<li class="director-film-slot">
+      ${opening}
+        <span class="director-film-cover">
+          <span class="director-film-fallback" aria-hidden="true"><b>FR</b><span>${escapeHtml(title)}</span><small>${escapeHtml(year)}</small></span>
+          ${poster ? `<img src="${escapeHtml(poster)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()" />` : ""}
+          <i aria-hidden="true">${String(index + 1).padStart(2, "0")}</i>
+        </span>
+        <span class="director-film-copy">
+          <strong>${escapeHtml(title)}</strong>
+          <small>${escapeHtml(year)}${selected ? " · Selected" : ""}</small>
+        </span>
+      ${closing}
+    </li>`;
+  });
+  if (loading) {
+    cards.push(...Array.from({ length: 5 }, (_, index) => `
+      <li class="director-film-slot is-skeleton" aria-hidden="true">
+        <span class="director-film-card">
+          <span class="director-film-cover"><i>${String(films.length + index + 1).padStart(2, "0")}</i></span>
+          <span class="director-film-copy"><strong></strong><small></small></span>
+        </span>
+      </li>`));
+  }
+  return `<ol class="director-film-list">${cards.join("")}</ol>`;
 }
 
 function displayableFilms(films) {
@@ -887,44 +999,14 @@ function displayableFilms(films) {
   });
 }
 
-function closetRoomMarkup(loading) {
-  return `
-    <div class="closet-viewport closet-webgl" data-closet-viewport tabindex="0" aria-label="Interactive Blender film shelf. Drag to look around, scroll or press W and S to move closer or farther away, use A and D to move sideways, and select a case to pull it out.">
-      <canvas data-closet-canvas aria-hidden="true"></canvas>
-      <div class="closet-model-loading" data-closet-loading role="status">
-        <div class="closet-loading-cases" aria-hidden="true">
-          <i></i><i></i><i></i><i></i><i></i><i></i>
-        </div>
-        <strong>${loading ? "Curating the shelf" : "Opening the 3D archive"}</strong>
-      </div>
-      <span class="closet-reticle" aria-hidden="true"></span>
-    </div>
-    <div class="closet-hud">
-      <div class="closet-radar" aria-hidden="true"><i></i><span></span></div>
-      <span class="closet-coordinate">DISTANT VIEW · FILM SHELF</span>
-      <div class="closet-walk-controls" role="group" aria-label="Move towards or away from the shelf">
-        <button type="button" data-walk-closet="-1.15" aria-label="Move away from the shelf">Step back</button>
-        <span class="closet-depth-track" aria-hidden="true"><i></i></span>
-        <button type="button" data-walk-closet="1.15" aria-label="Move towards the shelf">Move closer</button>
-      </div>
-      <button type="button" data-centre-closet aria-label="Reset the shelf view">Reset view</button>
-    </div>`;
-}
-
 async function onFilmResultClick(event) {
   const identityChoice = event.target.closest("[data-confirm-film-index]");
   if (identityChoice) {
     confirmDiscoveryFilm(Number(identityChoice.dataset.confirmFilmIndex));
     return;
   }
-  const centreButton = event.target.closest("[data-centre-closet]");
-  if (centreButton) {
-    window.FirstRollCloset?.reset();
-    return;
-  }
-  const walkButton = event.target.closest("[data-walk-closet]");
-  if (walkButton) {
-    window.FirstRollCloset?.walk(Number(walkButton.dataset.walkCloset));
+  if (event.target.closest("[data-retry-director-shelf]")) {
+    retryDirectorShelf();
     return;
   }
   const selection = event.target.closest("[data-select-film-id]");
@@ -937,30 +1019,12 @@ async function onFilmResultClick(event) {
   await loadFilmDetail(button.dataset.filmId);
 }
 
-function initialiseClosetViewport(payload, update = false) {
-  window.requestAnimationFrame(() => {
-    const root = refs.discoveryResults.querySelector("[data-closet-viewport]");
-    if (!root) return;
-    const detail = { ...payload, root };
-    window.__firstRollClosetPayload = detail;
-    if (window.FirstRollCloset) {
-      if (update) window.FirstRollCloset.update(detail);
-      else window.FirstRollCloset.mount(detail);
-      return;
-    }
-    window.dispatchEvent(new CustomEvent("firstroll:mount-closet", { detail }));
-  });
-}
-
 function selectArchiveFilm(filmId) {
   const archive = state.discovery.archive;
   if (!archive || archive.primary.id === filmId) return;
   const available = uniqueFilms([
     archive.primary,
     ...archive.directorWorks,
-    ...(archive.categories?.sharedCast || []),
-    ...(archive.categories?.sameCountry || []),
-    ...(archive.categories?.recommended || []),
     ...archive.relevant,
   ]);
   const selected = available.find((film) => film.id === filmId);

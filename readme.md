@@ -13,9 +13,9 @@ keeps those layers visible instead of presenting one fluent but unsupported answ
 > **Current status:** local working prototype and deployed Azure public beta. Discover,
 > private-library retrieval, Crossref scholarship, optional Douban, Letterboxd and Guardian
 > criticism, DeepSeek synthesis and clip analysis are implemented. The hosted edition publishes
-> discovery, the 3D shelf and authenticated Deep Study while keeping private-library tools, clip
-> analysis and unauthenticated model use disabled. Supabase email authentication, atomic daily
-> quotas and redacted SSE research progress are implemented. The next research milestone is
+> discovery, the native director shelf and authenticated Deep Study while keeping private-library
+> tools, clip analysis and unauthenticated model use disabled. Supabase email authentication, atomic
+> daily quotas and redacted SSE research progress are implemented. The next research milestone is
 > connecting measured clip evidence to Deep Study.
 
 See [Project Progress](docs/PROGRESS.md) for completed milestones, verification results,
@@ -63,16 +63,16 @@ The original GPL-3.0 licence and contributor attribution remain applicable. See
   a title; each choice exposes its year, director, original title and poster instead of trusting the
   provider's first-ranked result.
 - Read an attributed Wikipedia overview and poster after Wikidata resolves the film.
-- Explore a Blender-built GLB shelf rendered locally with Three.js. The shelf now requests only the
-  selected filmmaker's verified directing work and presents up to twelve films as large, front-facing
-  jewel cases in three balanced rows. Verified poster artwork fills each cover; a restrained title and
-  year overlay, plus a designed fallback, keeps every case legible when artwork is unavailable. Drag to
-  look, scroll or use W/S to move, strafe with A/D, hover a case for emphasis and select it as the new
-  edition. The browser first requests a bounded, fast director-film list and renders the shelf with any
-  available artwork or designed fallbacks; a slower background request upgrades covers with additional
-  verified posters without blocking the shelf. If even the fast identity request fails, FirstRoll keeps
-  the selected edition and omits the unavailable shelf instead of presenting a full-height error panel.
-  Unresolved identifier-only records remain hidden.
+- Browse a native HTML/CSS director shelf with up to twelve front-facing film cases. The selected
+  film appears immediately alongside five loading placeholders, so the shelf never waits for WebGL,
+  a 3D model or the related-film provider before becoming useful. A bounded fast request adds
+  verified directing work in place, then a best-effort background request upgrades any additional
+  poster covers without returning the shelf to a loading state. Native images and designed title/year
+  covers keep every case legible. If the fast request fails, FirstRoll removes the placeholders,
+  retains the selected film and offers an explicit retry instead of replacing the shelf with an
+  unavailable panel. Selecting another case rebuilds the edition and filmography, while stale
+  requests remain unable to overwrite the latest choice. Unresolved identifier-only records remain
+  hidden.
 - Compare attributed Douban and Letterboxd community scores and review up to three prominent
   Wikidata awards when those sources provide them.
 - Retrieve matched scholarly abstracts and DOI links through Crossref.
@@ -240,7 +240,7 @@ owner-scoped request. Local development retains the convenient combined interfac
 | Layer | Primary stack |
 |---|---|
 | Hosted web and API | Azure Static Web Apps, Azure Container Apps, Docker, FastAPI and Uvicorn |
-| Browser interface | HTML5, CSS3, vanilla JavaScript, Supabase JS, Three.js WebGL and a Blender-authored GLB |
+| Browser interface | HTML5, CSS3, vanilla JavaScript and Supabase JS |
 | Identity and account data | Supabase Auth plus PostgreSQL tables protected by RLS |
 | API and orchestration | Python 3.11, FastAPI, Pydantic and LangGraph 1.2 |
 | Quota enforcement | Backend-only PostgreSQL function with provider/subject counters; legacy Supabase RPC rollback path |
@@ -833,12 +833,9 @@ FirstRoll/
 │   │   ├── settings.py          # local credential store
 │   │   └── study_service.py     # DeepSeek synthesis and quality gate
 │   └── web/
-│       ├── app.js
-│       ├── closet3d.js           # Three.js shelf camera and live selectable cases
+│       ├── app.js                 # browser workflow and native director shelf
 │       ├── index.html
-│       ├── models/                # web-ready Blender GLB room shell
-│       ├── styles.css
-│       └── vendor/three/          # pinned local Three.js runtime and licence
+│       └── styles.css
 ├── docs/
 │   ├── API_REFERENCE.md
 │   ├── ARCHITECTURE.md
@@ -852,7 +849,6 @@ FirstRoll/
 │   └── RELEASE.md
 ├── tests/
 ├── tools/
-│   └── build_closet_blender.py    # deterministic single-wall shelf generator
 ├── .env.example
 ├── pyproject.toml
 └── uv.lock
@@ -883,7 +879,6 @@ Run scoped lint and frontend checks:
 uv run ruff check app/backend/library_index.py app/backend/evidence.py \
   app/backend/study_service.py app/backend/main.py tests
 node --check app/web/app.js
-node --check app/web/closet3d.js
 git diff --check
 ```
 
@@ -894,13 +889,6 @@ runner seals the validated `dist` directory as an immutable artifact; a separate
 repository code and gives the branch-restricted `production` token only to the pinned Azure upload
 action. External actions are full-SHA pinned and reviewed weekly by Dependabot; pull-request code is
 never deployed to an Azure preview environment.
-
-The checked-in GLB is ready to serve and does not require Blender at runtime. To regenerate
-the room asset after changing its geometry or materials, install Blender 5.2 or newer and run:
-
-```bash
-blender --background --python tools/build_closet_blender.py
-```
 
 The current verification baseline and its update protocol are recorded in
 [Evaluation](docs/EVALUATION.md); dated delivery evidence remains in

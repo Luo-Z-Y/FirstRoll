@@ -1,5 +1,45 @@
 # FirstRoll Project Progress
 
+### 21 August 2026 — Always-available native director shelf
+
+Delivered:
+
+1. Replaced the Three.js/WebGL room and Blender GLB with a native HTML/CSS filmography shelf that
+   requires no graphics capability, module graph or model download.
+2. Rendered the selected film synchronously with five designed loading cases, then replaced those
+   placeholders in place with up to twelve verified directing works from one bounded fast request.
+3. Made native poster images optional over title-and-year fallback covers, retained case selection
+   and kept the responsive shelf at six columns on wide panels and three on narrow screens. A slower,
+   best-effort request can upgrade additional posters without returning the shelf to loading.
+4. Changed fast-provider failure from a missing or unavailable shelf into a stable one-film state:
+   loading cases are removed, the selected edition remains and a visible retry can restart the request.
+5. Added a separate shelf request identity so cancelled, retried or stale fast and poster-enrichment
+   work cannot overwrite the latest film; enrichment failure leaves the ready shelf unchanged.
+6. Removed the obsolete 3D runtime, vendored Three.js files, GLB and Blender build tool from the web
+   package; the hosted build is now approximately 748 KB rather than 1.5 MB.
+
+Acceptance evidence:
+
+- all 174 automated tests, frontend JavaScript syntax, npm audit and repository whitespace checks
+  pass;
+- live local browser verification for *Interstellar* shows one selected case and five placeholders
+  immediately, then twelve selectable cases with no console errors or horizontal overflow;
+- the same browser run passes at 1,440-pixel desktop and 390-pixel mobile widths, while a synthetic
+  provider failure leaves one selected case, no loading cases and a visible retry;
+- the production build contains no 3D model, Three.js module or shelf-specific runtime file.
+
+Known constraint:
+
+- the expanded filmography still depends on Wikidata relationship coverage and availability; on a
+  sparse or failed response the native shelf deliberately remains useful with the selected film only;
+- optional poster enrichment may continue for up to sixty seconds after the shelf is ready, but it is
+  cancellable and cannot restore loading or hide the native cases.
+
+Next actionable work:
+
+1. Observe the lighter shelf on the hosted CDN and retain the one-film fallback contract when the
+   related-film provider is changed or cached more aggressively.
+
 ### 21 August 2026 — Hardened frontend CI/CD trust boundary
 
 Delivered:

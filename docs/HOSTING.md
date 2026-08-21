@@ -17,9 +17,10 @@ Browser  ->  Azure Static Web Apps  ->  Azure Container Apps  ->  public film so
               firstroll.app             api.firstroll.app
 ```
 
-The hosted edition publishes discovery, the 3D shelf, Supabase email-and-password accounts with
-saved films, and an authenticated Integration Centre. Private-library settings, local documents, clip uploads, computer-vision
-analysis and unauthenticated Deep Study are blocked by the backend. Authenticated Deep Study is
+The hosted edition publishes discovery, the native director shelf, Supabase email-and-password
+accounts with saved films, and an authenticated Integration Centre. Private-library settings, local
+documents, clip uploads, computer-vision analysis and unauthenticated Deep Study are blocked by the
+backend. Authenticated Deep Study is
 protected by durable Supabase usage counters.
 The separate origins keep the public boundary explicit and allow either service to be deployed or
 rolled back independently.
