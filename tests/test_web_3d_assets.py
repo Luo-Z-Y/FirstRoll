@@ -246,7 +246,7 @@ def test_archive_pullout_collapses_before_zoom_can_clip_its_copy() -> None:
     app = (WEB / "app.js").read_text(encoding="utf-8")
 
     assert "/assets/styles.css?v=20260821-3" in index
-    assert "/assets/app.js?v=20260821-3" in index
+    assert "/assets/app.js?v=20260821-4" in index
     assert "/assets/closet3d.js?v=20260821-1" in index
     assert 'class="archive-pullout-shell"' in app
     assert "container-type: inline-size" in styles
@@ -275,6 +275,22 @@ def test_recent_searches_can_be_removed_individually_or_cleared() -> None:
     assert ".recent-search-item" in styles
     assert ".recent-search-dismiss" in styles
     assert ".recent-search-clear" in styles
+
+
+def test_new_discovery_search_aborts_stale_search_and_shelf_work() -> None:
+    app = (WEB / "app.js").read_text(encoding="utf-8")
+
+    assert "searchRequestId: 0" in app
+    assert "searchController: null" in app
+    assert "shelfRequestControllers: new Set()" in app
+    assert "state.discovery.searchController?.abort()" in app
+    assert "cancelShelfRequests();" in app
+    assert "{ signal: controller.signal }" in app
+    assert "requestId !== state.discovery.searchRequestId" in app
+    assert 'err?.name === "AbortError"' in app
+    assert "state.discovery.shelfRequestControllers.add(controller)" in app
+    assert "state.discovery.shelfRequestControllers.delete(controller)" in app
+    assert "refs.discoverySubmit.disabled = true" not in app
 
 
 def test_supabase_dialog_hides_the_unused_entra_form() -> None:

@@ -56,7 +56,9 @@ The original GPL-3.0 licence and contributor attribution remain applicable. See
 
 - Search by title, year and director through key-free Wikidata.
 - Reuse up to five locally stored recent searches, remove individual entries or clear the history;
-  this browser-only convenience data is never attached to a FirstRoll account.
+  this browser-only convenience data is never attached to a FirstRoll account. Discovery follows a
+  latest-search-wins contract: starting another query aborts the previous title and shelf requests,
+  and stale responses cannot replace the newly selected film.
 - Confirm the intended film before opening the shelf whenever several records share or closely match
   a title; each choice exposes its year, director, original title and poster instead of trusting the
   provider's first-ranked result.

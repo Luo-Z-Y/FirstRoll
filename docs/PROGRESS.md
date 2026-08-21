@@ -1,5 +1,28 @@
 # FirstRoll Project Progress
 
+### 21 August 2026 — Interruptible recent-film switching
+
+Delivered:
+
+1. Added an abort controller and monotonically increasing request identity to discovery search.
+2. Made every new query abort the preceding title request and all active fast or enriched shelf
+   requests before presenting its own progress state.
+3. Suppressed abort errors and guarded every late response, so a provider that ignores cancellation
+   still cannot replace the newest search results.
+4. Kept the search control interactive while loading, allowing recent chips, edited queries or a
+   repeated search to interrupt immediately.
+
+Acceptance evidence:
+
+- the 171-test suite, frontend JavaScript syntax and repository whitespace checks pass;
+- a live rapid sequence of *The Thing* → *Crash* → *Interstellar* ends only on the *Interstellar*
+  identity choices, with no stale progress panel, unavailable error or lingering busy state.
+
+Concurrency contract:
+
+- discovery is deliberately latest-request-wins; cancelled provider work may finish server-side, but
+  its browser response is ignored and cannot mutate the active film interface.
+
 ### 21 August 2026 — Progressive director shelf loading
 
 Delivered:

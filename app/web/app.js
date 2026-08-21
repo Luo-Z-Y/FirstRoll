@@ -22,6 +22,9 @@ const state = {
     activeCriticismProvider: null,
     recentSearches: [],
     relatedFilmCache: new Map(),
+    searchRequestId: 0,
+    searchController: null,
+    shelfRequestControllers: new Set(),
   },
 };
 
@@ -456,7 +459,14 @@ async function onDiscoverySearch(event) {
   if (director) params.set("director", director);
   saveRecentSearch({ title, year, director });
 
-  refs.discoverySubmit.disabled = true;
+  state.discovery.searchController?.abort();
+  cancelShelfRequests();
+  const requestId = state.discovery.searchRequestId + 1;
+  const controller = new AbortController();
+  state.discovery.searchRequestId = requestId;
+  state.discovery.searchController = controller;
+
+  refs.discoverySubmit.setAttribute("aria-busy", "true");
   refs.discoverySubmit.querySelector("span").textContent = "Searching…";
   refs.discoveryResultsSection.classList.remove("hidden");
   refs.filmDetail.classList.add("hidden");
@@ -467,19 +477,32 @@ async function onDiscoverySearch(event) {
   refs.resultsMeta.textContent = "";
 
   try {
-    const res = await fetch(`${discoveryApiBase()}/api/discovery/search?${params.toString()}`);
+    const res = await fetch(
+      `${discoveryApiBase()}/api/discovery/search?${params.toString()}`,
+      { signal: controller.signal },
+    );
     if (!res.ok) throw new Error(await readApiError(res));
     const data = await res.json();
+    if (requestId !== state.discovery.searchRequestId) return;
     state.discovery.results = Array.isArray(data.results) ? data.results : [];
     state.discovery.mode = data.mode || "unknown";
     renderDiscoveryResults(data);
   } catch (err) {
+    if (err?.name === "AbortError" || requestId !== state.discovery.searchRequestId) return;
     refs.resultsTitle.textContent = "Discovery is unavailable";
     refs.discoveryResults.innerHTML = `<div class="no-results">${escapeHtml(err.message)} Check that the FirstRoll backend is running, then try again.</div>`;
   } finally {
-    refs.discoverySubmit.disabled = false;
-    refs.discoverySubmit.querySelector("span").textContent = "Search films";
+    if (state.discovery.searchController === controller) {
+      state.discovery.searchController = null;
+      refs.discoverySubmit.removeAttribute("aria-busy");
+      refs.discoverySubmit.querySelector("span").textContent = "Search films";
+    }
   }
+}
+
+function cancelShelfRequests() {
+  state.discovery.shelfRequestControllers.forEach((controller) => controller.abort());
+  state.discovery.shelfRequestControllers.clear();
 }
 
 function readRecentSearches() {
@@ -637,6 +660,7 @@ function filmIdentityChoicesMarkup(films) {
 function confirmDiscoveryFilm(index) {
   const primary = state.discovery.results[index];
   if (!primary) return;
+  cancelShelfRequests();
   const nearby = uniqueFilms(state.discovery.results, [primary]).slice(0, 10);
   refs.resultsTitle.textContent = "Pulled from the shelf";
   refs.resultsMeta.textContent = [
@@ -690,6 +714,7 @@ async function fetchRelatedFilms(filmId, { fast }) {
   const cached = state.discovery.relatedFilmCache.get(cacheKey);
   if (cached) return cached;
   const controller = new AbortController();
+  state.discovery.shelfRequestControllers.add(controller);
   const timeout = window.setTimeout(() => controller.abort(), fast ? 18000 : 65000);
   const progress = window.setTimeout(() => {
     const loading = refs.discoveryResults.querySelector("[data-closet-loading] strong");
@@ -712,6 +737,7 @@ async function fetchRelatedFilms(filmId, { fast }) {
       ? new Error("The director shelf took too long to respond.")
       : error;
   } finally {
+    state.discovery.shelfRequestControllers.delete(controller);
     window.clearTimeout(timeout);
     window.clearTimeout(progress);
   }
@@ -939,6 +965,7 @@ function selectArchiveFilm(filmId) {
   ]);
   const selected = available.find((film) => film.id === filmId);
   if (!selected) return;
+  cancelShelfRequests();
   const remaining = uniqueFilms(available, [selected]);
   state.discovery.selectedFilm = null;
   refs.filmDetail.classList.add("hidden");
