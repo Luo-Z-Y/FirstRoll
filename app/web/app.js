@@ -38,6 +38,7 @@ const state = {
     shelfRequestControllers: new Set(),
     studyRequestId: 0,
     studyController: null,
+    studyProgress: [],
   },
 };
 
@@ -674,6 +675,45 @@ const RESEARCH_PROGRESS_KEYS = new Set([
 const RESEARCH_PROGRESS_COUNT_KEYS = new Set([
   "theory_sources", "critical_claims", "attributed_sources", "sections",
 ]);
+const RESEARCH_COUNT_LABELS = Object.freeze({
+  theory_sources: "theory",
+  critical_claims: "critic claims",
+  attributed_sources: "attributed text",
+  sections: "sections",
+});
+
+function researchProgressMarkup(events, options = {}) {
+  const history = Array.isArray(events) ? events.slice(-12) : [];
+  const latest = history[history.length - 1] || {
+    sequence: 1,
+    kind: "existing_evidence_loading",
+    message: "Preparing the evidence packet…",
+    elapsed_ms: 0,
+    counts: {},
+  };
+  const combinedCounts = history.reduce(
+    (counts, progress) => ({ ...counts, ...(progress.counts || {}) }),
+    {},
+  );
+  const countsMarkup = Object.entries(combinedCounts)
+    .filter(([key, value]) => RESEARCH_PROGRESS_COUNT_KEYS.has(key) && Number.isInteger(value))
+    .map(([key, value]) => `<span><b>${escapeHtml(value)}</b> ${escapeHtml(RESEARCH_COUNT_LABELS[key])}</span>`)
+    .join("");
+  return `<section class="study-progress-history" aria-label="Deep Study progress">
+    <header>
+      <div><span>${options.completed ? "Run complete" : "Current stage"}</span><strong>${escapeHtml(latest.message)}</strong></div>
+      ${countsMarkup ? `<div class="study-progress-counts">${countsMarkup}</div>` : ""}
+      <p class="study-progress-current" role="status" aria-live="polite">${escapeHtml(latest.message)}</p>
+    </header>
+    <ol>
+      ${history.map((progress, index) => `<li class="${index === history.length - 1 ? "is-current" : "is-complete"}">
+        <i aria-hidden="true">${index === history.length - 1 && !options.completed ? "•" : "✓"}</i>
+        <span>${escapeHtml(progress.message)}</span>
+        <small>${escapeHtml((Number(progress.elapsed_ms || 0) / 1000).toFixed(1))}s</small>
+      </li>`).join("")}
+    </ol>
+  </section>`;
+}
 
 function parseProgressEvent(block) {
   const lines = block.split(/\r?\n/);
@@ -1788,6 +1828,17 @@ async function onFilmDetailClick(event) {
     await loadFilmDetail(detailRetry.dataset.retryFilmDetail);
     return;
   }
+  const citation = event.target.closest("[data-study-citation-target]");
+  if (citation) {
+    event.preventDefault();
+    const target = document.getElementById(citation.dataset.studyCitationTarget);
+    if (target) {
+      if (target.tagName === "DETAILS") target.open = true;
+      target.scrollIntoView({ behavior: "smooth", block: "center" });
+      focusElement(target, { preventScroll: true });
+    }
+    return;
+  }
   if (event.target.closest("[data-analyse-film]")) {
     const film = state.discovery.selectedFilm;
     refs.analyseContext.textContent = film
@@ -2315,13 +2366,15 @@ function cancelDeepStudyRequest(options = {}) {
   cancelButton?.classList.add("hidden");
   output?.setAttribute("aria-busy", "false");
   if (options.announce && output) {
-    output.innerHTML = `<div class="interface-state is-inverse" role="status" tabindex="-1" data-interface-state>
+    output.innerHTML = `${researchProgressMarkup(state.discovery.studyProgress)}<div class="interface-state is-inverse" role="status" tabindex="-1" data-interface-state>
       <span>Browser request stopped</span>
       <h4>You stopped waiting for this study.</h4>
       <p>Your film, evidence and focus remain here. A provider request already in progress may still finish and consume external quota.</p>
       <button type="button" data-retry-study>Start the study again</button>
     </div>`;
     focusInterfaceState(output);
+  } else {
+    state.discovery.studyProgress = [];
   }
   return true;
 }
@@ -2353,7 +2406,14 @@ async function generateDeepStudy(button) {
   button.textContent = "Studying…";
   cancelButton?.classList.remove("hidden");
   output.setAttribute("aria-busy", "true");
-  output.innerHTML = fetchProgressMarkup("Reading the film record against your cited sources…");
+  state.discovery.studyProgress = [{
+    sequence: 1,
+    kind: "existing_evidence_loading",
+    message: "Reading the film record against your cited sources…",
+    elapsed_ms: 0,
+    counts: {},
+  }];
+  output.innerHTML = researchProgressMarkup(state.discovery.studyProgress);
   const currentRequest = () => (
     state.discovery.studyRequestId === requestId
     && state.discovery.selectedFilm?.id === film.id
@@ -2378,7 +2438,9 @@ async function generateDeepStudy(button) {
       const runId = streamResponse.headers.get("X-FirstRoll-Run-ID");
       if (!runId) throw new Error("The research run did not return an identifier.");
       await consumeResearchProgress(streamResponse, runId, (progress) => {
-        if (currentRequest()) output.innerHTML = fetchProgressMarkup(progress.message);
+        if (!currentRequest()) return;
+        state.discovery.studyProgress.push(progress);
+        output.innerHTML = researchProgressMarkup(state.discovery.studyProgress);
       });
       const resultResponse = await fetch(
         `${discoveryApiBase()}/api/research/runs/${encodeURIComponent(runId)}`,
@@ -2402,12 +2464,25 @@ async function generateDeepStudy(button) {
       data = await response.json();
     }
     if (!currentRequest()) return;
-    output.innerHTML = `${deepStudyQuotaMarkup(data.quota)}${deepStudyMarkup(data.study || {})}`;
+    const study = data.study || {};
+    if (!runtimeConfig.publicMode) {
+      const endToEnd = (study.observability?.stages || []).find(
+        (stage) => stage.name === "end_to_end",
+      );
+      state.discovery.studyProgress.push({
+        sequence: state.discovery.studyProgress.length + 1,
+        kind: "run_completed",
+        message: "The study is ready.",
+        elapsed_ms: Number(endToEnd?.duration_ms || 0),
+        counts: { sections: Array.isArray(study.sections) ? study.sections.length : 0 },
+      });
+    }
+    output.innerHTML = `${researchProgressMarkup(state.discovery.studyProgress, { completed: true })}${deepStudyQuotaMarkup(data.quota)}${deepStudyMarkup(study)}`;
     focusElement(output.querySelector("[data-study-result]"));
   } catch (error) {
     if (error?.name === "AbortError" || !currentRequest()) return;
     console.warn("Deep Study request did not complete", error);
-    output.innerHTML = deepStudyFailureMarkup(error);
+    output.innerHTML = `${researchProgressMarkup(state.discovery.studyProgress)}${deepStudyFailureMarkup(error)}`;
     focusInterfaceState(output);
   } finally {
     if (currentRequest()) {
@@ -2438,6 +2513,118 @@ function deepStudyQuotaMarkup(quota) {
   return `<p class="study-quota"><strong>${escapeHtml(user.remaining)} of ${escapeHtml(user.limit)}</strong> account studies remain today · ${escapeHtml(global.remaining)} available across the public demo · resets ${escapeHtml(reset)}</p>`;
 }
 
+const PACKET_ISSUE_LABELS = Object.freeze({
+  attributed_omission_unexplained: "Some attributed omissions do not have a recognised reason.",
+  citation_ids_invalid: "One or more evidence identifiers are not citation-ready.",
+  duplicate_evidence_present: "The selected packet still contains duplicate evidence.",
+  film_identity_incomplete: "The selected film identity is incomplete.",
+  film_identity_mismatch: "The packet identity does not match the selected film.",
+  film_specific_evidence_sparse: "No film-specific attributed source is available; the study remains a viewing framework.",
+  focus_relevance_low: "The lexical focus signal is weak; inspect the selected evidence before relying on it.",
+  instruction_containment_missing: "Retrieved instructions are not safely bounded.",
+  provenance_incomplete: "Some selected evidence has incomplete applicable provenance.",
+  single_evidence_class: "Only one evidence class is currently available.",
+  theory_evidence_missing: "No theory framework is available for synthesis.",
+  unknown_evidence_language: "Some selected evidence has an unknown language label.",
+});
+const SELECTION_REASON_LABELS = Object.freeze({
+  below_minimum_content: "too little substantive text",
+  duplicate: "duplicate or near-duplicate",
+  source_quota: "source/domain diversity limit",
+  item_limit: "layer item limit",
+  total_budget_exhausted: "layer character budget",
+});
+const STUDY_STAGE_LABELS = Object.freeze({
+  film_context: "Film context",
+  criticism_cache: "Criticism cache",
+  video_cache: "Video cache",
+  retrieval_planning: "Retrieval planning",
+  lexical_retrieval: "Lexical retrieval",
+  semantic_retrieval: "Semantic retrieval",
+  fusion_and_selection: "Fusion and selection",
+  packet_assembly: "Packet assembly",
+  prompt_serialisation: "Prompt serialisation",
+  model_transport: "Model transport",
+  validation_and_repair: "Validation and repair",
+  end_to_end: "End to end",
+});
+
+function packetLayerMarkup(label, selection, selected) {
+  const candidates = Number(selection?.candidate_items ?? selected);
+  const omitted = Number(selection?.omitted_items || 0);
+  const characters = Number(selection?.selected_characters || 0);
+  return `<article class="packet-layer-card">
+    <span>${escapeHtml(label)}</span>
+    <strong>${escapeHtml(selected)} selected</strong>
+    <small>${escapeHtml(candidates)} candidates · ${escapeHtml(omitted)} omitted${characters ? ` · ${escapeHtml(characters)} chars` : ""}</small>
+  </article>`;
+}
+
+function packetTransparencyMarkup(study) {
+  const packet = study.evidence_packet || {};
+  const retrieval = packet.retrieval || {};
+  const theory = retrieval.theory_selection || {};
+  const critical = retrieval.critical_selection || {};
+  const attributed = retrieval.attributed_selection || {};
+  const quality = study.packet_quality || {};
+  const qualityIssues = Array.isArray(quality.issues) ? quality.issues : [];
+  const sources = Array.isArray(study.sources) ? study.sources : [];
+  const claims = Array.isArray(study.critical_claims) ? study.critical_claims : [];
+  const attributedSources = Array.isArray(study.attributed_sources)
+    ? study.attributed_sources
+    : [];
+  const omissions = [theory, critical, attributed].reduce((totals, selection) => {
+    Object.entries(selection?.omission_reasons || {}).forEach(([reason, value]) => {
+      if (SELECTION_REASON_LABELS[reason] && Number.isInteger(value) && value > 0) {
+        totals[reason] = (totals[reason] || 0) + value;
+      }
+    });
+    return totals;
+  }, {});
+  const gaps = qualityIssues.map(
+    (issue) => PACKET_ISSUE_LABELS[issue] || String(issue).replaceAll("_", " "),
+  );
+  if (!attributedSources.length && !claims.length && !gaps.some((gap) => gap.includes("film-specific"))) {
+    gaps.push("No film-specific attributed source is available; formal claims require close viewing.");
+  }
+  const observedEvidence = attributedSources.some(
+    (source) => source.evidence_type === "film_observed",
+  );
+  if (!observedEvidence) {
+    gaps.push("No measured clip evidence entered this study; film-form claims remain hypotheses.");
+  }
+  const provenance = Number(quality.provenance?.completeness_ratio || 0);
+  const duplication = Number(quality.duplication?.duplicate_ratio || 0);
+  const relevance = Number(quality.focus_relevance?.relevance_ratio || 0);
+  const observability = study.observability || {};
+  const stages = Array.isArray(observability.stages) ? observability.stages : [];
+  const counts = observability.counts || {};
+  const timingRows = stages
+    .filter((stage) => STUDY_STAGE_LABELS[stage.name] && stage.status !== "not_run")
+    .map((stage) => `<li><span>${escapeHtml(STUDY_STAGE_LABELS[stage.name])}</span><b>${escapeHtml(Number(stage.duration_ms || 0).toFixed(1))} ms</b><small>${escapeHtml(stage.status)}</small></li>`)
+    .join("");
+  return `<section class="packet-transparency" aria-labelledby="packetTransparencyTitle">
+    <header>
+      <div><span>Evidence packet</span><h4 id="packetTransparencyTitle">What entered this study</h4></div>
+      <strong class="packet-status is-${escapeHtml(quality.status || "unknown")}">${escapeHtml(quality.status === "passed" ? "Ready" : quality.status === "limited" ? "Ready with limits" : "Inspect packet")}</strong>
+    </header>
+    <div class="packet-layer-grid">
+      ${packetLayerMarkup("Theory", theory, sources.length)}
+      ${packetLayerMarkup("Critic claims", critical, claims.length)}
+      ${packetLayerMarkup("Attributed text", attributed, attributedSources.length)}
+    </div>
+    <div class="packet-metrics" aria-label="Packet quality metrics">
+      <span><b>${escapeHtml(Math.round(provenance * 100))}%</b> provenance</span>
+      <span><b>${escapeHtml(Math.round(duplication * 100))}%</b> duplicates</span>
+      <span><b>${escapeHtml(Math.round(relevance * 100))}%</b> lexical focus</span>
+      ${Number.isInteger(counts.prompt_tokens) ? `<span><b>${escapeHtml(counts.prompt_tokens)}</b> input tokens</span>` : ""}
+    </div>
+    ${Object.keys(omissions).length ? `<details class="packet-omissions"><summary>Why evidence was left out</summary><ul>${Object.entries(omissions).map(([reason, value]) => `<li><b>${escapeHtml(value)}</b> ${escapeHtml(SELECTION_REASON_LABELS[reason])}</li>`).join("")}</ul></details>` : ""}
+    ${gaps.length ? `<div class="packet-gaps"><strong>Evidence gaps</strong><ul>${[...new Set(gaps)].map((gap) => `<li>${escapeHtml(gap)}</li>`).join("")}</ul></div>` : ""}
+    ${timingRows ? `<details class="study-observability"><summary>Study timing and stages</summary><ul>${timingRows}</ul></details>` : ""}
+  </section>`;
+}
+
 function deepStudyMarkup(study) {
   const sections = Array.isArray(study.sections) ? study.sections : [];
   const sources = Array.isArray(study.sources) ? study.sources : [];
@@ -2455,6 +2642,7 @@ function deepStudyMarkup(study) {
       <strong>${escapeHtml(qualityLabel)}</strong>
       <span>${escapeHtml(Math.round((quality.score || 0) * 100))}% specificity · ${quality.repair_attempted ? "one audit pass used" : "first draft passed"}</span>
     </div>
+    ${packetTransparencyMarkup(study)}
     <article class="study-essay" tabindex="-1" data-study-result>
       <header><span>${escapeHtml(study.model || "DeepSeek")} · evidence-grounded essay</span><h4>${escapeHtml(study.title || "Film study")}</h4></header>
       <p class="study-essay-lede">${escapeHtml(study.central_argument || "No central argument was returned.")}</p>
@@ -2465,13 +2653,25 @@ function deepStudyMarkup(study) {
     </article>
     ${viewingTasks.length ? `<details class="study-viewing-guide"><summary>How to test this reading against the film</summary><ol>${viewingTasks.map((task) => `<li>${escapeHtml(task)}</li>`).join("")}</ol></details>` : ""}
     <details class="study-retrieval"><summary>Why these sources</summary><p>${escapeHtml(String(retrieval.method || "local retrieval").replaceAll("_", " "))} · ${escapeHtml(retrieval.candidate_count || 0)} candidates · ${escapeHtml(retrieval.embedding?.state || "lexical only")}</p>${plan.map((item) => `<span>${escapeHtml(item.origin)} · ${escapeHtml(item.lens)} — ${escapeHtml(item.query)}</span>`).join("")}</details>
-    <div class="study-source-key"><strong>Evidence used</strong>${sources.map((source) => `<details><summary><b>${escapeHtml(source.id)}</b> ${escapeHtml(source.title)} · ${escapeHtml(source.locator || `p. ${source.page || "?"}`)}</summary><p>${escapeHtml(source.excerpt || "")}</p></details>`).join("")}${attributedSources.map(attributedEvidenceMarkup).join("")}${criticalClaims.map((claim) => `<span><b>${escapeHtml(claim.claim_id)}</b> Attributed critic report · ${escapeHtml(claim.source_id)}</span>`).join("")}</div>`;
+    ${studySourceKeyMarkup(sources, attributedSources, criticalClaims)}`;
+}
+
+function studyEvidenceTarget(value) {
+  return `study-evidence-${String(value || "unknown").replace(/[^A-Za-z0-9_-]+/g, "-")}`;
+}
+
+function studySourceKeyMarkup(sources, attributedSources, criticalClaims) {
+  return `<div class="study-source-key"><strong>Evidence used</strong>
+    ${sources.map((source) => `<details id="${escapeHtml(studyEvidenceTarget(source.id))}" tabindex="-1" data-study-evidence><summary><b>${escapeHtml(source.id)}</b> ${escapeHtml(source.title)} · ${escapeHtml(source.locator || `p. ${source.page || "?"}`)}</summary><p>${escapeHtml(source.excerpt || "")}</p></details>`).join("")}
+    ${attributedSources.map(attributedEvidenceMarkup).join("")}
+    ${criticalClaims.map((claim) => `<details id="${escapeHtml(studyEvidenceTarget(claim.claim_id))}" tabindex="-1" data-study-evidence><summary><b>${escapeHtml(claim.claim_id)}</b> Attributed critic report · ${escapeHtml(claim.source_id)}</summary><p>${escapeHtml(claim.critic_claim || "No critic claim text was supplied.")}</p></details>`).join("")}
+  </div>`;
 }
 
 function attributedEvidenceMarkup(source) {
   const sourceUrl = safeHttpUrl(source.source_url);
   const link = sourceUrl ? ` <a href="${escapeHtml(sourceUrl)}" target="_blank" rel="noopener noreferrer">Source ↗</a>` : "";
-  return `<details><summary><b>${escapeHtml(source.evidence_id || "E?")}</b> ${escapeHtml(source.title || "Attributed source")} · ${escapeHtml(source.locator || source.evidence_type || "text")}</summary><p>${escapeHtml(source.content || "")}</p>${link}</details>`;
+  return `<details id="${escapeHtml(studyEvidenceTarget(source.evidence_id))}" tabindex="-1" data-study-evidence><summary><b>${escapeHtml(source.evidence_id || "E?")}</b> ${escapeHtml(source.title || "Attributed source")} · ${escapeHtml(source.locator || source.evidence_type || "text")}</summary><p>${escapeHtml(source.content || "")}</p>${link}</details>`;
 }
 
 function studyEssayParagraphMarkup(section, sourceMap, attributedSourceMap, quality) {
@@ -2479,12 +2679,19 @@ function studyEssayParagraphMarkup(section, sourceMap, attributedSourceMap, qual
   const citations = ids.map((id) => {
     const source = sourceMap[id];
     const label = source ? `${id} · p. ${source.page || "?"}` : id;
-    return `<span title="${escapeHtml(source?.title || "Local source")}">${escapeHtml(label)}</span>`;
+    const target = studyEvidenceTarget(id);
+    return `<a href="#${escapeHtml(target)}" data-study-citation-target="${escapeHtml(target)}" title="Open ${escapeHtml(source?.title || "local source")}">${escapeHtml(label)}</a>`;
   }).join("");
   const criticIds = Array.isArray(section.critic_claim_ids) ? section.critic_claim_ids : [];
-  const criticCitations = criticIds.map((id) => `<span class="critic-citation">${escapeHtml(id)} · critic</span>`).join("");
+  const criticCitations = criticIds.map((id) => {
+    const target = studyEvidenceTarget(id);
+    return `<a class="critic-citation" href="#${escapeHtml(target)}" data-study-citation-target="${escapeHtml(target)}">${escapeHtml(id)} · critic</a>`;
+  }).join("");
   const attributedIds = Array.isArray(section.attributed_source_ids) ? section.attributed_source_ids : [];
-  const attributedCitations = attributedIds.map((id) => `<span class="critic-citation" title="${escapeHtml(attributedSourceMap[id]?.title || "Attributed text")}">${escapeHtml(id)} · text</span>`).join("");
+  const attributedCitations = attributedIds.map((id) => {
+    const target = studyEvidenceTarget(id);
+    return `<a class="critic-citation" href="#${escapeHtml(target)}" data-study-citation-target="${escapeHtml(target)}" title="Open ${escapeHtml(attributedSourceMap[id]?.title || "attributed text")}">${escapeHtml(id)} · text</a>`;
+  }).join("");
   const qualityIssues = Array.isArray(quality?.issues) ? quality.issues : [];
   const prose = [
     section.critic_reports,

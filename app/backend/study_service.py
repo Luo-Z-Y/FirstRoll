@@ -11,6 +11,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from app.backend.criticism import CriticalClaim, CriticalClaimPayload, ReviewSource
 from app.backend.evidence import EvidencePacket
+from app.backend.packet_quality import assess_evidence_packet
 from app.backend.settings import LocalSettingsStore
 from app.backend.study_observability import StudyTrace
 
@@ -340,6 +341,7 @@ class DeepSeekStudyService:
             source.model_dump() for source in packet.attributed_sources
         ]
         result["evidence_packet"] = packet.model_dump()
+        result["packet_quality"] = assess_evidence_packet(packet)
         result["quality"] = quality
         result["grounding_notice"] = (
             "Textbook passages supply analytical frameworks, not proof of creator intention. "

@@ -87,7 +87,7 @@ def test_loopback_preview_uses_a_separate_persistent_unlimited_test_account() ->
     assert 'runtimeConfig.accountUi ? \'<button class="detail-action"' in app
     assert "account studies remain today" in app
     assert 'src="/assets/integrations.js?v=20260821-7"' in index
-    assert 'src="/assets/app.js?v=20260821-12"' in index
+    assert 'src="/assets/app.js?v=20260821-13"' in index
     assert '"X-FirstRoll-DeepSeek-Key"' in integrations
     assert '"X-FirstRoll-YouTube-Key"' in integrations
     assert "localStorage" not in integrations
@@ -250,8 +250,8 @@ def test_archive_pullout_collapses_before_zoom_can_clip_its_copy() -> None:
     styles = (WEB / "styles.css").read_text(encoding="utf-8")
     app = (WEB / "app.js").read_text(encoding="utf-8")
 
-    assert "/assets/styles.css?v=20260821-7" in index
-    assert "/assets/app.js?v=20260821-12" in index
+    assert "/assets/styles.css?v=20260821-8" in index
+    assert "/assets/app.js?v=20260821-13" in index
     assert "closet3d.js" not in index
     assert 'class="archive-pullout-shell"' in app
     assert "container-type: inline-size" in styles
@@ -321,6 +321,28 @@ def test_interface_states_are_actionable_and_keyboard_navigable() -> None:
     assert "--action-text: #11120f" in styles
 
 
+def test_deep_study_keeps_progress_packet_gaps_and_citations_inspectable() -> None:
+    app = (WEB / "app.js").read_text(encoding="utf-8")
+    styles = (WEB / "styles.css").read_text(encoding="utf-8")
+    study_service = (ROOT / "app" / "backend" / "study_service.py").read_text(
+        encoding="utf-8"
+    )
+
+    assert "researchProgressMarkup" in app
+    assert "studyProgress.push(progress)" in app
+    assert "packetTransparencyMarkup" in app
+    assert "Why evidence was left out" in app
+    assert "Evidence gaps" in app
+    assert "Study timing and stages" in app
+    assert "data-study-citation-target" in app
+    assert "data-study-evidence" in app
+    assert "studyEvidenceTarget" in app
+    assert "study-progress-history" in styles
+    assert "packet-transparency" in styles
+    assert "packet-layer-grid" in styles
+    assert 'result["packet_quality"] = assess_evidence_packet(packet)' in study_service
+
+
 def test_discovery_and_dossier_expose_a_clear_task_hierarchy() -> None:
     index = (WEB / "index.html").read_text(encoding="utf-8")
     styles = (WEB / "styles.css").read_text(encoding="utf-8")
@@ -348,7 +370,7 @@ def test_discovery_workspace_survives_refresh_and_product_navigation() -> None:
     app = (WEB / "app.js").read_text(encoding="utf-8")
     index = (WEB / "index.html").read_text(encoding="utf-8")
 
-    assert "/assets/app.js?v=20260821-12" in index
+    assert "/assets/app.js?v=20260821-13" in index
     assert 'const DISCOVERY_SESSION_KEY = "firstroll.discovery-session"' in app
     assert 'const PRODUCT_SESSION_KEY = "firstroll.product-session"' in app
     assert "window.sessionStorage.setItem(DISCOVERY_SESSION_KEY" in app

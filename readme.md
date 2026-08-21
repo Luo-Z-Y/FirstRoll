@@ -140,7 +140,10 @@ The original GPL-3.0 licence and contributor attribution remain applicable. See
 - Run a deterministic specificity and evidence-quality gate.
 - Permit at most one bounded repair request.
 - Label unresolved work as **insufficient evidence** rather than silently accepting it.
-- Show the retrieval plan, source rationale and expandable evidence excerpts in the UI.
+- Show a completed progress history plus selected/candidate/omitted layer counts, bounded omission
+  reasons, evidence gaps, provenance/duplicate/focus diagnostics, provider token count and stage
+  timing without exposing prompts or hidden reasoning.
+- Make every inline `S`, `C` and `E` citation open and focus its exact expandable evidence target.
 - In hosted mode, stream only allow-listed public progress after authentication, then retrieve the
   complete study through a separate authenticated, owner-scoped result request.
 
