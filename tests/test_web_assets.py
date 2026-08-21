@@ -39,7 +39,7 @@ def test_supabase_auth_is_bundled_and_deep_study_sends_bearer_tokens() -> None:
     app = (WEB / "app.js").read_text(encoding="utf-8")
 
     assert 'id="authDialog"' in index
-    assert '"/assets/auth.js?v=20260820-4"' in index
+    assert '"/assets/auth.js?v=20260821-5"' in index
     assert 'from "@supabase/supabase-js"' in auth
     assert 'flowType: "pkce"' in auth
     assert "signInWithPassword" in auth
@@ -65,7 +65,7 @@ def test_loopback_preview_uses_a_separate_persistent_unlimited_test_account() ->
     build = (ROOT / "tools" / "build_web.sh").read_text(encoding="utf-8")
 
     assert "localTestAccountEmail" in index
-    assert '"/assets/local-auth.js?v=20260820-2"' in index
+    assert '"/assets/local-auth.js?v=20260821-3"' in index
     assert '["localhost", "127.0.0.1", "::1"]' in index
     assert "if (localTestReady || (window.FIRSTROLL_CONFIG?.publicMode" in index
     assert 'localTestAccountEmail: ""' in build
@@ -86,8 +86,8 @@ def test_loopback_preview_uses_a_separate_persistent_unlimited_test_account() ->
     assert 'document.body.classList.toggle("public-mode", runtimeConfig.accountUi)' in app
     assert 'runtimeConfig.accountUi ? \'<button class="detail-action"' in app
     assert "account studies remain today" in app
-    assert 'src="/assets/integrations.js?v=20260820-6"' in index
-    assert 'src="/assets/app.js?v=20260821-10"' in index
+    assert 'src="/assets/integrations.js?v=20260821-7"' in index
+    assert 'src="/assets/app.js?v=20260821-11"' in index
     assert '"X-FirstRoll-DeepSeek-Key"' in integrations
     assert '"X-FirstRoll-YouTube-Key"' in integrations
     assert "localStorage" not in integrations
@@ -250,8 +250,8 @@ def test_archive_pullout_collapses_before_zoom_can_clip_its_copy() -> None:
     styles = (WEB / "styles.css").read_text(encoding="utf-8")
     app = (WEB / "app.js").read_text(encoding="utf-8")
 
-    assert "/assets/styles.css?v=20260821-6" in index
-    assert "/assets/app.js?v=20260821-10" in index
+    assert "/assets/styles.css?v=20260821-7" in index
+    assert "/assets/app.js?v=20260821-11" in index
     assert "closet3d.js" not in index
     assert 'class="archive-pullout-shell"' in app
     assert "container-type: inline-size" in styles
@@ -282,6 +282,45 @@ def test_recent_searches_can_be_removed_individually_or_cleared() -> None:
     assert ".recent-search-clear" in styles
 
 
+def test_interface_states_are_actionable_and_keyboard_navigable() -> None:
+    index = (WEB / "index.html").read_text(encoding="utf-8")
+    styles = (WEB / "styles.css").read_text(encoding="utf-8")
+    app = (WEB / "app.js").read_text(encoding="utf-8")
+    integrations = (WEB / "integrations.js").read_text(encoding="utf-8")
+    auth = (WEB / "auth.js").read_text(encoding="utf-8")
+    local_auth = (WEB / "local-auth.js").read_text(encoding="utf-8")
+
+    assert 'aria-labelledby="resultsTitle" aria-busy="false"' in index
+    assert 'id="filmDetail" class="film-detail hidden" aria-busy="false"' in index
+    assert index.count('role="tabpanel" aria-labelledby="analysisTab') == 4
+    assert index.count('role="tab" aria-selected=') >= 6
+    assert "interface-state" in styles
+    assert "study-cancel" in styles
+    assert "cancelDeepStudyRequest" in app
+    assert ".casefold(" not in app
+    assert "new AbortController()" in app
+    assert app.count("signal: controller.signal") >= 3
+    assert "currentRequest" in app
+    assert "A provider request already in progress may still finish and consume external quota" in app
+    assert "data-cancel-study" in app
+    assert "data-retry-study" in app
+    assert "data-retry-film-detail" in app
+    assert "data-retry-film-videos" in app
+    assert "data-retry-criticism" in app
+    assert "data-relax-discovery-filters" in app
+    assert "focusInterfaceState" in app
+    assert "onFilmDetailKeydown" in app
+    assert "onAnalysisTabKeydown" in app
+    navigation_keys = ("ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End")
+    assert all(key in integrations for key in navigation_keys)
+    assert all(key in auth for key in navigation_keys)
+    assert all(key in local_auth for key in navigation_keys)
+    assert "button.tabIndex = active ? 0 : -1" in auth
+    assert "button.tabIndex = active ? 0 : -1" in local_auth
+    assert "--action-text: #fff7ed" in styles
+    assert "--action-text: #11120f" in styles
+
+
 def test_discovery_and_dossier_expose_a_clear_task_hierarchy() -> None:
     index = (WEB / "index.html").read_text(encoding="utf-8")
     styles = (WEB / "styles.css").read_text(encoding="utf-8")
@@ -309,7 +348,7 @@ def test_discovery_workspace_survives_refresh_and_product_navigation() -> None:
     app = (WEB / "app.js").read_text(encoding="utf-8")
     index = (WEB / "index.html").read_text(encoding="utf-8")
 
-    assert "/assets/app.js?v=20260821-10" in index
+    assert "/assets/app.js?v=20260821-11" in index
     assert 'const DISCOVERY_SESSION_KEY = "firstroll.discovery-session"' in app
     assert 'const PRODUCT_SESSION_KEY = "firstroll.product-session"' in app
     assert "window.sessionStorage.setItem(DISCOVERY_SESSION_KEY" in app

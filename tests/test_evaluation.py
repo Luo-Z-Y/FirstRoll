@@ -140,6 +140,24 @@ def test_pre_agent_scorecard_freezes_steps_journeys_and_entry_targets() -> None:
     assert len(ui_result["journeys"]) == 6
     assert all(journey["status"].startswith("passed") for journey in ui_result["journeys"])
 
+    state_checkpoint = scorecard["measured_checkpoints"]["ui_states_accessibility"]
+    state_result = json.loads(
+        (ROOT / state_checkpoint["result_path"]).read_text(encoding="utf-8")
+    )
+    assert state_checkpoint["source_revision"] == state_result["source_revision"]
+    assert state_checkpoint["state_scenarios_assessed"] == state_result["summary"][
+        "state_scenarios_assessed"
+    ]
+    assert state_checkpoint["state_scenario_failures"] == state_result["summary"][
+        "state_scenario_failures"
+    ]
+    assert state_checkpoint["axe_violations"] == state_result["summary"]["axe_violations"]
+    assert state_checkpoint["critical_accessibility_defects"] == state_result["summary"][
+        "critical_accessibility_defects"
+    ]
+    assert all(item["status"] == "passed" for item in state_result["state_scenarios"])
+    assert all(item["status"] == "passed" for item in state_result["keyboard_tablists"])
+
     assert scorecard["latency_stages"] == list(STUDY_STAGE_NAMES)
 
     journey_ids = [journey["id"] for journey in scorecard["user_journeys"]]

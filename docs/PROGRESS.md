@@ -1,5 +1,60 @@
 # FirstRoll Project Progress
 
+### 21 August 2026 — Actionable states and WCAG-audited keyboard flow
+
+Delivered:
+
+1. Replaced raw search, dossier, video, criticism, saved-film and Deep Study failures with bounded
+   state panels that explain what remained unchanged and expose a direct retry or corrective action.
+2. Added browser-side Deep Study cancellation with request IDs and `AbortController` signals across
+   local, streamed and result fetches. **Stop waiting** prevents stale rendering and warns honestly
+   that already-started provider work may still finish and consume external quota.
+3. Added busy semantics and focus movement for search, dossier, evidence-provider, study and result
+   transitions, while removing oversized live regions that could announce an entire dossier.
+4. Completed roving keyboard tab contracts for analysis, settings, account mode, video category and
+   criticism controls, including Arrow, Home and End movement and labelled controlled panels.
+5. Corrected generic-container ARIA use, excluded hidden processing media from the accessibility
+   tree and introduced theme-specific primary-action text colour after axe identified a 3.05:1 dark
+   contrast defect.
+6. Versioned a no-model UI state/accessibility audit covering eight terminal states, four keyboard
+   tablists and three axe contexts at the source revision under test.
+
+Acceptance evidence:
+
+- all 199 automated tests, JavaScript syntax, scoped Ruff, hosted frontend build, npm audit and
+  repository whitespace checks pass;
+- search connection, empty filtered search, dossier, video and criticism synthetic failures all move
+  focus to a status/alert, clear `aria-busy`, preserve the relevant identity/input/evidence and expose
+  an explicit action without rendering synthetic private exception text;
+- Deep Study cancellation exposes a busy state and stop control, responds in 6.1 ms, restores
+  generation and focuses an honest retry state; a synthetic provider failure responds in 215.7 ms,
+  redacts its private detail and preserves the film/evidence/focus;
+- valid synthetic study completion focuses the result and clears both busy and stop controls without
+  spending a model call;
+- analysis, settings, account and dynamic video tablists each retain one selected tab stop and move
+  focus/panel correctly with Arrow or End keys;
+- axe-core 4.13 reports zero WCAG 2 A/AA/2.1 AA violations and zero incomplete checks on Discover,
+  the 390 × 844 dossier and its Deep Study error/retry state;
+- dark primary-action contrast improves from 3.05:1 to 5.79:1 against the 4.5:1 AA requirement, and
+  all audited mobile states retain zero horizontal overflow.
+
+Known constraints:
+
+- aborting browser fetches cannot terminate synchronous provider work already running in a backend
+  worker; user copy states this boundary and no cost-saving cancellation claim is made;
+- synthetic bounded failures exercise deterministic UI behaviour without creating paid provider
+  calls, but do not estimate real timeout frequency;
+- automated axe and keyboard checks do not replace VoiceOver/NVDA user testing, Safari/Firefox,
+  physical devices, browser zoom or operating-system high-contrast validation;
+- detailed completed-stage/evidence transparency remains Step 9 rather than being folded into this
+  error-state checkpoint.
+
+Next actionable work:
+
+1. Complete Step 6 by addressing measured latency only: warm packet P95 already passes at 182.306 ms,
+   so concentrate on the approximately ten-second cold semantic-model initialisation path without
+   changing evidence selection.
+
 ### 21 August 2026 — Task-led responsive product hierarchy
 
 Delivered:

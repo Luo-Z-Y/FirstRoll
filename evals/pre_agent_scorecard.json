@@ -81,6 +81,19 @@
       "desktop_horizontal_overflow_px": 0,
       "mobile_horizontal_overflow_px": 0,
       "model_calls": 0
+    },
+    "ui_states_accessibility": {
+      "result_path": "evals/results/ui-states-accessibility-2026-08-21.json",
+      "source_revision": "a081947816f97762c77480da94a7367119443fc1",
+      "state_scenarios_assessed": 8,
+      "state_scenario_failures": 0,
+      "keyboard_tablists_assessed": 4,
+      "keyboard_tablist_failures": 0,
+      "axe_contexts_assessed": 3,
+      "axe_violations": 0,
+      "critical_accessibility_defects": 0,
+      "mobile_horizontal_overflow_px": 0,
+      "model_calls": 0
     }
   },
   "user_journeys": [
@@ -361,12 +374,12 @@
     {
       "id": "S05",
       "name": "Improve user-interface states and accessibility",
-      "status": "next"
+      "status": "complete"
     },
     {
       "id": "S06",
       "name": "Reduce evidence-packet latency",
-      "status": "queued"
+      "status": "next"
     },
     {
       "id": "S07",

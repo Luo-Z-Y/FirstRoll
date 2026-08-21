@@ -122,10 +122,22 @@ DevTools Protocol audit at 1,280 × 1,000 and 390 × 844 CSS pixels from revisio
 frozen journeys retained a usable hierarchy with zero P0/P1 blockers and zero horizontal overflow.
 Six immediate response observations produced P50/P95 of 7.35/12.05 ms against the 300 ms budget.
 
-The audit made no model calls. It reused the complete workflow result for synthesis coverage and
-explicitly defers detailed failure copy, retry, cancellation, keyboard, focus, announcement and
-contrast assessment to Step 5. Screenshots remain local acceptance aids; only public fixture IDs and
-redacted measurements are versioned.
+The audit made no model calls. It reused the complete workflow result for synthesis coverage.
+Screenshots remain local acceptance aids; only public fixture IDs and redacted measurements are
+versioned.
+
+The follow-on [`ui-states-accessibility-2026-08-21.json`](../evals/results/ui-states-accessibility-2026-08-21.json)
+closes the deferred Step 5 checks at revision `a081947`. Eight search, dossier, provider and Deep
+Study terminal-state scenarios retained inputs/evidence, moved focus, cleared busy state, redacted
+synthetic provider details and exposed a safe retry. Browser-side **Stop waiting** responded in 6.1
+ms while explicitly warning that server/provider work might continue.
+
+Arrow/Home/End checks left exactly one tab stop and selected panel in analysis, settings, account and
+dynamic video tablists. Axe-core 4.13 reported zero WCAG 2 A/AA/2.1 AA violations and zero incomplete
+checks on the Discover landing, mobile dossier and mobile Deep Study error contexts. The initial
+dark-theme primary-action contrast defect moved from 3.05:1 to 5.79:1 against a 4.5:1 requirement.
+No model call was made for this UI-only checkpoint; physical devices and assistive-technology user
+testing remain separate known constraints.
 
 ## Metric Dictionary
 

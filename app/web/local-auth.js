@@ -110,6 +110,7 @@
       const active = button.dataset.authMode === authMode;
       button.classList.toggle("is-active", active);
       button.setAttribute("aria-selected", String(active));
+      button.tabIndex = active ? 0 : -1;
     });
     if (refs.nameWrap) refs.nameWrap.hidden = !signingUp;
     if (refs.emailWrap) refs.emailWrap.hidden = recovering;
@@ -302,6 +303,23 @@
   refs.close?.addEventListener("click", () => refs.dialog?.close());
   refs.modeButtons.forEach((button) => {
     button.addEventListener("click", () => setMode(button.dataset.authMode || "sign-in"));
+    button.addEventListener("keydown", (event) => {
+      if (!["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"].includes(event.key)) {
+        return;
+      }
+      event.preventDefault();
+      const current = refs.modeButtons.indexOf(button);
+      const forward = ["ArrowRight", "ArrowDown"].includes(event.key);
+      const nextIndex = event.key === "Home"
+        ? 0
+        : event.key === "End"
+          ? refs.modeButtons.length - 1
+          : (current + (forward ? 1 : -1) + refs.modeButtons.length)
+            % refs.modeButtons.length;
+      const next = refs.modeButtons[nextIndex];
+      setMode(next.dataset.authMode || "sign-in");
+      next.focus();
+    });
   });
   refs.dialog?.addEventListener("click", (event) => {
     if (event.target === refs.dialog) refs.dialog.close();
