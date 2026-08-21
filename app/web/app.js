@@ -707,7 +707,7 @@ function researchProgressMarkup(events, options = {}) {
     </header>
     <ol>
       ${history.map((progress, index) => `<li class="${index === history.length - 1 ? "is-current" : "is-complete"}">
-        <i aria-hidden="true">${index === history.length - 1 && !options.completed ? "•" : "✓"}</i>
+        <i aria-hidden="true"></i>
         <span>${escapeHtml(progress.message)}</span>
         <small>${escapeHtml((Number(progress.elapsed_ms || 0) / 1000).toFixed(1))}s</small>
       </li>`).join("")}
@@ -2613,7 +2613,7 @@ function packetTransparencyMarkup(study) {
       ${packetLayerMarkup("Critic claims", critical, claims.length)}
       ${packetLayerMarkup("Attributed text", attributed, attributedSources.length)}
     </div>
-    <div class="packet-metrics" aria-label="Packet quality metrics">
+    <div class="packet-metrics" role="group" aria-label="Packet quality metrics">
       <span><b>${escapeHtml(Math.round(provenance * 100))}%</b> provenance</span>
       <span><b>${escapeHtml(Math.round(duplication * 100))}%</b> duplicates</span>
       <span><b>${escapeHtml(Math.round(relevance * 100))}%</b> lexical focus</span>

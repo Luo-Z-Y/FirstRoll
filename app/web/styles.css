@@ -1594,8 +1594,8 @@ button.director-film-card:focus-visible { outline: 2px solid #e47c67; outline-of
 .study-progress-counts b { color: var(--cream); }
 .study-progress-history ol { display: grid; gap: 7px; margin: 12px 0 0; padding: 0; list-style: none; }
 .study-progress-history li { display: grid; grid-template-columns: 16px minmax(0, 1fr) auto; align-items: baseline; gap: 7px; color: rgba(250, 246, 238, 0.68); font-size: 0.64rem; }
-.study-progress-history li i { color: #9aaf72; font-style: normal; }
-.study-progress-history li.is-current i { color: #e6a995; }
+.study-progress-history li i { width: 8px; height: 8px; border-radius: 50%; background: #9aaf72; }
+.study-progress-history li.is-current i { background: #e6a995; box-shadow: 0 0 0 3px rgba(230, 169, 149, 0.16); }
 .study-progress-history li small { color: rgba(250, 246, 238, 0.52); font: 0.52rem "IBM Plex Mono", monospace; }
 .study-quality { display: flex; max-width: 900px; justify-content: space-between; gap: 16px; margin: 0 auto 18px; padding: 11px 13px; border-left: 3px solid #d58a76; background: rgba(250, 246, 238, 0.06); font: 0.58rem "IBM Plex Mono", monospace; text-transform: uppercase; }
 .study-quality.is-passed { border-left-color: #9aaf72; }

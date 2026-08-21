@@ -340,6 +340,7 @@ def test_deep_study_keeps_progress_packet_gaps_and_citations_inspectable() -> No
     assert "study-progress-history" in styles
     assert "packet-transparency" in styles
     assert "packet-layer-grid" in styles
+    assert 'class="packet-metrics" role="group" aria-label="Packet quality metrics"' in app
     assert 'result["packet_quality"] = assess_evidence_packet(packet)' in study_service
 
 
