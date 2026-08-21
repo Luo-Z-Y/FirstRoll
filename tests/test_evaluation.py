@@ -124,6 +124,22 @@ def test_pre_agent_scorecard_freezes_steps_journeys_and_entry_targets() -> None:
     assert packet_checkpoint["cold_p95_ms"] == packet_result["summary"]["cold"]["p95_ms"]
     assert packet_checkpoint["warm_p95_ms"] == packet_result["summary"]["warm"]["p95_ms"]
 
+    ui_checkpoint = scorecard["measured_checkpoints"]["ui_hierarchy"]
+    ui_result = json.loads(
+        (ROOT / ui_checkpoint["result_path"]).read_text(encoding="utf-8")
+    )
+    assert ui_checkpoint["source_revision"] == ui_result["source_revision"]
+    assert ui_checkpoint["journeys_assessed"] == ui_result["summary"]["journeys_assessed"]
+    assert ui_checkpoint["journey_blockers"] == ui_result["summary"]["journey_blockers"]
+    assert ui_checkpoint["visible_response_p95_ms"] == ui_result["summary"][
+        "visible_response_p95_ms"
+    ]
+    assert ui_checkpoint["mobile_horizontal_overflow_px"] == ui_result["summary"][
+        "mobile_horizontal_overflow_px"
+    ]
+    assert len(ui_result["journeys"]) == 6
+    assert all(journey["status"].startswith("passed") for journey in ui_result["journeys"])
+
     assert scorecard["latency_stages"] == list(STUDY_STAGE_NAMES)
 
     journey_ids = [journey["id"] for journey in scorecard["user_journeys"]]

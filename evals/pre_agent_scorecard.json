@@ -71,6 +71,16 @@
       "cold_p95_ms": 10013.91,
       "warm_p50_ms": 138.24,
       "warm_p95_ms": 182.306
+    },
+    "ui_hierarchy": {
+      "result_path": "evals/results/ui-hierarchy-2026-08-21.json",
+      "source_revision": "d3b3c1946044e2478cd597b651f6e4caf4c96103",
+      "journeys_assessed": 6,
+      "journey_blockers": 0,
+      "visible_response_p95_ms": 12.05,
+      "desktop_horizontal_overflow_px": 0,
+      "mobile_horizontal_overflow_px": 0,
+      "model_calls": 0
     }
   },
   "user_journeys": [
@@ -346,12 +356,12 @@
     {
       "id": "S04",
       "name": "Improve user-interface hierarchy",
-      "status": "next"
+      "status": "complete"
     },
     {
       "id": "S05",
       "name": "Improve user-interface states and accessibility",
-      "status": "queued"
+      "status": "next"
     },
     {
       "id": "S06",

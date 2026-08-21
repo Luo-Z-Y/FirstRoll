@@ -1,6 +1,6 @@
 # Pre-Agent Product Hardening
 
-**Status:** active; Steps 1–3 complete and Step 4 is next
+**Status:** active; Steps 1–4 complete and Step 5 is next
 
 **Machine-readable scorecard:** [`evals/pre_agent_scorecard.json`](../evals/pre_agent_scorecard.json)
 
@@ -116,15 +116,17 @@ uv run python tools/benchmark_evidence_packet.py \
 **Acceptance:** a reviewed, redacted result records packet P50/P95, prompt size, selected/omitted
 counts, failures and configuration fingerprint. No optimisation is mixed into this result.
 
-### Step 4 — Improve user-interface hierarchy — next
+### Step 4 — Improve user-interface hierarchy — complete
 
 Use the frozen journeys to improve information order, visual priority, navigation, dossier density
 and mobile composition. Preserve the evidence taxonomy and private/public runtime boundary.
 
 **Acceptance:** all six journeys complete without a P0/P1 blocker, stale selection or horizontal
-overflow; the interface gives visible feedback within a 300 ms P95 budget.
+overflow; the interface gives visible feedback within a 300 ms P95 budget. The reviewed
+[`ui-hierarchy-2026-08-21.json`](../evals/results/ui-hierarchy-2026-08-21.json) records zero blockers,
+zero desktop/mobile overflow and 12.05 ms P95 immediate visible response without a model call.
 
-### Step 5 — Improve user-interface states and accessibility
+### Step 5 — Improve user-interface states and accessibility — next
 
 Make loading, empty, sparse-evidence, degraded-provider, timeout, cancellation and retry states
 specific and actionable. Correct keyboard order, focus movement, accessible names, status

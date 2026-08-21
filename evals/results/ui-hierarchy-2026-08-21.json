@@ -1,0 +1,179 @@
+{
+  "schema_version": 1,
+  "suite_id": "firstroll-ui-hierarchy-v1",
+  "system": "local_private_edition_browser",
+  "recorded_at": "2026-08-21T15:27:39Z",
+  "source_revision": "d3b3c1946044e2478cd597b651f6e4caf4c96103",
+  "comparison_revision": "78982b2c10483e4ec9d2cd2c7dc6ca94965aa095",
+  "environment": {
+    "browser": "Chrome 151.0.7922.172 headless",
+    "automation": "Chrome DevTools Protocol",
+    "origin": "http://127.0.0.1:8000",
+    "viewports": [
+      {
+        "name": "desktop",
+        "width_css_px": 1280,
+        "height_css_px": 1000
+      },
+      {
+        "name": "mobile",
+        "width_css_px": 390,
+        "height_css_px": 844
+      }
+    ]
+  },
+  "quality_scope": "Task hierarchy, immediate visible response, responsive overflow and documented journey continuity; not the Step 5 accessibility or failure-state audit.",
+  "summary": {
+    "journeys_assessed": 6,
+    "journey_blockers": 0,
+    "critical_hierarchy_defects": 0,
+    "visible_response_samples": 6,
+    "visible_response_p50_ms": 7.35,
+    "visible_response_p95_ms": 12.05,
+    "visible_response_maximum_ms": 12.7,
+    "desktop_horizontal_overflow_px": 0,
+    "mobile_horizontal_overflow_px": 0,
+    "model_calls": 0
+  },
+  "visible_response_samples": [
+    {
+      "action": "exact_search_pending_state",
+      "duration_ms": 10.1,
+      "visible_result": "Searching label and progress region"
+    },
+    {
+      "action": "ambiguous_search_pending_state",
+      "duration_ms": 9.4,
+      "visible_result": "Searching label and progress region"
+    },
+    {
+      "action": "open_dossier_pending_state",
+      "duration_ms": 5.3,
+      "visible_result": "Building dossier progress region"
+    },
+    {
+      "action": "settings_navigation",
+      "duration_ms": 0.4,
+      "visible_result": "Settings product view active"
+    },
+    {
+      "action": "synopsis_disclosure",
+      "duration_ms": 0.2,
+      "visible_result": "Full attributed synopsis expanded"
+    },
+    {
+      "action": "dossier_section_route",
+      "duration_ms": 12.7,
+      "visible_result": "Watch and verify target selected"
+    }
+  ],
+  "journeys": [
+    {
+      "id": "J01",
+      "name": "Exact discovery to dossier",
+      "status": "passed",
+      "evidence": {
+        "identity": "wikidata:Q210756",
+        "search_results": 1,
+        "search_pending_ms": 10.1,
+        "search_terminal_ms": 10190.7,
+        "dossier_pending_ms": 5.3,
+        "dossier_terminal_ms": 7597.7,
+        "loaded_film_detail_top_css_px": 0.328,
+        "desktop_dossier_hero_height_css_px": 718.703,
+        "desktop_dossier_route_top_css_px": 772.031
+      }
+    },
+    {
+      "id": "J02",
+      "name": "Ambiguous identity confirmation",
+      "status": "passed",
+      "evidence": {
+        "query_case": "the-thing-ambiguous-identity",
+        "candidate_choices": 14,
+        "heading": "Which film did you mean?",
+        "search_pending_ms": 9.4,
+        "search_terminal_ms": 16800.7,
+        "mobile_horizontal_overflow_px": 0
+      }
+    },
+    {
+      "id": "J03",
+      "name": "Inspect attributed evidence",
+      "status": "passed",
+      "evidence": {
+        "case": "in-the-mood-for-love-space",
+        "dossier_route_links": 3,
+        "criticism_provider_tabs": 4,
+        "loaded_criticism_provider_tabs": 3,
+        "visible_raw_sources": 6,
+        "applicable_public_source_links": 6,
+        "mobile_horizontal_overflow_px": 0
+      }
+    },
+    {
+      "id": "J04",
+      "name": "Generate and inspect Deep Study",
+      "status": "passed_for_hierarchy",
+      "evidence": {
+        "deep_study_route_present": true,
+        "focus_control_present": true,
+        "generate_control_present": true,
+        "numbered_sequence_position": 3,
+        "model_called_during_ui_audit": false,
+        "complete_workflow_evidence": "evals/results/baseline-2026-08-21.json"
+      }
+    },
+    {
+      "id": "J05",
+      "name": "Navigate and resume work",
+      "status": "passed",
+      "evidence": {
+        "restored_product_view": "settings",
+        "restored_film": "In the Mood for Love",
+        "summary_workspace_restored": true,
+        "mobile_horizontal_overflow_px": 0
+      }
+    },
+    {
+      "id": "J06",
+      "name": "Recover from sparse evidence or provider failure",
+      "status": "passed_for_hierarchy",
+      "evidence": {
+        "case": "the-thing-ambiguous-identity",
+        "loaded_criticism_sources": 0,
+        "available_criticism_actions": 4,
+        "dossier_route_links": 3,
+        "deep_study_control_remains_visible": true,
+        "stale_result_displayed": false,
+        "failure_copy_and_retry_depth_deferred_to_step": "S05"
+      }
+    }
+  ],
+  "responsive_comparison": {
+    "before": {
+      "mobile_dossier_hero_height_css_px": 1749.688,
+      "mobile_primary_actions_top_css_px": 792.156
+    },
+    "after": {
+      "mobile_dossier_hero_height_css_px": 1037.688,
+      "mobile_primary_actions_top_css_px": 208.609,
+      "mobile_secondary_facts_collapsed": true,
+      "mobile_dossier_route_top_css_px": 1085.453
+    }
+  },
+  "acceptance": {
+    "visible_response_p95_budget_ms": 300,
+    "visible_response_budget_passed": true,
+    "journey_blocker_budget": 0,
+    "journey_blocker_budget_passed": true,
+    "horizontal_overflow_budget_px": 0,
+    "horizontal_overflow_budget_passed": true
+  },
+  "known_constraints": [
+    "External catalogue timing remains provider-dependent and is reported separately from immediate interface response.",
+    "J04 reused the current complete-workflow result instead of spending another model call during a hierarchy-only audit.",
+    "J06 confirms that sparse evidence retains a usable route and actions; detailed timeout, cancellation, retry and accessibility behaviour belongs to Step 5.",
+    "Headless screenshots are acceptance aids and are not committed product evidence; this JSON contains only measurements and public fixture identifiers."
+  ]
+}
