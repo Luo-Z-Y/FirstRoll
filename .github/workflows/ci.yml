@@ -4,20 +4,39 @@ on:
   push:
   pull_request:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   checks:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - name: Check out the tested revision
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: '3.11'
-      - uses: actions/setup-node@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: '22'
-      - uses: hashicorp/setup-terraform@v4
+          cache: npm
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
         with:
           terraform_version: '1.14.9'
+      - name: Audit frontend dependency lock
+        run: npm audit --audit-level=high
+      - name: Check frontend JavaScript syntax
+        run: find app/web -maxdepth 1 -name '*.js' -exec node --check {} \;
       - name: Validate Terraform
         run: |
           terraform -chdir=infra/terraform fmt -check -recursive
@@ -40,7 +59,7 @@ jobs:
           result = asyncio.run(douban_adapter.test_connection());
           assert result['cookie_configured'] is False;
           assert result['tools'] == ['list-movie-reviews', 'search-movie']"
-      - name: Test film discovery
+      - name: Test hosted contracts
         run: >-
           python -m pytest -q
           tests/test_discovery.py
@@ -52,6 +71,7 @@ jobs:
           tests/test_research_graph.py
           tests/test_video_sources.py
           tests/test_web_3d_assets.py
+          tests/test_frontend_ci.py
       - name: Build hosted frontend
         env:
           FIRSTROLL_API_BASE: https://firstroll.example.com

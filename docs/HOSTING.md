@@ -6,7 +6,7 @@
 
 **API URL:** `https://api.firstroll.app`
 
-**Last reconciled:** 20 August 2026
+**Last reconciled:** 21 August 2026
 
 FirstRoll is not merely a local application. Its active public beta uses Azure Static Web Apps for
 the frontend and Azure Container Apps for the Docker API, while private-library and clip-analysis
@@ -127,15 +127,21 @@ visitor-facing website.
 
 ## 2. Operate the Azure Static Web Apps frontend
 
-The active Static Web App deploys from `master` through
-`.github/workflows/azure-static-web-apps-salmon-field-03695a010.yml`.
+The active Static Web App deploys through
+`.github/workflows/azure-static-web-apps-salmon-field-03695a010.yml`. The production workflow accepts
+only a successful `CI` run caused by a push to this repository's `master` branch. Pull requests run
+the same frontend audit, syntax checks, contract tests and build without receiving a deployment
+credential; FirstRoll deliberately does not create Azure preview deployments from pull-request code.
+Use `./tools/preview_hosted_web.sh` for a local hosted-mode preview.
 
 | Setting | Value |
 |---|---|
-| App location | `/` |
+| Trigger | successful `CI` push run on `master` |
+| Checked-out revision | exact CI-approved SHA, verified as the current `master` head |
+| App location | `dist`; pre-built before the deployment credential is used |
 | API location | empty; FastAPI is a separate service |
-| Output location | `dist` |
-| Build script | `./tools/build_web.sh` |
+| Output location | empty because Azure's application build is skipped |
+| Build script | `./tools/build_web.sh` with lockfile-controlled, lifecycle-script-disabled installation |
 | Visitor domain | `https://firstroll.app` |
 
 The workflow supplies these public build values:
@@ -146,13 +152,24 @@ The workflow supplies these public build values:
 | `FIRSTROLL_SUPABASE_URL` | Supabase project URL |
 | `FIRSTROLL_SUPABASE_PUBLISHABLE_KEY` | browser-safe Supabase publishable key |
 
-The Azure deployment token remains in the GitHub Actions secret
-`AZURE_STATIC_WEB_APPS_API_TOKEN_SALMON_FIELD_03695A010`. Never place that token in source code or a
-public build variable.
+The Azure deployment token is rotated into the branch-restricted GitHub `production` environment as
+`AZURE_STATIC_WEB_APPS_API_TOKEN_SALMON_FIELD_03695A010`; it is not a repository-wide secret. Never
+place that token in source code or a public build variable. The uncredentialled build job validates
+`dist` and seals it in an immutable, one-day GitHub Actions artifact. A separate deployment runner
+checks out no repository code, downloads that artifact by its run-scoped ID and gives the token only
+to the final pinned Azure action. `skip_app_build` prevents that action from running repository build
+code while credentialled.
 
-Every push to `master` runs CI and the Azure deployment. After it succeeds, verify
-`https://firstroll.app` because custom-domain DNS and CDN caching are separate from the build job.
-The frontend should appear independently of the API's deployment state.
+Both workflows grant `GITHUB_TOKEN` only read access to repository contents, do not persist checkout
+credentials and pin every external action to a full commit SHA. Repository Actions policy enforces
+SHA pinning and permits only GitHub-owned actions plus the explicitly allow-listed HashiCorp and
+Azure actions. Dependabot checks the npm lock and action pins weekly; production dependency audit
+failures at high severity block CI and deployment.
+
+Every push to `master` runs CI first. A successful current revision starts one serialised production
+job; a failed, cancelled, pull-request, foreign-repository or stale run cannot deploy. After a
+production job succeeds, verify `https://firstroll.app` because custom-domain DNS and CDN caching are
+separate from the build job. The frontend should appear independently of the API's deployment state.
 
 ## 3. Connect Supabase authentication
 

@@ -1,5 +1,43 @@
 # FirstRoll Project Progress
 
+### 21 August 2026 — Hardened frontend CI/CD trust boundary
+
+Delivered:
+
+1. Made pull-request CI explicitly read-only, stopped checkout from persisting its token and pinned
+   every GitHub, HashiCorp and Azure action to an immutable full commit SHA.
+2. Replaced credentialled pull-request preview deployments with a production-only workflow that
+   accepts a successful same-repository `master` push, checks out its exact approved SHA and refuses
+   to deploy if a newer revision has reached `master`.
+3. Isolated the frontend build, high-severity npm audit and bounded `dist` validation in an
+   uncredentialled job that seals its output as an immutable, run-scoped artifact. A separate runner
+   checks out no repository code and gives the token only to Azure's build-disabled upload step.
+4. Rotated the Azure token out of repository-wide secrets and into a `master`-restricted GitHub
+   `production` environment. Reduced the repository's default workflow token to read-only and
+   enforced full-SHA action references with a narrow external-action allow-list.
+5. Added workflow contract tests, cancellation and timeout bounds, weekly npm and Actions Dependabot
+   checks, and operator documentation for the new deployment gate.
+
+Acceptance evidence:
+
+- the 175-test suite, action-workflow and YAML validation, JavaScript syntax, npm audit and repository
+  whitespace checks pass locally;
+- GitHub reports read-only default workflow permissions, mandatory action SHA pinning, the restricted
+  `production` environment secret and no repository-wide Azure deployment secret;
+- a successful `master` CI run triggers the production workflow, which uploads only the pre-built
+  `dist` directory before `https://firstroll.app` is checked for the approved build.
+
+Known constraint:
+
+- the Azure action is SHA-pinned, but its pinned Dockerfile delegates to Microsoft's maintained
+  `staticappsclient:stable` image; the remaining transitive image update boundary is controlled by
+  Azure rather than this repository.
+
+Next actionable work:
+
+1. Review weekly Dependabot action and npm updates, retaining full-SHA pins and re-running the
+   production smoke check before merging a supply-chain change.
+
 ### 21 August 2026 — Interruptible recent-film switching
 
 Delivered:

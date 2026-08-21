@@ -887,6 +887,14 @@ node --check app/web/closet3d.js
 git diff --check
 ```
 
+Pull-request CI uses a read-only, non-persisted GitHub token, audits the locked frontend dependency
+graph and builds without Azure credentials. Production frontend deployment starts only after a
+successful `master` push run and checks that the approved SHA is still current. An uncredentialled
+runner seals the validated `dist` directory as an immutable artifact; a separate runner checks out no
+repository code and gives the branch-restricted `production` token only to the pinned Azure upload
+action. External actions are full-SHA pinned and reviewed weekly by Dependabot; pull-request code is
+never deployed to an Azure preview environment.
+
 The checked-in GLB is ready to serve and does not require Blender at runtime. To regenerate
 the room asset after changing its geometry or materials, install Blender 5.2 or newer and run:
 

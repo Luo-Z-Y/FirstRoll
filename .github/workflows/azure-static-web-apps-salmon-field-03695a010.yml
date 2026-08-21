@@ -1,30 +1,59 @@
-name: Azure Static Web Apps CI/CD
+name: Azure Static Web Apps production
 
 on:
-  push:
-    branches:
-      - master
-  pull_request:
-    types: [opened, synchronize, reopened, closed]
+  workflow_run:
+    workflows:
+      - CI
+    types:
+      - completed
     branches:
       - master
 
+permissions:
+  contents: read
+
+concurrency:
+  group: azure-static-web-apps-production
+  cancel-in-progress: true
+
 jobs:
-  build_and_deploy_job:
-    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed')
-    runs-on: ubuntu-latest
-    name: Build and Deploy Job
+  build:
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'master' &&
+      github.event.workflow_run.head_repository.full_name == github.repository
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    name: Build production frontend without credentials
+    outputs:
+      artifact-id: ${{ steps.frontend-artifact.outputs.artifact-id }}
     steps:
-      - uses: actions/checkout@v3
+      - name: Check out the CI-approved revision
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
-          # Build numbers use the repository's commit count. Azure's default
-          # one-commit checkout would make every deployment appear as v1.
           fetch-depth: 0
-          submodules: true
-          lfs: false
-      - name: Build And Deploy
-        id: builddeploy
-        uses: Azure/static-web-apps-deploy@v1
+          persist-credentials: false
+          ref: ${{ github.event.workflow_run.head_sha }}
+      - name: Refuse a stale production revision
+        env:
+          EXPECTED_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -eu
+          checked_out_sha=$(git rev-parse HEAD)
+          current_master_sha=$(git ls-remote origin refs/heads/master | cut -f1)
+          if [ "$checked_out_sha" != "$EXPECTED_SHA" ] || [ "$current_master_sha" != "$EXPECTED_SHA" ]; then
+            echo "Refusing to deploy a stale revision." >&2
+            exit 1
+          fi
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Audit frontend dependency lock
+        run: npm audit --audit-level=high
+      - name: Build production frontend
         env:
           FIRSTROLL_API_BASE: https://api.firstroll.app
           # The UI renders a small comparable release badge; localhost reserves
@@ -34,25 +63,61 @@ jobs:
           FIRSTROLL_AUTH_PROVIDER: supabase
           FIRSTROLL_SUPABASE_URL: https://obnxmfcvshbkbsgxbmgg.supabase.co
           FIRSTROLL_SUPABASE_PUBLISHABLE_KEY: sb_publishable_P6VzoeBdroR-2yeit62cbg_vvTXH47Y
+        run: ./tools/build_web.sh
+      - name: Validate the bounded deployment directory
+        run: |
+          set -eu
+          test -f dist/index.html
+          test -f dist/assets/config.js
+          test -f dist/assets/app.js
+          test -f dist/assets/auth.js
+          if find dist -type l -print -quit | grep -q .; then
+            echo "The deployment directory must not contain symbolic links." >&2
+            exit 1
+          fi
+          node --check dist/assets/app.js
+          node --check dist/assets/auth.js
+          node --check dist/assets/config.js
+          grep -F 'apiBase: "https://api.firstroll.app"' dist/assets/config.js >/dev/null
+          grep -F 'buildChannel: "live"' dist/assets/config.js >/dev/null
+      - name: Seal the deployment artifact
+        id: frontend-artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_SALMON_FIELD_03695A010 }}
-          repo_token: ${{ secrets.GITHUB_TOKEN }} # Used for Github integrations (i.e. PR comments)
-          action: "upload"
-          ###### Repository/Build Configurations - These values can be configured to match your app requirements. ######
-          # For more information regarding Static Web App workflow configurations, please visit: https://aka.ms/swaworkflowconfig
-          app_location: "/" # App source code path
-          api_location: "" # Api source code path - optional
-          output_location: "dist" # Built app content directory - optional
-          ###### End of Repository/Build Configurations ######
+          name: production-frontend-${{ github.event.workflow_run.head_sha }}
+          path: dist/
+          if-no-files-found: error
+          retention-days: 1
 
-  close_pull_request_job:
-    if: github.event_name == 'pull_request' && github.event.action == 'closed'
-    runs-on: ubuntu-latest
-    name: Close Pull Request Job
+  deploy:
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    name: Deploy sealed production frontend
+    environment:
+      name: production
+      url: https://firstroll.app
     steps:
-      - name: Close Pull Request
-        id: closepullrequest
-        uses: Azure/static-web-apps-deploy@v1
+      - name: Download the immutable build artifact
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          artifact-ids: ${{ needs.build.outputs.artifact-id }}
+          path: dist
+      - name: Check the deployment boundary
+        run: |
+          set -eu
+          test -f dist/index.html
+          test -f dist/assets/config.js
+          if find dist -type l -print -quit | grep -q .; then
+            echo "The deployment artifact must not contain symbolic links." >&2
+            exit 1
+          fi
+      - name: Upload the pre-built frontend
+        uses: Azure/static-web-apps-deploy@1a947af9992250f3bc2e68ad0754c0b0c11566c9 # v1
         with:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_SALMON_FIELD_03695A010 }}
-          action: "close"
+          action: upload
+          app_location: dist
+          api_location: ''
+          output_location: ''
+          skip_app_build: true
