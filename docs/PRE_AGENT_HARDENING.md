@@ -1,6 +1,6 @@
 # Pre-Agent Product Hardening
 
-**Status:** active; Steps 1–9 complete and Step 10 is next
+**Status:** active; Steps 1–10 complete and Step 11 is next
 
 **Machine-readable scorecard:** [`evals/pre_agent_scorecard.json`](../evals/pre_agent_scorecard.json)
 
@@ -193,7 +193,7 @@ records retained progress history, four aggregate count types, three packet laye
 reasons, two explicit evidence gaps, four timing rows and exact `S`/`C`/`E` navigation with zero
 citation failures, axe findings, overflow or model calls.
 
-### Step 10 — Tune synthesis reliability — next
+### Step 10 — Tune synthesis reliability — complete
 
 Hold packet selection fixed while testing prompt reduction, timeout handling and model settings one
 variable at a time. Use same-day paired runs and retain operational failures in the denominator.
@@ -201,9 +201,13 @@ variable at a time. Use same-day paired runs and retain operational failures in 
 **Acceptance:** all five final cases produce assessable terminal results, deterministic gate pass
 rate remains 100% over completed studies, mean automated quality is at least 96.94 and paired median
 end-to-end latency improves by at least 15% without a P95 regression. A provider-reliability claim
-requires at least twenty attempts; five cases alone remain a regression fixture.
+requires at least twenty attempts; five cases alone remain a regression fixture. The reviewed
+[`baseline-reliability-2026-08-21.json`](../evals/results/baseline-reliability-2026-08-21.json)
+completes 5/5 at 98.65 mean quality; relative to the held-packet Step 8 run, P50/P95 improve
+16.9011%/20.1406%, completion-token P95 is 2,552.4 and total tokens fall to 38,875. The result makes
+no provider-reliability claim.
 
-### Step 11 — Freeze the fixed-workflow baseline
+### Step 11 — Freeze the fixed-workflow baseline — next
 
 Run the full automated suite, desktop/mobile journeys, cold/warm packet benchmark, adversarial
 fixtures, human packet rubric and final fixed workflow evaluation. Review every retained artefact for

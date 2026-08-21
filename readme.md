@@ -1014,7 +1014,7 @@ fallback behaviour; these are tracked separately from the new FirstRoll modules.
 | Evidence-grounded Deep Study | Complete | Typed theory, criticism, review and video-text evidence; Pydantic output, citation validation and quality gate |
 | Bounded research Agent core | Implemented | LangGraph control flow, bounded reducers, deterministic tool authorisation, fake-service scenarios and optional checkpointing; production route integration remains gated |
 | Authenticated research progress | Implemented | Allow-listed SSE lifecycle events, separate owner-scoped result retrieval and secret/evidence redaction tests; final interactive browser observation remains pending |
-| Pre-Agent product hardening | Active — Steps 1–9 complete | UI/latency/packet gates and inspectable progress, packet gaps, timing and exact citation targets are complete; synthesis reliability is next |
+| Pre-Agent product hardening | Active — Steps 1–10 complete | UI, latency, packet and transparency gates pass; bounded concise synthesis exceeds paired latency/quality targets; integrated baseline freeze is next |
 | Clip analysis web migration | Complete | Scene, shot, colour, object and export workflow |
 | Clip-to-study evidence bridge | Queued | Feed measured scenes, shots and timecodes into synthesis after the active hardening sequence |
 | Creator primary-source layer | Partial | Discovered interview descriptions and public YouTube captions are stored and cited; verified speaker attribution and dedicated interview search remain planned |
@@ -1049,7 +1049,8 @@ The latest bounded-selection packet, synthetic-quality and complete-workflow che
 [`packet-selection-2026-08-21.json`](evals/results/packet-selection-2026-08-21.json),
 [`packet-quality-selection-2026-08-21.json`](evals/results/packet-quality-selection-2026-08-21.json)
 and [`baseline-selection-2026-08-21.json`](evals/results/baseline-selection-2026-08-21.json). The
-latest Deep Study transparency audit is
+latest synthesis-reliability and Deep Study transparency checkpoints are
+[`baseline-reliability-2026-08-21.json`](evals/results/baseline-reliability-2026-08-21.json) and
 [`deep-study-transparency-2026-08-21.json`](evals/results/deep-study-transparency-2026-08-21.json), and
 the latest responsive hierarchy and state/accessibility audits are
 [`ui-hierarchy-2026-08-21.json`](evals/results/ui-hierarchy-2026-08-21.json) and
