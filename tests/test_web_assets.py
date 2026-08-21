@@ -87,7 +87,7 @@ def test_loopback_preview_uses_a_separate_persistent_unlimited_test_account() ->
     assert 'runtimeConfig.accountUi ? \'<button class="detail-action"' in app
     assert "account studies remain today" in app
     assert 'src="/assets/integrations.js?v=20260820-6"' in index
-    assert 'src="/assets/app.js?v=20260821-9"' in index
+    assert 'src="/assets/app.js?v=20260821-10"' in index
     assert '"X-FirstRoll-DeepSeek-Key"' in integrations
     assert '"X-FirstRoll-YouTube-Key"' in integrations
     assert "localStorage" not in integrations
@@ -250,8 +250,8 @@ def test_archive_pullout_collapses_before_zoom_can_clip_its_copy() -> None:
     styles = (WEB / "styles.css").read_text(encoding="utf-8")
     app = (WEB / "app.js").read_text(encoding="utf-8")
 
-    assert "/assets/styles.css?v=20260821-5" in index
-    assert "/assets/app.js?v=20260821-9" in index
+    assert "/assets/styles.css?v=20260821-6" in index
+    assert "/assets/app.js?v=20260821-10" in index
     assert "closet3d.js" not in index
     assert 'class="archive-pullout-shell"' in app
     assert "container-type: inline-size" in styles
@@ -282,11 +282,34 @@ def test_recent_searches_can_be_removed_individually_or_cleared() -> None:
     assert ".recent-search-clear" in styles
 
 
+def test_discovery_and_dossier_expose_a_clear_task_hierarchy() -> None:
+    index = (WEB / "index.html").read_text(encoding="utf-8")
+    styles = (WEB / "styles.css").read_text(encoding="utf-8")
+    app = (WEB / "app.js").read_text(encoding="utf-8")
+
+    assert 'class="discovery-hero"' in index
+    assert 'id="discoveryTitle"' in index
+    assert "Find the film." in index
+    assert "Required</small>" in index
+    assert index.count("Optional</small>") == 2
+    assert ".discovery-hero" in styles
+    assert 'class="study-paths" aria-label="Film dossier sections"' in app
+    assert 'href="#dossier-watch"' in app
+    assert 'href="#dossier-criticism"' in app
+    assert 'href="#dossier-study"' in app
+    assert "detailOverviewMarkup" in app
+    assert "Read the full attributed synopsis" in app
+    assert '<details class="detail-facts"${factsOpen}>' in app
+    assert 'summary>Credits &amp; film facts</summary>' in app
+    assert 'window.requestAnimationFrame(() => {' in app
+    assert 'refs.filmDetail.scrollIntoView({ behavior: "smooth", block: "start" })' in app
+
+
 def test_discovery_workspace_survives_refresh_and_product_navigation() -> None:
     app = (WEB / "app.js").read_text(encoding="utf-8")
     index = (WEB / "index.html").read_text(encoding="utf-8")
 
-    assert "/assets/app.js?v=20260821-9" in index
+    assert "/assets/app.js?v=20260821-10" in index
     assert 'const DISCOVERY_SESSION_KEY = "firstroll.discovery-session"' in app
     assert 'const PRODUCT_SESSION_KEY = "firstroll.product-session"' in app
     assert "window.sessionStorage.setItem(DISCOVERY_SESSION_KEY" in app

@@ -70,6 +70,11 @@ The original GPL-3.0 licence and contributor attribution remain applicable. See
 - Confirm the intended film before opening the shelf whenever several records share or closely match
   a title; each choice exposes its year, director, original title and poster instead of trusting the
   provider's first-ranked result.
+- Start from a task-led Discover introduction and one clearly labelled identity form. Each completed
+  dossier keeps primary actions ahead of the bounded catalogue synopsis, collapses secondary credits
+  on narrow screens and provides numbered links through viewing context, attributed criticism and
+  Deep Study. A final loaded-dossier scroll prevents a changing shelf from leaving the requested film
+  below the viewport.
 - Read an attributed catalogue overview, poster and field-level crew provenance. TMDb results retain
   their IMDb and Wikidata external IDs so later research adapters can resolve the same work safely.
 - Browse a native HTML/CSS director shelf with up to twelve front-facing film cases. The selected
