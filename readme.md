@@ -644,14 +644,17 @@ Every genuine loopback-served interface, including the standard port `8000` app 
 port `4173` preview, exposes a development-only account for `luo_zhiyang@outlook.com`. Any password
 of at least eight characters opens that local account. Its profile, preferences and saved films are
 kept in that browser's local storage, and FirstRoll's own Deep Study allowance is unlimited. The
+loopback interface uses the same account-style **Discover / Analyse / Settings** navigation and
+integrated Settings screen as the hosted site while retaining local clip-analysis capabilities. The
 adapter requires both the requested host and connected client to be loopback addresses; Azure,
 Render and other non-loopback deployments cannot accept its development token and continue to use
 Supabase. DeepSeek, YouTube and other external provider limits still apply.
 
 ### Local settings
 
-Open [http://127.0.0.1:8000/settings](http://127.0.0.1:8000/settings) to configure optional
-connectors and manage the private study library. Secrets are write-only from the browser's
+Use the **Settings** item in the main navigation for account-style profile, appearance, allowance
+and integration controls. Open [http://127.0.0.1:8000/settings](http://127.0.0.1:8000/settings)
+directly for the separate developer-only connector and private-library console. Secrets are write-only from the browser's
 perspective and are stored in the Git-ignored `.firstroll/settings.json` file with local-only
 permissions.
 
