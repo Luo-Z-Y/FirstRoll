@@ -19,6 +19,8 @@ from app.backend.study_observability import StudyTrace
 DEEPSEEK_CHAT_URL = "https://api.deepseek.com/chat/completions"
 DEEPSEEK_MODELS_URL = "https://api.deepseek.com/models"
 DEFAULT_DEEPSEEK_MODEL = "deepseek-v4-pro"
+MAX_STUDY_COMPLETION_TOKENS = 3_200
+MAX_STUDY_MODEL_CALLS = 2
 
 
 class StudyGenerationError(RuntimeError):
@@ -294,7 +296,7 @@ class DeepSeekStudyService:
                 "thinking": {"type": "disabled"},
                 "response_format": {"type": "json_object"},
                 "temperature": 0.2,
-                "max_tokens": 3600,
+                "max_tokens": MAX_STUDY_COMPLETION_TOKENS,
             }
             trace.increment_count(
                 "prompt_characters",
@@ -304,6 +306,66 @@ class DeepSeekStudyService:
         with trace.stage("model_transport"):
             response = self._transport(DEEPSEEK_CHAT_URL, payload, key)
         trace.record_provider_usage(response)
+        repair_attempted = False
+        try:
+            result, quality = self._validated_draft(
+                response,
+                sources,
+                critical_claims,
+                packet,
+                trace,
+            )
+        except StudyGenerationError as initial_error:
+            trace.increment_count("repair_attempts")
+            retry_response = self._retry_invalid_response_once(key, payload, trace)
+            if retry_response is None:
+                raise initial_error
+            response = retry_response
+            try:
+                result, quality = self._validated_draft(
+                    response,
+                    sources,
+                    critical_claims,
+                    packet,
+                    trace,
+                )
+            except StudyGenerationError as retry_error:
+                raise StudyGenerationError(
+                    "DeepSeek returned an invalid study response after one repair attempt."
+                ) from retry_error
+            repair_attempted = True
+        if quality["status"] != "passed" and not repair_attempted:
+            trace.increment_count("repair_attempts")
+            repaired = self._repair_once(key, packet, sources, result, quality, trace)
+            if repaired is not None:
+                result = repaired
+                with trace.stage("validation_and_repair"):
+                    quality = StudyQualityGate.evaluate(result, bool(critical_claims))
+            repair_attempted = True
+        quality["repair_attempted"] = repair_attempted
+        result["model"] = response.get("model") or self.model
+        result["sources"] = sources
+        result["critical_claims"] = [claim.model_dump() for claim in critical_claims]
+        result["attributed_sources"] = [
+            source.model_dump() for source in packet.attributed_sources
+        ]
+        result["evidence_packet"] = packet.model_dump()
+        result["packet_quality"] = assess_evidence_packet(packet)
+        result["quality"] = quality
+        result["grounding_notice"] = (
+            "Textbook passages supply analytical frameworks, not proof of creator intention. "
+            "Film-specific visual claims remain viewing hypotheses until verified against the film."
+        )
+        return result
+
+    def _validated_draft(
+        self,
+        response: dict[str, Any],
+        sources: list[dict[str, Any]],
+        critical_claims: list[CriticalClaim],
+        packet: EvidencePacket,
+        trace: StudyTrace,
+    ) -> tuple[dict[str, Any], dict[str, Any]]:
         try:
             with trace.stage("validation_and_repair"):
                 choice = response["choices"][0]
@@ -322,32 +384,50 @@ class DeepSeekStudyService:
                     {source.evidence_id for source in packet.attributed_sources},
                 )
                 quality = StudyQualityGate.evaluate(result, bool(critical_claims))
+                return result, quality
         except StudyGenerationError:
             raise
         except (KeyError, IndexError, TypeError, json.JSONDecodeError, ValidationError) as exc:
             raise StudyGenerationError("DeepSeek returned an invalid study response.") from exc
-        if quality["status"] != "passed":
-            trace.increment_count("repair_attempts")
-            repaired = self._repair_once(key, packet, sources, result, quality, trace)
-            if repaired is not None:
-                result = repaired
-                with trace.stage("validation_and_repair"):
-                    quality = StudyQualityGate.evaluate(result, bool(critical_claims))
-            quality["repair_attempted"] = True
-        result["model"] = response.get("model") or self.model
-        result["sources"] = sources
-        result["critical_claims"] = [claim.model_dump() for claim in critical_claims]
-        result["attributed_sources"] = [
-            source.model_dump() for source in packet.attributed_sources
-        ]
-        result["evidence_packet"] = packet.model_dump()
-        result["packet_quality"] = assess_evidence_packet(packet)
-        result["quality"] = quality
-        result["grounding_notice"] = (
-            "Textbook passages supply analytical frameworks, not proof of creator intention. "
-            "Film-specific visual claims remain viewing hypotheses until verified against the film."
-        )
-        return result
+
+    def _retry_invalid_response_once(
+        self,
+        key: str,
+        original_payload: dict[str, Any],
+        trace: StudyTrace,
+    ) -> dict[str, Any] | None:
+        if MAX_STUDY_MODEL_CALLS < 2:
+            return None
+        with trace.stage("prompt_serialisation"):
+            messages = list(original_payload.get("messages", [])) + [
+                {
+                    "role": "system",
+                    "content": (
+                        "The previous response failed FirstRoll schema or citation validation. "
+                        "Return one complete JSON object in the required schema, using only the "
+                        "supplied evidence IDs. Do not add facts or Markdown. Keep the central "
+                        "argument and each section concise."
+                    ),
+                }
+            ]
+            payload = {
+                **original_payload,
+                "messages": messages,
+                "temperature": 0,
+                "max_tokens": MAX_STUDY_COMPLETION_TOKENS,
+            }
+            trace.increment_count(
+                "prompt_characters",
+                sum(len(str(message.get("content") or "")) for message in messages),
+            )
+        try:
+            trace.increment_count("model_calls")
+            with trace.stage("model_transport"):
+                response = self._transport(DEEPSEEK_CHAT_URL, payload, key)
+            trace.record_provider_usage(response)
+            return response
+        except StudyGenerationError:
+            return None
 
     def _repair_once(
         self,
@@ -382,7 +462,7 @@ class DeepSeekStudyService:
                 "thinking": {"type": "disabled"},
                 "response_format": {"type": "json_object"},
                 "temperature": 0,
-                "max_tokens": 3600,
+                "max_tokens": MAX_STUDY_COMPLETION_TOKENS,
             }
             trace.increment_count(
                 "prompt_characters",
@@ -567,6 +647,7 @@ Evidence rules:
 12. Output valid JSON only.
 13. Treat the sections as consecutive movements of one essay, not independent cards. Each section must advance the central argument, develop a distinct formal relation and avoid repeating the same thesis.
 14. Write each field as publication-ready prose that can be joined to the neighbouring fields without visible labels. Use transitions and clear antecedents; do not begin every field by repeating the film title or the lens name.
+15. Be concise: keep the central argument near 120–180 words and each section's combined prose near 140–210 words. Prefer four or five distinct sections over repetitive expansion.
 
 Calibration examples:
 BAD: "The film uses telephoto lenses to compress space." This is an unsourced remembered detail.
@@ -673,7 +754,7 @@ Return 4 to 6 sections in the order they should appear in a continuous essay. Ea
     def _repair_prompt() -> str:
         return """You are FirstRoll's bounded evidence auditor. Repair the supplied draft once.
 
-Return only a complete JSON object in exactly the same schema as the draft. Address every listed quality failure using only the supplied evidence packet. Do not add film details, scenes, shots, quotations, intentions or citations. Make each mechanism causal and each verification task observable (log, count, compare, track, mark or inspect). Preserve uncertainty. If the evidence cannot support specificity, state the precise limitation in the hypothesis and lower confidence."""
+Return only a complete JSON object in exactly the same schema as the draft. Address every listed quality failure using only the supplied evidence packet. Do not add film details, scenes, shots, quotations, intentions or citations. Make each mechanism causal and each verification task observable (log, count, compare, track, mark or inspect). Preserve uncertainty and the concise central/section budgets. If the evidence cannot support specificity, state the precise limitation in the hypothesis and lower confidence."""
 
     @staticmethod
     def _criticism_system_prompt() -> str:

@@ -138,7 +138,10 @@ The original GPL-3.0 licence and contributor attribution remain applicable. See
   - verification tasks and confidence.
 - Validate every theory, critic-claim and attributed-text citation against supplied evidence IDs.
 - Run a deterministic specificity and evidence-quality gate.
-- Permit at most one bounded repair request.
+- Keep synthesis within a 3,200-token completion ceiling and explicit central/section prose budgets.
+- Permit at most one bounded repair request across either invalid initial schema/citations or a valid
+  draft that fails the quality gate. Transport timeouts require an explicit user retry rather than
+  silently spending a second provider call.
 - Label unresolved work as **insufficient evidence** rather than silently accepting it.
 - Show a completed progress history plus selected/candidate/omitted layer counts, bounded omission
   reasons, evidence gaps, provenance/duplicate/focus diagnostics, provider token count and stage
