@@ -281,6 +281,9 @@ fusion rather than treating the raw BM25 value as an absolute relevance score.
 
 The default model is `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2`. Embeddings are
 optional and can be disabled with `FIRSTROLL_EMBEDDINGS=0`; lexical FTS retrieval remains available.
+The query encoder's `idle | warming | ready | failed | unavailable` warm-up state and aggregate
+milliseconds are process memory only. Warm-up embeds one fixed FirstRoll phrase, reads no private
+chunk and creates no additional vector, file, database row, browser record or telemetry store.
 
 ### `index_meta`
 

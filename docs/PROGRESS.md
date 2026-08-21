@@ -1,5 +1,63 @@
 # FirstRoll Project Progress
 
+### 21 August 2026 — Background semantic prewarm removes cold packet stall
+
+Delivered:
+
+1. Added a local-only startup handler that loads the unchanged multilingual query encoder in one
+   daemon thread while the API and Discover remain responsive. Hosted public mode never loads the
+   private index.
+2. Added model-initialisation and encode locks so startup, an early study request and index rebuild
+   cannot construct duplicate encoder instances or run unsafe concurrent inference.
+3. Exposed only `idle`, `warming`, `ready`, `failed` or `unavailable`, aggregate milliseconds and the
+   background flag through existing local index status. The warm-up embeds one fixed FirstRoll phrase
+   and reads no private chunk.
+4. Made Discover announce temporary background preparation and honest lexical fallback after a
+   failed warm-up; `FIRSTROLL_PREWARM_EMBEDDINGS=0` restores deferred loading.
+5. Extended the packet harness with an explicit prewarm protocol that keeps encoder startup outside
+   packet timing while retaining its cost as a separate distribution.
+6. Versioned a 35/35-sample candidate from the same five cases with zero model calls and exactly the
+   same aggregate packet-shape object as the unprewarmed baseline.
+
+Measured comparison:
+
+| Measure | Baseline | Prewarmed candidate | Change |
+|---|---:|---:|---:|
+| Cold-process P50 | 9,420.905 ms | 272.919 ms | −97.1030% |
+| Cold-process P95 | 10,013.910 ms | 361.549 ms | −96.3895% |
+| Warm P50 | 138.240 ms | 149.896 ms | +8.4317% |
+| Warm P95 | 182.306 ms | 182.709 ms | +0.2211% |
+| Semantic cold-stage P95 | 9,886.688 ms | 237.969 ms | −97.5930% |
+| Background encoder warm-up P95 | Included in request | 10,155.338 ms | Reported separately |
+
+Acceptance evidence:
+
+- all 205 automated tests, scoped Ruff, backend/tool compilation, frontend JavaScript syntax,
+  hosted frontend build, npm audit and repository whitespace checks pass;
+- deterministic concurrency coverage proves one encoder construction across concurrent callers,
+  one idempotent warm-up and redacted failure state without exception details;
+- startup coverage proves local default prewarm, explicit disablement and public-mode exclusion;
+- a live local API starts accepting status requests while state is `warming`, then reports `ready`
+  after 9,979.749 ms without a restart;
+- all ten fresh-process warm-ups complete, all 35 packet samples complete and warm P95 remains far
+  below the two-second budget;
+- theory, criticism, attributed, selected/unselected, omission/truncation and character metrics are
+  byte-for-byte equal at the aggregate level between baseline and candidate.
+
+Known constraints:
+
+- prewarming moves roughly ten seconds of encoder initialisation off the packet request path; it does
+  not reduce its CPU, memory or model-file cost;
+- a user who requests semantic study retrieval before readiness can still wait on the same
+  single-flight load, while a failed load falls back to lexical retrieval;
+- cold-process timing retains normal operating-system/model-file caches and remains machine-specific;
+- warm P50 varies upward while P95 is effectively unchanged, so no warm-speed improvement is claimed.
+
+Next actionable work:
+
+1. Complete Step 7 by adding synthetic packet-quality fixtures for abundant, sparse, duplicate,
+   multilingual, ambiguous and malicious retrieved content without changing the frozen Agent cases.
+
 ### 21 August 2026 — Actionable states and WCAG-audited keyboard flow
 
 Delivered:

@@ -1,6 +1,6 @@
 # Pre-Agent Product Hardening
 
-**Status:** active; Steps 1–5 complete and Step 6 is next
+**Status:** active; Steps 1–6 complete and Step 7 is next
 
 **Machine-readable scorecard:** [`evals/pre_agent_scorecard.json`](../evals/pre_agent_scorecard.json)
 
@@ -138,7 +138,7 @@ failure has a safe next action. The reviewed
 records eight passing state scenarios, four passing keyboard tablists and zero axe violations or
 incomplete checks across landing, mobile dossier and Deep Study error contexts.
 
-### Step 6 — Reduce evidence-packet latency — next
+### Step 6 — Reduce evidence-packet latency — complete
 
 Optimise only measured bottlenecks. Candidates include avoiding repeated cache work, deliberate
 embedding warm-up, parallel independent reads, earlier deduplication and bounded serialisation.
@@ -146,9 +146,13 @@ Provider acquisition and model transport remain separate timing domains.
 
 **Acceptance:** warm packet P95 is at most two seconds. If the Step 3 baseline exceeds that budget,
 the first optimisation checkpoint must reduce it by at least 30%. Quality and selected-evidence
-fixtures must not regress.
+fixtures must not regress. The reviewed
+[`packet-latency-prewarm-2026-08-21.json`](../evals/results/packet-latency-prewarm-2026-08-21.json)
+records 35/35 completed samples, cold-process P95 of 361.549 ms (96.3895% below baseline), warm P95
+of 182.709 ms and packet-shape metrics identical to baseline. Encoder initialisation remains a
+separately reported roughly ten-second background startup cost rather than being hidden.
 
-### Step 7 — Establish packet-quality fixtures
+### Step 7 — Establish packet-quality fixtures — next
 
 Add a separate packet suite for abundant, sparse, duplicate, multilingual, ambiguous and malicious
 retrieved content without altering the five frozen Agent-comparison cases. Define deterministic

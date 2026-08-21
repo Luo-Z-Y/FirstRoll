@@ -140,7 +140,7 @@ future-enterprise path, but ADR-017 removes it from the production critical path
 | `criticism.py` | Provider-specific acquisition, identity checks, attributed review models and private cache | Direct film observation |
 | `video_sources.py` | Public video discovery, classification, deduplication, captions/descriptions and private cache | Copyright adjudication or verified speaker identity by default |
 | `library.py` | Private document catalogue and managed-file metadata | Text extraction or ranking |
-| `library_index.py` | PDF extraction, chunking, FTS5, local embeddings, rank fusion and page citations | Film-specific factual claims |
+| `library_index.py` | PDF extraction, chunking, FTS5, single-flight background query-encoder warm-up, local embeddings, rank fusion and page citations | Film-specific factual claims |
 | `evidence.py` | Typed evidence packet, permitted-claim boundaries and aggregate attributed-selection/omission accounting | Model generation or provider access |
 | `study_observability.py` | Allow-listed monotonic stage timings, terminal status and bounded aggregate counts | Prompts, evidence text, credentials, model output or exception details |
 | `study_service.py` | DeepSeek request, Pydantic validation, citation validation, quality gate and one repair | Authentication, quota reservation or research-tool authorisation |
@@ -204,6 +204,7 @@ is synchronised across devices.
 ### Local Deep Study
 
 ```text
+local API startup → background query-encoder warm-up while Discover remains available
 selected film
 → cached criticism and video text
 → private hybrid library retrieval
@@ -217,7 +218,11 @@ selected film
 ```
 
 Only selected excerpts and attributed source text in the evidence packet are sent to DeepSeek. Full
-books, vectors, local paths and uploaded clips do not leave the device. A shared `StudyTrace` spans
+books, vectors, local paths and uploaded clips do not leave the device. Encoder warm-up uses one
+fixed first-party phrase, accepts no private passage and reports only bounded state/duration. A model
+initialisation lock prevents startup and an early request from loading duplicate encoder instances;
+`FIRSTROLL_PREWARM_EMBEDDINGS=0` restores lazy loading, and a failed warm-up leaves FTS retrieval
+available. A shared `StudyTrace` spans
 the HTTP route, cache reads, public or private retrieval, packet assembly and synthesis. It emits only
 schema-controlled stage names, durations, statuses, attempt/failure totals and bounded counts. The
 complete record appears in the owner-visible study result and as a redacted server log record;

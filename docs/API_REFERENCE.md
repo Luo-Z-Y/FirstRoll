@@ -79,9 +79,13 @@ identity record or previously cached evidence from another source.
 | GET | `/assets/config.js` | Public | — | Non-cacheable browser runtime configuration; only public Supabase values may appear |
 | GET | `/api/health` | Public | — | `{"status":"ok"}` |
 | GET | `/api/contract` | Public | — | Compact endpoint and clip-analysis shape summary |
-| GET | `/api/discovery/status` | Public | — | Provider status and feature flags; local mode also includes private-library counts |
+| GET | `/api/discovery/status` | Public | — | Provider status and feature flags; local mode also includes private-library counts and redacted embedding warm-up state/duration |
 | GET | `/api/auth/me` | Hosted bearer | Bearer token | Verified `id`, optional `email` and `role` |
 | GET | `/api/account/integrations` | Hosted bearer; hosted mode only | Bearer token | Account identity, non-consuming quota status, platform/personal provider capability and privacy statement |
+
+Local `local_library.index.warmup` contains only `state`, `duration_ms` and `background`. State is
+`idle`, `warming`, `ready`, `failed` or `unavailable`; it never contains model output, source text,
+paths or exception details. Public mode omits the entire `local_library` object.
 
 ### Local settings and private library
 

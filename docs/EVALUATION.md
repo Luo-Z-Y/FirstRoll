@@ -115,6 +115,29 @@ from zero to twenty items; all current eligible attributed candidates fit, so om
 truncation totals were zero. Packet JSON shape ranged from 14,022 to 45,004 characters. These counts
 measure volume and selection pressure, not relevance, factual correctness or human usefulness.
 
+## Packet Latency Prewarm Checkpoint
+
+[`packet-latency-prewarm-2026-08-21.json`](../evals/results/packet-latency-prewarm-2026-08-21.json)
+measures the same 35-sample, zero-model-call protocol from revision `a272d5b`, but each fresh process
+loads the unchanged local query encoder before packet timing. The candidate reports the roughly
+ten-second encoder initialisation separately; production performs it in a daemon thread while the
+local API and Discover remain available.
+
+| Packet measure | Unprewarmed baseline | Prewarmed candidate | Change |
+|---|---:|---:|---:|
+| Cold-process P50 | 9,420.905 ms | 272.919 ms | −97.1030% |
+| Cold-process P95 | 10,013.910 ms | 361.549 ms | −96.3895% |
+| Warm P50 | 138.240 ms | 149.896 ms | +8.4317% |
+| Warm P95 | 182.306 ms | 182.709 ms | +0.2211% |
+| Encoder warm-up P95 | Included in packet | 10,155.338 ms, separate | Moved off request path |
+| Completed samples | 35 / 35 | 35 / 35 | No change |
+
+The full aggregate packet-shape object is exactly equal between baseline and candidate: theory,
+criticism and attributed counts/characters, selected/unselected totals and omission/truncation totals
+do not change. This is a latency-path change, not a retrieval-quality claim. A study requested before
+background readiness can still wait on the same single-flight model load; disabling
+`FIRSTROLL_PREWARM_EMBEDDINGS` restores deferred loading.
+
 ## Latest UI Hierarchy Checkpoint
 
 [`ui-hierarchy-2026-08-21.json`](../evals/results/ui-hierarchy-2026-08-21.json) records a local Chrome
