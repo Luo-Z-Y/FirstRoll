@@ -1,5 +1,76 @@
 # FirstRoll Project Progress
 
+### 21 August 2026 — Measured fixed-workflow and packet baselines
+
+Delivered:
+
+1. Added a model-free packet benchmark that resolves the five frozen canonical identities outside
+   the packet clock, runs each case in two fresh processes and records five samples after one
+   same-case warm-up without writing packet contents.
+2. Versioned 35/35 successful packet preparations with full redacted stage observations, aggregate
+   packet shape, source-selection pressure and a non-secret index/provider fingerprint aligned with
+   workflow evaluation.
+3. Added aggregate attributed candidate, selected, omitted and truncated item/character accounting
+   to `EvidencePacket.retrieval`; this records selection pressure without retaining titles, authors,
+   URLs or source text and does not change the initial synthesis prompt.
+4. Ran one controlled five-case fixed-workflow evaluation with the new observability schema and
+   source revision. Four studies completed, all four passed the deterministic gate and the sparse
+   case ended as an operational invalid-JSON response after one billed model call.
+5. Made source revision part of all future complete-workflow results and linked both measured
+   checkpoints from the machine-readable Pre-Agent scorecard.
+
+Measured packet result:
+
+| Measure | Cold process | Warm process |
+|---|---:|---:|
+| Samples completed | 10 / 10 | 25 / 25 |
+| Mean | 9,513.659 ms | 137.466 ms |
+| P50 / P95 | 9,420.905 / 10,013.910 ms | 138.240 / 182.306 ms |
+| Semantic retrieval P95 | 9,886.688 ms | 47.355 ms |
+| Lexical retrieval P95 | 138.791 ms | 132.239 ms |
+| Packet assembly P95 | 0.359 ms | 0.121 ms |
+
+Measured complete-workflow result:
+
+| Measure | Result |
+|---|---:|
+| Cases completed | 4 / 5 |
+| Mean / median automated quality | 97.02 / 97.38 |
+| P50 / P95 end to end | 77.679 / 91.225 s |
+| Mean combined study stage | 61.403 s |
+| Model calls / total tokens | 5 / 63,764 |
+| Completed-study prompt-token median / P95 | 9,577 / 14,830.6 |
+
+Acceptance evidence:
+
+- all 197 automated tests, scoped Ruff, backend/tool compilation, JSON parsing and repository
+  whitespace checks pass;
+- the packet harness rejects query, question, title, director and evidence-text fields before write;
+  repository scans find no credentials, private passages, local paths, prompts, excerpts or caches
+  in either new result;
+- every packet stage completed in all 35 samples, no model call occurred, and packet candidate/
+  omission totals reconcile with selected evidence counts;
+- the latest complete result preserves operational versus quality denominators and its four returned
+  observability traces show model transport taking 48.498–64.058 seconds, far above warm packet
+  preparation;
+- README, evaluation reference, hardening plan and scorecard all identify Step 4 as next.
+
+Known constraints:
+
+- “cold” means a fresh Python process with empty process caches but a retained local index and normal
+  operating-system/model-file caches; it is not a clean-machine or first-download measurement;
+- the warm packet target already passes, but no improvement is claimed because this is the first
+  packet-only baseline;
+- the complete run is five cases, not a provider-reliability estimate or same-day paired optimisation
+  trial; lower prompt-cache reuse makes direct latency attribution to the 18 August run invalid;
+- packet relevance, factual correctness and filmmaker usefulness still require the later deterministic
+  fixtures and human rubric.
+
+Next actionable work:
+
+1. Complete Step 4 by measuring and improving interface hierarchy across the six frozen desktop and
+   390-pixel mobile journeys without combining packet or model changes.
+
 ### 21 August 2026 — Redacted study-stage observability
 
 Delivered:
@@ -79,7 +150,7 @@ Known constraints:
 - packet-stage latency, duplicate ratio, provenance completeness, human packet usefulness and UI
   journey timing remain explicitly unmeasured; Step 1 defines how to measure them but claims no
   result;
-- the current 98.94 automated score remains a structural/citation/calibration proxy rather than
+- the then-current 98.94 automated score remains a structural/citation/calibration proxy rather than
   evidence of factual film-analysis correctness.
 
 Next actionable work:

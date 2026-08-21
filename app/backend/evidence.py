@@ -90,7 +90,9 @@ class EvidencePacket(BaseModel):
                     ],
                 )
             )
-        attributed = cls._attributed_sources(reviews or [], videos or [])
+        attributed, attributed_selection = cls._attributed_sources(
+            reviews or [], videos or []
+        )
         return cls(
             focus=(focus or "Create a rigorous formal study dossier for this film.").strip(),
             film_record=record,
@@ -102,6 +104,7 @@ class EvidencePacket(BaseModel):
                 "plan": retrieval.get("plan", []),
                 "candidate_count": retrieval.get("candidate_count", 0),
                 "embedding": retrieval.get("embedding", {}),
+                "attributed_selection": attributed_selection,
             },
             boundaries=[
                 "Theory sources explain concepts; they do not describe this film.",
@@ -114,20 +117,37 @@ class EvidencePacket(BaseModel):
         )
 
     @staticmethod
-    def _attributed_sources(reviews: list[Any], videos: list[Any]) -> list[EvidenceItem]:
+    def _attributed_sources(
+        reviews: list[Any], videos: list[Any]
+    ) -> tuple[list[EvidenceItem], dict[str, Any]]:
         """Build a bounded, inspectable text layer from already retrieved public sources."""
         items: list[EvidenceItem] = []
         total_characters = 0
         maximum_total = 36_000
+        maximum_per_item = 6_000
+        candidate_items = 0
+        input_characters = 0
+        truncated_items = 0
+        omission_reasons = {
+            "below_minimum_content": 0,
+            "total_budget_exhausted": 0,
+        }
 
         def append(item: EvidenceItem) -> None:
-            nonlocal total_characters
+            nonlocal candidate_items, input_characters, total_characters, truncated_items
+            candidate_items += 1
+            original = item.content.strip()
+            input_characters += len(original)
             remaining = maximum_total - total_characters
             if remaining < 120:
+                omission_reasons["total_budget_exhausted"] += 1
                 return
-            content = item.content[: min(6_000, remaining)].strip()
+            content = original[: min(maximum_per_item, remaining)].strip()
             if len(content) < 40:
+                omission_reasons["below_minimum_content"] += 1
                 return
+            if len(content) < len(original):
+                truncated_items += 1
             items.append(item.model_copy(update={"content": content}))
             total_characters += len(content)
 
@@ -196,4 +216,16 @@ class EvidencePacket(BaseModel):
                         ],
                     )
                 )
-        return items
+        selection = {
+            "candidate_items": candidate_items,
+            "selected_items": len(items),
+            "omitted_items": candidate_items - len(items),
+            "truncated_items": truncated_items,
+            "input_characters": input_characters,
+            "selected_characters": total_characters,
+            "omitted_characters": max(0, input_characters - total_characters),
+            "maximum_total_characters": maximum_total,
+            "maximum_item_characters": maximum_per_item,
+            "omission_reasons": omission_reasons,
+        }
+        return items, selection

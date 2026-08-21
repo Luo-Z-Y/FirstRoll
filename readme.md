@@ -986,7 +986,7 @@ fallback behaviour; these are tracked separately from the new FirstRoll modules.
 | Evidence-grounded Deep Study | Complete | Typed theory, criticism, review and video-text evidence; Pydantic output, citation validation and quality gate |
 | Bounded research Agent core | Implemented | LangGraph control flow, bounded reducers, deterministic tool authorisation, fake-service scenarios and optional checkpointing; production route integration remains gated |
 | Authenticated research progress | Implemented | Allow-listed SSE lifecycle events, separate owner-scoped result retrieval and secret/evidence redaction tests; final interactive browser observation remains pending |
-| Pre-Agent product hardening | Active — Steps 1–2 complete | Scorecard and redacted study-stage observability are complete; the measured fixed-workflow baseline is next |
+| Pre-Agent product hardening | Active — Steps 1–3 complete | Scorecard, observability and reviewed cold/warm plus complete-workflow baselines are complete; interface hierarchy is next |
 | Clip analysis web migration | Complete | Scene, shot, colour, object and export workflow |
 | Clip-to-study evidence bridge | Queued | Feed measured scenes, shots and timecodes into synthesis after the active hardening sequence |
 | Creator primary-source layer | Partial | Discovered interview descriptions and public YouTube captions are stored and cited; verified speaker attribution and dedicated interview search remain planned |
@@ -1002,8 +1002,16 @@ Evaluation results are mutable experimental records, so the README no longer dup
 metric table that can silently become stale. The frozen cases, latest committed result, metric
 definitions, case-level results and replacement procedure live in [Evaluation](docs/EVALUATION.md).
 
-The source of truth is the newest reviewed JSON artefact under `evals/results/`, not a screenshot or
-copied Markdown table. Any fixed-workflow or Agent comparison must use the same identities, questions
+For a model-free cold/warm evidence-packet measurement, run
+`uv run python tools/benchmark_evidence_packet.py --output evals/results/packet-baseline-YYYY-MM-DD.json`.
+The harness writes only redacted stage timings, aggregate packet shape, safe IDs and configuration;
+it never calls DeepSeek or stores packet text.
+
+The latest reviewed complete-workflow and packet-only results are
+[`baseline-2026-08-21.json`](evals/results/baseline-2026-08-21.json) and
+[`packet-baseline-2026-08-21.json`](evals/results/packet-baseline-2026-08-21.json). The source of truth
+for each result family is its reviewed JSON artefact, not a screenshot or copied Markdown table. Any
+fixed-workflow or Agent comparison must use the same identities, questions
 and rubric in [`evals/agent_cases.json`](evals/agent_cases.json), report operational and quality
 failures separately and retain its non-secret configuration fingerprint. The active step order,
 packet/UI targets and Agent entry gate are versioned separately in

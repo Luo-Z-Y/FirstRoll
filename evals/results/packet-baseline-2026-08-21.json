@@ -1,0 +1,4723 @@
+{
+  "schema_version": 1,
+  "suite_id": "firstroll-pre-agent-packet-v1",
+  "system": "fixed_workflow_packet_preparation",
+  "recorded_at": "2026-08-21T14:53:51.882542+00:00",
+  "source_revision": "d968110b6c09390f6981ea2b59bf808ba2fc7578",
+  "environment": {
+    "python": "3.11.7",
+    "platform": "macOS-26.5.2-arm64-arm-64bit",
+    "configuration": {
+      "runtime": "local_private_edition",
+      "connectors": {
+        "tmdb": {
+          "state": "available",
+          "configured": false,
+          "credential_source": "none"
+        },
+        "deepseek": {
+          "state": "available",
+          "configured": true,
+          "credential_source": "local_store"
+        },
+        "douban": {
+          "state": "available",
+          "configured": false,
+          "credential_source": "none"
+        },
+        "letterboxd": {
+          "state": "available",
+          "configured": false,
+          "credential_source": "none"
+        },
+        "youtube": {
+          "state": "available",
+          "configured": true,
+          "credential_source": "local_store"
+        },
+        "nyt": {
+          "state": "planned",
+          "configured": false,
+          "credential_source": "none"
+        },
+        "guardian": {
+          "state": "planned",
+          "configured": false,
+          "credential_source": "none"
+        }
+      },
+      "library_documents": 7,
+      "index_chunks": 4381,
+      "index_schema": "2",
+      "embedding_state": "ready",
+      "embedding_model": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+      "sha256": "29d00f82075f3756"
+    }
+  },
+  "protocol": {
+    "source_cases": "evals/agent_cases.json",
+    "canonical_identity_reference": "evals/results/baseline-2026-08-18.json",
+    "runtime": "local_private_edition",
+    "model_calls": 0,
+    "film_resolution_timed": false,
+    "warmups_per_case": 1,
+    "warm_samples_per_case": 5,
+    "cold_processes_per_case": 2,
+    "percentile_method": "linear_interpolation_n_minus_1",
+    "packet_stages": [
+      "criticism_cache",
+      "video_cache",
+      "retrieval_planning",
+      "lexical_retrieval",
+      "semantic_retrieval",
+      "fusion_and_selection",
+      "packet_assembly"
+    ]
+  },
+  "quality_scope": "Packet latency and aggregate shape only; no generated-study or factual-quality claim.",
+  "summary": {
+    "case_count": 5,
+    "sample_count": 35,
+    "failed_samples": 0,
+    "cold": {
+      "attempted": 10,
+      "completed": 10,
+      "failed": 0,
+      "mean_ms": 9513.659,
+      "p50_ms": 9420.905,
+      "p95_ms": 10013.91,
+      "minimum_ms": 9135.25,
+      "maximum_ms": 10197.685
+    },
+    "warm": {
+      "attempted": 25,
+      "completed": 25,
+      "failed": 0,
+      "mean_ms": 137.466,
+      "p50_ms": 138.24,
+      "p95_ms": 182.306,
+      "minimum_ms": 82.91,
+      "maximum_ms": 186.837
+    },
+    "cold_stages": {
+      "criticism_cache": {
+        "status_counts": {
+          "completed": 10
+        },
+        "mean_ms": 2.113,
+        "p50_ms": 2.323,
+        "p95_ms": 3.165
+      },
+      "video_cache": {
+        "status_counts": {
+          "completed": 10
+        },
+        "mean_ms": 0.201,
+        "p50_ms": 0.073,
+        "p95_ms": 0.496
+      },
+      "retrieval_planning": {
+        "status_counts": {
+          "completed": 10
+        },
+        "mean_ms": 6.206,
+        "p50_ms": 5.394,
+        "p95_ms": 10.124
+      },
+      "lexical_retrieval": {
+        "status_counts": {
+          "completed": 10
+        },
+        "mean_ms": 100.578,
+        "p50_ms": 111.437,
+        "p95_ms": 138.791
+      },
+      "semantic_retrieval": {
+        "status_counts": {
+          "completed": 10
+        },
+        "mean_ms": 9398.71,
+        "p50_ms": 9333.373,
+        "p95_ms": 9886.688
+      },
+      "fusion_and_selection": {
+        "status_counts": {
+          "completed": 10
+        },
+        "mean_ms": 5.174,
+        "p50_ms": 5.061,
+        "p95_ms": 6.009
+      },
+      "packet_assembly": {
+        "status_counts": {
+          "completed": 10
+        },
+        "mean_ms": 0.187,
+        "p50_ms": 0.158,
+        "p95_ms": 0.359
+      }
+    },
+    "warm_stages": {
+      "criticism_cache": {
+        "status_counts": {
+          "completed": 25
+        },
+        "mean_ms": 0.335,
+        "p50_ms": 0.366,
+        "p95_ms": 0.471
+      },
+      "video_cache": {
+        "status_counts": {
+          "completed": 25
+        },
+        "mean_ms": 0.047,
+        "p50_ms": 0.015,
+        "p95_ms": 0.125
+      },
+      "retrieval_planning": {
+        "status_counts": {
+          "completed": 25
+        },
+        "mean_ms": 2.862,
+        "p50_ms": 2.815,
+        "p95_ms": 2.971
+      },
+      "lexical_retrieval": {
+        "status_counts": {
+          "completed": 25
+        },
+        "mean_ms": 88.575,
+        "p50_ms": 87.911,
+        "p95_ms": 132.239
+      },
+      "semantic_retrieval": {
+        "status_counts": {
+          "completed": 25
+        },
+        "mean_ms": 40.878,
+        "p50_ms": 41.019,
+        "p95_ms": 47.355
+      },
+      "fusion_and_selection": {
+        "status_counts": {
+          "completed": 25
+        },
+        "mean_ms": 4.477,
+        "p50_ms": 4.454,
+        "p95_ms": 4.921
+      },
+      "packet_assembly": {
+        "status_counts": {
+          "completed": 25
+        },
+        "mean_ms": 0.085,
+        "p50_ms": 0.103,
+        "p95_ms": 0.121
+      }
+    },
+    "packet_metrics": {
+      "attributed_candidates": {
+        "minimum": 0,
+        "median": 15.0,
+        "maximum": 20
+      },
+      "attributed_characters": {
+        "minimum": 0,
+        "median": 7035.0,
+        "maximum": 16628
+      },
+      "attributed_omitted": {
+        "minimum": 0,
+        "median": 0.0,
+        "maximum": 0
+      },
+      "attributed_sources": {
+        "minimum": 0,
+        "median": 15.0,
+        "maximum": 20
+      },
+      "attributed_truncated": {
+        "minimum": 0,
+        "median": 0.0,
+        "maximum": 0
+      },
+      "boundaries": {
+        "minimum": 6,
+        "median": 6.0,
+        "maximum": 6
+      },
+      "critical_claim_characters": {
+        "minimum": 0,
+        "median": 5835.0,
+        "maximum": 15688
+      },
+      "critical_claims": {
+        "minimum": 0,
+        "median": 8.0,
+        "maximum": 26
+      },
+      "packet_json_characters": {
+        "minimum": 14022,
+        "median": 31818.0,
+        "maximum": 45004
+      },
+      "theory_candidates": {
+        "minimum": 211,
+        "median": 385.0,
+        "maximum": 433
+      },
+      "theory_characters": {
+        "minimum": 5799,
+        "median": 6294.0,
+        "maximum": 6703
+      },
+      "theory_sources": {
+        "minimum": 10,
+        "median": 10.0,
+        "maximum": 10
+      },
+      "theory_unselected": {
+        "minimum": 201,
+        "median": 375.0,
+        "maximum": 423
+      }
+    }
+  },
+  "cases": [
+    {
+      "case_id": "syndromes-cinematography",
+      "canonical_film_id": "wikidata:Q3508807",
+      "warmup_status": "completed",
+      "cold": {
+        "summary": {
+          "attempted": 2,
+          "completed": 2,
+          "failed": 0,
+          "mean_ms": 9805.709,
+          "p50_ms": 9805.709,
+          "p95_ms": 10158.487,
+          "minimum_ms": 9413.732,
+          "maximum_ms": 10197.685
+        },
+        "samples": [
+          {
+            "sample_kind": "cold",
+            "sample_index": 1,
+            "status": "completed",
+            "packet_prepare_ms": 10197.685,
+            "retrieval_method": "hybrid_rrf",
+            "packet_metrics": {
+              "theory_candidates": 309,
+              "theory_sources": 10,
+              "theory_unselected": 299,
+              "critical_claims": 4,
+              "attributed_candidates": 1,
+              "attributed_sources": 1,
+              "attributed_omitted": 0,
+              "attributed_truncated": 0,
+              "boundaries": 6,
+              "theory_characters": 6678,
+              "critical_claim_characters": 2709,
+              "attributed_characters": 268,
+              "packet_json_characters": 17581
+            },
+            "observability": {
+              "schema_version": 1,
+              "status": "completed",
+              "stages": [
+                {
+                  "name": "film_context",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "criticism_cache",
+                  "status": "completed",
+                  "duration_ms": 2.444,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "video_cache",
+                  "status": "completed",
+                  "duration_ms": 0.084,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "retrieval_planning",
+                  "status": "completed",
+                  "duration_ms": 9.126,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "lexical_retrieval",
+                  "status": "completed",
+                  "duration_ms": 110.157,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "semantic_retrieval",
+                  "status": "completed",
+                  "duration_ms": 10070.249,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "fusion_and_selection",
+                  "status": "completed",
+                  "duration_ms": 4.806,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "packet_assembly",
+                  "status": "completed",
+                  "duration_ms": 0.245,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "prompt_serialisation",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "model_transport",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "validation_and_repair",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "end_to_end",
+                  "status": "completed",
+                  "duration_ms": 10197.685,
+                  "attempts": 1,
+                  "failures": 0
+                }
+              ],
+              "counts": {
+                "retrieval_plan_items": 7,
+                "retrieval_candidates": 309,
+                "theory_sources": 10,
+                "critical_claims": 4,
+                "attributed_sources": 1,
+                "attributed_candidates": 1,
+                "attributed_omitted": 0,
+                "attributed_truncated": 0
+              }
+            }
+          },
+          {
+            "sample_kind": "cold",
+            "sample_index": 2,
+            "status": "completed",
+            "packet_prepare_ms": 9413.732,
+            "retrieval_method": "hybrid_rrf",
+            "packet_metrics": {
+              "theory_candidates": 309,
+              "theory_sources": 10,
+              "theory_unselected": 299,
+              "critical_claims": 4,
+              "attributed_candidates": 1,
+              "attributed_sources": 1,
+              "attributed_omitted": 0,
+              "attributed_truncated": 0,
+              "boundaries": 6,
+              "theory_characters": 6678,
+              "critical_claim_characters": 2709,
+              "attributed_characters": 268,
+              "packet_json_characters": 17581
+            },
+            "observability": {
+              "schema_version": 1,
+              "status": "completed",
+              "stages": [
+                {
+                  "name": "film_context",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "criticism_cache",
+                  "status": "completed",
+                  "duration_ms": 2.159,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "video_cache",
+                  "status": "completed",
+                  "duration_ms": 0.061,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "retrieval_planning",
+                  "status": "completed",
+                  "duration_ms": 9.431,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "lexical_retrieval",
+                  "status": "completed",
+                  "duration_ms": 112.717,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "semantic_retrieval",
+                  "status": "completed",
+                  "duration_ms": 9284.234,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "fusion_and_selection",
+                  "status": "completed",
+                  "duration_ms": 4.48,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "packet_assembly",
+                  "status": "completed",
+                  "duration_ms": 0.08,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "prompt_serialisation",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "model_transport",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "validation_and_repair",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "end_to_end",
+                  "status": "completed",
+                  "duration_ms": 9413.732,
+                  "attempts": 1,
+                  "failures": 0
+                }
+              ],
+              "counts": {
+                "retrieval_plan_items": 7,
+                "retrieval_candidates": 309,
+                "theory_sources": 10,
+                "critical_claims": 4,
+                "attributed_sources": 1,
+                "attributed_candidates": 1,
+                "attributed_omitted": 0,
+                "attributed_truncated": 0
+              }
+            }
+          }
+        ]
+      },
+      "warm": {
+        "summary": {
+          "attempted": 5,
+          "completed": 5,
+          "failed": 0,
+          "mean_ms": 139.825,
+          "p50_ms": 138.24,
+          "p95_ms": 143.934,
+          "minimum_ms": 136.528,
+          "maximum_ms": 144.477
+        },
+        "samples": [
+          {
+            "sample_kind": "warm",
+            "sample_index": 1,
+            "status": "completed",
+            "packet_prepare_ms": 144.477,
+            "retrieval_method": "hybrid_rrf",
+            "packet_metrics": {
+              "theory_candidates": 309,
+              "theory_sources": 10,
+              "theory_unselected": 299,
+              "critical_claims": 4,
+              "attributed_candidates": 1,
+              "attributed_sources": 1,
+              "attributed_omitted": 0,
+              "attributed_truncated": 0,
+              "boundaries": 6,
+              "theory_characters": 6678,
+              "critical_claim_characters": 2709,
+              "attributed_characters": 268,
+              "packet_json_characters": 17581
+            },
+            "observability": {
+              "schema_version": 1,
+              "status": "completed",
+              "stages": [
+                {
+                  "name": "film_context",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "criticism_cache",
+                  "status": "completed",
+                  "duration_ms": 0.471,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "video_cache",
+                  "status": "completed",
+                  "duration_ms": 0.024,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "retrieval_planning",
+                  "status": "completed",
+                  "duration_ms": 3.613,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "lexical_retrieval",
+                  "status": "completed",
+                  "duration_ms": 93.46,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "semantic_retrieval",
+                  "status": "completed",
+                  "duration_ms": 42.569,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "fusion_and_selection",
+                  "status": "completed",
+                  "duration_ms": 4.064,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "packet_assembly",
+                  "status": "completed",
+                  "duration_ms": 0.054,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "prompt_serialisation",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "model_transport",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "validation_and_repair",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "end_to_end",
+                  "status": "completed",
+                  "duration_ms": 144.477,
+                  "attempts": 1,
+                  "failures": 0
+                }
+              ],
+              "counts": {
+                "retrieval_plan_items": 7,
+                "retrieval_candidates": 309,
+                "theory_sources": 10,
+                "critical_claims": 4,
+                "attributed_sources": 1,
+                "attributed_candidates": 1,
+                "attributed_omitted": 0,
+                "attributed_truncated": 0
+              }
+            }
+          },
+          {
+            "sample_kind": "warm",
+            "sample_index": 2,
+            "status": "completed",
+            "packet_prepare_ms": 138.24,
+            "retrieval_method": "hybrid_rrf",
+            "packet_metrics": {
+              "theory_candidates": 309,
+              "theory_sources": 10,
+              "theory_unselected": 299,
+              "critical_claims": 4,
+              "attributed_candidates": 1,
+              "attributed_sources": 1,
+              "attributed_omitted": 0,
+              "attributed_truncated": 0,
+              "boundaries": 6,
+              "theory_characters": 6678,
+              "critical_claim_characters": 2709,
+              "attributed_characters": 268,
+              "packet_json_characters": 17581
+            },
+            "observability": {
+              "schema_version": 1,
+              "status": "completed",
+              "stages": [
+                {
+                  "name": "film_context",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "criticism_cache",
+                  "status": "completed",
+                  "duration_ms": 0.219,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "video_cache",
+                  "status": "completed",
+                  "duration_ms": 0.015,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "retrieval_planning",
+                  "status": "completed",
+                  "duration_ms": 2.779,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "lexical_retrieval",
+                  "status": "completed",
+                  "duration_ms": 87.582,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "semantic_retrieval",
+                  "status": "completed",
+                  "duration_ms": 43.336,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "fusion_and_selection",
+                  "status": "completed",
+                  "duration_ms": 4.072,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "packet_assembly",
+                  "status": "completed",
+                  "duration_ms": 0.056,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "prompt_serialisation",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "model_transport",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "validation_and_repair",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "end_to_end",
+                  "status": "completed",
+                  "duration_ms": 138.24,
+                  "attempts": 1,
+                  "failures": 0
+                }
+              ],
+              "counts": {
+                "retrieval_plan_items": 7,
+                "retrieval_candidates": 309,
+                "theory_sources": 10,
+                "critical_claims": 4,
+                "attributed_sources": 1,
+                "attributed_candidates": 1,
+                "attributed_omitted": 0,
+                "attributed_truncated": 0
+              }
+            }
+          },
+          {
+            "sample_kind": "warm",
+            "sample_index": 3,
+            "status": "completed",
+            "packet_prepare_ms": 141.76,
+            "retrieval_method": "hybrid_rrf",
+            "packet_metrics": {
+              "theory_candidates": 309,
+              "theory_sources": 10,
+              "theory_unselected": 299,
+              "critical_claims": 4,
+              "attributed_candidates": 1,
+              "attributed_sources": 1,
+              "attributed_omitted": 0,
+              "attributed_truncated": 0,
+              "boundaries": 6,
+              "theory_characters": 6678,
+              "critical_claim_characters": 2709,
+              "attributed_characters": 268,
+              "packet_json_characters": 17581
+            },
+            "observability": {
+              "schema_version": 1,
+              "status": "completed",
+              "stages": [
+                {
+                  "name": "film_context",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "criticism_cache",
+                  "status": "completed",
+                  "duration_ms": 0.237,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "video_cache",
+                  "status": "completed",
+                  "duration_ms": 0.012,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "retrieval_planning",
+                  "status": "completed",
+                  "duration_ms": 2.743,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "lexical_retrieval",
+                  "status": "completed",
+                  "duration_ms": 86.951,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "semantic_retrieval",
+                  "status": "completed",
+                  "duration_ms": 47.508,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "fusion_and_selection",
+                  "status": "completed",
+                  "duration_ms": 4.072,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "packet_assembly",
+                  "status": "completed",
+                  "duration_ms": 0.06,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "prompt_serialisation",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "model_transport",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "validation_and_repair",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "end_to_end",
+                  "status": "completed",
+                  "duration_ms": 141.76,
+                  "attempts": 1,
+                  "failures": 0
+                }
+              ],
+              "counts": {
+                "retrieval_plan_items": 7,
+                "retrieval_candidates": 309,
+                "theory_sources": 10,
+                "critical_claims": 4,
+                "attributed_sources": 1,
+                "attributed_candidates": 1,
+                "attributed_omitted": 0,
+                "attributed_truncated": 0
+              }
+            }
+          },
+          {
+            "sample_kind": "warm",
+            "sample_index": 4,
+            "status": "completed",
+            "packet_prepare_ms": 136.528,
+            "retrieval_method": "hybrid_rrf",
+            "packet_metrics": {
+              "theory_candidates": 309,
+              "theory_sources": 10,
+              "theory_unselected": 299,
+              "critical_claims": 4,
+              "attributed_candidates": 1,
+              "attributed_sources": 1,
+              "attributed_omitted": 0,
+              "attributed_truncated": 0,
+              "boundaries": 6,
+              "theory_characters": 6678,
+              "critical_claim_characters": 2709,
+              "attributed_characters": 268,
+              "packet_json_characters": 17581
+            },
+            "observability": {
+              "schema_version": 1,
+              "status": "completed",
+              "stages": [
+                {
+                  "name": "film_context",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "criticism_cache",
+                  "status": "completed",
+                  "duration_ms": 0.241,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "video_cache",
+                  "status": "completed",
+                  "duration_ms": 0.013,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "retrieval_planning",
+                  "status": "completed",
+                  "duration_ms": 2.817,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "lexical_retrieval",
+                  "status": "completed",
+                  "duration_ms": 88.983,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "semantic_retrieval",
+                  "status": "completed",
+                  "duration_ms": 40.228,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "fusion_and_selection",
+                  "status": "completed",
+                  "duration_ms": 4.022,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "packet_assembly",
+                  "status": "completed",
+                  "duration_ms": 0.048,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "prompt_serialisation",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "model_transport",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "validation_and_repair",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "end_to_end",
+                  "status": "completed",
+                  "duration_ms": 136.528,
+                  "attempts": 1,
+                  "failures": 0
+                }
+              ],
+              "counts": {
+                "retrieval_plan_items": 7,
+                "retrieval_candidates": 309,
+                "theory_sources": 10,
+                "critical_claims": 4,
+                "attributed_sources": 1,
+                "attributed_candidates": 1,
+                "attributed_omitted": 0,
+                "attributed_truncated": 0
+              }
+            }
+          },
+          {
+            "sample_kind": "warm",
+            "sample_index": 5,
+            "status": "completed",
+            "packet_prepare_ms": 138.12,
+            "retrieval_method": "hybrid_rrf",
+            "packet_metrics": {
+              "theory_candidates": 309,
+              "theory_sources": 10,
+              "theory_unselected": 299,
+              "critical_claims": 4,
+              "attributed_candidates": 1,
+              "attributed_sources": 1,
+              "attributed_omitted": 0,
+              "attributed_truncated": 0,
+              "boundaries": 6,
+              "theory_characters": 6678,
+              "critical_claim_characters": 2709,
+              "attributed_characters": 268,
+              "packet_json_characters": 17581
+            },
+            "observability": {
+              "schema_version": 1,
+              "status": "completed",
+              "stages": [
+                {
+                  "name": "film_context",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "criticism_cache",
+                  "status": "completed",
+                  "duration_ms": 0.213,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "video_cache",
+                  "status": "completed",
+                  "duration_ms": 0.012,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "retrieval_planning",
+                  "status": "completed",
+                  "duration_ms": 2.742,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "lexical_retrieval",
+                  "status": "completed",
+                  "duration_ms": 87.911,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "semantic_retrieval",
+                  "status": "completed",
+                  "duration_ms": 42.918,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "fusion_and_selection",
+                  "status": "completed",
+                  "duration_ms": 4.071,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "packet_assembly",
+                  "status": "completed",
+                  "duration_ms": 0.053,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "prompt_serialisation",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "model_transport",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "validation_and_repair",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "end_to_end",
+                  "status": "completed",
+                  "duration_ms": 138.12,
+                  "attempts": 1,
+                  "failures": 0
+                }
+              ],
+              "counts": {
+                "retrieval_plan_items": 7,
+                "retrieval_candidates": 309,
+                "theory_sources": 10,
+                "critical_claims": 4,
+                "attributed_sources": 1,
+                "attributed_candidates": 1,
+                "attributed_omitted": 0,
+                "attributed_truncated": 0
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "in-the-mood-for-love-space",
+      "canonical_film_id": "wikidata:Q1056853",
+      "warmup_status": "completed",
+      "cold": {
+        "summary": {
+          "attempted": 2,
+          "completed": 2,
+          "failed": 0,
+          "mean_ms": 9755.659,
+          "p50_ms": 9755.659,
+          "p95_ms": 9785.932,
+          "minimum_ms": 9722.023,
+          "maximum_ms": 9789.296
+        },
+        "samples": [
+          {
+            "sample_kind": "cold",
+            "sample_index": 1,
+            "status": "completed",
+            "packet_prepare_ms": 9789.296,
+            "retrieval_method": "hybrid_rrf",
+            "packet_metrics": {
+              "theory_candidates": 420,
+              "theory_sources": 10,
+              "theory_unselected": 410,
+              "critical_claims": 26,
+              "attributed_candidates": 18,
+              "attributed_sources": 18,
+              "attributed_omitted": 0,
+              "attributed_truncated": 0,
+              "boundaries": 6,
+              "theory_characters": 6291,
+              "critical_claim_characters": 15688,
+              "attributed_characters": 8583,
+              "packet_json_characters": 45004
+            },
+            "observability": {
+              "schema_version": 1,
+              "status": "completed",
+              "stages": [
+                {
+                  "name": "film_context",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "criticism_cache",
+                  "status": "completed",
+                  "duration_ms": 2.918,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "video_cache",
+                  "status": "completed",
+                  "duration_ms": 0.02,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "retrieval_planning",
+                  "status": "completed",
+                  "duration_ms": 3.974,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "lexical_retrieval",
+                  "status": "completed",
+                  "duration_ms": 114.424,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "semantic_retrieval",
+                  "status": "completed",
+                  "duration_ms": 9662.335,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "fusion_and_selection",
+                  "status": "completed",
+                  "duration_ms": 4.916,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "packet_assembly",
+                  "status": "completed",
+                  "duration_ms": 0.269,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "prompt_serialisation",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "model_transport",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "validation_and_repair",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "end_to_end",
+                  "status": "completed",
+                  "duration_ms": 9789.296,
+                  "attempts": 1,
+                  "failures": 0
+                }
+              ],
+              "counts": {
+                "retrieval_plan_items": 10,
+                "retrieval_candidates": 420,
+                "theory_sources": 10,
+                "critical_claims": 26,
+                "attributed_sources": 18,
+                "attributed_candidates": 18,
+                "attributed_omitted": 0,
+                "attributed_truncated": 0
+              }
+            }
+          },
+          {
+            "sample_kind": "cold",
+            "sample_index": 2,
+            "status": "completed",
+            "packet_prepare_ms": 9722.023,
+            "retrieval_method": "hybrid_rrf",
+            "packet_metrics": {
+              "theory_candidates": 420,
+              "theory_sources": 10,
+              "theory_unselected": 410,
+              "critical_claims": 26,
+              "attributed_candidates": 18,
+              "attributed_sources": 18,
+              "attributed_omitted": 0,
+              "attributed_truncated": 0,
+              "boundaries": 6,
+              "theory_characters": 6291,
+              "critical_claim_characters": 15688,
+              "attributed_characters": 8583,
+              "packet_json_characters": 45004
+            },
+            "observability": {
+              "schema_version": 1,
+              "status": "completed",
+              "stages": [
+                {
+                  "name": "film_context",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "criticism_cache",
+                  "status": "completed",
+                  "duration_ms": 2.03,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "video_cache",
+                  "status": "completed",
+                  "duration_ms": 0.018,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "retrieval_planning",
+                  "status": "completed",
+                  "duration_ms": 4.595,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "lexical_retrieval",
+                  "status": "completed",
+                  "duration_ms": 114.034,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "semantic_retrieval",
+                  "status": "completed",
+                  "duration_ms": 9596.056,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "fusion_and_selection",
+                  "status": "completed",
+                  "duration_ms": 4.775,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "packet_assembly",
+                  "status": "completed",
+                  "duration_ms": 0.143,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "prompt_serialisation",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "model_transport",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "validation_and_repair",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "end_to_end",
+                  "status": "completed",
+                  "duration_ms": 9722.023,
+                  "attempts": 1,
+                  "failures": 0
+                }
+              ],
+              "counts": {
+                "retrieval_plan_items": 10,
+                "retrieval_candidates": 420,
+                "theory_sources": 10,
+                "critical_claims": 26,
+                "attributed_sources": 18,
+                "attributed_candidates": 18,
+                "attributed_omitted": 0,
+                "attributed_truncated": 0
+              }
+            }
+          }
+        ]
+      },
+      "warm": {
+        "summary": {
+          "attempted": 5,
+          "completed": 5,
+          "failed": 0,
+          "mean_ms": 165.768,
+          "p50_ms": 165.511,
+          "p95_ms": 172.299,
+          "minimum_ms": 160.056,
+          "maximum_ms": 172.822
+        },
+        "samples": [
+          {
+            "sample_kind": "warm",
+            "sample_index": 1,
+            "status": "completed",
+            "packet_prepare_ms": 165.511,
+            "retrieval_method": "hybrid_rrf",
+            "packet_metrics": {
+              "theory_candidates": 420,
+              "theory_sources": 10,
+              "theory_unselected": 410,
+              "critical_claims": 26,
+              "attributed_candidates": 18,
+              "attributed_sources": 18,
+              "attributed_omitted": 0,
+              "attributed_truncated": 0,
+              "boundaries": 6,
+              "theory_characters": 6291,
+              "critical_claim_characters": 15688,
+              "attributed_characters": 8583,
+              "packet_json_characters": 45004
+            },
+            "observability": {
+              "schema_version": 1,
+              "status": "completed",
+              "stages": [
+                {
+                  "name": "film_context",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "criticism_cache",
+                  "status": "completed",
+                  "duration_ms": 0.458,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "video_cache",
+                  "status": "completed",
+                  "duration_ms": 0.016,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "retrieval_planning",
+                  "status": "completed",
+                  "duration_ms": 2.899,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "lexical_retrieval",
+                  "status": "completed",
+                  "duration_ms": 107.349,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "semantic_retrieval",
+                  "status": "completed",
+                  "duration_ms": 50.012,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "fusion_and_selection",
+                  "status": "completed",
+                  "duration_ms": 4.454,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "packet_assembly",
+                  "status": "completed",
+                  "duration_ms": 0.106,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "prompt_serialisation",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "model_transport",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "validation_and_repair",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "end_to_end",
+                  "status": "completed",
+                  "duration_ms": 165.511,
+                  "attempts": 1,
+                  "failures": 0
+                }
+              ],
+              "counts": {
+                "retrieval_plan_items": 10,
+                "retrieval_candidates": 420,
+                "theory_sources": 10,
+                "critical_claims": 26,
+                "attributed_sources": 18,
+                "attributed_candidates": 18,
+                "attributed_omitted": 0,
+                "attributed_truncated": 0
+              }
+            }
+          },
+          {
+            "sample_kind": "warm",
+            "sample_index": 2,
+            "status": "completed",
+            "packet_prepare_ms": 170.209,
+            "retrieval_method": "hybrid_rrf",
+            "packet_metrics": {
+              "theory_candidates": 420,
+              "theory_sources": 10,
+              "theory_unselected": 410,
+              "critical_claims": 26,
+              "attributed_candidates": 18,
+              "attributed_sources": 18,
+              "attributed_omitted": 0,
+              "attributed_truncated": 0,
+              "boundaries": 6,
+              "theory_characters": 6291,
+              "critical_claim_characters": 15688,
+              "attributed_characters": 8583,
+              "packet_json_characters": 45004
+            },
+            "observability": {
+              "schema_version": 1,
+              "status": "completed",
+              "stages": [
+                {
+                  "name": "film_context",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "criticism_cache",
+                  "status": "completed",
+                  "duration_ms": 0.455,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "video_cache",
+                  "status": "completed",
+                  "duration_ms": 0.01,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "retrieval_planning",
+                  "status": "completed",
+                  "duration_ms": 2.932,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "lexical_retrieval",
+                  "status": "completed",
+                  "duration_ms": 116.336,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "semantic_retrieval",
+                  "status": "completed",
+                  "duration_ms": 45.704,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "fusion_and_selection",
+                  "status": "completed",
+                  "duration_ms": 4.426,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "packet_assembly",
+                  "status": "completed",
+                  "duration_ms": 0.105,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "prompt_serialisation",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "model_transport",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "validation_and_repair",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "end_to_end",
+                  "status": "completed",
+                  "duration_ms": 170.209,
+                  "attempts": 1,
+                  "failures": 0
+                }
+              ],
+              "counts": {
+                "retrieval_plan_items": 10,
+                "retrieval_candidates": 420,
+                "theory_sources": 10,
+                "critical_claims": 26,
+                "attributed_sources": 18,
+                "attributed_candidates": 18,
+                "attributed_omitted": 0,
+                "attributed_truncated": 0
+              }
+            }
+          },
+          {
+            "sample_kind": "warm",
+            "sample_index": 3,
+            "status": "completed",
+            "packet_prepare_ms": 160.056,
+            "retrieval_method": "hybrid_rrf",
+            "packet_metrics": {
+              "theory_candidates": 420,
+              "theory_sources": 10,
+              "theory_unselected": 410,
+              "critical_claims": 26,
+              "attributed_candidates": 18,
+              "attributed_sources": 18,
+              "attributed_omitted": 0,
+              "attributed_truncated": 0,
+              "boundaries": 6,
+              "theory_characters": 6291,
+              "critical_claim_characters": 15688,
+              "attributed_characters": 8583,
+              "packet_json_characters": 45004
+            },
+            "observability": {
+              "schema_version": 1,
+              "status": "completed",
+              "stages": [
+                {
+                  "name": "film_context",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "criticism_cache",
+                  "status": "completed",
+                  "duration_ms": 0.469,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "video_cache",
+                  "status": "completed",
+                  "duration_ms": 0.011,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "retrieval_planning",
+                  "status": "completed",
+                  "duration_ms": 2.898,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "lexical_retrieval",
+                  "status": "completed",
+                  "duration_ms": 108.835,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "semantic_retrieval",
+                  "status": "completed",
+                  "duration_ms": 43.158,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "fusion_and_selection",
+                  "status": "completed",
+                  "duration_ms": 4.34,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "packet_assembly",
+                  "status": "completed",
+                  "duration_ms": 0.107,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "prompt_serialisation",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "model_transport",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "validation_and_repair",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "end_to_end",
+                  "status": "completed",
+                  "duration_ms": 160.056,
+                  "attempts": 1,
+                  "failures": 0
+                }
+              ],
+              "counts": {
+                "retrieval_plan_items": 10,
+                "retrieval_candidates": 420,
+                "theory_sources": 10,
+                "critical_claims": 26,
+                "attributed_sources": 18,
+                "attributed_candidates": 18,
+                "attributed_omitted": 0,
+                "attributed_truncated": 0
+              }
+            }
+          },
+          {
+            "sample_kind": "warm",
+            "sample_index": 4,
+            "status": "completed",
+            "packet_prepare_ms": 160.243,
+            "retrieval_method": "hybrid_rrf",
+            "packet_metrics": {
+              "theory_candidates": 420,
+              "theory_sources": 10,
+              "theory_unselected": 410,
+              "critical_claims": 26,
+              "attributed_candidates": 18,
+              "attributed_sources": 18,
+              "attributed_omitted": 0,
+              "attributed_truncated": 0,
+              "boundaries": 6,
+              "theory_characters": 6291,
+              "critical_claim_characters": 15688,
+              "attributed_characters": 8583,
+              "packet_json_characters": 45004
+            },
+            "observability": {
+              "schema_version": 1,
+              "status": "completed",
+              "stages": [
+                {
+                  "name": "film_context",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "criticism_cache",
+                  "status": "completed",
+                  "duration_ms": 0.441,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "video_cache",
+                  "status": "completed",
+                  "duration_ms": 0.01,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "retrieval_planning",
+                  "status": "completed",
+                  "duration_ms": 2.809,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "lexical_retrieval",
+                  "status": "completed",
+                  "duration_ms": 107.261,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "semantic_retrieval",
+                  "status": "completed",
+                  "duration_ms": 44.859,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "fusion_and_selection",
+                  "status": "completed",
+                  "duration_ms": 4.532,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "packet_assembly",
+                  "status": "completed",
+                  "duration_ms": 0.113,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "prompt_serialisation",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "model_transport",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "validation_and_repair",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "end_to_end",
+                  "status": "completed",
+                  "duration_ms": 160.243,
+                  "attempts": 1,
+                  "failures": 0
+                }
+              ],
+              "counts": {
+                "retrieval_plan_items": 10,
+                "retrieval_candidates": 420,
+                "theory_sources": 10,
+                "critical_claims": 26,
+                "attributed_sources": 18,
+                "attributed_candidates": 18,
+                "attributed_omitted": 0,
+                "attributed_truncated": 0
+              }
+            }
+          },
+          {
+            "sample_kind": "warm",
+            "sample_index": 5,
+            "status": "completed",
+            "packet_prepare_ms": 172.822,
+            "retrieval_method": "hybrid_rrf",
+            "packet_metrics": {
+              "theory_candidates": 420,
+              "theory_sources": 10,
+              "theory_unselected": 410,
+              "critical_claims": 26,
+              "attributed_candidates": 18,
+              "attributed_sources": 18,
+              "attributed_omitted": 0,
+              "attributed_truncated": 0,
+              "boundaries": 6,
+              "theory_characters": 6291,
+              "critical_claim_characters": 15688,
+              "attributed_characters": 8583,
+              "packet_json_characters": 45004
+            },
+            "observability": {
+              "schema_version": 1,
+              "status": "completed",
+              "stages": [
+                {
+                  "name": "film_context",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "criticism_cache",
+                  "status": "completed",
+                  "duration_ms": 0.553,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "video_cache",
+                  "status": "completed",
+                  "duration_ms": 0.013,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "retrieval_planning",
+                  "status": "completed",
+                  "duration_ms": 2.869,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "lexical_retrieval",
+                  "status": "completed",
+                  "duration_ms": 117.782,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "semantic_retrieval",
+                  "status": "completed",
+                  "duration_ms": 46.741,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "fusion_and_selection",
+                  "status": "completed",
+                  "duration_ms": 4.511,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "packet_assembly",
+                  "status": "completed",
+                  "duration_ms": 0.105,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "prompt_serialisation",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "model_transport",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "validation_and_repair",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "end_to_end",
+                  "status": "completed",
+                  "duration_ms": 172.822,
+                  "attempts": 1,
+                  "failures": 0
+                }
+              ],
+              "counts": {
+                "retrieval_plan_items": 10,
+                "retrieval_candidates": 420,
+                "theory_sources": 10,
+                "critical_claims": 26,
+                "attributed_sources": 18,
+                "attributed_candidates": 18,
+                "attributed_omitted": 0,
+                "attributed_truncated": 0
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "memoria-sound",
+      "canonical_film_id": "wikidata:Q67087116",
+      "warmup_status": "completed",
+      "cold": {
+        "summary": {
+          "attempted": 2,
+          "completed": 2,
+          "failed": 0,
+          "mean_ms": 9397.028,
+          "p50_ms": 9397.028,
+          "p95_ms": 9558.404,
+          "minimum_ms": 9217.721,
+          "maximum_ms": 9576.335
+        },
+        "samples": [
+          {
+            "sample_kind": "cold",
+            "sample_index": 1,
+            "status": "completed",
+            "packet_prepare_ms": 9576.335,
+            "retrieval_method": "hybrid_rrf",
+            "packet_metrics": {
+              "theory_candidates": 385,
+              "theory_sources": 10,
+              "theory_unselected": 375,
+              "critical_claims": 11,
+              "attributed_candidates": 20,
+              "attributed_sources": 20,
+              "attributed_omitted": 0,
+              "attributed_truncated": 0,
+              "boundaries": 6,
+              "theory_characters": 5799,
+              "critical_claim_characters": 6907,
+              "attributed_characters": 16628,
+              "packet_json_characters": 44626
+            },
+            "observability": {
+              "schema_version": 1,
+              "status": "completed",
+              "stages": [
+                {
+                  "name": "film_context",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "criticism_cache",
+                  "status": "completed",
+                  "duration_ms": 2.609,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "video_cache",
+                  "status": "completed",
+                  "duration_ms": 0.385,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "retrieval_planning",
+                  "status": "completed",
+                  "duration_ms": 3.803,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "lexical_retrieval",
+                  "status": "completed",
+                  "duration_ms": 136.748,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "semantic_retrieval",
+                  "status": "completed",
+                  "duration_ms": 9425.482,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "fusion_and_selection",
+                  "status": "completed",
+                  "duration_ms": 6.285,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "packet_assembly",
+                  "status": "completed",
+                  "duration_ms": 0.432,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "prompt_serialisation",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "model_transport",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "validation_and_repair",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "end_to_end",
+                  "status": "completed",
+                  "duration_ms": 9576.335,
+                  "attempts": 1,
+                  "failures": 0
+                }
+              ],
+              "counts": {
+                "retrieval_plan_items": 10,
+                "retrieval_candidates": 385,
+                "theory_sources": 10,
+                "critical_claims": 11,
+                "attributed_sources": 20,
+                "attributed_candidates": 20,
+                "attributed_omitted": 0,
+                "attributed_truncated": 0
+              }
+            }
+          },
+          {
+            "sample_kind": "cold",
+            "sample_index": 2,
+            "status": "completed",
+            "packet_prepare_ms": 9217.721,
+            "retrieval_method": "hybrid_rrf",
+            "packet_metrics": {
+              "theory_candidates": 385,
+              "theory_sources": 10,
+              "theory_unselected": 375,
+              "critical_claims": 11,
+              "attributed_candidates": 20,
+              "attributed_sources": 20,
+              "attributed_omitted": 0,
+              "attributed_truncated": 0,
+              "boundaries": 6,
+              "theory_characters": 5799,
+              "critical_claim_characters": 6907,
+              "attributed_characters": 16628,
+              "packet_json_characters": 44626
+            },
+            "observability": {
+              "schema_version": 1,
+              "status": "completed",
+              "stages": [
+                {
+                  "name": "film_context",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "criticism_cache",
+                  "status": "completed",
+                  "duration_ms": 2.202,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "video_cache",
+                  "status": "completed",
+                  "duration_ms": 0.428,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "retrieval_planning",
+                  "status": "completed",
+                  "duration_ms": 4.973,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "lexical_retrieval",
+                  "status": "completed",
+                  "duration_ms": 140.462,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "semantic_retrieval",
+                  "status": "completed",
+                  "duration_ms": 9063.379,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "fusion_and_selection",
+                  "status": "completed",
+                  "duration_ms": 5.671,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "packet_assembly",
+                  "status": "completed",
+                  "duration_ms": 0.195,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "prompt_serialisation",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "model_transport",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "validation_and_repair",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "end_to_end",
+                  "status": "completed",
+                  "duration_ms": 9217.721,
+                  "attempts": 1,
+                  "failures": 0
+                }
+              ],
+              "counts": {
+                "retrieval_plan_items": 10,
+                "retrieval_candidates": 385,
+                "theory_sources": 10,
+                "critical_claims": 11,
+                "attributed_sources": 20,
+                "attributed_candidates": 20,
+                "attributed_omitted": 0,
+                "attributed_truncated": 0
+              }
+            }
+          }
+        ]
+      },
+      "warm": {
+        "summary": {
+          "attempted": 5,
+          "completed": 5,
+          "failed": 0,
+          "mean_ms": 181.779,
+          "p50_ms": 181.289,
+          "p95_ms": 185.982,
+          "minimum_ms": 177.954,
+          "maximum_ms": 186.837
+        },
+        "samples": [
+          {
+            "sample_kind": "warm",
+            "sample_index": 1,
+            "status": "completed",
+            "packet_prepare_ms": 186.837,
+            "retrieval_method": "hybrid_rrf",
+            "packet_metrics": {
+              "theory_candidates": 385,
+              "theory_sources": 10,
+              "theory_unselected": 375,
+              "critical_claims": 11,
+              "attributed_candidates": 20,
+              "attributed_sources": 20,
+              "attributed_omitted": 0,
+              "attributed_truncated": 0,
+              "boundaries": 6,
+              "theory_characters": 5799,
+              "critical_claim_characters": 6907,
+              "attributed_characters": 16628,
+              "packet_json_characters": 44626
+            },
+            "observability": {
+              "schema_version": 1,
+              "status": "completed",
+              "stages": [
+                {
+                  "name": "film_context",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "criticism_cache",
+                  "status": "completed",
+                  "duration_ms": 0.421,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "video_cache",
+                  "status": "completed",
+                  "duration_ms": 0.122,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "retrieval_planning",
+                  "status": "completed",
+                  "duration_ms": 2.81,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "lexical_retrieval",
+                  "status": "completed",
+                  "duration_ms": 133.257,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "semantic_retrieval",
+                  "status": "completed",
+                  "duration_ms": 44.948,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "fusion_and_selection",
+                  "status": "completed",
+                  "duration_ms": 4.926,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "packet_assembly",
+                  "status": "completed",
+                  "duration_ms": 0.124,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "prompt_serialisation",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "model_transport",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "validation_and_repair",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "end_to_end",
+                  "status": "completed",
+                  "duration_ms": 186.837,
+                  "attempts": 1,
+                  "failures": 0
+                }
+              ],
+              "counts": {
+                "retrieval_plan_items": 10,
+                "retrieval_candidates": 385,
+                "theory_sources": 10,
+                "critical_claims": 11,
+                "attributed_sources": 20,
+                "attributed_candidates": 20,
+                "attributed_omitted": 0,
+                "attributed_truncated": 0
+              }
+            }
+          },
+          {
+            "sample_kind": "warm",
+            "sample_index": 2,
+            "status": "completed",
+            "packet_prepare_ms": 181.289,
+            "retrieval_method": "hybrid_rrf",
+            "packet_metrics": {
+              "theory_candidates": 385,
+              "theory_sources": 10,
+              "theory_unselected": 375,
+              "critical_claims": 11,
+              "attributed_candidates": 20,
+              "attributed_sources": 20,
+              "attributed_omitted": 0,
+              "attributed_truncated": 0,
+              "boundaries": 6,
+              "theory_characters": 5799,
+              "critical_claim_characters": 6907,
+              "attributed_characters": 16628,
+              "packet_json_characters": 44626
+            },
+            "observability": {
+              "schema_version": 1,
+              "status": "completed",
+              "stages": [
+                {
+                  "name": "film_context",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "criticism_cache",
+                  "status": "completed",
+                  "duration_ms": 0.423,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "video_cache",
+                  "status": "completed",
+                  "duration_ms": 0.123,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "retrieval_planning",
+                  "status": "completed",
+                  "duration_ms": 2.975,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "lexical_retrieval",
+                  "status": "completed",
+                  "duration_ms": 131.392,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "semantic_retrieval",
+                  "status": "completed",
+                  "duration_ms": 41.019,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "fusion_and_selection",
+                  "status": "completed",
+                  "duration_ms": 4.971,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "packet_assembly",
+                  "status": "completed",
+                  "duration_ms": 0.122,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "prompt_serialisation",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "model_transport",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "validation_and_repair",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "end_to_end",
+                  "status": "completed",
+                  "duration_ms": 181.289,
+                  "attempts": 1,
+                  "failures": 0
+                }
+              ],
+              "counts": {
+                "retrieval_plan_items": 10,
+                "retrieval_candidates": 385,
+                "theory_sources": 10,
+                "critical_claims": 11,
+                "attributed_sources": 20,
+                "attributed_candidates": 20,
+                "attributed_omitted": 0,
+                "attributed_truncated": 0
+              }
+            }
+          },
+          {
+            "sample_kind": "warm",
+            "sample_index": 3,
+            "status": "completed",
+            "packet_prepare_ms": 182.56,
+            "retrieval_method": "hybrid_rrf",
+            "packet_metrics": {
+              "theory_candidates": 385,
+              "theory_sources": 10,
+              "theory_unselected": 375,
+              "critical_claims": 11,
+              "attributed_candidates": 20,
+              "attributed_sources": 20,
+              "attributed_omitted": 0,
+              "attributed_truncated": 0,
+              "boundaries": 6,
+              "theory_characters": 5799,
+              "critical_claim_characters": 6907,
+              "attributed_characters": 16628,
+              "packet_json_characters": 44626
+            },
+            "observability": {
+              "schema_version": 1,
+              "status": "completed",
+              "stages": [
+                {
+                  "name": "film_context",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "criticism_cache",
+                  "status": "completed",
+                  "duration_ms": 0.424,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "video_cache",
+                  "status": "completed",
+                  "duration_ms": 0.121,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "retrieval_planning",
+                  "status": "completed",
+                  "duration_ms": 2.766,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "lexical_retrieval",
+                  "status": "completed",
+                  "duration_ms": 132.451,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "semantic_retrieval",
+                  "status": "completed",
+                  "duration_ms": 41.572,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "fusion_and_selection",
+                  "status": "completed",
+                  "duration_ms": 4.901,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "packet_assembly",
+                  "status": "completed",
+                  "duration_ms": 0.114,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "prompt_serialisation",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "model_transport",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "validation_and_repair",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "end_to_end",
+                  "status": "completed",
+                  "duration_ms": 182.56,
+                  "attempts": 1,
+                  "failures": 0
+                }
+              ],
+              "counts": {
+                "retrieval_plan_items": 10,
+                "retrieval_candidates": 385,
+                "theory_sources": 10,
+                "critical_claims": 11,
+                "attributed_sources": 20,
+                "attributed_candidates": 20,
+                "attributed_omitted": 0,
+                "attributed_truncated": 0
+              }
+            }
+          },
+          {
+            "sample_kind": "warm",
+            "sample_index": 4,
+            "status": "completed",
+            "packet_prepare_ms": 177.954,
+            "retrieval_method": "hybrid_rrf",
+            "packet_metrics": {
+              "theory_candidates": 385,
+              "theory_sources": 10,
+              "theory_unselected": 375,
+              "critical_claims": 11,
+              "attributed_candidates": 20,
+              "attributed_sources": 20,
+              "attributed_omitted": 0,
+              "attributed_truncated": 0,
+              "boundaries": 6,
+              "theory_characters": 5799,
+              "critical_claim_characters": 6907,
+              "attributed_characters": 16628,
+              "packet_json_characters": 44626
+            },
+            "observability": {
+              "schema_version": 1,
+              "status": "completed",
+              "stages": [
+                {
+                  "name": "film_context",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "criticism_cache",
+                  "status": "completed",
+                  "duration_ms": 0.437,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "video_cache",
+                  "status": "completed",
+                  "duration_ms": 0.125,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "retrieval_planning",
+                  "status": "completed",
+                  "duration_ms": 2.956,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "lexical_retrieval",
+                  "status": "completed",
+                  "duration_ms": 128.503,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "semantic_retrieval",
+                  "status": "completed",
+                  "duration_ms": 40.703,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "fusion_and_selection",
+                  "status": "completed",
+                  "duration_ms": 4.898,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "packet_assembly",
+                  "status": "completed",
+                  "duration_ms": 0.118,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "prompt_serialisation",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "model_transport",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "validation_and_repair",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "end_to_end",
+                  "status": "completed",
+                  "duration_ms": 177.954,
+                  "attempts": 1,
+                  "failures": 0
+                }
+              ],
+              "counts": {
+                "retrieval_plan_items": 10,
+                "retrieval_candidates": 385,
+                "theory_sources": 10,
+                "critical_claims": 11,
+                "attributed_sources": 20,
+                "attributed_candidates": 20,
+                "attributed_omitted": 0,
+                "attributed_truncated": 0
+              }
+            }
+          },
+          {
+            "sample_kind": "warm",
+            "sample_index": 5,
+            "status": "completed",
+            "packet_prepare_ms": 180.255,
+            "retrieval_method": "hybrid_rrf",
+            "packet_metrics": {
+              "theory_candidates": 385,
+              "theory_sources": 10,
+              "theory_unselected": 375,
+              "critical_claims": 11,
+              "attributed_candidates": 20,
+              "attributed_sources": 20,
+              "attributed_omitted": 0,
+              "attributed_truncated": 0,
+              "boundaries": 6,
+              "theory_characters": 5799,
+              "critical_claim_characters": 6907,
+              "attributed_characters": 16628,
+              "packet_json_characters": 44626
+            },
+            "observability": {
+              "schema_version": 1,
+              "status": "completed",
+              "stages": [
+                {
+                  "name": "film_context",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "criticism_cache",
+                  "status": "completed",
+                  "duration_ms": 0.442,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "video_cache",
+                  "status": "completed",
+                  "duration_ms": 0.131,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "retrieval_planning",
+                  "status": "completed",
+                  "duration_ms": 2.809,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "lexical_retrieval",
+                  "status": "completed",
+                  "duration_ms": 129.364,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "semantic_retrieval",
+                  "status": "completed",
+                  "duration_ms": 42.361,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "fusion_and_selection",
+                  "status": "completed",
+                  "duration_ms": 4.834,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "packet_assembly",
+                  "status": "completed",
+                  "duration_ms": 0.115,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "prompt_serialisation",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "model_transport",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "validation_and_repair",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "end_to_end",
+                  "status": "completed",
+                  "duration_ms": 180.255,
+                  "attempts": 1,
+                  "failures": 0
+                }
+              ],
+              "counts": {
+                "retrieval_plan_items": 10,
+                "retrieval_candidates": 385,
+                "theory_sources": 10,
+                "critical_claims": 11,
+                "attributed_sources": 20,
+                "attributed_candidates": 20,
+                "attributed_omitted": 0,
+                "attributed_truncated": 0
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "the-thing-ambiguous-identity",
+      "canonical_film_id": "wikidata:Q210756",
+      "warmup_status": "completed",
+      "cold": {
+        "summary": {
+          "attempted": 2,
+          "completed": 2,
+          "failed": 0,
+          "mean_ms": 9269.034,
+          "p50_ms": 9269.034,
+          "p95_ms": 9389.44,
+          "minimum_ms": 9135.25,
+          "maximum_ms": 9402.818
+        },
+        "samples": [
+          {
+            "sample_kind": "cold",
+            "sample_index": 1,
+            "status": "completed",
+            "packet_prepare_ms": 9135.25,
+            "retrieval_method": "hybrid_rrf",
+            "packet_metrics": {
+              "theory_candidates": 211,
+              "theory_sources": 10,
+              "theory_unselected": 201,
+              "critical_claims": 0,
+              "attributed_candidates": 0,
+              "attributed_sources": 0,
+              "attributed_omitted": 0,
+              "attributed_truncated": 0,
+              "boundaries": 6,
+              "theory_characters": 6703,
+              "critical_claim_characters": 0,
+              "attributed_characters": 0,
+              "packet_json_characters": 14022
+            },
+            "observability": {
+              "schema_version": 1,
+              "status": "completed",
+              "stages": [
+                {
+                  "name": "film_context",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "criticism_cache",
+                  "status": "completed",
+                  "duration_ms": 0.244,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "video_cache",
+                  "status": "completed",
+                  "duration_ms": 0.016,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "retrieval_planning",
+                  "status": "completed",
+                  "duration_ms": 3.223,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "lexical_retrieval",
+                  "status": "completed",
+                  "duration_ms": 41.294,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "semantic_retrieval",
+                  "status": "completed",
+                  "duration_ms": 9084.942,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "fusion_and_selection",
+                  "status": "completed",
+                  "duration_ms": 5.16,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "packet_assembly",
+                  "status": "completed",
+                  "duration_ms": 0.086,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "prompt_serialisation",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "model_transport",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "validation_and_repair",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "end_to_end",
+                  "status": "completed",
+                  "duration_ms": 9135.25,
+                  "attempts": 1,
+                  "failures": 0
+                }
+              ],
+              "counts": {
+                "retrieval_plan_items": 5,
+                "retrieval_candidates": 211,
+                "theory_sources": 10,
+                "critical_claims": 0,
+                "attributed_sources": 0,
+                "attributed_candidates": 0,
+                "attributed_omitted": 0,
+                "attributed_truncated": 0
+              }
+            }
+          },
+          {
+            "sample_kind": "cold",
+            "sample_index": 2,
+            "status": "completed",
+            "packet_prepare_ms": 9402.818,
+            "retrieval_method": "hybrid_rrf",
+            "packet_metrics": {
+              "theory_candidates": 211,
+              "theory_sources": 10,
+              "theory_unselected": 201,
+              "critical_claims": 0,
+              "attributed_candidates": 0,
+              "attributed_sources": 0,
+              "attributed_omitted": 0,
+              "attributed_truncated": 0,
+              "boundaries": 6,
+              "theory_characters": 6703,
+              "critical_claim_characters": 0,
+              "attributed_characters": 0,
+              "packet_json_characters": 14022
+            },
+            "observability": {
+              "schema_version": 1,
+              "status": "completed",
+              "stages": [
+                {
+                  "name": "film_context",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "criticism_cache",
+                  "status": "completed",
+                  "duration_ms": 0.361,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "video_cache",
+                  "status": "completed",
+                  "duration_ms": 0.021,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "retrieval_planning",
+                  "status": "completed",
+                  "duration_ms": 5.815,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "lexical_retrieval",
+                  "status": "completed",
+                  "duration_ms": 54.571,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "semantic_retrieval",
+                  "status": "completed",
+                  "duration_ms": 9336.558,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "fusion_and_selection",
+                  "status": "completed",
+                  "duration_ms": 4.961,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "packet_assembly",
+                  "status": "completed",
+                  "duration_ms": 0.107,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "prompt_serialisation",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "model_transport",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "validation_and_repair",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "end_to_end",
+                  "status": "completed",
+                  "duration_ms": 9402.818,
+                  "attempts": 1,
+                  "failures": 0
+                }
+              ],
+              "counts": {
+                "retrieval_plan_items": 5,
+                "retrieval_candidates": 211,
+                "theory_sources": 10,
+                "critical_claims": 0,
+                "attributed_sources": 0,
+                "attributed_candidates": 0,
+                "attributed_omitted": 0,
+                "attributed_truncated": 0
+              }
+            }
+          }
+        ]
+      },
+      "warm": {
+        "summary": {
+          "attempted": 5,
+          "completed": 5,
+          "failed": 0,
+          "mean_ms": 83.415,
+          "p50_ms": 83.324,
+          "p95_ms": 84.069,
+          "minimum_ms": 82.91,
+          "maximum_ms": 84.245
+        },
+        "samples": [
+          {
+            "sample_kind": "warm",
+            "sample_index": 1,
+            "status": "completed",
+            "packet_prepare_ms": 83.229,
+            "retrieval_method": "hybrid_rrf",
+            "packet_metrics": {
+              "theory_candidates": 211,
+              "theory_sources": 10,
+              "theory_unselected": 201,
+              "critical_claims": 0,
+              "attributed_candidates": 0,
+              "attributed_sources": 0,
+              "attributed_omitted": 0,
+              "attributed_truncated": 0,
+              "boundaries": 6,
+              "theory_characters": 6703,
+              "critical_claim_characters": 0,
+              "attributed_characters": 0,
+              "packet_json_characters": 14022
+            },
+            "observability": {
+              "schema_version": 1,
+              "status": "completed",
+              "stages": [
+                {
+                  "name": "film_context",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "criticism_cache",
+                  "status": "completed",
+                  "duration_ms": 0.133,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "video_cache",
+                  "status": "completed",
+                  "duration_ms": 0.008,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "retrieval_planning",
+                  "status": "completed",
+                  "duration_ms": 2.717,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "lexical_retrieval",
+                  "status": "completed",
+                  "duration_ms": 40.438,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "semantic_retrieval",
+                  "status": "completed",
+                  "duration_ms": 35.53,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "fusion_and_selection",
+                  "status": "completed",
+                  "duration_ms": 4.195,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "packet_assembly",
+                  "status": "completed",
+                  "duration_ms": 0.041,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "prompt_serialisation",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "model_transport",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "validation_and_repair",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "end_to_end",
+                  "status": "completed",
+                  "duration_ms": 83.229,
+                  "attempts": 1,
+                  "failures": 0
+                }
+              ],
+              "counts": {
+                "retrieval_plan_items": 5,
+                "retrieval_candidates": 211,
+                "theory_sources": 10,
+                "critical_claims": 0,
+                "attributed_sources": 0,
+                "attributed_candidates": 0,
+                "attributed_omitted": 0,
+                "attributed_truncated": 0
+              }
+            }
+          },
+          {
+            "sample_kind": "warm",
+            "sample_index": 2,
+            "status": "completed",
+            "packet_prepare_ms": 83.324,
+            "retrieval_method": "hybrid_rrf",
+            "packet_metrics": {
+              "theory_candidates": 211,
+              "theory_sources": 10,
+              "theory_unselected": 201,
+              "critical_claims": 0,
+              "attributed_candidates": 0,
+              "attributed_sources": 0,
+              "attributed_omitted": 0,
+              "attributed_truncated": 0,
+              "boundaries": 6,
+              "theory_characters": 6703,
+              "critical_claim_characters": 0,
+              "attributed_characters": 0,
+              "packet_json_characters": 14022
+            },
+            "observability": {
+              "schema_version": 1,
+              "status": "completed",
+              "stages": [
+                {
+                  "name": "film_context",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "criticism_cache",
+                  "status": "completed",
+                  "duration_ms": 0.15,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "video_cache",
+                  "status": "completed",
+                  "duration_ms": 0.007,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "retrieval_planning",
+                  "status": "completed",
+                  "duration_ms": 2.768,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "lexical_retrieval",
+                  "status": "completed",
+                  "duration_ms": 40.449,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "semantic_retrieval",
+                  "status": "completed",
+                  "duration_ms": 35.498,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "fusion_and_selection",
+                  "status": "completed",
+                  "duration_ms": 4.234,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "packet_assembly",
+                  "status": "completed",
+                  "duration_ms": 0.048,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "prompt_serialisation",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "model_transport",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "validation_and_repair",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "end_to_end",
+                  "status": "completed",
+                  "duration_ms": 83.324,
+                  "attempts": 1,
+                  "failures": 0
+                }
+              ],
+              "counts": {
+                "retrieval_plan_items": 5,
+                "retrieval_candidates": 211,
+                "theory_sources": 10,
+                "critical_claims": 0,
+                "attributed_sources": 0,
+                "attributed_candidates": 0,
+                "attributed_omitted": 0,
+                "attributed_truncated": 0
+              }
+            }
+          },
+          {
+            "sample_kind": "warm",
+            "sample_index": 3,
+            "status": "completed",
+            "packet_prepare_ms": 83.366,
+            "retrieval_method": "hybrid_rrf",
+            "packet_metrics": {
+              "theory_candidates": 211,
+              "theory_sources": 10,
+              "theory_unselected": 201,
+              "critical_claims": 0,
+              "attributed_candidates": 0,
+              "attributed_sources": 0,
+              "attributed_omitted": 0,
+              "attributed_truncated": 0,
+              "boundaries": 6,
+              "theory_characters": 6703,
+              "critical_claim_characters": 0,
+              "attributed_characters": 0,
+              "packet_json_characters": 14022
+            },
+            "observability": {
+              "schema_version": 1,
+              "status": "completed",
+              "stages": [
+                {
+                  "name": "film_context",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "criticism_cache",
+                  "status": "completed",
+                  "duration_ms": 0.151,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "video_cache",
+                  "status": "completed",
+                  "duration_ms": 0.008,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "retrieval_planning",
+                  "status": "completed",
+                  "duration_ms": 2.824,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "lexical_retrieval",
+                  "status": "completed",
+                  "duration_ms": 39.911,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "semantic_retrieval",
+                  "status": "completed",
+                  "duration_ms": 36.033,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "fusion_and_selection",
+                  "status": "completed",
+                  "duration_ms": 4.232,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "packet_assembly",
+                  "status": "completed",
+                  "duration_ms": 0.04,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "prompt_serialisation",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "model_transport",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "validation_and_repair",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "end_to_end",
+                  "status": "completed",
+                  "duration_ms": 83.366,
+                  "attempts": 1,
+                  "failures": 0
+                }
+              ],
+              "counts": {
+                "retrieval_plan_items": 5,
+                "retrieval_candidates": 211,
+                "theory_sources": 10,
+                "critical_claims": 0,
+                "attributed_sources": 0,
+                "attributed_candidates": 0,
+                "attributed_omitted": 0,
+                "attributed_truncated": 0
+              }
+            }
+          },
+          {
+            "sample_kind": "warm",
+            "sample_index": 4,
+            "status": "completed",
+            "packet_prepare_ms": 82.91,
+            "retrieval_method": "hybrid_rrf",
+            "packet_metrics": {
+              "theory_candidates": 211,
+              "theory_sources": 10,
+              "theory_unselected": 201,
+              "critical_claims": 0,
+              "attributed_candidates": 0,
+              "attributed_sources": 0,
+              "attributed_omitted": 0,
+              "attributed_truncated": 0,
+              "boundaries": 6,
+              "theory_characters": 6703,
+              "critical_claim_characters": 0,
+              "attributed_characters": 0,
+              "packet_json_characters": 14022
+            },
+            "observability": {
+              "schema_version": 1,
+              "status": "completed",
+              "stages": [
+                {
+                  "name": "film_context",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "criticism_cache",
+                  "status": "completed",
+                  "duration_ms": 0.145,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "video_cache",
+                  "status": "completed",
+                  "duration_ms": 0.007,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "retrieval_planning",
+                  "status": "completed",
+                  "duration_ms": 2.815,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "lexical_retrieval",
+                  "status": "completed",
+                  "duration_ms": 39.921,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "semantic_retrieval",
+                  "status": "completed",
+                  "duration_ms": 35.516,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "fusion_and_selection",
+                  "status": "completed",
+                  "duration_ms": 4.308,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "packet_assembly",
+                  "status": "completed",
+                  "duration_ms": 0.04,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "prompt_serialisation",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "model_transport",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "validation_and_repair",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "end_to_end",
+                  "status": "completed",
+                  "duration_ms": 82.91,
+                  "attempts": 1,
+                  "failures": 0
+                }
+              ],
+              "counts": {
+                "retrieval_plan_items": 5,
+                "retrieval_candidates": 211,
+                "theory_sources": 10,
+                "critical_claims": 0,
+                "attributed_sources": 0,
+                "attributed_candidates": 0,
+                "attributed_omitted": 0,
+                "attributed_truncated": 0
+              }
+            }
+          },
+          {
+            "sample_kind": "warm",
+            "sample_index": 5,
+            "status": "completed",
+            "packet_prepare_ms": 84.245,
+            "retrieval_method": "hybrid_rrf",
+            "packet_metrics": {
+              "theory_candidates": 211,
+              "theory_sources": 10,
+              "theory_unselected": 201,
+              "critical_claims": 0,
+              "attributed_candidates": 0,
+              "attributed_sources": 0,
+              "attributed_omitted": 0,
+              "attributed_truncated": 0,
+              "boundaries": 6,
+              "theory_characters": 6703,
+              "critical_claim_characters": 0,
+              "attributed_characters": 0,
+              "packet_json_characters": 14022
+            },
+            "observability": {
+              "schema_version": 1,
+              "status": "completed",
+              "stages": [
+                {
+                  "name": "film_context",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "criticism_cache",
+                  "status": "completed",
+                  "duration_ms": 0.129,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "video_cache",
+                  "status": "completed",
+                  "duration_ms": 0.012,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "retrieval_planning",
+                  "status": "completed",
+                  "duration_ms": 2.885,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "lexical_retrieval",
+                  "status": "completed",
+                  "duration_ms": 41.809,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "semantic_retrieval",
+                  "status": "completed",
+                  "duration_ms": 34.853,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "fusion_and_selection",
+                  "status": "completed",
+                  "duration_ms": 4.331,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "packet_assembly",
+                  "status": "completed",
+                  "duration_ms": 0.042,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "prompt_serialisation",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "model_transport",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "validation_and_repair",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "end_to_end",
+                  "status": "completed",
+                  "duration_ms": 84.245,
+                  "attempts": 1,
+                  "failures": 0
+                }
+              ],
+              "counts": {
+                "retrieval_plan_items": 5,
+                "retrieval_candidates": 211,
+                "theory_sources": 10,
+                "critical_claims": 0,
+                "attributed_sources": 0,
+                "attributed_candidates": 0,
+                "attributed_omitted": 0,
+                "attributed_truncated": 0
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "we-are-all-strangers-sparse",
+      "canonical_film_id": "wikidata:Q137883355",
+      "warmup_status": "completed",
+      "cold": {
+        "summary": {
+          "attempted": 2,
+          "completed": 2,
+          "failed": 0,
+          "mean_ms": 9340.864,
+          "p50_ms": 9340.864,
+          "p95_ms": 9419.356,
+          "minimum_ms": 9253.651,
+          "maximum_ms": 9428.077
+        },
+        "samples": [
+          {
+            "sample_kind": "cold",
+            "sample_index": 1,
+            "status": "completed",
+            "packet_prepare_ms": 9428.077,
+            "retrieval_method": "hybrid_rrf",
+            "packet_metrics": {
+              "theory_candidates": 433,
+              "theory_sources": 10,
+              "theory_unselected": 423,
+              "critical_claims": 8,
+              "attributed_candidates": 15,
+              "attributed_sources": 15,
+              "attributed_omitted": 0,
+              "attributed_truncated": 0,
+              "boundaries": 6,
+              "theory_characters": 6294,
+              "critical_claim_characters": 5835,
+              "attributed_characters": 7035,
+              "packet_json_characters": 31818
+            },
+            "observability": {
+              "schema_version": 1,
+              "status": "completed",
+              "stages": [
+                {
+                  "name": "film_context",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "criticism_cache",
+                  "status": "completed",
+                  "duration_ms": 3.368,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "video_cache",
+                  "status": "completed",
+                  "duration_ms": 0.42,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "retrieval_planning",
+                  "status": "completed",
+                  "duration_ms": 6.426,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "lexical_retrieval",
+                  "status": "completed",
+                  "duration_ms": 81.786,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "semantic_retrieval",
+                  "status": "completed",
+                  "duration_ms": 9330.187,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "fusion_and_selection",
+                  "status": "completed",
+                  "duration_ms": 5.273,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "packet_assembly",
+                  "status": "completed",
+                  "duration_ms": 0.166,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "prompt_serialisation",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "model_transport",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "validation_and_repair",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "end_to_end",
+                  "status": "completed",
+                  "duration_ms": 9428.077,
+                  "attempts": 1,
+                  "failures": 0
+                }
+              ],
+              "counts": {
+                "retrieval_plan_items": 10,
+                "retrieval_candidates": 433,
+                "theory_sources": 10,
+                "critical_claims": 8,
+                "attributed_sources": 15,
+                "attributed_candidates": 15,
+                "attributed_omitted": 0,
+                "attributed_truncated": 0
+              }
+            }
+          },
+          {
+            "sample_kind": "cold",
+            "sample_index": 2,
+            "status": "completed",
+            "packet_prepare_ms": 9253.651,
+            "retrieval_method": "hybrid_rrf",
+            "packet_metrics": {
+              "theory_candidates": 433,
+              "theory_sources": 10,
+              "theory_unselected": 423,
+              "critical_claims": 8,
+              "attributed_candidates": 15,
+              "attributed_sources": 15,
+              "attributed_omitted": 0,
+              "attributed_truncated": 0,
+              "boundaries": 6,
+              "theory_characters": 6294,
+              "critical_claim_characters": 5835,
+              "attributed_characters": 7035,
+              "packet_json_characters": 31818
+            },
+            "observability": {
+              "schema_version": 1,
+              "status": "completed",
+              "stages": [
+                {
+                  "name": "film_context",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "criticism_cache",
+                  "status": "completed",
+                  "duration_ms": 2.792,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "video_cache",
+                  "status": "completed",
+                  "duration_ms": 0.552,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "retrieval_planning",
+                  "status": "completed",
+                  "duration_ms": 10.691,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "lexical_retrieval",
+                  "status": "completed",
+                  "duration_ms": 99.589,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "semantic_retrieval",
+                  "status": "completed",
+                  "duration_ms": 9133.677,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "fusion_and_selection",
+                  "status": "completed",
+                  "duration_ms": 5.408,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "packet_assembly",
+                  "status": "completed",
+                  "duration_ms": 0.15,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "prompt_serialisation",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "model_transport",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "validation_and_repair",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "end_to_end",
+                  "status": "completed",
+                  "duration_ms": 9253.651,
+                  "attempts": 1,
+                  "failures": 0
+                }
+              ],
+              "counts": {
+                "retrieval_plan_items": 10,
+                "retrieval_candidates": 433,
+                "theory_sources": 10,
+                "critical_claims": 8,
+                "attributed_sources": 15,
+                "attributed_candidates": 15,
+                "attributed_omitted": 0,
+                "attributed_truncated": 0
+              }
+            }
+          }
+        ]
+      },
+      "warm": {
+        "summary": {
+          "attempted": 5,
+          "completed": 5,
+          "failed": 0,
+          "mean_ms": 116.543,
+          "p50_ms": 117.857,
+          "p95_ms": 119.106,
+          "minimum_ms": 109.9,
+          "maximum_ms": 119.315
+        },
+        "samples": [
+          {
+            "sample_kind": "warm",
+            "sample_index": 1,
+            "status": "completed",
+            "packet_prepare_ms": 117.375,
+            "retrieval_method": "hybrid_rrf",
+            "packet_metrics": {
+              "theory_candidates": 433,
+              "theory_sources": 10,
+              "theory_unselected": 423,
+              "critical_claims": 8,
+              "attributed_candidates": 15,
+              "attributed_sources": 15,
+              "attributed_omitted": 0,
+              "attributed_truncated": 0,
+              "boundaries": 6,
+              "theory_characters": 6294,
+              "critical_claim_characters": 5835,
+              "attributed_characters": 7035,
+              "packet_json_characters": 31818
+            },
+            "observability": {
+              "schema_version": 1,
+              "status": "completed",
+              "stages": [
+                {
+                  "name": "film_context",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "criticism_cache",
+                  "status": "completed",
+                  "duration_ms": 0.345,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "video_cache",
+                  "status": "completed",
+                  "duration_ms": 0.086,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "retrieval_planning",
+                  "status": "completed",
+                  "duration_ms": 2.807,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "lexical_retrieval",
+                  "status": "completed",
+                  "duration_ms": 69.461,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "semantic_retrieval",
+                  "status": "completed",
+                  "duration_ms": 39.631,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "fusion_and_selection",
+                  "status": "completed",
+                  "duration_ms": 4.7,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "packet_assembly",
+                  "status": "completed",
+                  "duration_ms": 0.11,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "prompt_serialisation",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "model_transport",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "validation_and_repair",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "end_to_end",
+                  "status": "completed",
+                  "duration_ms": 117.375,
+                  "attempts": 1,
+                  "failures": 0
+                }
+              ],
+              "counts": {
+                "retrieval_plan_items": 10,
+                "retrieval_candidates": 433,
+                "theory_sources": 10,
+                "critical_claims": 8,
+                "attributed_sources": 15,
+                "attributed_candidates": 15,
+                "attributed_omitted": 0,
+                "attributed_truncated": 0
+              }
+            }
+          },
+          {
+            "sample_kind": "warm",
+            "sample_index": 2,
+            "status": "completed",
+            "packet_prepare_ms": 117.857,
+            "retrieval_method": "hybrid_rrf",
+            "packet_metrics": {
+              "theory_candidates": 433,
+              "theory_sources": 10,
+              "theory_unselected": 423,
+              "critical_claims": 8,
+              "attributed_candidates": 15,
+              "attributed_sources": 15,
+              "attributed_omitted": 0,
+              "attributed_truncated": 0,
+              "boundaries": 6,
+              "theory_characters": 6294,
+              "critical_claim_characters": 5835,
+              "attributed_characters": 7035,
+              "packet_json_characters": 31818
+            },
+            "observability": {
+              "schema_version": 1,
+              "status": "completed",
+              "stages": [
+                {
+                  "name": "film_context",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "criticism_cache",
+                  "status": "completed",
+                  "duration_ms": 0.366,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "video_cache",
+                  "status": "completed",
+                  "duration_ms": 0.069,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "retrieval_planning",
+                  "status": "completed",
+                  "duration_ms": 2.83,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "lexical_retrieval",
+                  "status": "completed",
+                  "duration_ms": 69.686,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "semantic_retrieval",
+                  "status": "completed",
+                  "duration_ms": 39.883,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "fusion_and_selection",
+                  "status": "completed",
+                  "duration_ms": 4.674,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "packet_assembly",
+                  "status": "completed",
+                  "duration_ms": 0.109,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "prompt_serialisation",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "model_transport",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "validation_and_repair",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "end_to_end",
+                  "status": "completed",
+                  "duration_ms": 117.857,
+                  "attempts": 1,
+                  "failures": 0
+                }
+              ],
+              "counts": {
+                "retrieval_plan_items": 10,
+                "retrieval_candidates": 433,
+                "theory_sources": 10,
+                "critical_claims": 8,
+                "attributed_sources": 15,
+                "attributed_candidates": 15,
+                "attributed_omitted": 0,
+                "attributed_truncated": 0
+              }
+            }
+          },
+          {
+            "sample_kind": "warm",
+            "sample_index": 3,
+            "status": "completed",
+            "packet_prepare_ms": 118.269,
+            "retrieval_method": "hybrid_rrf",
+            "packet_metrics": {
+              "theory_candidates": 433,
+              "theory_sources": 10,
+              "theory_unselected": 423,
+              "critical_claims": 8,
+              "attributed_candidates": 15,
+              "attributed_sources": 15,
+              "attributed_omitted": 0,
+              "attributed_truncated": 0,
+              "boundaries": 6,
+              "theory_characters": 6294,
+              "critical_claim_characters": 5835,
+              "attributed_characters": 7035,
+              "packet_json_characters": 31818
+            },
+            "observability": {
+              "schema_version": 1,
+              "status": "completed",
+              "stages": [
+                {
+                  "name": "film_context",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "criticism_cache",
+                  "status": "completed",
+                  "duration_ms": 0.389,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "video_cache",
+                  "status": "completed",
+                  "duration_ms": 0.078,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "retrieval_planning",
+                  "status": "completed",
+                  "duration_ms": 2.912,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "lexical_retrieval",
+                  "status": "completed",
+                  "duration_ms": 71.326,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "semantic_retrieval",
+                  "status": "completed",
+                  "duration_ms": 38.607,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "fusion_and_selection",
+                  "status": "completed",
+                  "duration_ms": 4.645,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "packet_assembly",
+                  "status": "completed",
+                  "duration_ms": 0.098,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "prompt_serialisation",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "model_transport",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "validation_and_repair",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "end_to_end",
+                  "status": "completed",
+                  "duration_ms": 118.269,
+                  "attempts": 1,
+                  "failures": 0
+                }
+              ],
+              "counts": {
+                "retrieval_plan_items": 10,
+                "retrieval_candidates": 433,
+                "theory_sources": 10,
+                "critical_claims": 8,
+                "attributed_sources": 15,
+                "attributed_candidates": 15,
+                "attributed_omitted": 0,
+                "attributed_truncated": 0
+              }
+            }
+          },
+          {
+            "sample_kind": "warm",
+            "sample_index": 4,
+            "status": "completed",
+            "packet_prepare_ms": 109.9,
+            "retrieval_method": "hybrid_rrf",
+            "packet_metrics": {
+              "theory_candidates": 433,
+              "theory_sources": 10,
+              "theory_unselected": 423,
+              "critical_claims": 8,
+              "attributed_candidates": 15,
+              "attributed_sources": 15,
+              "attributed_omitted": 0,
+              "attributed_truncated": 0,
+              "boundaries": 6,
+              "theory_characters": 6294,
+              "critical_claim_characters": 5835,
+              "attributed_characters": 7035,
+              "packet_json_characters": 31818
+            },
+            "observability": {
+              "schema_version": 1,
+              "status": "completed",
+              "stages": [
+                {
+                  "name": "film_context",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "criticism_cache",
+                  "status": "completed",
+                  "duration_ms": 0.328,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "video_cache",
+                  "status": "completed",
+                  "duration_ms": 0.073,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "retrieval_planning",
+                  "status": "completed",
+                  "duration_ms": 2.753,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "lexical_retrieval",
+                  "status": "completed",
+                  "duration_ms": 70.008,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "semantic_retrieval",
+                  "status": "completed",
+                  "duration_ms": 31.669,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "fusion_and_selection",
+                  "status": "completed",
+                  "duration_ms": 4.755,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "packet_assembly",
+                  "status": "completed",
+                  "duration_ms": 0.101,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "prompt_serialisation",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "model_transport",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "validation_and_repair",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "end_to_end",
+                  "status": "completed",
+                  "duration_ms": 109.9,
+                  "attempts": 1,
+                  "failures": 0
+                }
+              ],
+              "counts": {
+                "retrieval_plan_items": 10,
+                "retrieval_candidates": 433,
+                "theory_sources": 10,
+                "critical_claims": 8,
+                "attributed_sources": 15,
+                "attributed_candidates": 15,
+                "attributed_omitted": 0,
+                "attributed_truncated": 0
+              }
+            }
+          },
+          {
+            "sample_kind": "warm",
+            "sample_index": 5,
+            "status": "completed",
+            "packet_prepare_ms": 119.315,
+            "retrieval_method": "hybrid_rrf",
+            "packet_metrics": {
+              "theory_candidates": 433,
+              "theory_sources": 10,
+              "theory_unselected": 423,
+              "critical_claims": 8,
+              "attributed_candidates": 15,
+              "attributed_sources": 15,
+              "attributed_omitted": 0,
+              "attributed_truncated": 0,
+              "boundaries": 6,
+              "theory_characters": 6294,
+              "critical_claim_characters": 5835,
+              "attributed_characters": 7035,
+              "packet_json_characters": 31818
+            },
+            "observability": {
+              "schema_version": 1,
+              "status": "completed",
+              "stages": [
+                {
+                  "name": "film_context",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "criticism_cache",
+                  "status": "completed",
+                  "duration_ms": 0.33,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "video_cache",
+                  "status": "completed",
+                  "duration_ms": 0.069,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "retrieval_planning",
+                  "status": "completed",
+                  "duration_ms": 2.814,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "lexical_retrieval",
+                  "status": "completed",
+                  "duration_ms": 73.945,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "semantic_retrieval",
+                  "status": "completed",
+                  "duration_ms": 37.09,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "fusion_and_selection",
+                  "status": "completed",
+                  "duration_ms": 4.768,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "packet_assembly",
+                  "status": "completed",
+                  "duration_ms": 0.103,
+                  "attempts": 1,
+                  "failures": 0
+                },
+                {
+                  "name": "prompt_serialisation",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "model_transport",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "validation_and_repair",
+                  "status": "skipped",
+                  "duration_ms": 0.0,
+                  "attempts": 0,
+                  "failures": 0
+                },
+                {
+                  "name": "end_to_end",
+                  "status": "completed",
+                  "duration_ms": 119.315,
+                  "attempts": 1,
+                  "failures": 0
+                }
+              ],
+              "counts": {
+                "retrieval_plan_items": 10,
+                "retrieval_candidates": 433,
+                "theory_sources": 10,
+                "critical_claims": 8,
+                "attributed_sources": 15,
+                "attributed_candidates": 15,
+                "attributed_omitted": 0,
+                "attributed_truncated": 0
+              }
+            }
+          }
+        ]
+      }
+    }
+  ]
+}
