@@ -140,7 +140,10 @@ The original GPL-3.0 licence and contributor attribution remain applicable. See
 - Run a deterministic specificity and evidence-quality gate.
 - Permit at most one bounded repair request.
 - Label unresolved work as **insufficient evidence** rather than silently accepting it.
-- Show the retrieval plan, source rationale and expandable evidence excerpts in the UI.
+- Show a completed progress history plus selected/candidate/omitted layer counts, bounded omission
+  reasons, evidence gaps, provenance/duplicate/focus diagnostics, provider token count and stage
+  timing without exposing prompts or hidden reasoning.
+- Make every inline `S`, `C` and `E` citation open and focus its exact expandable evidence target.
 - In hosted mode, stream only allow-listed public progress after authentication, then retrieve the
   complete study through a separate authenticated, owner-scoped result request.
 
@@ -1008,7 +1011,7 @@ fallback behaviour; these are tracked separately from the new FirstRoll modules.
 | Evidence-grounded Deep Study | Complete | Typed theory, criticism, review and video-text evidence; Pydantic output, citation validation and quality gate |
 | Bounded research Agent core | Implemented | LangGraph control flow, bounded reducers, deterministic tool authorisation, fake-service scenarios and optional checkpointing; production route integration remains gated |
 | Authenticated research progress | Implemented | Allow-listed SSE lifecycle events, separate owner-scoped result retrieval and secret/evidence redaction tests; final interactive browser observation remains pending |
-| Pre-Agent product hardening | Active — Steps 1–8 complete | UI/latency hardening and bounded focus-ranked packet selection meet provenance, duplicate, token and quality gates; Deep Study transparency is next |
+| Pre-Agent product hardening | Active — Steps 1–9 complete | UI/latency/packet gates and inspectable progress, packet gaps, timing and exact citation targets are complete; synthesis reliability is next |
 | Clip analysis web migration | Complete | Scene, shot, colour, object and export workflow |
 | Clip-to-study evidence bridge | Queued | Feed measured scenes, shots and timecodes into synthesis after the active hardening sequence |
 | Creator primary-source layer | Partial | Discovered interview descriptions and public YouTube captions are stored and cited; verified speaker attribution and dedicated interview search remain planned |
@@ -1043,7 +1046,9 @@ The latest bounded-selection packet, synthetic-quality and complete-workflow che
 [`packet-selection-2026-08-21.json`](evals/results/packet-selection-2026-08-21.json),
 [`packet-quality-selection-2026-08-21.json`](evals/results/packet-quality-selection-2026-08-21.json)
 and [`baseline-selection-2026-08-21.json`](evals/results/baseline-selection-2026-08-21.json). The
-latest responsive hierarchy and state/accessibility audits are
+latest Deep Study transparency audit is
+[`deep-study-transparency-2026-08-21.json`](evals/results/deep-study-transparency-2026-08-21.json), and
+the latest responsive hierarchy and state/accessibility audits are
 [`ui-hierarchy-2026-08-21.json`](evals/results/ui-hierarchy-2026-08-21.json) and
 [`ui-states-accessibility-2026-08-21.json`](evals/results/ui-states-accessibility-2026-08-21.json).
 The source of truth for each result family is its reviewed JSON artefact, not a screenshot or copied

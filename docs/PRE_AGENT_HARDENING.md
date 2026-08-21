@@ -1,6 +1,6 @@
 # Pre-Agent Product Hardening
 
-**Status:** active; Steps 1–8 complete and Step 9 is next
+**Status:** active; Steps 1–9 complete and Step 10 is next
 
 **Machine-readable scorecard:** [`evals/pre_agent_scorecard.json`](../evals/pre_agent_scorecard.json)
 
@@ -180,16 +180,20 @@ tokens. Reviewed results are
 [`packet-quality-selection-2026-08-21.json`](../evals/results/packet-quality-selection-2026-08-21.json)
 and [`baseline-selection-2026-08-21.json`](../evals/results/baseline-selection-2026-08-21.json).
 
-### Step 9 — Improve Deep Study transparency — next
+### Step 9 — Improve Deep Study transparency — complete
 
 Expose packet readiness, safe aggregate evidence counts, completed progress stages, missing evidence
 and inspectable citation targets. Add cancellation and bounded retry without publishing prompts,
 private passages, hidden reasoning or credentials.
 
 **Acceptance:** a filmmaker can explain what evidence supports the result, what is absent and why a
-run failed; the owner-scoped hosted result and local private boundary remain intact.
+run failed; the owner-scoped hosted result and local private boundary remain intact. The reviewed
+[`deep-study-transparency-2026-08-21.json`](../evals/results/deep-study-transparency-2026-08-21.json)
+records retained progress history, four aggregate count types, three packet layers, bounded omission
+reasons, two explicit evidence gaps, four timing rows and exact `S`/`C`/`E` navigation with zero
+citation failures, axe findings, overflow or model calls.
 
-### Step 10 — Tune synthesis reliability
+### Step 10 — Tune synthesis reliability — next
 
 Hold packet selection fixed while testing prompt reduction, timeout handling and model settings one
 variable at a time. Use same-day paired runs and retain operational failures in the denominator.

@@ -1,0 +1,106 @@
+{
+  "schema_version": 1,
+  "suite_id": "firstroll-deep-study-transparency-v1",
+  "system": "local_private_edition_browser_with_synthetic_safe_result",
+  "recorded_at": "2026-08-21T18:10:48Z",
+  "source_revision": "6c63a77217c6691b7dbb59d905e10950b8191b37",
+  "environment": {
+    "browser": "Chrome 151.0.7922.172 headless",
+    "automation": "Chrome DevTools Protocol",
+    "accessibility_engine": "axe-core 4.13.0",
+    "origin": "http://127.0.0.1:8000",
+    "viewport_css_px": {
+      "width": 390,
+      "height": 844
+    }
+  },
+  "quality_scope": "Safe progress history, packet readiness/selection/gap diagnostics, stage timing, input-token visibility and exact citation-to-evidence navigation; not a new model-quality or provider-reliability run.",
+  "summary": {
+    "progress_events_rendered": 3,
+    "packet_count_types_rendered": 4,
+    "packet_layers_rendered": 3,
+    "omission_reason_control_present": true,
+    "evidence_gap_items_rendered": 2,
+    "timing_rows_rendered": 4,
+    "inline_citations_rendered": 3,
+    "evidence_targets_rendered": 3,
+    "citation_navigation_failures": 0,
+    "axe_violations": 0,
+    "axe_incomplete_checks": 0,
+    "mobile_horizontal_overflow_px": 0,
+    "model_calls": 0
+  },
+  "progress_history": {
+    "messages": [
+      "Loading available evidence…",
+      "The evidence boundary is ready for synthesis.",
+      "The study is ready."
+    ],
+    "aggregate_counts": {
+      "theory_sources": 1,
+      "critical_claims": 1,
+      "attributed_sources": 1,
+      "sections": 1
+    },
+    "completed_history_retained_with_result": true,
+    "live_region_contains_latest_message_only": true,
+    "public_event_schema_changed": false
+  },
+  "packet_transparency": {
+    "status_label": "Ready with limits",
+    "layers": [
+      "Theory",
+      "Critic claims",
+      "Attributed text"
+    ],
+    "selected_candidate_omitted_counts_visible": true,
+    "selected_character_counts_visible": true,
+    "quality_metrics": {
+      "provenance_percent": 100,
+      "duplicate_percent": 0,
+      "lexical_focus_percent": 75,
+      "input_tokens": 3456
+    },
+    "omission_reasons_available": [
+      "duplicate or near-duplicate",
+      "source/domain diversity limit",
+      "layer item limit"
+    ],
+    "evidence_gaps": [
+      "No film-specific attributed source is available; the study remains a viewing framework.",
+      "No measured clip evidence entered this study; film-form claims remain hypotheses."
+    ],
+    "timed_stages": [
+      "Packet assembly",
+      "Model transport",
+      "Validation and repair",
+      "End to end"
+    ]
+  },
+  "citation_navigation": {
+    "theory_citations": 1,
+    "critic_claim_citations": 1,
+    "attributed_text_citations": 1,
+    "targets_openable": 3,
+    "selected_target_opened": true,
+    "focus_moved_to_selected_target": true,
+    "unknown_or_unvalidated_identifier_rendered": false
+  },
+  "privacy_and_accessibility": {
+    "prompt_rendered": false,
+    "credentials_rendered": false,
+    "hidden_reasoning_rendered": false,
+    "private_source_used": false,
+    "synthetic_source_text_committed_in_result": false,
+    "axe_rules_passed": 19,
+    "axe_violations": 0,
+    "axe_incomplete_checks": 0,
+    "horizontal_overflow_px": 0
+  },
+  "known_constraints": [
+    "The browser acceptance uses a synthetic safe study object and does not spend model tokens; backend and stream contract tests separately cover authenticated SSE ordering and redaction.",
+    "The local synchronous route cannot expose intermediate server stages before completion; it shows a waiting state followed by result-level packet and timing diagnostics.",
+    "Hosted progress displays only allow-listed aggregate counts until the separately authenticated owner-scoped result is retrieved.",
+    "Packet relevance percentages are deterministic lexical diagnostics, not factual or human usefulness scores."
+  ]
+}

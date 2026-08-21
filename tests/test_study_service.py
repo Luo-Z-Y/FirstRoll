@@ -128,6 +128,9 @@ def test_grounded_prompt_separates_frameworks_from_film_evidence() -> None:
     assert observability["counts"]["completion_tokens"] == 80
     assert observability["counts"]["total_tokens"] == 200
     assert observability["counts"]["sections"] == 4
+    assert result["packet_quality"]["status"] == "limited"
+    assert result["packet_quality"]["provenance"]["completeness_ratio"] == 1
+    assert "film_specific_evidence_sparse" in result["packet_quality"]["issues"]
     serialised_observability = json.dumps(observability)
     assert "private-test-key" not in serialised_observability
     assert "Study point of view" not in serialised_observability

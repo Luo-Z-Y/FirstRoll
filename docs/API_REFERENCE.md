@@ -217,9 +217,10 @@ The real array always contains the twelve ordered stages from film context throu
 Statuses are `completed`, `failed`, `degraded`, `skipped` or `not_run`. Count keys are restricted to
 retrieval plan/candidate totals, evidence-layer totals, attributed candidate/omission/truncation
 counts, prompt characters, model/repair calls, provider-reported token totals and output sections.
-Prompts, excerpts, credentials, responses and exception text have no field. Failed runs retain their
-trace only in a redacted server log and keep
-the existing safe HTTP/SSE error contract.
+The complete study also contains aggregate `packet_quality` identity/citation, issue, provenance,
+duplicate, focus, diversity, instruction, sufficiency, selection and size fields. Prompts, excerpts,
+credentials, responses and exception text have no observability/quality field. Failed runs retain
+their trace only in a redacted server log and keep the existing safe HTTP/SSE error contract.
 
 Study request:
 

@@ -274,6 +274,7 @@ def run_case(client: TestClient, case: dict[str, Any], recorder: RecordingTransp
             "attributed_source_count": len(study.get("attributed_sources", [])),
         }
         result["study_observability"] = study.get("observability", {})
+        result["packet_quality"] = study.get("packet_quality", {})
         result["status"] = "passed"
     except Exception as exc:  # The benchmark must record failures and continue to later cases.
         if result["failure_stage"] is None:

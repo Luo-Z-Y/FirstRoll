@@ -133,7 +133,7 @@ future-enterprise path, but ADR-017 removes it from the production critical path
 
 | Component | Responsibility | Does not own |
 |---|---|---|
-| `app/web` | Search, disambiguation, per-tab Discover continuity, resilient native director shelf, password-account UI, RLS-backed saved films, evidence views, progress rendering and clip upload UI | Provider secrets, cross-account authorisation, durable study storage, evidence validation or quota decisions |
+| `app/web` | Search, disambiguation, per-tab Discover continuity, resilient native director shelf, password-account UI, RLS-backed saved films, retained safe progress history, packet/gap/timing diagnostics, exact citation targets and clip upload UI | Provider secrets, cross-account authorisation, durable study storage, evidence validation or quota decisions |
 | `main.py` | HTTP boundary, mode gates, authentication calls, quota ordering, request validation and error mapping | Provider parsing rules or model-quality policy |
 | `tmdb_discovery.py` | Official TMDb candidate hydration, provider-qualified routing, IMDb/Wikidata identity bridges and open-catalogue failover | Critical interpretation, browser-held catalogue secrets or silent first-result selection |
 | `discovery.py` | Key-free Wikidata/Wikipedia identity fallback, overview reconciliation and related films | Critical interpretation or creator intention |
@@ -144,7 +144,7 @@ future-enterprise path, but ADR-017 removes it from the production critical path
 | `evidence.py` | Typed packet; focus-aware theory/claim/attributed ranking; exact/near deduplication; source and character budgets; permitted-claim and omission boundaries | Model generation or provider access |
 | `packet_quality.py` | Pre-synthesis identity, citation, provenance, duplication, lexical relevance, diversity and retrieved-instruction diagnostics | Source-text persistence, factual correctness, human usefulness or model grading |
 | `study_observability.py` | Allow-listed monotonic stage timings, terminal status and bounded aggregate counts | Prompts, evidence text, credentials, model output or exception details |
-| `study_service.py` | DeepSeek request, Pydantic validation, citation validation, quality gate and one repair | Authentication, quota reservation or research-tool authorisation |
+| `study_service.py` | DeepSeek request, Pydantic/citation validation, generated-study gate, one repair and owner-visible redacted packet-quality attachment | Authentication, quota reservation or research-tool authorisation |
 | `research_stream.py` | Fixed public progress vocabulary and transient owner-scoped result store | Hidden reasoning, prompts, credentials or private evidence bodies |
 | `research_graph` | Bounded LangGraph state, reducers, routes and deterministic safety boundaries | Production provider credentials or public cut-over decision |
 | `quota.py` + PostgreSQL function | Provider-neutral quota status and atomic reservation after authentication | Bearer tokens, prompts, evidence or generated studies |
@@ -216,7 +216,8 @@ selected film
 → schema and citation validation
 → deterministic quality gate
 → at most one repair
-→ redacted stage observability attached to the private result
+→ redacted packet-quality and stage observability attached to the private result
+→ retained progress history, packet selection/gaps and exact citation-target rendering
 → escaped article rendering
 ```
 

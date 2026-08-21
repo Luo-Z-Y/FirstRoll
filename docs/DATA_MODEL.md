@@ -400,6 +400,12 @@ inherit the run store's owner check and ten-minute TTL; local synchronous result
 response unless the user exports them. It does not create a new database, cookie or browser-storage
 record.
 
+`study.packet_quality` is another transient aggregate object in the complete result. It contains only
+identity/citation booleans, issue codes, counts, ratios, evidence-type/language labels, selection
+pressure and packet character totals. It contains no prompt or source prose. The browser combines it
+with the already owner-visible selected `evidence_packet`, `observability` and study citations; this
+creates no additional persistence or public SSE field.
+
 ### Discovery and reception caches
 
 TMDb and Wikidata/Wikipedia details, related-film results and reception summaries are cached in

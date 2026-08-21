@@ -1,5 +1,55 @@
 # FirstRoll Project Progress
 
+### 21 August 2026 — Inspectable Deep Study progress, packet and citations
+
+Delivered:
+
+1. Retained the complete allow-listed research-event history instead of replacing each prior stage
+   with one current sentence. The latest message alone remains live for assistive technology, while
+   the visual history and elapsed times remain available after completion or failure.
+2. Kept hosted pre-model transparency within the existing public SSE contract: theory, critic-claim,
+   attributed-text and section counts only. No prompt, token, source text, hidden reasoning or new
+   event field enters the stream.
+3. Attached the existing redacted packet-quality assessment to the authenticated/local complete study
+   result and rendered selected/candidate/omitted counts for theory, critic claims and attributed
+   text, plus selected characters and recognised omission reasons.
+4. Added result-level provenance, duplicate, lexical-focus and provider input-token metrics, explicit
+   film-specific/clip evidence gaps and expandable stage/timing observations.
+5. Turned every inline `S`, `C` and `E` marker into a keyboard-focusable link to one exact expandable
+   theory passage, critic claim or attributed source; activation opens, centres and focuses the
+   target.
+6. Versioned a zero-model, synthetic-safe mobile transparency audit and reran automated privacy,
+   citation, stream and accessibility contracts.
+
+Acceptance evidence:
+
+- all 212 automated tests, frontend JavaScript syntax, scoped Ruff, hosted frontend build, npm audit
+  and repository whitespace checks pass;
+- a completed synthetic run retains three progress events and all four safe aggregate count types;
+- the result renders three packet layer cards, recognised omission details, two evidence-gap items,
+  four timing rows and provider input-token count without rendering a prompt or hidden reasoning;
+- all three synthetic inline citations resolve to three unique evidence targets; activating `S1`
+  opens it and moves focus with zero navigation failure;
+- Chrome at 390 × 844 reports no horizontal overflow, axe WCAG violation or incomplete check in the
+  complete transparency context;
+- backend tests prove every returned valid study receives the aggregate `packet_quality` object,
+  while authenticated SSE ordering/field redaction remains unchanged;
+- the acceptance audit makes zero model calls and commits no synthetic source excerpt in its result.
+
+Known constraints:
+
+- the local synchronous route cannot report intermediate server stages before its response; it shows
+  a waiting state followed by complete result-level packet/timing diagnostics;
+- lexical-focus percentage is a structural proxy, not semantic or human relevance;
+- complete selected evidence is intentionally owner-visible, so opening a citation can display
+  private local excerpts in the local result even though SSE and the audit remain redacted;
+- durable/resumable hosted history still depends on replacing the ten-minute process-local run store.
+
+Next actionable work:
+
+1. Complete Step 10 by isolating model/timeout reliability from the now-bounded packet, running paired
+   controlled trials and retaining only changes that preserve the 98.3 quality checkpoint.
+
 ### 21 August 2026 — Focus-ranked bounded packet selection
 
 Delivered:

@@ -223,10 +223,26 @@ The latest complete workflow result is
 Completed-study input-token median and P95 improve 34.34% and 50.26%; complete-suite token use falls
 33.77% while mean quality rises 1.28 points above the pre-selection run and remains above the 96.94
 floor. This is one controlled five-case checkpoint, not a provider-reliability estimate or proof
-that selection
-caused every latency/quality difference. It does establish both scorecard token budgets with no
-citation, provenance, duplicate or containment regression. Result scans found no private title or
-120-character private passage fragment.
+that selection caused every latency/quality difference. It does establish both scorecard token
+budgets with no citation, provenance, duplicate or containment regression. Result scans found no
+private title or 120-character private passage fragment.
+
+## Deep Study Transparency Checkpoint
+
+[`deep-study-transparency-2026-08-21.json`](../evals/results/deep-study-transparency-2026-08-21.json)
+records a 390 × 844 Chrome audit at revision `6c63a77` using a synthetic safe result and zero model
+calls. The completed view retains three lifecycle events and four aggregate count types, then shows
+all three selected/candidate/omitted packet layers, character counts, provenance/duplicate/lexical
+focus diagnostics, provider-reported input tokens, bounded omission reasons, explicit evidence gaps
+and four redacted timing rows.
+
+Three inline citations (`S`, `C`, `E`) each resolve to a unique expandable evidence target; activating
+`S1` opens it, centres it and moves focus. The transparency context has zero horizontal overflow,
+zero axe WCAG 2 A/AA/2.1 AA violations and zero incomplete checks. Prompts, credentials, hidden
+reasoning and private source text have no UI field. Hosted pre-model progress still uses only the
+existing allow-listed SSE counts; the richer packet and timing diagnostics appear only after the
+separately authenticated owner-scoped result is retrieved. Local synchronous studies expose their
+waiting state followed by the same result-level diagnostics.
 
 ## Latest UI Hierarchy Checkpoint
 
