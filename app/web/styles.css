@@ -796,6 +796,11 @@ html[data-theme="dark"] .theme-icon-moon { opacity: 1; transform: rotate(0) scal
   align-items: stretch;
 }
 
+.film-archive.is-shelf-unavailable {
+  grid-template-columns: minmax(0, 720px);
+  justify-content: center;
+}
+
 .archive-pullout-shell {
   min-width: 0;
   container-type: inline-size;

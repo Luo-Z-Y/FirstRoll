@@ -66,8 +66,11 @@ The original GPL-3.0 licence and contributor attribution remain applicable. See
   jewel cases in three balanced rows. Verified poster artwork fills each cover; a restrained title and
   year overlay, plus a designed fallback, keeps every case legible when artwork is unavailable. Drag to
   look, scroll or use W/S to move, strafe with A/D, hover a case for emphasis and select it as the new
-  edition. The director-only Wikidata route bounds candidate hydration while allowing poster enrichment,
-  and unresolved identifier-only records remain hidden.
+  edition. The browser first requests a bounded, fast director-film list and renders the shelf with any
+  available artwork or designed fallbacks; a slower background request upgrades covers with additional
+  verified posters without blocking the shelf. If even the fast identity request fails, FirstRoll keeps
+  the selected edition and omits the unavailable shelf instead of presenting a full-height error panel.
+  Unresolved identifier-only records remain hidden.
 - Compare attributed Douban and Letterboxd community scores and review up to three prominent
   Wikidata awards when those sources provide them.
 - Retrieve matched scholarly abstracts and DOI links through Crossref.

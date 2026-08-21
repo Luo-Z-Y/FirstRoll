@@ -1,5 +1,28 @@
 # FirstRoll Project Progress
 
+### 21 August 2026 — Progressive director shelf loading
+
+Delivered:
+
+1. Split the director shelf into a bounded fast identity request and a non-blocking enriched-poster
+   request, with separate browser caches and time budgets.
+2. Rendered the fast director film list immediately with available artwork or designed fallbacks,
+   then upgraded the live cases when enriched poster data arrived.
+3. Prevented slow poster providers from replacing the entire shelf with an error after 28 seconds.
+4. Collapsed the shelf column when even the fast identity request fails, retaining the selected film
+   card without redundant failure copy or a full-height empty panel.
+
+Acceptance evidence:
+
+- the 170-test suite, frontend JavaScript syntax and repository whitespace checks pass;
+- live *Interstellar* verification renders 12 director cases, upgrades 11 poster covers and exposes no
+  “full shelf unavailable” text.
+
+Resilience boundary:
+
+- background poster enrichment is best-effort; film identity and designed cover fallbacks remain usable
+  when an artwork provider is slow or unavailable.
+
 ### 21 August 2026 — Clearable local search history
 
 Delivered:

@@ -245,8 +245,8 @@ def test_archive_pullout_collapses_before_zoom_can_clip_its_copy() -> None:
     styles = (WEB / "styles.css").read_text(encoding="utf-8")
     app = (WEB / "app.js").read_text(encoding="utf-8")
 
-    assert "/assets/styles.css?v=20260821-2" in index
-    assert "/assets/app.js?v=20260821-2" in index
+    assert "/assets/styles.css?v=20260821-3" in index
+    assert "/assets/app.js?v=20260821-3" in index
     assert "/assets/closet3d.js?v=20260821-1" in index
     assert 'class="archive-pullout-shell"' in app
     assert "container-type: inline-size" in styles
@@ -294,7 +294,11 @@ def test_director_shelf_uses_front_facing_poster_cases() -> None:
     )
 
     assert "displayableFilms" in app
-    assert "related?limit=12&fast=false&director_only=true" in app
+    assert "fetchRelatedFilms(primary.id, { fast: true })" in app
+    assert "fetchRelatedFilms(primary.id, { fast: false })" in app
+    assert 'fast=${fast}&director_only=true' in app
+    assert "enrichDirectorShelf" in app
+    assert "Keep the fast shelf and its designed cover fallbacks" in app
     assert "buildShelfCollections(primary, directorWorks, director)" in app
     director_shelf = app[app.index("function buildShelfCollections"):app.index("function displayableFilms")]
     assert "const films = displayableFilms(directorWorks)" in director_shelf
@@ -305,8 +309,8 @@ def test_director_shelf_uses_front_facing_poster_cases() -> None:
     assert "self._get_shelf_entities(selected_ids)" in discovery
     assert "RELATED_POSTER_FALLBACK_LIMIT = 8" in discovery
     assert "fetchRelatedFilms" in app
-    assert "28000" in app
-    assert "Still checking verified films" in app
+    assert "fast ? 18000 : 65000" in app
+    assert "Loading director shelf" in app
     assert "searchFallbackShelfCollections" not in app
     assert "Live relations delayed · showing verified search matches" not in app
     assert "clearLiveCollections" in runtime
@@ -315,6 +319,10 @@ def test_director_shelf_uses_front_facing_poster_cases() -> None:
     assert "collections: []" in app
     assert "window.FirstRollCloset.update(detail)" in app
     assert "showFilmShelfError" in app
+    assert 'querySelector(".film-closet")?.remove()' in app
+    assert 'classList.add("is-shelf-unavailable")' in app
+    assert "Full shelf unavailable" not in app
+    assert ".film-archive.is-shelf-unavailable" in styles
     assert "No other verified films by this director were returned" in app
     assert "collections.some((collection) => collection.films.length < 10)" not in app
     assert "videoProviderStatusMarkup" in app

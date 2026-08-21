@@ -650,38 +650,54 @@ function confirmDiscoveryFilm(index) {
 
 async function loadRelatedFilms(primary, nearby) {
   try {
-    const data = await fetchRelatedFilms(primary.id);
-    if (state.discovery.archiveSelectionId !== primary.id) return;
-    const directorWorks = uniqueFilms(data.same_director || [], [primary]);
-    const director = firstCrewName(
-      [data.director, ...(primary.directors || [])],
-      "this director",
-    );
-    const collections = buildShelfCollections(primary, directorWorks, director);
-    if (!collections.some((collection) => collection.films.length)) {
+    const data = await fetchRelatedFilms(primary.id, { fast: true });
+    if (!applyDirectorShelf(primary, nearby, data)) {
       throw new Error("No other verified films by this director were returned.");
     }
-    state.discovery.archive = { primary, directorWorks, relevant: nearby, categories: {} };
-    hydrateFilmShelf(primary.id, collections);
-    setFilmShelfStatus("ready");
+    void enrichDirectorShelf(primary, nearby);
   } catch (error) {
     if (state.discovery.archiveSelectionId !== primary.id) return;
     showFilmShelfError(error);
   }
 }
 
-async function fetchRelatedFilms(filmId) {
-  const cached = state.discovery.relatedFilmCache.get(filmId);
+function applyDirectorShelf(primary, nearby, data) {
+  if (state.discovery.archiveSelectionId !== primary.id) return false;
+  const directorWorks = uniqueFilms(data.same_director || [], [primary]);
+  const director = firstCrewName(
+    [data.director, ...(primary.directors || [])],
+    "this director",
+  );
+  const collections = buildShelfCollections(primary, directorWorks, director);
+  if (!collections.some((collection) => collection.films.length)) return false;
+  state.discovery.archive = { primary, directorWorks, relevant: nearby, categories: {} };
+  hydrateFilmShelf(primary.id, collections);
+  setFilmShelfStatus("ready");
+  return true;
+}
+
+async function enrichDirectorShelf(primary, nearby) {
+  try {
+    const data = await fetchRelatedFilms(primary.id, { fast: false });
+    applyDirectorShelf(primary, nearby, data);
+  } catch (_) {
+    // Keep the fast shelf and its designed cover fallbacks when poster providers are slow.
+  }
+}
+
+async function fetchRelatedFilms(filmId, { fast }) {
+  const cacheKey = `${filmId}:${fast ? "fast" : "enriched"}`;
+  const cached = state.discovery.relatedFilmCache.get(cacheKey);
   if (cached) return cached;
   const controller = new AbortController();
-  const timeout = window.setTimeout(() => controller.abort(), 28000);
+  const timeout = window.setTimeout(() => controller.abort(), fast ? 18000 : 65000);
   const progress = window.setTimeout(() => {
     const loading = refs.discoveryResults.querySelector("[data-closet-loading] strong");
-    if (loading) loading.textContent = "Still checking verified films";
-  }, 10000);
+    if (loading && fast) loading.textContent = "Loading director shelf";
+  }, 7000);
   try {
     const res = await fetch(
-      `${discoveryApiBase()}/api/discovery/films/${encodeURIComponent(filmId)}/related?limit=12&fast=false&director_only=true`,
+      `${discoveryApiBase()}/api/discovery/films/${encodeURIComponent(filmId)}/related?limit=12&fast=${fast}&director_only=true`,
       { signal: controller.signal },
     );
     if (!res.ok) throw new Error(await readApiError(res));
@@ -689,11 +705,11 @@ async function fetchRelatedFilms(filmId) {
     if (data.state === "unavailable") {
       throw new Error("Verified related films are temporarily unavailable.");
     }
-    state.discovery.relatedFilmCache.set(filmId, data);
+    state.discovery.relatedFilmCache.set(cacheKey, data);
     return data;
   } catch (error) {
     throw error?.name === "AbortError"
-      ? new Error("Verified related films took too long to respond.")
+      ? new Error("The director shelf took too long to respond.")
       : error;
   } finally {
     window.clearTimeout(timeout);
@@ -712,13 +728,9 @@ function setFilmShelfStatus(message) {
 }
 
 function showFilmShelfError(error) {
-  const root = refs.discoveryResults.querySelector("[data-closet-viewport]");
-  const loading = root?.querySelector("[data-closet-loading]");
-  if (!root || !loading) return;
-  root.classList.add("has-error");
-  loading.innerHTML = `
-    <strong>Full shelf unavailable</strong>
-    <small>${escapeHtml(error?.message || "Verified related films could not be loaded. Search again to retry.")}</small>`;
+  console.warn("Director shelf unavailable", error);
+  refs.discoveryResults.querySelector(".film-closet")?.remove();
+  refs.discoveryResults.classList.add("is-shelf-unavailable");
 }
 
 function uniqueFilms(films, excluded = []) {
@@ -738,6 +750,7 @@ function renderFilmArchive(
   directorName = null,
   categories = {},
 ) {
+  refs.discoveryResults.classList.remove("is-shelf-unavailable");
   const director = firstCrewName(
     [directorName, ...(primary.directors || [])],
     "this director",
