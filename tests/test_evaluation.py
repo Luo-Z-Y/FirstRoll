@@ -82,6 +82,48 @@ def test_pre_agent_scorecard_freezes_steps_journeys_and_entry_targets() -> None:
     assert baseline["median_prompt_tokens_completed"] == 7882.5
     assert baseline["p95_prompt_tokens_completed"] == percentile(prompt_tokens, 0.95)
 
+    workflow_checkpoint = scorecard["measured_checkpoints"]["complete_workflow"]
+    workflow_result = json.loads(
+        (ROOT / workflow_checkpoint["result_path"]).read_text(encoding="utf-8")
+    )
+    assert workflow_result["schema_version"] == 2
+    assert workflow_checkpoint["source_revision"] == workflow_result["source_revision"]
+    assert workflow_checkpoint["configuration_fingerprint"] == workflow_result["environment"][
+        "configuration"
+    ]["sha256"]
+    assert workflow_checkpoint["completed_cases"] == workflow_result["summary"][
+        "successful_cases"
+    ]
+    assert workflow_checkpoint["mean_quality_score_completed"] == workflow_result["summary"][
+        "mean_quality_score"
+    ]
+    assert workflow_checkpoint["p50_end_to_end_seconds"] == workflow_result["summary"][
+        "latency_seconds"
+    ]["p50_end_to_end"]
+    current_prompt_tokens = [
+        call["usage"]["prompt_tokens"]
+        for case in workflow_result["cases"]
+        if case["status"] == "passed"
+        for call in case.get("model_calls", [])
+    ]
+    assert workflow_checkpoint["median_prompt_tokens_completed"] == 9577.0
+    assert workflow_checkpoint["p95_prompt_tokens_completed"] == percentile(
+        current_prompt_tokens, 0.95
+    )
+
+    packet_checkpoint = scorecard["measured_checkpoints"]["packet_preparation"]
+    packet_result = json.loads(
+        (ROOT / packet_checkpoint["result_path"]).read_text(encoding="utf-8")
+    )
+    assert packet_checkpoint["source_revision"] == packet_result["source_revision"]
+    assert packet_checkpoint["configuration_fingerprint"] == packet_result["environment"][
+        "configuration"
+    ]["sha256"]
+    assert packet_checkpoint["attempted_samples"] == packet_result["summary"]["sample_count"]
+    assert packet_checkpoint["failed_samples"] == packet_result["summary"]["failed_samples"]
+    assert packet_checkpoint["cold_p95_ms"] == packet_result["summary"]["cold"]["p95_ms"]
+    assert packet_checkpoint["warm_p95_ms"] == packet_result["summary"]["warm"]["p95_ms"]
+
     assert scorecard["latency_stages"] == list(STUDY_STAGE_NAMES)
 
     journey_ids = [journey["id"] for journey in scorecard["user_journeys"]]

@@ -1,0 +1,970 @@
+{
+  "schema_version": 2,
+  "suite_id": "firstroll-agent-comparison-v1",
+  "system": "fixed_workflow_baseline",
+  "recorded_at": "2026-08-21T14:44:59.623243+00:00",
+  "source_revision": "c913bbdbd27281294efb8e37b855d34fe9d4f8ef",
+  "environment": {
+    "python": "3.11.7",
+    "platform": "macOS-26.5.2-arm64-arm-64bit",
+    "configuration": {
+      "model": "deepseek-v4-pro",
+      "connectors": {
+        "tmdb": {
+          "state": "available",
+          "configured": false,
+          "credential_source": "none"
+        },
+        "deepseek": {
+          "state": "available",
+          "configured": true,
+          "credential_source": "local_store"
+        },
+        "douban": {
+          "state": "available",
+          "configured": false,
+          "credential_source": "none"
+        },
+        "letterboxd": {
+          "state": "available",
+          "configured": false,
+          "credential_source": "none"
+        },
+        "youtube": {
+          "state": "available",
+          "configured": true,
+          "credential_source": "local_store"
+        },
+        "nyt": {
+          "state": "planned",
+          "configured": false,
+          "credential_source": "none"
+        },
+        "guardian": {
+          "state": "planned",
+          "configured": false,
+          "credential_source": "none"
+        }
+      },
+      "library_documents": 7,
+      "index_chunks": 4381,
+      "index_schema": "2",
+      "embedding_model": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+      "sha256": "42f89877219dcb53"
+    }
+  },
+  "quality_scope": "Automated structural, citation, calibration and verifiability proxy; it does not establish the factual correctness of unseen film-form claims.",
+  "summary": {
+    "case_count": 5,
+    "successful_cases": 4,
+    "failed_cases": 1,
+    "operational_failure_rate": 0.2,
+    "failure_rate": 0.2,
+    "mean_quality_score": 97.02,
+    "median_quality_score": 97.38,
+    "quality_gate_pass_rate": 1.0,
+    "quality_acceptance_failure_rate": 0.0,
+    "repair_rate": 0.0,
+    "latency_seconds": {
+      "mean_end_to_end": 79.452,
+      "p50_end_to_end": 77.679,
+      "p95_end_to_end": 91.225,
+      "mean_study": 61.403
+    },
+    "model_calls": 5,
+    "total_tokens": 63764,
+    "failure_stages": {
+      "search": 0,
+      "identity": 0,
+      "detail": 0,
+      "study": 1
+    }
+  },
+  "cases": [
+    {
+      "case_id": "syndromes-cinematography",
+      "challenge": "formal specificity without clip evidence",
+      "status": "passed",
+      "failure_stage": null,
+      "failure_reason": null,
+      "candidate_count": 6,
+      "identity_ambiguity": true,
+      "resolved_film": {
+        "id": "wikidata:Q3508807",
+        "title": "Syndromes and a Century",
+        "year": 2006,
+        "directors": [
+          "Apichatpong Weerasethakul"
+        ]
+      },
+      "cached_criticism_providers": [
+        "douban"
+      ],
+      "cached_video_count": 0,
+      "quality": {
+        "score": 98.0,
+        "components": {
+          "identity": 15.0,
+          "structured_completion": 10.0,
+          "deterministic_quality_gate": 23.0,
+          "citation_integrity": 20.0,
+          "epistemic_calibration": 10.0,
+          "observable_verification": 10.0,
+          "evidence_coverage": 10.0
+        },
+        "quality_gate_status": "passed",
+        "quality_gate_score": 0.92,
+        "quality_gate_central_issues": [],
+        "quality_gate_failed_sections": [
+          {
+            "section": 1,
+            "lens": "Framing and shot scale as emotional temperature",
+            "score": 0.8,
+            "issues": [
+              "mechanism_not_causal"
+            ]
+          },
+          {
+            "section": 4,
+            "lens": "Spatial repetition and the recurring square fitness exercise",
+            "score": 0.8,
+            "issues": [
+              "generic_language"
+            ]
+          }
+        ],
+        "repair_attempted": false,
+        "section_count": 5,
+        "valid_citations": true,
+        "distinct_theory_sources_cited": 8,
+        "available_theory_sources": 10,
+        "calibrated_section_ratio": 1.0,
+        "observable_verification_ratio": 1.0
+      },
+      "study_summary": {
+        "title": "Two Halves, One Frame: Testing Spatial Repetition in Syndromes and a Century",
+        "central_argument": "A filmmaker can test whether framing, camera position, and spatial repetition distinguish the film's two halves by treating the critic's reported contrast—warm, intimate first half versus cold, detached second half—as a hypothesis to be verified through systematic logging of shot scale, camera angle, offscreen space, and recurring locations. Because no clip evidence is supplied, every formal claim must remain conditional: the task is not to assert what the film does, but to design observable tests that would confirm or refute the critic's interpretation. The central question is whether the two halves use the same spatial grammar with different emotional inflections, or whether they employ fundamentally different framing and staging strategies. By comparing repeated scenes—such as the dentist and monk consultations mentioned by the critic—and by tracking how the camera frames bodies, architecture, and empty spaces, the filmmaker can distinguish between a unified style and a deliberate bifurcation.",
+        "section_lenses": [
+          "Framing and shot scale as emotional temperature",
+          "Camera position and the vector line in repeated encounters",
+          "Offscreen space and the implied world",
+          "Spatial repetition and the recurring square fitness exercise",
+          "Deep space, lens choice, and the architecture of the two worlds"
+        ],
+        "model": "deepseek-v4-pro"
+      },
+      "retrieval": {
+        "method": "hybrid_rrf",
+        "candidate_count": 309,
+        "theory_source_count": 10,
+        "critical_claim_count": 4,
+        "attributed_source_count": 1
+      },
+      "study_observability": {
+        "schema_version": 1,
+        "status": "completed",
+        "stages": [
+          {
+            "name": "film_context",
+            "status": "completed",
+            "duration_ms": 782.38,
+            "attempts": 1,
+            "failures": 0
+          },
+          {
+            "name": "criticism_cache",
+            "status": "completed",
+            "duration_ms": 0.498,
+            "attempts": 1,
+            "failures": 0
+          },
+          {
+            "name": "video_cache",
+            "status": "completed",
+            "duration_ms": 0.027,
+            "attempts": 1,
+            "failures": 0
+          },
+          {
+            "name": "retrieval_planning",
+            "status": "completed",
+            "duration_ms": 5.977,
+            "attempts": 1,
+            "failures": 0
+          },
+          {
+            "name": "lexical_retrieval",
+            "status": "completed",
+            "duration_ms": 113.894,
+            "attempts": 1,
+            "failures": 0
+          },
+          {
+            "name": "semantic_retrieval",
+            "status": "completed",
+            "duration_ms": 69.022,
+            "attempts": 1,
+            "failures": 0
+          },
+          {
+            "name": "fusion_and_selection",
+            "status": "completed",
+            "duration_ms": 4.242,
+            "attempts": 1,
+            "failures": 0
+          },
+          {
+            "name": "packet_assembly",
+            "status": "completed",
+            "duration_ms": 0.073,
+            "attempts": 1,
+            "failures": 0
+          },
+          {
+            "name": "prompt_serialisation",
+            "status": "completed",
+            "duration_ms": 0.276,
+            "attempts": 1,
+            "failures": 0
+          },
+          {
+            "name": "model_transport",
+            "status": "completed",
+            "duration_ms": 57425.526,
+            "attempts": 1,
+            "failures": 0
+          },
+          {
+            "name": "validation_and_repair",
+            "status": "completed",
+            "duration_ms": 1.496,
+            "attempts": 1,
+            "failures": 0
+          },
+          {
+            "name": "end_to_end",
+            "status": "completed",
+            "duration_ms": 58404.509,
+            "attempts": 1,
+            "failures": 0
+          }
+        ],
+        "counts": {
+          "retrieval_plan_items": 7,
+          "retrieval_candidates": 309,
+          "theory_sources": 10,
+          "critical_claims": 4,
+          "attributed_sources": 1,
+          "prompt_characters": 20788,
+          "model_calls": 1,
+          "prompt_tokens": 5238,
+          "completion_tokens": 2922,
+          "total_tokens": 8160,
+          "sections": 5
+        }
+      },
+      "latency_seconds": {
+        "search": 9.381,
+        "detail": 12.168,
+        "study": 58.409,
+        "end_to_end": 79.958
+      },
+      "model_calls": [
+        {
+          "endpoint": "completions",
+          "latency_seconds": 57.425,
+          "model": "deepseek-v4-pro",
+          "usage": {
+            "prompt_tokens": 5238,
+            "completion_tokens": 2922,
+            "total_tokens": 8160,
+            "prompt_tokens_details": {
+              "cached_tokens": 0
+            },
+            "prompt_cache_hit_tokens": 0,
+            "prompt_cache_miss_tokens": 5238
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "in-the-mood-for-love-space",
+      "challenge": "well-known film with abundant secondary interpretation",
+      "status": "passed",
+      "failure_stage": null,
+      "failure_reason": null,
+      "candidate_count": 9,
+      "identity_ambiguity": true,
+      "resolved_film": {
+        "id": "wikidata:Q1056853",
+        "title": "In the Mood for Love",
+        "year": 2000,
+        "directors": [
+          "Wong Kar-wai"
+        ]
+      },
+      "cached_criticism_providers": [
+        "crossref scholarship",
+        "douban",
+        "letterboxd public web"
+      ],
+      "cached_video_count": 0,
+      "quality": {
+        "score": 93.33,
+        "components": {
+          "identity": 15.0,
+          "structured_completion": 10.0,
+          "deterministic_quality_gate": 22.5,
+          "citation_integrity": 20.0,
+          "epistemic_calibration": 10.0,
+          "observable_verification": 8.33,
+          "evidence_coverage": 7.5
+        },
+        "quality_gate_status": "passed",
+        "quality_gate_score": 0.9,
+        "quality_gate_central_issues": [],
+        "quality_gate_failed_sections": [
+          {
+            "section": 1,
+            "lens": "Constrained framing as emotional architecture",
+            "score": 0.8,
+            "issues": [
+              "generic_language"
+            ]
+          },
+          {
+            "section": 3,
+            "lens": "Repetition as ritual and variation",
+            "score": 0.8,
+            "issues": [
+              "generic_language"
+            ]
+          },
+          {
+            "section": 4,
+            "lens": "Constructive editing and spatial ambiguity",
+            "score": 0.8,
+            "issues": [
+              "verification_not_observable"
+            ]
+          }
+        ],
+        "repair_attempted": false,
+        "section_count": 6,
+        "valid_citations": true,
+        "distinct_theory_sources_cited": 3,
+        "available_theory_sources": 10,
+        "calibrated_section_ratio": 1.0,
+        "observable_verification_ratio": 0.833
+      },
+      "study_summary": {
+        "title": "Framing Desire: Constraint, Offscreen Space, and Repetition in In the Mood for Love",
+        "central_argument": "In the Mood for Love builds its emotional architecture less through what it shows than through what it withholds. The film’s constrained framing, its systematic use of offscreen space, and its rhythmic repetitions do not merely decorate a story of unconsummated love; they enact it. By treating the frame as a boundary that characters repeatedly brush against but rarely cross, and by letting the unseen spouses and the spaces beyond doorways and corridors exert pressure on every composition, the film converts formal restraint into a felt condition. This study proposes that the film’s central formal relation is a dialectic between containment and overflow: the image holds the lovers in tight, often partial views, while offscreen space and repetition suggest a world of desire that cannot be fully contained. Because no clip evidence is supplied, every claim below is a viewing hypothesis to be tested against the film itself.",
+        "section_lenses": [
+          "Constrained framing as emotional architecture",
+          "Offscreen space and the absent spouses",
+          "Repetition as ritual and variation",
+          "Constructive editing and spatial ambiguity",
+          "Framing, angle, and the blocking of facial access",
+          "Repetition, music, and the rhythm of longing"
+        ],
+        "model": "deepseek-v4-pro"
+      },
+      "retrieval": {
+        "method": "hybrid_rrf",
+        "candidate_count": 420,
+        "theory_source_count": 10,
+        "critical_claim_count": 26,
+        "attributed_source_count": 18
+      },
+      "study_observability": {
+        "schema_version": 1,
+        "status": "completed",
+        "stages": [
+          {
+            "name": "film_context",
+            "status": "completed",
+            "duration_ms": 9896.234,
+            "attempts": 1,
+            "failures": 0
+          },
+          {
+            "name": "criticism_cache",
+            "status": "completed",
+            "duration_ms": 0.793,
+            "attempts": 1,
+            "failures": 0
+          },
+          {
+            "name": "video_cache",
+            "status": "completed",
+            "duration_ms": 0.016,
+            "attempts": 1,
+            "failures": 0
+          },
+          {
+            "name": "retrieval_planning",
+            "status": "completed",
+            "duration_ms": 3.618,
+            "attempts": 1,
+            "failures": 0
+          },
+          {
+            "name": "lexical_retrieval",
+            "status": "completed",
+            "duration_ms": 113.621,
+            "attempts": 1,
+            "failures": 0
+          },
+          {
+            "name": "semantic_retrieval",
+            "status": "completed",
+            "duration_ms": 66.63,
+            "attempts": 1,
+            "failures": 0
+          },
+          {
+            "name": "fusion_and_selection",
+            "status": "completed",
+            "duration_ms": 4.383,
+            "attempts": 1,
+            "failures": 0
+          },
+          {
+            "name": "packet_assembly",
+            "status": "completed",
+            "duration_ms": 0.117,
+            "attempts": 1,
+            "failures": 0
+          },
+          {
+            "name": "prompt_serialisation",
+            "status": "completed",
+            "duration_ms": 0.448,
+            "attempts": 1,
+            "failures": 0
+          },
+          {
+            "name": "model_transport",
+            "status": "completed",
+            "duration_ms": 64058.261,
+            "attempts": 1,
+            "failures": 0
+          },
+          {
+            "name": "validation_and_repair",
+            "status": "completed",
+            "duration_ms": 1.056,
+            "attempts": 1,
+            "failures": 0
+          },
+          {
+            "name": "end_to_end",
+            "status": "completed",
+            "duration_ms": 74145.847,
+            "attempts": 1,
+            "failures": 0
+          }
+        ],
+        "counts": {
+          "retrieval_plan_items": 10,
+          "retrieval_candidates": 420,
+          "theory_sources": 10,
+          "critical_claims": 26,
+          "attributed_sources": 18,
+          "prompt_characters": 52555,
+          "model_calls": 1,
+          "prompt_tokens": 14992,
+          "completion_tokens": 3479,
+          "total_tokens": 18471,
+          "sections": 6
+        }
+      },
+      "latency_seconds": {
+        "search": 12.686,
+        "detail": 7.207,
+        "study": 74.148,
+        "end_to_end": 94.042
+      },
+      "model_calls": [
+        {
+          "endpoint": "completions",
+          "latency_seconds": 64.058,
+          "model": "deepseek-v4-pro",
+          "usage": {
+            "prompt_tokens": 14992,
+            "completion_tokens": 3479,
+            "total_tokens": 18471,
+            "prompt_tokens_details": {
+              "cached_tokens": 0
+            },
+            "prompt_cache_hit_tokens": 0,
+            "prompt_cache_miss_tokens": 14992
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "memoria-sound",
+      "challenge": "multilingual identity and sound-centred analysis",
+      "status": "passed",
+      "failure_stage": null,
+      "failure_reason": null,
+      "candidate_count": 8,
+      "identity_ambiguity": true,
+      "resolved_film": {
+        "id": "wikidata:Q67087116",
+        "title": "Memoria",
+        "year": 2021,
+        "directors": [
+          "Apichatpong Weerasethakul"
+        ]
+      },
+      "cached_criticism_providers": [
+        "crossref scholarship",
+        "douban",
+        "letterboxd public web",
+        "the guardian public web"
+      ],
+      "cached_video_count": 0,
+      "quality": {
+        "score": 100.0,
+        "components": {
+          "identity": 15.0,
+          "structured_completion": 10.0,
+          "deterministic_quality_gate": 25.0,
+          "citation_integrity": 20.0,
+          "epistemic_calibration": 10.0,
+          "observable_verification": 10.0,
+          "evidence_coverage": 10.0
+        },
+        "quality_gate_status": "passed",
+        "quality_gate_score": 1.0,
+        "quality_gate_central_issues": [],
+        "quality_gate_failed_sections": [],
+        "repair_attempted": false,
+        "section_count": 5,
+        "valid_citations": true,
+        "distinct_theory_sources_cited": 5,
+        "available_theory_sources": 10,
+        "calibrated_section_ratio": 1.0,
+        "observable_verification_ratio": 1.0
+      },
+      "study_summary": {
+        "title": "Sonic Drift and Spatial Uncertainty in Memoria",
+        "central_argument": "A close viewing of Memoria can test how sound perspective, duration, and spatial uncertainty interact without claiming the director's intention. By treating the film as a formal system, we can observe how acoustic cues and temporal extension generate a perceptual field in which the source and location of sounds remain ambiguous. This ambiguity is not a flaw but a structuring principle: it forces the viewer to attend to the materiality of sound and the duration of shots, thereby creating a mode of spectatorship that is more akin to listening than to looking. The analysis proceeds through a series of viewing hypotheses, each grounded in a theoretical framework and verifiable through close observation.",
+        "section_lenses": [
+          "Sound perspective and spatial anchoring",
+          "Duration and the threshold of attention",
+          "Sound continuity and the construction of offscreen space",
+          "Editing patterns and the withholding of spatial information",
+          "Aesthetic distance and the viewer's participatory role"
+        ],
+        "model": "deepseek-v4-pro"
+      },
+      "retrieval": {
+        "method": "hybrid_rrf",
+        "candidate_count": 385,
+        "theory_source_count": 10,
+        "critical_claim_count": 11,
+        "attributed_source_count": 20
+      },
+      "study_observability": {
+        "schema_version": 1,
+        "status": "completed",
+        "stages": [
+          {
+            "name": "film_context",
+            "status": "completed",
+            "duration_ms": 1047.125,
+            "attempts": 1,
+            "failures": 0
+          },
+          {
+            "name": "criticism_cache",
+            "status": "completed",
+            "duration_ms": 0.606,
+            "attempts": 1,
+            "failures": 0
+          },
+          {
+            "name": "video_cache",
+            "status": "completed",
+            "duration_ms": 0.216,
+            "attempts": 1,
+            "failures": 0
+          },
+          {
+            "name": "retrieval_planning",
+            "status": "completed",
+            "duration_ms": 4.314,
+            "attempts": 1,
+            "failures": 0
+          },
+          {
+            "name": "lexical_retrieval",
+            "status": "completed",
+            "duration_ms": 139.134,
+            "attempts": 1,
+            "failures": 0
+          },
+          {
+            "name": "semantic_retrieval",
+            "status": "completed",
+            "duration_ms": 67.621,
+            "attempts": 1,
+            "failures": 0
+          },
+          {
+            "name": "fusion_and_selection",
+            "status": "completed",
+            "duration_ms": 4.665,
+            "attempts": 1,
+            "failures": 0
+          },
+          {
+            "name": "packet_assembly",
+            "status": "completed",
+            "duration_ms": 0.115,
+            "attempts": 1,
+            "failures": 0
+          },
+          {
+            "name": "prompt_serialisation",
+            "status": "completed",
+            "duration_ms": 0.336,
+            "attempts": 1,
+            "failures": 0
+          },
+          {
+            "name": "model_transport",
+            "status": "completed",
+            "duration_ms": 56200.593,
+            "attempts": 1,
+            "failures": 0
+          },
+          {
+            "name": "validation_and_repair",
+            "status": "completed",
+            "duration_ms": 1.107,
+            "attempts": 1,
+            "failures": 0
+          },
+          {
+            "name": "end_to_end",
+            "status": "completed",
+            "duration_ms": 57466.56,
+            "attempts": 1,
+            "failures": 0
+          }
+        ],
+        "counts": {
+          "retrieval_plan_items": 10,
+          "retrieval_candidates": 385,
+          "theory_sources": 10,
+          "critical_claims": 11,
+          "attributed_sources": 20,
+          "prompt_characters": 50332,
+          "model_calls": 1,
+          "prompt_tokens": 13916,
+          "completion_tokens": 2808,
+          "total_tokens": 16724,
+          "sections": 5
+        }
+      },
+      "latency_seconds": {
+        "search": 10.412,
+        "detail": 1.247,
+        "study": 57.469,
+        "end_to_end": 69.129
+      },
+      "model_calls": [
+        {
+          "endpoint": "completions",
+          "latency_seconds": 56.201,
+          "model": "deepseek-v4-pro",
+          "usage": {
+            "prompt_tokens": 13916,
+            "completion_tokens": 2808,
+            "total_tokens": 16724,
+            "prompt_tokens_details": {
+              "cached_tokens": 896
+            },
+            "prompt_cache_hit_tokens": 896,
+            "prompt_cache_miss_tokens": 13020
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "the-thing-ambiguous-identity",
+      "challenge": "ambiguous title requiring explicit film selection",
+      "status": "passed",
+      "failure_stage": null,
+      "failure_reason": null,
+      "candidate_count": 14,
+      "identity_ambiguity": true,
+      "resolved_film": {
+        "id": "wikidata:Q210756",
+        "title": "The Thing",
+        "year": 1982,
+        "directors": [
+          "John Carpenter"
+        ]
+      },
+      "cached_criticism_providers": [],
+      "cached_video_count": 0,
+      "quality": {
+        "score": 96.75,
+        "components": {
+          "identity": 15.0,
+          "structured_completion": 10.0,
+          "deterministic_quality_gate": 21.75,
+          "citation_integrity": 20.0,
+          "epistemic_calibration": 10.0,
+          "observable_verification": 10.0,
+          "evidence_coverage": 10.0
+        },
+        "quality_gate_status": "passed",
+        "quality_gate_score": 0.87,
+        "quality_gate_central_issues": [],
+        "quality_gate_failed_sections": [
+          {
+            "section": 1,
+            "lens": "Continuity editing and temporal order",
+            "score": 0.8,
+            "issues": [
+              "mechanism_not_causal"
+            ]
+          },
+          {
+            "section": 4,
+            "lens": "Constructive editing and spatial uncertainty",
+            "score": 0.8,
+            "issues": [
+              "mechanism_not_causal"
+            ]
+          },
+          {
+            "section": 5,
+            "lens": "Deep focus and staging in depth",
+            "score": 0.8,
+            "issues": [
+              "mechanism_not_causal"
+            ]
+          },
+          {
+            "section": 6,
+            "lens": "Focal length, camera position, and spatial compression",
+            "score": 0.8,
+            "issues": [
+              "mechanism_not_causal"
+            ]
+          }
+        ],
+        "repair_attempted": false,
+        "section_count": 6,
+        "valid_citations": true,
+        "distinct_theory_sources_cited": 6,
+        "available_theory_sources": 10,
+        "calibrated_section_ratio": 1.0,
+        "observable_verification_ratio": 1.0
+      },
+      "study_summary": {
+        "title": "Framing Mistrust: Testing Uncertainty in The Thing",
+        "central_argument": "The Thing’s paranoid group dynamics can be studied as a formal problem of how framing, eyelines, and editing organise uncertainty. Rather than assuming the film simply depicts mistrust, a filmmaker can test whether its shot design and cutting patterns systematically withhold or destabilise the spatial and temporal cues that normally anchor character relations. By treating every claim about the film as a viewing hypothesis, the analysis shifts from asserting what the film does to designing observable tests for how it might produce suspicion.",
+        "section_lenses": [
+          "Continuity editing and temporal order",
+          "Discontinuous editing and ambiguous relations",
+          "Graphic editing and rhythmic cutting",
+          "Constructive editing and spatial uncertainty",
+          "Deep focus and staging in depth",
+          "Focal length, camera position, and spatial compression"
+        ],
+        "model": "deepseek-v4-pro"
+      },
+      "retrieval": {
+        "method": "hybrid_rrf",
+        "candidate_count": 211,
+        "theory_source_count": 10,
+        "critical_claim_count": 0,
+        "attributed_source_count": 0
+      },
+      "study_observability": {
+        "schema_version": 1,
+        "status": "completed",
+        "stages": [
+          {
+            "name": "film_context",
+            "status": "completed",
+            "duration_ms": 4800.178,
+            "attempts": 1,
+            "failures": 0
+          },
+          {
+            "name": "criticism_cache",
+            "status": "completed",
+            "duration_ms": 0.171,
+            "attempts": 1,
+            "failures": 0
+          },
+          {
+            "name": "video_cache",
+            "status": "completed",
+            "duration_ms": 0.02,
+            "attempts": 1,
+            "failures": 0
+          },
+          {
+            "name": "retrieval_planning",
+            "status": "completed",
+            "duration_ms": 3.214,
+            "attempts": 1,
+            "failures": 0
+          },
+          {
+            "name": "lexical_retrieval",
+            "status": "completed",
+            "duration_ms": 40.939,
+            "attempts": 1,
+            "failures": 0
+          },
+          {
+            "name": "semantic_retrieval",
+            "status": "completed",
+            "duration_ms": 63.334,
+            "attempts": 1,
+            "failures": 0
+          },
+          {
+            "name": "fusion_and_selection",
+            "status": "completed",
+            "duration_ms": 4.085,
+            "attempts": 1,
+            "failures": 0
+          },
+          {
+            "name": "packet_assembly",
+            "status": "completed",
+            "duration_ms": 0.041,
+            "attempts": 1,
+            "failures": 0
+          },
+          {
+            "name": "prompt_serialisation",
+            "status": "completed",
+            "duration_ms": 0.121,
+            "attempts": 1,
+            "failures": 0
+          },
+          {
+            "name": "model_transport",
+            "status": "completed",
+            "duration_ms": 48497.743,
+            "attempts": 1,
+            "failures": 0
+          },
+          {
+            "name": "validation_and_repair",
+            "status": "completed",
+            "duration_ms": 0.755,
+            "attempts": 1,
+            "failures": 0
+          },
+          {
+            "name": "end_to_end",
+            "status": "completed",
+            "duration_ms": 53411.016,
+            "attempts": 1,
+            "failures": 0
+          }
+        ],
+        "counts": {
+          "retrieval_plan_items": 5,
+          "retrieval_candidates": 211,
+          "theory_sources": 10,
+          "critical_claims": 0,
+          "attributed_sources": 0,
+          "prompt_characters": 17576,
+          "model_calls": 1,
+          "prompt_tokens": 4257,
+          "completion_tokens": 2354,
+          "total_tokens": 6611,
+          "sections": 6
+        }
+      },
+      "latency_seconds": {
+        "search": 11.604,
+        "detail": 11.434,
+        "study": 53.413,
+        "end_to_end": 76.452
+      },
+      "model_calls": [
+        {
+          "endpoint": "completions",
+          "latency_seconds": 48.498,
+          "model": "deepseek-v4-pro",
+          "usage": {
+            "prompt_tokens": 4257,
+            "completion_tokens": 2354,
+            "total_tokens": 6611,
+            "prompt_tokens_details": {
+              "cached_tokens": 896
+            },
+            "prompt_cache_hit_tokens": 896,
+            "prompt_cache_miss_tokens": 3361
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "we-are-all-strangers-sparse",
+      "challenge": "appropriate limitation and abstention under sparse evidence",
+      "status": "failed",
+      "failure_stage": "study",
+      "failure_reason": "study HTTP 502: {\"detail\":\"DeepSeek returned an invalid study response.\"}",
+      "candidate_count": 11,
+      "identity_ambiguity": true,
+      "resolved_film": {
+        "id": "wikidata:Q137883355",
+        "title": "We Are All Strangers",
+        "year": 2026,
+        "directors": [
+          "Anthony Chen"
+        ]
+      },
+      "cached_criticism_providers": [
+        "douban",
+        "letterboxd public web",
+        "the guardian public web"
+      ],
+      "cached_video_count": 12,
+      "quality": {
+        "score": 0.0
+      },
+      "latency_seconds": {
+        "search": 13.3,
+        "detail": 0.802,
+        "study": 63.576,
+        "end_to_end": 77.679
+      },
+      "model_calls": [
+        {
+          "endpoint": "completions",
+          "latency_seconds": 62.745,
+          "model": "deepseek-v4-pro",
+          "usage": {
+            "prompt_tokens": 10527,
+            "completion_tokens": 3271,
+            "total_tokens": 13798,
+            "prompt_tokens_details": {
+              "cached_tokens": 896
+            },
+            "prompt_cache_hit_tokens": 896,
+            "prompt_cache_miss_tokens": 9631
+          }
+        }
+      ]
+    }
+  ]
+}

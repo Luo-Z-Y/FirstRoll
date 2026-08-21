@@ -1,6 +1,6 @@
 # Pre-Agent Product Hardening
 
-**Status:** active; Steps 1–2 complete and Step 3 is next
+**Status:** active; Steps 1–3 complete and Step 4 is next
 
 **Machine-readable scorecard:** [`evals/pre_agent_scorecard.json`](../evals/pre_agent_scorecard.json)
 
@@ -51,10 +51,15 @@ The historical comparison remains
 | Mean combined study-stage latency | 58.52 s |
 | Median / P95 input tokens over completed calls | 7,882.5 / 14,322.25 |
 
-The combined study timing does not isolate retrieval, packet assembly or model transport. Those
-packet-stage measurements are unknown until Steps 2 and 3. The automated quality score is also a
-structural, citation, calibration and verifiability proxy; its high value does not establish factual
-film-analysis correctness or human usefulness.
+The starting combined study timing did not isolate retrieval, packet assembly or model transport.
+Step 3 now supplies the first packet-only reference: 35/35 preparations completed, with cold
+P50/P95 of 9,420.905/10,013.910 ms and warm P50/P95 of 138.240/182.306 ms. The current complete run
+again completed four of five cases, scored 97.02 on average and recorded end-to-end P50/P95 of
+77.679/91.225 seconds. These are starting measurements, not an optimisation claim.
+
+The automated quality score remains a structural, citation, calibration and verifiability proxy; its
+high value does not establish factual film-analysis correctness or human usefulness. The reviewed
+raw values and provider/cache interpretation remain canonical in [Evaluation](EVALUATION.md).
 
 ## Frozen User Journeys
 
@@ -97,7 +102,7 @@ not silently omitted.
 **Acceptance:** every applicable stage has duration and terminal status; instrumentation contains no
 prompt, credential, private passage, full review body or model response.
 
-### Step 3 — Capture the measured baseline — next
+### Step 3 — Capture the measured baseline — complete
 
 Run the unchanged fixed workflow with the new instrumentation. Use five warm packet-only samples per
 frozen case after one unrecorded warm-up and two cold processes per case. Run model synthesis only
@@ -111,7 +116,7 @@ uv run python tools/benchmark_evidence_packet.py \
 **Acceptance:** a reviewed, redacted result records packet P50/P95, prompt size, selected/omitted
 counts, failures and configuration fingerprint. No optimisation is mixed into this result.
 
-### Step 4 — Improve user-interface hierarchy
+### Step 4 — Improve user-interface hierarchy — next
 
 Use the frozen journeys to improve information order, visual priority, navigation, dossier density
 and mobile composition. Preserve the evidence taxonomy and private/public runtime boundary.

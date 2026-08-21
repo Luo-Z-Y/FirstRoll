@@ -5,8 +5,9 @@
 **Canonical result directory:** `evals/results/`
 
 This document defines how FirstRoll records quality, latency and failure behaviour. A result is
-versioned evidence, not a timeless product claim. The source of truth is the newest reviewed JSON
-artefact committed under `evals/results/`; screenshots and copied Markdown tables are explanatory
+versioned evidence, not a timeless product claim. The source of truth for each result family is its
+newest reviewed JSON artefact committed under `evals/results/`; a packet-only result complements but
+does not replace a complete workflow result. Screenshots and copied Markdown tables are explanatory
 views only.
 
 The active fixed-workflow improvement sequence, frozen user journeys and Agent entry targets are in
@@ -14,36 +15,31 @@ The active fixed-workflow improvement sequence, frozen user journeys and Agent e
 [`pre_agent_scorecard.json`](../evals/pre_agent_scorecard.json). That scorecard governs future work;
 it does not replace a measured result or retroactively add unobserved metrics to this baseline.
 
-## Latest Versioned Baseline
+## Latest Complete-Workflow Baseline
 
-The newest result currently present in the repository is
-[`baseline-2026-08-18.json`](../evals/results/baseline-2026-08-18.json). It evaluates the production
+The newest complete result is
+[`baseline-2026-08-21.json`](../evals/results/baseline-2026-08-21.json). It evaluates the unchanged
 fixed workflow against the five frozen cases in
-[`agent_cases.json`](../evals/agent_cases.json). Its UTC `recorded_at` value is
-17 August 2026 18:54:33, which falls on 18 August in the project's Singapore timezone.
-
-If a later run has been completed elsewhere, it is not the versioned baseline until its complete,
-redacted JSON artefact is reviewed and committed. Documentation must not reconstruct new metrics
-from memory or an image.
+[`agent_cases.json`](../evals/agent_cases.json). It was recorded at 21 August 2026 14:44:59 UTC
+(22:44:59 Singapore time) from source revision `c913bbd`.
 
 ### Run configuration
 
 | Field | Recorded value |
 |---|---|
-| Suite | `firstroll-agent-comparison-v1` |
+| Schema / suite | 2 / `firstroll-agent-comparison-v1` |
 | System | Fixed workflow baseline |
 | Model | `deepseek-v4-pro` |
 | Python/platform | Python 3.11.7 / macOS 26.5.2 arm64 |
 | Private library | 7 documents; 4,381 chunks |
 | Retrieval | SQLite FTS5 plus `paraphrase-multilingual-MiniLM-L12-v2` embeddings |
 | Configured providers | DeepSeek and YouTube |
-| Available without stored credentials | Douban and Letterboxd adapters |
-| Configuration fingerprint | `e648c6a826485971` |
+| Available connector states | TMDb, DeepSeek, Douban, Letterboxd and YouTube available; NYT and Guardian planned |
+| Configuration fingerprint | `42f89877219dcb53` |
 
-“Credential absent” in an evaluation fingerprint does not mean that a provider adapter is missing.
-For this run, Douban was available through anonymous MCP operation and public Letterboxd acquisition
-did not require official OAuth credentials. The fingerprint records credential configuration, not
-whether cached evidence from those providers was present.
+“Credential absent” in an evaluation fingerprint does not mean that an adapter or cached evidence is
+missing. The fingerprint records non-secret configuration state, not source participation in every
+case.
 
 ### Summary
 
@@ -54,26 +50,70 @@ whether cached evidence from those providers was present.
 | Operational failure rate | 20% |
 | Deterministic quality-gate pass rate | 100% of completed studies |
 | Quality acceptance failure rate | 0% of completed studies |
-| Mean quality score | 98.94 / 100 |
-| Median quality score | 99.5 / 100 |
-| Mean end-to-end latency | 65.798 s |
-| P50 / P95 end-to-end latency | 66.409 s / 96.451 s |
+| Mean / median quality score | 97.02 / 97.38 |
+| Mean end-to-end latency | 79.452 s |
+| P50 / P95 end-to-end latency | 77.679 s / 91.225 s |
+| Mean combined study-stage latency | 61.403 s |
 | Repair rate | 0% of completed studies |
-| DeepSeek calls / total tokens | 4 / 46,950 |
+| DeepSeek calls / total tokens | 5 / 63,764 |
+| All-call median / P95 prompt tokens | 10,527 / 14,776.8 |
+| Completed-study median / P95 prompt tokens | 9,577 / 14,830.6 |
 
 ### Case results
 
 | Case | Challenge | Result | Quality | End-to-end latency |
 |---|---|---|---:|---:|
-| *Syndromes and a Century* | Formal specificity without clip evidence | Passed | 100 | 77.212 s |
-| *In the Mood for Love* | Abundant secondary interpretation | Passed | 96.75 | 31.080 s |
-| *Memoria* | Multilingual identity and sound perspective | DeepSeek timeout | — | 101.261 s |
-| *The Thing* (1982) | Ambiguous title identity | Passed | 99 | 53.029 s |
-| *We Are All Strangers* | Sparse evidence and honest limitation | Passed | 100 | 66.409 s |
+| *Syndromes and a Century* | Formal specificity without clip evidence | Passed | 98 | 79.958 s |
+| *In the Mood for Love* | Abundant secondary interpretation | Passed | 93.33 | 94.042 s |
+| *Memoria* | Multilingual identity and sound perspective | Passed | 100 | 69.129 s |
+| *The Thing* (1982) | Ambiguous title identity | Passed | 96.75 | 76.452 s |
+| *We Are All Strangers* | Sparse evidence and honest limitation | Invalid structured response | — | 77.679 s |
 
-The *Memoria* attempt had no quality outcome because the study-stage DeepSeek call timed out. It is
-an operational failure and remains in the latency denominator; it is not counted as a rejected
-study.
+The sparse-evidence case consumed one model call but returned no assessable study because DeepSeek's
+JSON did not validate. It is an operational study-stage failure, remains in latency and cost totals
+and is excluded from completed-study quality denominators.
+
+The previous 18 August result remains available for history. The two runs both completed four of five
+cases but failed on different films. The latest mean quality is 1.92 points lower, still above the
+scorecard's 96.94 non-inferiority floor. Its P50 is 11.270 seconds higher while P95 is 5.226 seconds
+lower. This is not a paired performance comparison: the newest run had substantially fewer prompt
+cache hits and different live-provider timing. It establishes a current starting point rather than
+an optimisation claim.
+
+## Latest Packet-Only Baseline
+
+[`packet-baseline-2026-08-21.json`](../evals/results/packet-baseline-2026-08-21.json) was recorded at
+21 August 2026 14:53:51 UTC from revision `d968110` and configuration fingerprint
+`29d00f82075f3756`. It used no model calls: two fresh processes and five post-warm-up samples for
+each frozen case produced 35/35 completed packet preparations.
+
+| Packet measure | Cold process | Warm process |
+|---|---:|---:|
+| Samples | 10 | 25 |
+| Mean | 9,513.659 ms | 137.466 ms |
+| P50 | 9,420.905 ms | 138.240 ms |
+| P95 | 10,013.910 ms | 182.306 ms |
+| Minimum / maximum | 9,135.250 / 10,197.685 ms | 82.910 / 186.837 ms |
+
+| Stage | Cold P95 | Warm P95 |
+|---|---:|---:|
+| Criticism cache | 3.165 ms | 0.471 ms |
+| Video cache | 0.496 ms | 0.125 ms |
+| Retrieval planning | 10.124 ms | 2.971 ms |
+| Lexical retrieval | 138.791 ms | 132.239 ms |
+| Semantic retrieval | 9,886.688 ms | 47.355 ms |
+| Fusion and selection | 6.009 ms | 4.921 ms |
+| Packet assembly | 0.359 ms | 0.121 ms |
+
+The warm P95 is already below the provisional two-second budget. Cold preparation is dominated by
+local embedding-model initialisation, while warm preparation is dominated by lexical retrieval; the
+actual typed-packet assembly is sub-millisecond. These are measurements, not a claimed reduction,
+because no pre-instrumentation packet-only baseline exists.
+
+Every case selected ten theory passages from 211–433 fused candidates. Attributed selection ranged
+from zero to twenty items; all current eligible attributed candidates fit, so omission and
+truncation totals were zero. Packet JSON shape ranged from 14,022 to 45,004 characters. These counts
+measure volume and selection pressure, not relevance, factual correctness or human usefulness.
 
 ## Metric Dictionary
 
@@ -104,9 +144,10 @@ criticism cache, video cache, retrieval planning, lexical retrieval, semantic re
 selection, packet assembly, prompt serialisation, model transport, validation/repair and end to end.
 
 Provider-reported prompt, completion and total tokens are bounded integer counts. The evaluator
-retains this record as `study_observability` in future results. The historical 18 August baseline
-predates the schema and remains unchanged; its combined `study` timing must not be presented as a
-packet-only measurement.
+retains this record as `study_observability`; the latest result contains a complete trace for each of
+its four assessable studies. Failed callers retain the safe trace in server logs rather than the HTTP
+error body. The historical 18 August baseline predates the schema and remains unchanged; neither
+run's combined `study` timing may be presented as a packet-only measurement.
 
 ## What the Score Does Not Establish
 
@@ -164,7 +205,7 @@ Then:
 1. inspect every case result and confirm no key, prompt, private passage or full review body appears;
 2. keep the previous artefact for historical comparison;
 3. name the new file with its evaluation date under `evals/results/`;
-4. update this document's “Latest Versioned Baseline” tables directly from that JSON;
+4. update this document's “Latest Complete-Workflow Baseline” tables directly from that JSON;
 5. add a dated entry to `docs/PROGRESS.md` explaining policy or configuration changes; and
 6. commit the case fixture, evaluator, result and documentation together when any contract changed.
 

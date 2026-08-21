@@ -46,6 +46,33 @@
       "user_journey_completion"
     ]
   },
+  "measured_checkpoints": {
+    "complete_workflow": {
+      "result_path": "evals/results/baseline-2026-08-21.json",
+      "source_revision": "c913bbdbd27281294efb8e37b855d34fe9d4f8ef",
+      "configuration_fingerprint": "42f89877219dcb53",
+      "attempted_cases": 5,
+      "completed_cases": 4,
+      "operational_failure_rate": 0.2,
+      "mean_quality_score_completed": 97.02,
+      "p50_end_to_end_seconds": 77.679,
+      "p95_end_to_end_seconds": 91.225,
+      "median_prompt_tokens_completed": 9577.0,
+      "p95_prompt_tokens_completed": 14830.6
+    },
+    "packet_preparation": {
+      "result_path": "evals/results/packet-baseline-2026-08-21.json",
+      "source_revision": "d968110b6c09390f6981ea2b59bf808ba2fc7578",
+      "configuration_fingerprint": "29d00f82075f3756",
+      "model_calls": 0,
+      "attempted_samples": 35,
+      "failed_samples": 0,
+      "cold_p50_ms": 9420.905,
+      "cold_p95_ms": 10013.91,
+      "warm_p50_ms": 138.24,
+      "warm_p95_ms": 182.306
+    }
+  },
   "user_journeys": [
     {
       "id": "J01",
@@ -314,12 +341,12 @@
     {
       "id": "S03",
       "name": "Capture the measured baseline",
-      "status": "next"
+      "status": "complete"
     },
     {
       "id": "S04",
       "name": "Improve user-interface hierarchy",
-      "status": "queued"
+      "status": "next"
     },
     {
       "id": "S05",

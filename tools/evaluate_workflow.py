@@ -7,6 +7,7 @@ import math
 import platform
 import re
 import statistics
+import subprocess
 import sys
 import time
 from dataclasses import dataclass, field
@@ -44,6 +45,17 @@ class RecordingTransport:
             }
         )
         return response
+
+
+def source_revision() -> str:
+    try:
+        return subprocess.check_output(
+            ["git", "rev-parse", "HEAD"],
+            cwd=ROOT,
+            text=True,
+        ).strip()
+    except (OSError, subprocess.SubprocessError):
+        return "unknown"
 
 
 def normalise(value: Any) -> str:
@@ -373,10 +385,11 @@ def main_cli() -> int:
         )
 
     report = {
-        "schema_version": 1,
+        "schema_version": 2,
         "suite_id": suite["suite_id"],
         "system": "fixed_workflow_baseline",
         "recorded_at": datetime.now(timezone.utc).isoformat(),
+        "source_revision": source_revision(),
         "environment": {
             "python": platform.python_version(),
             "platform": platform.platform(),
