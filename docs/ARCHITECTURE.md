@@ -142,6 +142,7 @@ future-enterprise path, but ADR-017 removes it from the production critical path
 | `library.py` | Private document catalogue and managed-file metadata | Text extraction or ranking |
 | `library_index.py` | PDF extraction, chunking, FTS5, single-flight background query-encoder warm-up, local embeddings, rank fusion and page citations | Film-specific factual claims |
 | `evidence.py` | Typed evidence packet, permitted-claim boundaries and aggregate attributed-selection/omission accounting | Model generation or provider access |
+| `packet_quality.py` | Pre-synthesis identity, citation, provenance, duplication, lexical relevance, diversity and retrieved-instruction diagnostics | Source-text persistence, factual correctness, human usefulness or model grading |
 | `study_observability.py` | Allow-listed monotonic stage timings, terminal status and bounded aggregate counts | Prompts, evidence text, credentials, model output or exception details |
 | `study_service.py` | DeepSeek request, Pydantic validation, citation validation, quality gate and one repair | Authentication, quota reservation or research-tool authorisation |
 | `research_stream.py` | Fixed public progress vocabulary and transient owner-scoped result store | Hidden reasoning, prompts, credentials or private evidence bodies |
@@ -208,7 +209,8 @@ local API startup → background query-encoder warm-up while Discover remains av
 selected film
 → cached criticism and video text
 → private hybrid library retrieval
-→ typed EvidencePacket
+→ typed EvidencePacket with explicit untrusted-instruction boundary
+→ deterministic packet-quality diagnostics in evaluation paths
 → DeepSeek structured draft
 → schema and citation validation
 → deterministic quality gate

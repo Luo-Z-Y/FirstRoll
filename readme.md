@@ -913,6 +913,7 @@ FirstRoll/
 │   │   ├── library_index.py     # chunking, embeddings and hybrid retrieval
 │   │   ├── main.py              # FastAPI routes
 │   │   ├── research_agent_contract.py # framework-neutral Agent policy and budgets
+│   │   ├── packet_quality.py   # redacted pre-synthesis packet quality diagnostics
 │   │   ├── research_stream.py  # allow-listed SSE projection and owner-scoped transient runs
 │   │   ├── research_graph/      # typed LangGraph state, nodes, routing and runtime context
 │   │   ├── settings.py          # local credential store
@@ -954,7 +955,8 @@ FirstRoll/
 5. Creator intention requires an attributable creator statement.
 6. Model outputs may cite only evidence identifiers supplied in their request.
 7. Missing evidence should produce a verification task or insufficient-evidence result.
-8. Private source text is treated as untrusted data, never as model instructions.
+8. Retrieved private or public source instructions are untrusted data and cannot authorise tools or
+   change FirstRoll policy.
 
 ## Development and Verification
 
@@ -1002,7 +1004,7 @@ fallback behaviour; these are tracked separately from the new FirstRoll modules.
 | Evidence-grounded Deep Study | Complete | Typed theory, criticism, review and video-text evidence; Pydantic output, citation validation and quality gate |
 | Bounded research Agent core | Implemented | LangGraph control flow, bounded reducers, deterministic tool authorisation, fake-service scenarios and optional checkpointing; production route integration remains gated |
 | Authenticated research progress | Implemented | Allow-listed SSE lifecycle events, separate owner-scoped result retrieval and secret/evidence redaction tests; final interactive browser observation remains pending |
-| Pre-Agent product hardening | Active — Steps 1–6 complete | UI hardening and measured baselines are complete; background semantic prewarm removes the cold packet stall without changing packet shape; quality fixtures are next |
+| Pre-Agent product hardening | Active — Steps 1–7 complete | UI and latency hardening plus a six-case redacted pre-synthesis quality baseline are complete; packet selection quality is next |
 | Clip analysis web migration | Complete | Scene, shot, colour, object and export workflow |
 | Clip-to-study evidence bridge | Queued | Feed measured scenes, shots and timecodes into synthesis after the active hardening sequence |
 | Creator primary-source layer | Partial | Discovered interview descriptions and public YouTube captions are stored and cited; verified speaker attribution and dedicated interview search remain planned |
@@ -1021,14 +1023,19 @@ definitions, case-level results and replacement procedure live in [Evaluation](d
 For a model-free cold/warm evidence-packet measurement, run
 `uv run python tools/benchmark_evidence_packet.py --output evals/results/packet-baseline-YYYY-MM-DD.json`.
 The harness writes only redacted stage timings, aggregate packet shape, safe IDs and configuration;
-it never calls DeepSeek or stores packet text.
+it never calls DeepSeek or stores packet text. Run
+`uv run python tools/evaluate_packet_quality.py --output evals/results/packet-quality-YYYY-MM-DD.json`
+to assess the separate synthetic abundant, sparse, duplicate, multilingual, ambiguous-identity and
+malicious-instruction fixtures before synthesis.
 
 The latest reviewed complete-workflow and packet-only results are
 [`baseline-2026-08-21.json`](evals/results/baseline-2026-08-21.json) and
 [`packet-baseline-2026-08-21.json`](evals/results/packet-baseline-2026-08-21.json), with the measured
 prewarm candidate in
-[`packet-latency-prewarm-2026-08-21.json`](evals/results/packet-latency-prewarm-2026-08-21.json); the
-latest responsive hierarchy and state/accessibility audits are
+[`packet-latency-prewarm-2026-08-21.json`](evals/results/packet-latency-prewarm-2026-08-21.json),
+and the synthetic pre-synthesis quality baseline is
+[`packet-quality-baseline-2026-08-21.json`](evals/results/packet-quality-baseline-2026-08-21.json);
+the latest responsive hierarchy and state/accessibility audits are
 [`ui-hierarchy-2026-08-21.json`](evals/results/ui-hierarchy-2026-08-21.json) and
 [`ui-states-accessibility-2026-08-21.json`](evals/results/ui-states-accessibility-2026-08-21.json).
 The source of truth for each result family is its reviewed JSON artefact, not a screenshot or copied

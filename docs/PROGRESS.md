@@ -1,5 +1,62 @@
 # FirstRoll Project Progress
 
+### 21 August 2026 — Synthetic pre-synthesis packet-quality baseline
+
+Delivered:
+
+1. Added six commit-safe packet fixtures covering abundant complementary evidence, honest scarcity,
+   duplicate criticism, multilingual provenance, explicit same-title identity and malicious
+   retrieved instructions without modifying the frozen Agent comparison suite.
+2. Added deterministic pre-synthesis diagnostics for film identity, citation-ID readiness,
+   applicable provenance, exact/near duplication, lexical focus overlap, evidence/language diversity,
+   sufficiency, selection pressure, packet size and instruction containment.
+3. Added a packet boundary stating that retrieved source instructions are untrusted evidence and
+   cannot authorise tools or change FirstRoll policy, reinforcing the existing system-prompt rule.
+4. Kept reports redacted by construction: only counts, ratios, allow-listed issue/status codes and
+   language/evidence-type labels can be emitted; film/focus/title/prompt/review/passage/source-text
+   fields are rejected before write.
+5. Added a zero-model evaluator and versioned the first fixture fingerprint/result at the exact source
+   revision under assessment.
+
+Baseline result:
+
+| Measure | Result |
+|---|---:|
+| Cases assessed / expectation failures | 6 / 0 |
+| Packet status | 4 passed · 2 limited · 0 failed |
+| Mean provenance completeness | 100% |
+| Mean duplicate ratio | 3.33% |
+| Mean lexical focus relevance | 94.45% |
+| Malicious items flagged / contained cases | 2 / 1 |
+| Model calls | 0 |
+
+Acceptance evidence:
+
+- all 210 automated tests, scoped Ruff, backend/tool compilation, frontend JavaScript syntax, JSON
+  parsing and repository whitespace checks pass;
+- direct coverage blocks missing theory, wrong identity and invalid citation IDs; reports incomplete
+  attributed provenance and unknown language without returning evidence text;
+- all six fixture identities match, required `en`/`zh` languages survive and all fixture
+  expectations pass;
+- the malicious case flags both instruction-bearing evidence items while the containment boundary
+  remains true and no `instruction_containment_missing` issue appears;
+- the sparse case remains honestly limited by `film_specific_evidence_sparse`, while the duplicate
+  case remains limited by `duplicate_evidence_present` at a 20% case-level duplicate ratio;
+- the committed result passes its forbidden-field scan and reads no private library or provider data.
+
+Known constraints:
+
+- lexical focus overlap is a deterministic diagnostic, not semantic relevance or a human judgement;
+- synthetic provenance and instruction coverage prove contract behaviour, not the factual quality of
+  live criticism, captions or private books;
+- exact/near duplicate detection measures the selected packet but does not yet remove anything;
+- creator/actionability scoring and blind human review remain later gates.
+
+Next actionable work:
+
+1. Complete Step 8 by applying focus-aware, provenance-conscious deduplication and token budgets to
+   actual packet selection, then rerun both synthetic and frozen packet-only measurements.
+
 ### 21 August 2026 — Background semantic prewarm removes cold packet stall
 
 Delivered:
