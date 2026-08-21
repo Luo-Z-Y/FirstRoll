@@ -1,6 +1,10 @@
 const runtimeConfig = Object.freeze({
   apiBase: window.FIRSTROLL_CONFIG?.apiBase || "",
   publicMode: Boolean(window.FIRSTROLL_CONFIG?.publicMode),
+  accountUi: Boolean(
+    window.FIRSTROLL_CONFIG?.publicMode
+    || window.FIRSTROLL_CONFIG?.localTestAccountEmail,
+  ),
   videoAnalysisEnabled: window.FIRSTROLL_CONFIG?.videoAnalysisEnabled !== false,
   buildId: String(window.FIRSTROLL_CONFIG?.buildId || "").trim(),
   buildNumber: Number(window.FIRSTROLL_CONFIG?.buildNumber || 0),
@@ -205,7 +209,7 @@ function updateAccountFilmState() {
 
 function updateDeepStudyAuthState() {
   const button = refs.filmDetail.querySelector("[data-generate-study]");
-  if (!button || !runtimeConfig.publicMode) return;
+  if (!button || !runtimeConfig.accountUi) return;
   button.textContent = window.FirstRollAuth?.currentUser()
     ? "Generate study"
     : "Sign in to Deep Study";
@@ -269,7 +273,7 @@ function updateIntegrationDependentState() {
 }
 
 function applyRuntimeMode() {
-  document.body.classList.toggle("public-mode", runtimeConfig.publicMode);
+  document.body.classList.toggle("public-mode", runtimeConfig.accountUi);
   document.body.classList.toggle(
     "video-analysis-disabled",
     !runtimeConfig.videoAnalysisEnabled,
@@ -1445,7 +1449,7 @@ function renderFilmDetail(film) {
           ${runtimeConfig.videoAnalysisEnabled
             ? '<button class="detail-action primary" type="button" data-analyse-film>Analyse a clip</button>'
             : '<button class="detail-action primary" type="button" disabled>Video analysis · coming soon</button>'}
-          ${runtimeConfig.publicMode ? '<button class="detail-action" type="button" data-save-film>Save to account</button>' : ""}
+          ${runtimeConfig.accountUi ? '<button class="detail-action" type="button" data-save-film>Save to account</button>' : ""}
           ${sourceUrl ? `<a class="detail-action" href="${escapeHtml(sourceUrl)}" target="_blank" rel="noopener noreferrer">View source ↗</a>` : ""}
         </div>
         ${filmReceptionMarkup(film.awards || [])}

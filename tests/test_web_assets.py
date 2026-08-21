@@ -82,8 +82,12 @@ def test_loopback_preview_uses_a_separate_persistent_unlimited_test_account() ->
     assert "Unlimited studies on this local test account" in integrations
     assert "Local development account" in integrations
     assert "This loopback test account has no FirstRoll daily quota" in integrations
+    assert "window.FIRSTROLL_CONFIG?.localTestAccountEmail" in app
+    assert 'document.body.classList.toggle("public-mode", runtimeConfig.accountUi)' in app
+    assert 'runtimeConfig.accountUi ? \'<button class="detail-action"' in app
     assert "account studies remain today" in app
     assert 'src="/assets/integrations.js?v=20260820-6"' in index
+    assert 'src="/assets/app.js?v=20260821-9"' in index
     assert '"X-FirstRoll-DeepSeek-Key"' in integrations
     assert '"X-FirstRoll-YouTube-Key"' in integrations
     assert "localStorage" not in integrations
@@ -247,7 +251,7 @@ def test_archive_pullout_collapses_before_zoom_can_clip_its_copy() -> None:
     app = (WEB / "app.js").read_text(encoding="utf-8")
 
     assert "/assets/styles.css?v=20260821-5" in index
-    assert "/assets/app.js?v=20260821-8" in index
+    assert "/assets/app.js?v=20260821-9" in index
     assert "closet3d.js" not in index
     assert 'class="archive-pullout-shell"' in app
     assert "container-type: inline-size" in styles
@@ -282,7 +286,7 @@ def test_discovery_workspace_survives_refresh_and_product_navigation() -> None:
     app = (WEB / "app.js").read_text(encoding="utf-8")
     index = (WEB / "index.html").read_text(encoding="utf-8")
 
-    assert "/assets/app.js?v=20260821-8" in index
+    assert "/assets/app.js?v=20260821-9" in index
     assert 'const DISCOVERY_SESSION_KEY = "firstroll.discovery-session"' in app
     assert 'const PRODUCT_SESSION_KEY = "firstroll.product-session"' in app
     assert "window.sessionStorage.setItem(DISCOVERY_SESSION_KEY" in app

@@ -121,6 +121,9 @@ are loopback (`localhost`, `127.0.0.1` or `::1`). It does not depend on a partic
 `./tools/preview_hosted_web.sh` expose the same test identity. Its browser token is rejected by every
 non-loopback deployment. Local profile, preference and saved-film records are browser-specific test
 data rather than Supabase rows; production accounts and cross-device persistence still use Supabase.
+The loopback account also selects the hosted account shell, so the header contains **Discover**,
+**Analyse** and **Settings** and Settings opens inside the application. This affects presentation
+only: local clip analysis and other private-edition runtime capabilities remain available.
 The unlimited label bypasses only FirstRoll's daily demo counters, not an external provider's
 balance, rate limit or billing policy.
 

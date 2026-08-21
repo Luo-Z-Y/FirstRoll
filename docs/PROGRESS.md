@@ -1,5 +1,25 @@
 # FirstRoll Project Progress
 
+### 21 August 2026 — Local and hosted account-shell parity
+
+Delivered:
+
+1. Separated account-interface availability from the backend's public execution mode.
+2. Made every genuine loopback test-account session use the hosted **Discover / Analyse / Settings**
+   navigation and integrated Settings screen instead of the legacy standalone Settings link.
+3. Retained private local capabilities, including clip analysis and local review structuring; the
+   change affects the browser shell rather than the API trust or data boundary.
+4. Versioned the application script and added a static regression contract for the loopback shell.
+5. Reconciled the README, architecture, local setup and Obsidian project notes.
+
+Acceptance evidence:
+
+- all 186 automated tests, frontend JavaScript syntax, scoped Ruff and repository whitespace checks
+  pass;
+- live loopback browser verification shows the same three-item account navigation and integrated
+  Settings hero as the hosted site;
+- production mode and the loopback-only authentication predicate remain separate controls.
+
 ### 21 August 2026 — Protected branches and human production approval
 
 Delivered:

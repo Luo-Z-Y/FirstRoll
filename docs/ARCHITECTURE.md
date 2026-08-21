@@ -103,7 +103,9 @@ separate adapter, not a Supabase bypass: FastAPI accepts its fixed development t
 the URL host and connected client are loopback addresses. The condition is independent of port and
 launcher, which keeps `uv run firstroll` and the hosted-mode preview consistent. The adapter stores
 test profile, preference and saved-film state in the current browser and returns an unlimited local
-FirstRoll quota marker. Non-loopback deployments never publish the local identity and cannot accept
+FirstRoll quota marker. Its presence selects the same account-navigation shell used in production,
+without changing the API's private/public execution boundary or disabling local video analysis.
+Non-loopback deployments never publish the local identity and cannot accept
 its token; they retain Supabase verification, RLS persistence and atomic production quota checks.
 
 FirstRoll application records are separate from credentials:
