@@ -442,7 +442,7 @@
       ["localhost", "127.0.0.1", "::1"].includes(window.location.hostname)
       && window.FIRSTROLL_CONFIG?.localTestAccountEmail
     );
-    if (window.FIRSTROLL_CONFIG?.publicMode && (localTestReady || entraReady || supabaseReady)) {
+    if (localTestReady || (window.FIRSTROLL_CONFIG?.publicMode && (entraReady || supabaseReady))) {
       const authScript = document.createElement("script");
       authScript.src = localTestReady
         ? "/assets/local-auth.js?v=20260820-2"

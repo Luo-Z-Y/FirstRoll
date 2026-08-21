@@ -94,16 +94,17 @@ def _loopback_host(value: str | None) -> bool:
 
 
 def local_test_request(request: Request) -> bool:
-    """Permit the development account only on the explicit loopback preview.
+    """Permit the development account on any genuine loopback-served UI.
 
     The token is deliberately useless on Azure, Render, or any non-loopback host,
-    even though the browser-side adapter is part of the public source tree.
+    even though the browser-side adapter is part of the public source tree. Requiring
+    both the URL host and the connected client to be loopback keeps this independent
+    of the local launch command without trusting a spoofed Host header by itself.
     """
 
     client_host = request.client.host if request.client else ""
     return bool(
-        hosted_frontend_preview_enabled()
-        and _loopback_host(request.url.hostname)
+        _loopback_host(request.url.hostname)
         and _loopback_host(client_host)
     )
 
@@ -753,7 +754,7 @@ def auth_me(request: Request) -> dict:
 
 @app.get("/api/account/integrations")
 def account_integrations(request: Request) -> dict:
-    if not public_mode_enabled():
+    if not public_mode_enabled() and not local_test_request(request):
         raise HTTPException(status_code=404, detail="Hosted account integrations are not enabled.")
     user = authenticated_user(request)
     is_local_test = local_test_user(user)

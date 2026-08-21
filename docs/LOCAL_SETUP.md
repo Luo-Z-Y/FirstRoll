@@ -97,17 +97,32 @@ process. Do not start a second frontend server.
 
 ## 5. Confirm It Works
 
-1. Search for a film using title, year and optionally director.
-2. Confirm that discovery reports `TMDb · ready` when configured, or
+1. Confirm that **Sign in** is visible in the header. Use `luo_zhiyang@outlook.com` and any password
+   of at least eight characters. Reload the page and confirm that the local session persists.
+2. Open **Settings → System settings** and confirm that the account displays an unlimited local
+   FirstRoll allowance.
+3. Search for a film using title, year and optionally director.
+4. Confirm that discovery reports `TMDb · ready` when configured, or
    `TMDb · credentials required` followed by `Wikidata · ready` in key-free mode.
-3. Open a film dossier and inspect its source link and evidence boundary.
-4. Open **Analyse**, choose a short video clip and generate an analysis.
+5. Open a film dossier and inspect its source link and evidence boundary.
+6. Open **Analyse**, choose a short video clip and generate an analysis.
 
 The health check is available at:
 
 ```text
 http://127.0.0.1:8000/api/health
 ```
+
+### Local test-account boundary
+
+The local account works on any port only when both the browser URL and the connected HTTP client
+are loopback (`localhost`, `127.0.0.1` or `::1`). It does not depend on a particular launcher or on
+`FIRSTROLL_SERVE_HOSTED_FRONTEND`, so both `uv run firstroll` and
+`./tools/preview_hosted_web.sh` expose the same test identity. Its browser token is rejected by every
+non-loopback deployment. Local profile, preference and saved-film records are browser-specific test
+data rather than Supabase rows; production accounts and cross-device persistence still use Supabase.
+The unlimited label bypasses only FirstRoll's daily demo counters, not an external provider's
+balance, rate limit or billing policy.
 
 ## Stop and Restart
 

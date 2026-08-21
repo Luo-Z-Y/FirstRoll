@@ -87,7 +87,7 @@ Spaceship DNS records and deployed website content remain outside Terraform.
 | Deep Study | Local DeepSeek key; no hosted account quota | Configured bearer authentication plus atomic provider/subject and global PostgreSQL quota reservation; legacy Supabase RPC retained for rollback |
 | Research progress | Synchronous result route remains available | Authenticated POST-based SSE followed by a separate owner-scoped result request |
 | Clip analysis | Enabled when local dependencies are available | Disabled by default and returns 503 |
-| Durable account state | Not required | Supabase Auth plus RLS-owned profile, preferences and saved-film rows; generic PostgreSQL quota counters remain staged |
+| Durable account state | Loopback-only test identity with browser-local profile, preferences and saved films | Supabase Auth plus RLS-owned profile, preferences and saved-film rows; generic PostgreSQL quota counters remain staged |
 | Durable study results | Not implemented | Not implemented; current result store is process-local and expires after ten minutes |
 
 ## Account Identity and Persistence
@@ -96,6 +96,15 @@ Supabase is the production identity provider. The browser uses password-based `s
 `signInWithPassword()`, persists and refreshes the Supabase session, and sends the access token to
 FastAPI only for protected API operations. Password recovery also remains inside Supabase. The
 browser contains the publishable key, never a service-role key.
+
+The private edition also exposes one development identity, `luo_zhiyang@outlook.com`, so signed-in
+interfaces can be exercised without coupling local work to Supabase availability. This is a
+separate adapter, not a Supabase bypass: FastAPI accepts its fixed development token only when both
+the URL host and connected client are loopback addresses. The condition is independent of port and
+launcher, which keeps `uv run firstroll` and the hosted-mode preview consistent. The adapter stores
+test profile, preference and saved-film state in the current browser and returns an unlimited local
+FirstRoll quota marker. Non-loopback deployments never publish the local identity and cannot accept
+its token; they retain Supabase verification, RLS persistence and atomic production quota checks.
 
 FirstRoll application records are separate from credentials:
 

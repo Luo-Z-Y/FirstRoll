@@ -18,8 +18,6 @@ from app.backend.video_sources import FilmVideoBundle
 def test_local_test_account_is_strictly_limited_to_the_loopback_preview(
     monkeypatch,
 ) -> None:
-    monkeypatch.setenv("FIRSTROLL_SERVE_HOSTED_FRONTEND", "true")
-
     def request(host: str, client: str) -> Request:
         return Request(
             {
@@ -43,7 +41,7 @@ def test_local_test_account_is_strictly_limited_to_the_loopback_preview(
 def test_local_test_account_authenticates_without_supabase_and_has_unlimited_quota(
     monkeypatch,
 ) -> None:
-    monkeypatch.setenv("FIRSTROLL_PUBLIC_MODE", "true")
+    monkeypatch.setenv("FIRSTROLL_PUBLIC_MODE", "false")
     monkeypatch.setattr(main, "local_test_request", lambda _request: True)
 
     class QuotaMustNotRun:

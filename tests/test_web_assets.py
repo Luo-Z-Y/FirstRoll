@@ -67,6 +67,7 @@ def test_loopback_preview_uses_a_separate_persistent_unlimited_test_account() ->
     assert "localTestAccountEmail" in index
     assert '"/assets/local-auth.js?v=20260820-2"' in index
     assert '["localhost", "127.0.0.1", "::1"]' in index
+    assert "if (localTestReady || (window.FIRSTROLL_CONFIG?.publicMode" in index
     assert 'localTestAccountEmail: ""' in build
     assert 'cp "$source_dir/local-auth.js"' in build
     assert "firstroll.local-test" in local_auth

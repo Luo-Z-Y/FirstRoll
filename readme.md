@@ -635,6 +635,14 @@ The frontend and API are served by the same FastAPI process; no separate fronten
 or TMDB credential is required. Full macOS, Windows and Linux instructions are in
 [Local Setup](docs/LOCAL_SETUP.md).
 
+Every genuine loopback-served interface, including the standard port `8000` app and the hosted-mode
+port `4173` preview, exposes a development-only account for `luo_zhiyang@outlook.com`. Any password
+of at least eight characters opens that local account. Its profile, preferences and saved films are
+kept in that browser's local storage, and FirstRoll's own Deep Study allowance is unlimited. The
+adapter requires both the requested host and connected client to be loopback addresses; Azure,
+Render and other non-loopback deployments cannot accept its development token and continue to use
+Supabase. DeepSeek, YouTube and other external provider limits still apply.
+
 ### Local settings
 
 Open [http://127.0.0.1:8000/settings](http://127.0.0.1:8000/settings) to configure optional

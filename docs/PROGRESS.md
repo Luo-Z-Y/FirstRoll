@@ -1,5 +1,37 @@
 # FirstRoll Project Progress
 
+### 21 August 2026 — Launch-independent localhost test account
+
+Delivered:
+
+1. Removed the hosted-preview feature-flag dependency from the development identity. The test
+   account now appears on any genuine loopback-served FirstRoll interface, including the standard
+   `127.0.0.1:8000` process and the `127.0.0.1:4173` hosted-mode preview.
+2. Kept the boundary fail-closed by requiring both the requested URL host and connected client to be
+   loopback before publishing the account or accepting its token. Production Supabase behaviour is
+   unchanged.
+3. Allowed the local account-integration endpoint in private mode, preserving the browser-local
+   profile, preferences and saved films and the explicit unlimited FirstRoll test allowance.
+4. Added regression coverage for the ordinary private launcher as well as the hosted preview and
+   reconciled the README, architecture, local setup and Obsidian project notes.
+
+Acceptance evidence:
+
+- automated tests, JavaScript syntax, Ruff and repository whitespace checks pass;
+- local API configuration and browser verification confirm that port `8000` publishes the test
+  account, retains the session after reload and displays the unlimited local allowance;
+- non-loopback URL or client addresses fail the local-account predicate.
+
+Boundary:
+
+- the local allowance bypasses only FirstRoll's daily demo counters. External DeepSeek, YouTube and
+  other provider limits, balances and billing remain in force.
+
+Next actionable work:
+
+1. Keep authentication acceptance tests exercising both local launch commands whenever the runtime
+   configuration or web bootstrap changes.
+
 ### 21 August 2026 — TMDb primary catalogue with open failover
 
 Delivered:
