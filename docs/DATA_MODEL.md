@@ -356,10 +356,13 @@ thumbnail/published time/duration, category, relevance and up to three text trac
 bounded to 12,000 characters and retain language, source URL and `speaker_verified`; unverified
 captions cannot establish creator intention.
 
-The transient `EvidencePacket.retrieval.attributed_selection` object records candidate, selected,
-omitted and truncated item totals, input/selected/omitted character totals, fixed character budgets
-and bounded omission-reason counts. It contains no titles, authors, URLs or source text and is not a
-new cache. This makes packet shape measurable without persisting private evidence.
+The transient `EvidencePacket.retrieval` object carries `theory_selection`, `critical_selection` and
+`attributed_selection` aggregate manifests. They record candidate/selected/omitted totals,
+input/selected/omitted character totals, fixed layer budgets, focus-ranked state and bounded
+`below_minimum_content | duplicate | source_quota | item_limit | total_budget_exhausted` reasons.
+Attributed selection also records truncation and selected origin/domain counts. These manifests
+contain no titles, authors, URLs or source text and create no cache; complete selected evidence keeps
+its existing typed fields in the packet.
 
 `evals/packet_quality_cases.json` contains invented films and synthetic source prose only. Its
 versioned result retains aggregate counts/ratios, issue codes, evidence-type/language labels and a

@@ -19,7 +19,7 @@ BLOCKING_PACKET_ISSUES = frozenset(
 PACKET_ISSUES = frozenset(
     {
         *BLOCKING_PACKET_ISSUES,
-        "attributed_items_omitted",
+        "attributed_omission_unexplained",
         "duplicate_evidence_present",
         "film_specific_evidence_sparse",
         "focus_relevance_low",
@@ -207,6 +207,8 @@ def assess_evidence_packet(
     instruction_contained = has_instruction_boundary(packet)
     languages = sorted({safe_language(item.language) for item in items})
     evidence_types = sorted({item.evidence_type for item in items})
+    theory_selection = packet.retrieval.get("theory_selection", {})
+    critical_selection = packet.retrieval.get("critical_selection", {})
     attributed_selection = packet.retrieval.get("attributed_selection", {})
     omitted_items = int(attributed_selection.get("omitted_items", 0) or 0)
     total_items = len(items)
@@ -235,8 +237,12 @@ def assess_evidence_packet(
         issues.add("focus_relevance_low")
     if flagged_instructions and not instruction_contained:
         issues.add("instruction_containment_missing")
-    if omitted_items:
-        issues.add("attributed_items_omitted")
+    omission_reasons = attributed_selection.get("omission_reasons", {})
+    explained_omissions = sum(
+        int(value or 0) for value in omission_reasons.values()
+    ) if isinstance(omission_reasons, dict) else 0
+    if omitted_items != explained_omissions:
+        issues.add("attributed_omission_unexplained")
 
     if not issues:
         status = "passed"
@@ -306,9 +312,13 @@ def assess_evidence_packet(
             "critical_claims": len(packet.critical_claims),
         },
         "selection": {
-            "theory_candidates": int(packet.retrieval.get("candidate_count", 0) or 0),
+            "retrieval_candidates": int(packet.retrieval.get("candidate_count", 0) or 0),
+            "theory_candidates": int(theory_selection.get("candidate_items", 0) or 0),
             "theory_selected": len(packet.theory_sources),
+            "theory_omitted": int(theory_selection.get("omitted_items", 0) or 0),
+            "critical_candidates": int(critical_selection.get("candidate_items", 0) or 0),
             "critical_claims": len(packet.critical_claims),
+            "critical_omitted": int(critical_selection.get("omitted_items", 0) or 0),
             "attributed_candidates": int(
                 attributed_selection.get("candidate_items", 0) or 0
             ),

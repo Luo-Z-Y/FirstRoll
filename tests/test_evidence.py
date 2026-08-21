@@ -1,5 +1,5 @@
 from app.backend.evidence import EvidencePacket
-from app.backend.criticism import ReviewSource
+from app.backend.criticism import CriticalClaim, ReviewSource
 from app.backend.study_service import StudyQualityGate
 from app.backend.video_sources import FilmVideo, VideoTextTrack
 
@@ -109,7 +109,7 @@ def test_evidence_packet_reports_bounded_attributed_omissions_without_source_tex
             provider="Synthetic publication",
             review_id=f"review-{index}",
             title=f"Review {index}",
-            summary="x" * 7000,
+            summary=chr(96 + index) * 7000,
             author="Synthetic critic",
             url=f"https://example.org/review-{index}",
             language="en",
@@ -125,24 +125,96 @@ def test_evidence_packet_reports_bounded_attributed_omissions_without_source_tex
     )
 
     selection = packet.retrieval["attributed_selection"]
-    assert len(packet.attributed_sources) == 6
+    assert len(packet.attributed_sources) == 4
     assert selection == {
         "candidate_items": 8,
-        "selected_items": 6,
-        "omitted_items": 2,
-        "truncated_items": 6,
+        "selected_items": 4,
+        "omitted_items": 4,
+        "truncated_items": 4,
         "input_characters": 56000,
-        "selected_characters": 36000,
-        "omitted_characters": 20000,
-        "maximum_total_characters": 36000,
-        "maximum_item_characters": 6000,
+        "selected_characters": 12000,
+        "omitted_characters": 44000,
+        "maximum_items": 12,
+        "maximum_total_characters": 18000,
+        "maximum_item_characters": 3000,
+        "focus_ranked": True,
+        "selected_origin_count": 4,
+        "selected_domain_count": 1,
         "omission_reasons": {
             "below_minimum_content": 0,
-            "total_budget_exhausted": 2,
+            "duplicate": 0,
+            "source_quota": 4,
+            "item_limit": 0,
+            "total_budget_exhausted": 0,
         },
     }
     assert "Synthetic critic" not in str(selection)
     assert "x" * 40 not in str(selection)
+
+
+def test_evidence_packet_enforces_focus_aware_layer_budgets() -> None:
+    passages = [
+        {
+            "title": f"Framework {index}",
+            "page": index,
+            "language": "en",
+            "excerpt": (
+                f"Framing framework topic{index} compares position, boundary, depth and "
+                "offscreen relations through a distinct synthetic example."
+            ),
+        }
+        for index in range(1, 11)
+    ]
+    reviews = [
+        ReviewSource(
+            source_id=f"R{index}",
+            provider=f"Synthetic provider {index}",
+            review_id=f"review-{index}",
+            title=f"Review {index}",
+            summary=(
+                f"Critic topic{index} argues that framing relation {index} directs attention "
+                "through a distinct synthetic interpretation requiring close viewing."
+            ),
+            author=f"Critic {index}",
+            url=f"https://source{index}.example/review",
+            language="en",
+        )
+        for index in range(1, 21)
+    ]
+    claims = [
+        CriticalClaim(
+            claim_id=f"C{index}",
+            source_id=f"R{index}",
+            critic_claim=(
+                f"Critic topic{index} proposes a distinct framing relation that should be "
+                "verified through close viewing."
+            ),
+            lens_tags=["cinematography"],
+            extraction_confidence="high",
+        )
+        for index in range(1, 21)
+    ]
+
+    packet = EvidencePacket.from_retrieval(
+        {"title": "Example", "year": 2024, "directors": ["Director"]},
+        {"method": "test", "candidate_count": 100, "passages": passages},
+        "framing",
+        claims,
+        reviews=reviews,
+    )
+
+    assert [item.evidence_id for item in packet.theory_sources] == [
+        f"S{index}" for index in range(1, 9)
+    ]
+    assert [claim.claim_id for claim in packet.critical_claims] == [
+        f"C{index}" for index in range(1, 13)
+    ]
+    assert [item.evidence_id for item in packet.attributed_sources] == [
+        f"E{index}" for index in range(1, 13)
+    ]
+    assert packet.retrieval["theory_selection"]["omission_reasons"]["item_limit"] == 2
+    assert packet.retrieval["critical_selection"]["omission_reasons"]["item_limit"] == 8
+    assert packet.retrieval["attributed_selection"]["omission_reasons"]["item_limit"] == 8
 
 
 def test_quality_gate_rejects_generic_unobservable_prose() -> None:

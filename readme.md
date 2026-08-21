@@ -120,11 +120,15 @@ The original GPL-3.0 licence and contributor attribution remain applicable. See
 ### Deep Study
 
 - Configure a DeepSeek key from the local Settings page.
-- Build a typed evidence packet from the film record, retrieved theory, full cached review text
-  and attributed text attached to relevant videos.
+- Build a typed evidence packet from the film record, up to eight focus-ranked theory passages,
+  twelve deduplicated critic claims and twelve provenance-ranked review/video excerpts. Per-layer
+  item/character budgets and explicit omission reasons prevent first-in source order or abundant
+  criticism from silently dominating synthesis.
 - Attach redacted monotonic observability for cache, retrieval, packet, prompt, model and validation
   stages using only allow-listed statuses, durations and aggregate counts; prompts, evidence text,
   credentials, responses and exceptions have no measurement field.
+- Serialise the selected packet into compact prompt records without dropping inspectable evidence
+  from the returned study object.
 - Generate four to six sections with separate fields for:
   - critic reports;
   - theory explanations;
@@ -1004,7 +1008,7 @@ fallback behaviour; these are tracked separately from the new FirstRoll modules.
 | Evidence-grounded Deep Study | Complete | Typed theory, criticism, review and video-text evidence; Pydantic output, citation validation and quality gate |
 | Bounded research Agent core | Implemented | LangGraph control flow, bounded reducers, deterministic tool authorisation, fake-service scenarios and optional checkpointing; production route integration remains gated |
 | Authenticated research progress | Implemented | Allow-listed SSE lifecycle events, separate owner-scoped result retrieval and secret/evidence redaction tests; final interactive browser observation remains pending |
-| Pre-Agent product hardening | Active — Steps 1–7 complete | UI and latency hardening plus a six-case redacted pre-synthesis quality baseline are complete; packet selection quality is next |
+| Pre-Agent product hardening | Active — Steps 1–8 complete | UI/latency hardening and bounded focus-ranked packet selection meet provenance, duplicate, token and quality gates; Deep Study transparency is next |
 | Clip analysis web migration | Complete | Scene, shot, colour, object and export workflow |
 | Clip-to-study evidence bridge | Queued | Feed measured scenes, shots and timecodes into synthesis after the active hardening sequence |
 | Creator primary-source layer | Partial | Discovered interview descriptions and public YouTube captions are stored and cited; verified speaker attribution and dedicated interview search remain planned |
@@ -1034,8 +1038,12 @@ The latest reviewed complete-workflow and packet-only results are
 prewarm candidate in
 [`packet-latency-prewarm-2026-08-21.json`](evals/results/packet-latency-prewarm-2026-08-21.json),
 and the synthetic pre-synthesis quality baseline is
-[`packet-quality-baseline-2026-08-21.json`](evals/results/packet-quality-baseline-2026-08-21.json);
-the latest responsive hierarchy and state/accessibility audits are
+[`packet-quality-baseline-2026-08-21.json`](evals/results/packet-quality-baseline-2026-08-21.json).
+The latest bounded-selection packet, synthetic-quality and complete-workflow checkpoints are
+[`packet-selection-2026-08-21.json`](evals/results/packet-selection-2026-08-21.json),
+[`packet-quality-selection-2026-08-21.json`](evals/results/packet-quality-selection-2026-08-21.json)
+and [`baseline-selection-2026-08-21.json`](evals/results/baseline-selection-2026-08-21.json). The
+latest responsive hierarchy and state/accessibility audits are
 [`ui-hierarchy-2026-08-21.json`](evals/results/ui-hierarchy-2026-08-21.json) and
 [`ui-states-accessibility-2026-08-21.json`](evals/results/ui-states-accessibility-2026-08-21.json).
 The source of truth for each result family is its reviewed JSON artefact, not a screenshot or copied

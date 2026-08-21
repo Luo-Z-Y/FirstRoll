@@ -207,6 +207,61 @@ def test_pre_agent_scorecard_freezes_steps_journeys_and_entry_targets() -> None:
     ]
     assert quality_checkpoint["model_calls"] == quality_result["aggregate"]["model_calls"]
 
+    selection_checkpoint = scorecard["measured_checkpoints"]["packet_selection_candidate"]
+    selected_packets = json.loads(
+        (ROOT / selection_checkpoint["packet_result_path"]).read_text(encoding="utf-8")
+    )
+    selected_synthetic = json.loads(
+        (ROOT / selection_checkpoint["synthetic_result_path"]).read_text(encoding="utf-8")
+    )
+    selected_workflow = json.loads(
+        (ROOT / selection_checkpoint["workflow_result_path"]).read_text(encoding="utf-8")
+    )
+    assert all(
+        result["source_revision"] == selection_checkpoint["source_revision"]
+        for result in (selected_packets, selected_synthetic, selected_workflow)
+    )
+    assert selection_checkpoint["packet_configuration_fingerprint"] == selected_packets[
+        "environment"
+    ]["configuration"]["sha256"]
+    assert selection_checkpoint["packet_samples"] == selected_packets["summary"]["sample_count"]
+    assert selection_checkpoint["packet_mean_duplicate_ratio"] == selected_packets["summary"][
+        "packet_quality"
+    ]["mean_duplicate_ratio"]
+    assert selection_checkpoint["packet_prompt_character_median"] == selected_packets["summary"][
+        "packet_metrics"
+    ]["synthesis_prompt_characters"]["median"]
+    assert selection_checkpoint["synthetic_passed_packets"] == selected_synthetic["aggregate"][
+        "packet_status_counts"
+    ]["passed"]
+    assert selection_checkpoint["synthetic_duplicate_ratio"] == selected_synthetic["aggregate"][
+        "mean_duplicate_ratio"
+    ]
+    assert selection_checkpoint["workflow_configuration_fingerprint"] == selected_workflow[
+        "environment"
+    ]["configuration"]["sha256"]
+    assert selection_checkpoint["workflow_completed_cases"] == selected_workflow["summary"][
+        "successful_cases"
+    ]
+    assert selection_checkpoint["workflow_mean_quality"] == selected_workflow["summary"][
+        "mean_quality_score"
+    ]
+    assert selection_checkpoint["workflow_p50_end_to_end_seconds"] == selected_workflow[
+        "summary"
+    ]["latency_seconds"]["p50_end_to_end"]
+    selected_prompt_tokens = [
+        call["usage"]["prompt_tokens"]
+        for case in selected_workflow["cases"]
+        for call in case.get("model_calls", [])
+    ]
+    assert selection_checkpoint["workflow_prompt_token_median"] == 6288
+    assert selection_checkpoint["workflow_prompt_token_p95"] == percentile(
+        selected_prompt_tokens, 0.95
+    )
+    assert selection_checkpoint["workflow_total_tokens"] == selected_workflow["summary"][
+        "total_tokens"
+    ]
+
     assert scorecard["latency_stages"] == list(STUDY_STAGE_NAMES)
 
     journey_ids = [journey["id"] for journey in scorecard["user_journeys"]]

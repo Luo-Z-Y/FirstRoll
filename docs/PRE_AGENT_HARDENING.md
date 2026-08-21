@@ -1,6 +1,6 @@
 # Pre-Agent Product Hardening
 
-**Status:** active; Steps 1–7 complete and Step 8 is next
+**Status:** active; Steps 1–8 complete and Step 9 is next
 
 **Machine-readable scorecard:** [`evals/pre_agent_scorecard.json`](../evals/pre_agent_scorecard.json)
 
@@ -165,16 +165,22 @@ records six expectation-complete synthetic cases, 100% provenance, two contained
 zero model calls. Four packets pass; the duplicate and honestly sparse cases remain limited for Step
 8 rather than being concealed.
 
-### Step 8 — Improve packet selection quality — next
+### Step 8 — Improve packet selection quality — complete
 
 Implement focus-aware selection, canonical deduplication, justified source diversity, complete
 applicable provenance, explicit omission reasons and per-layer token budgets.
 
 **Acceptance:** citation and applicable provenance integrity are 100%, selected duplication is below
 10%, instruction containment is 100%, median input is at most 8,000 tokens and P95 input is at most
-12,000 tokens.
+12,000 tokens. At revision `88c054c`, 35/35 frozen packet samples have 100% provenance and zero
+selected duplicates; the synthetic malicious case retains 2/2 flagged and contained items. The
+five-case workflow completes 5/5 with 98.3 mean automated quality, 6,288 median and 7,376.6 P95 input
+tokens. Reviewed results are
+[`packet-selection-2026-08-21.json`](../evals/results/packet-selection-2026-08-21.json),
+[`packet-quality-selection-2026-08-21.json`](../evals/results/packet-quality-selection-2026-08-21.json)
+and [`baseline-selection-2026-08-21.json`](../evals/results/baseline-selection-2026-08-21.json).
 
-### Step 9 — Improve Deep Study transparency
+### Step 9 — Improve Deep Study transparency — next
 
 Expose packet readiness, safe aggregate evidence counts, completed progress stages, missing evidence
 and inspectable citation targets. Add cancellation and bounded retry without publishing prompts,

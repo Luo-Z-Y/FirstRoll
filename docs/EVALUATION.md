@@ -15,10 +15,10 @@ The active fixed-workflow improvement sequence, frozen user journeys and Agent e
 [`pre_agent_scorecard.json`](../evals/pre_agent_scorecard.json). That scorecard governs future work;
 it does not replace a measured result or retroactively add unobserved metrics to this baseline.
 
-## Latest Complete-Workflow Baseline
+## Pre-Selection Complete-Workflow Baseline
 
-The newest complete result is
-[`baseline-2026-08-21.json`](../evals/results/baseline-2026-08-21.json). It evaluates the unchanged
+The Step 3 complete result is
+[`baseline-2026-08-21.json`](../evals/results/baseline-2026-08-21.json). It evaluates the then-current
 fixed workflow against the five frozen cases in
 [`agent_cases.json`](../evals/agent_cases.json). It was recorded at 21 August 2026 14:44:59 UTC
 (22:44:59 Singapore time) from source revision `c913bbd`.
@@ -171,6 +171,63 @@ uv run python tools/evaluate_packet_quality.py \
   --output evals/results/packet-quality-YYYY-MM-DD.json
 ```
 
+## Latest Bounded-Selection and Workflow Checkpoint
+
+Revision `88c054c` ranks focus matches while preserving retrieval order as a tie-break, keeps at most
+eight theory passages, twelve critic claims and twelve attributed excerpts, removes exact/near
+duplicates, enforces source/domain and character budgets and records every omission reason. The
+provider prompt receives compact selected records; the complete selected evidence remains in the
+owner-visible result.
+
+The synthetic candidate
+[`packet-quality-selection-2026-08-21.json`](../evals/results/packet-quality-selection-2026-08-21.json)
+keeps all six expectations, 100% provenance, 94.45% mean focus overlap and 2/2 malicious items
+contained. Deduplication moves the duplicate fixture from limited to passed and mean duplicate ratio
+from 3.33% to 0%; the honestly sparse fixture remains the only limited case.
+
+The private, zero-model packet run
+[`packet-selection-2026-08-21.json`](../evals/results/packet-selection-2026-08-21.json) completes all
+35 samples:
+
+| Frozen packet measure | Bounded-selection result |
+|---|---:|
+| Applicable provenance completeness | 100% |
+| Mean / maximum selected duplicate ratio | 0% / 0% |
+| Mean lexical focus relevance | 82.73% |
+| Packet status | 28 passed samples · 7 honestly limited *The Thing* samples |
+| Median / maximum packet JSON | 26,150 / 33,556 characters |
+| Median / maximum synthesis prompt | 23,242 / 29,360 characters |
+| Median selected layers | 8 theory · 5 claims · 11 attributed sources |
+| Warm packet P50 / P95 | 141.210 / 204.671 ms |
+| Model calls | 0 |
+
+Compared with the pre-selection packet baseline, median packet JSON falls 17.81%, theory passages
+fall from ten to eight, median attributed characters fall 28.46% and median critical-claim
+characters fall 36.32%. All omitted theory, claim and attributed candidates have bounded duplicate,
+source-quota, item-limit, short-content or character-budget reasons. The only frozen packet
+limitation is *The Thing*: it correctly has theory frameworks but no film-specific attributed source.
+
+The latest complete workflow result is
+[`baseline-selection-2026-08-21.json`](../evals/results/baseline-selection-2026-08-21.json):
+
+| Complete workflow measure | Pre-selection | Bounded selection |
+|---|---:|---:|
+| Cases completed | 4 / 5 | 5 / 5 |
+| Mean / median quality | 97.02 / 97.38 | 98.30 / 99.25 |
+| Valid citations / gate pass | 100% of completed | 100% of completed |
+| Completed-study median / P95 input tokens | 9,577 / 14,830.6 | 6,288 / 7,376.6 |
+| P50 / P95 end to end | 77.679 / 91.225 s | 66.676 / 77.798 s |
+| Mean combined study stage | 61.403 s | 55.139 s |
+| Calls / total tokens | 5 / 63,764 | 5 / 42,234 |
+
+Completed-study input-token median and P95 improve 34.34% and 50.26%; complete-suite token use falls
+33.77% while mean quality rises 1.28 points above the pre-selection run and remains above the 96.94
+floor. This is one controlled five-case checkpoint, not a provider-reliability estimate or proof
+that selection
+caused every latency/quality difference. It does establish both scorecard token budgets with no
+citation, provenance, duplicate or containment regression. Result scans found no private title or
+120-character private passage fragment.
+
 ## Latest UI Hierarchy Checkpoint
 
 [`ui-hierarchy-2026-08-21.json`](../evals/results/ui-hierarchy-2026-08-21.json) records a local Chrome
@@ -224,9 +281,10 @@ criticism cache, video cache, retrieval planning, lexical retrieval, semantic re
 selection, packet assembly, prompt serialisation, model transport, validation/repair and end to end.
 
 Provider-reported prompt, completion and total tokens are bounded integer counts. The evaluator
-retains this record as `study_observability`; the latest result contains a complete trace for each of
-its four assessable studies. Failed callers retain the safe trace in server logs rather than the HTTP
-error body. The historical 18 August baseline predates the schema and remains unchanged; neither
+retains this record as `study_observability`; the latest bounded-selection result contains a complete
+trace for all five assessable studies. Failed callers retain the safe trace in server logs rather
+than the HTTP error body. The historical 18 August baseline predates the schema and remains
+unchanged; neither
 run's combined `study` timing may be presented as a packet-only measurement.
 
 ## What the Score Does Not Establish
@@ -285,7 +343,7 @@ Then:
 1. inspect every case result and confirm no key, prompt, private passage or full review body appears;
 2. keep the previous artefact for historical comparison;
 3. name the new file with its evaluation date under `evals/results/`;
-4. update this document's “Latest Complete-Workflow Baseline” tables directly from that JSON;
+4. update this document's latest complete-workflow tables directly from that JSON;
 5. add a dated entry to `docs/PROGRESS.md` explaining policy or configuration changes; and
 6. commit the case fixture, evaluator, result and documentation together when any contract changed.
 
