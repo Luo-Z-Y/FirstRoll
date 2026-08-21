@@ -65,6 +65,7 @@ def fake_wikidata_with_related(params: dict[str, Any]) -> dict[str, Any]:
                     "id": qid,
                     "labels": {"en": {"value": definitions[qid][0]}},
                     "descriptions": {"en": {"value": "2020 drama film"}},
+                    "sitelinks": {"enwiki": {"title": definitions[qid][0]}},
                     "claims": {
                         **definitions[qid][1],
                         "P577": [claim_time(f"+20{20 + int(qid[-1]):02d}-02-01T00:00:00Z")],
@@ -306,10 +307,65 @@ def test_director_only_enrichment_does_not_reuse_the_fast_cache() -> None:
         fast=False,
         director_only=True,
     )
+    cached_enriched = service.related(
+        "wikidata:Q100",
+        limit=12,
+        fast=False,
+        director_only=True,
+    )
 
     assert fast["same_director"][0]["poster_url"] is None
     assert enriched["same_director"][0]["poster_url"].startswith("https://a.ltrbxd.com/")
+    assert cached_enriched is enriched
     assert requested_imdb_ids == ["tt7654321"]
+
+
+def test_director_posters_use_one_batched_wikipedia_request() -> None:
+    wikipedia_requests: list[dict[str, Any]] = []
+
+    def wikipedia_request(params: dict[str, Any]) -> dict[str, Any]:
+        wikipedia_requests.append(params)
+        if params.get("prop") != "pageimages|info":
+            return {"query": {"pages": []}}
+        return {
+            "query": {
+                "pages": [
+                    {
+                        "title": "Earlier Example",
+                        "fullurl": "https://en.wikipedia.org/wiki/Earlier_Example",
+                        "original": {
+                            "source": "https://upload.wikimedia.org/example-poster.jpg",
+                            "width": 400,
+                            "height": 600,
+                        },
+                    }
+                ]
+            }
+        }
+
+    service = DiscoveryService(
+        request_json=fake_wikidata_with_related,
+        wikipedia_search=wikipedia_request,
+        sparql_json=lambda _: {
+            "results": {
+                "bindings": [sparql_relation("Q101", "same_director", "Q200")]
+            }
+        },
+    )
+    service.search("Example Film")
+    wikipedia_requests.clear()
+
+    result = service.related(
+        "wikidata:Q100",
+        limit=12,
+        fast=False,
+        director_only=True,
+    )
+
+    poster = result["same_director"][0]
+    assert poster["poster_url"] == "https://upload.wikimedia.org/example-poster.jpg"
+    assert poster["poster_source"]["name"] == "Wikipedia article image"
+    assert [request["prop"] for request in wikipedia_requests] == ["pageimages|info"]
 
 
 def test_related_films_are_grouped_by_cast_country_and_genre() -> None:
@@ -494,7 +550,8 @@ def test_search_falls_back_to_public_letterboxd_poster_by_imdb_identity() -> Non
 def test_letterboxd_poster_parser_uses_movie_json_ld_image() -> None:
     page = """
     <script type="application/ld+json">
-      {"@type":"Movie","name":"Example Film",
+      {"@type":"Movie","name":"Example Film","dateCreated":"2012-08-21",
+       "director":[{"@type":"Person","name":"Example Director"}],
        "image":"https://a.ltrbxd.com/resized/film-poster/1/example.jpg",
        "url":"https://letterboxd.com/film/example-film/","duration":"PT2H37M"}
     </script>
@@ -508,8 +565,53 @@ def test_letterboxd_poster_parser_uses_movie_json_ld_image() -> None:
     assert result == {
         "image": "https://a.ltrbxd.com/resized/film-poster/1/example.jpg",
         "url": "https://letterboxd.com/film/example-film/",
+        "title": "Example Film",
+        "year": 2012,
+        "directors": ["Example Director"],
         "runtime_minutes": 157,
     }
+
+
+def test_letterboxd_title_poster_requires_matching_film_identity() -> None:
+    candidate = {
+        "image": "https://a.ltrbxd.com/resized/film-poster/1/example.jpg",
+        "url": "https://letterboxd.com/film/the-poet-and-singer/",
+        "title": "The Poet and Singer",
+        "year": 2012,
+        "directors": ["Bi Gan"],
+    }
+    service = DiscoveryService(
+        request_json=fake_wikidata,
+        identity_poster_request=lambda _title, _year, _director: candidate,
+    )
+    film = {
+        "title": "The Poet and the Singer",
+        "year": 2012,
+        "directors": ["Bi Gan"],
+        "external_ids": {},
+        "poster_url": None,
+        "runtime_minutes": None,
+    }
+
+    service._enrich_letterboxd_poster(film)
+
+    assert film["poster_url"] == candidate["image"]
+    assert film["poster_source"]["url"] == candidate["url"]
+
+    for mismatch in (
+        {"title": "Different Film"},
+        {"year": 2013},
+        {"directors": ["Different Director"]},
+    ):
+        film["poster_url"] = None
+        candidate.update(
+            title="The Poet and Singer",
+            year=2012,
+            directors=["Bi Gan"],
+        )
+        candidate.update(mismatch)
+        service._enrich_letterboxd_poster(film)
+        assert film["poster_url"] is None
 
 
 def test_wikidata_detail_keeps_intention_claims_out_of_identity_metadata() -> None:

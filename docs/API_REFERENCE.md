@@ -109,12 +109,14 @@ content; other formats can be catalogued but are not counted as indexable docume
 |---|---|---|---|---|
 | GET | `/api/discovery/search` | Public | `q` 1–160 chars; optional `year` 1888–2100; optional `director` ≤120 chars | Candidate films with identity evidence |
 | GET | `/api/discovery/films/{film_id}` | Public | Canonical path ID | Full dossier; local mode adds library/retrieval, both modes add cached criticism/video bundles |
-| GET | `/api/discovery/films/{film_id}/related` | Public | `limit` 1–60, default 12; `fast` boolean, default true; `director_only` boolean, default false. `fast=false` enables verified poster enrichment | Same-director and relationship groups for the native filmography shelf |
+| GET | `/api/discovery/films/{film_id}/related` | Public | `limit` 1–60, default 12; `fast` boolean, default true; `director_only` boolean, default false. `fast=false` enables cached, batched poster enrichment | Same-director and relationship groups for the native filmography shelf |
 | GET | `/api/discovery/films/{film_id}/reception` | Public | Canonical path ID | Available Douban/Letterboxd scores, optional equal-weight aggregate, provider state and up to three awards |
 
 Search can return more than one candidate. The browser must require an explicit user choice before
 opening a dossier or starting Deep Study; the API does not silently promote the first same-title
-result.
+result. Director-only poster enrichment batches supported Wikipedia article images. A Letterboxd
+page discovered without an IMDb claim is used only when its structured title, release year and
+director match the canonical film.
 
 Example:
 

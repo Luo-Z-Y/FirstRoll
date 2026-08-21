@@ -1061,7 +1061,7 @@ html[data-theme="dark"] .theme-icon-moon { opacity: 1; transform: rotate(0) scal
   position: relative;
   min-width: 0;
   display: flex;
-  padding: 0 2px 15px;
+  padding: 0 2px 34px;
   isolation: isolate;
 }
 .director-film-slot::after {
@@ -1167,9 +1167,11 @@ button.director-film-card { cursor: pointer; }
   font: 0.42rem "IBM Plex Mono", monospace;
 }
 .director-film-copy {
+  position: relative;
+  z-index: 2;
   min-width: 0;
   display: block;
-  padding: 9px 4px 0;
+  padding: 9px 4px 6px;
 }
 .director-film-copy strong {
   min-height: 2.45em;

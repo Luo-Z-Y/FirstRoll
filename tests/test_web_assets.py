@@ -236,8 +236,8 @@ def test_archive_pullout_collapses_before_zoom_can_clip_its_copy() -> None:
     styles = (WEB / "styles.css").read_text(encoding="utf-8")
     app = (WEB / "app.js").read_text(encoding="utf-8")
 
-    assert "/assets/styles.css?v=20260821-4" in index
-    assert "/assets/app.js?v=20260821-6" in index
+    assert "/assets/styles.css?v=20260821-5" in index
+    assert "/assets/app.js?v=20260821-7" in index
     assert "closet3d.js" not in index
     assert 'class="archive-pullout-shell"' in app
     assert "container-type: inline-size" in styles
@@ -309,8 +309,8 @@ def test_director_shelf_renders_immediately_then_enriches_posters() -> None:
     assert "Showing the selected film." in fallback
     assert "shelfRequestId: 0" in app
     assert "requestId !== state.discovery.shelfRequestId" in app
-    assert "window.setTimeout(() => controller.abort(), fast ? 25000 : 60000)" in app
-    assert 'fast ? 25000 : 60000' in app
+    assert "window.setTimeout(() => controller.abort(), fast ? 25000 : 90000)" in app
+    assert 'fast ? 25000 : 90000' in app
     assert 'fast=${fast ? "true" : "false"}&director_only=true' in app
     assert "enrichDirectorFilmography" in app
     assert '`${filmId}:${fast ? "fast" : "enriched"}`' in app
@@ -333,6 +333,8 @@ def test_director_shelf_renders_immediately_then_enriches_posters() -> None:
     assert ".director-film-list" in styles
     assert ".director-film-card.is-selected" in styles
     assert ".director-film-slot.is-skeleton" in styles
+    assert 'loading="eager" decoding="async"' in app
+    assert "padding: 0 2px 34px" in styles
     assert "@container (min-width: 660px)" in styles
     assert ".film-closet" not in styles
     assert ".closet-webgl" not in styles

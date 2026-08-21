@@ -746,7 +746,7 @@ async function fetchRelatedFilms(filmId, fast = true) {
   if (cached) return cached;
   const controller = new AbortController();
   state.discovery.shelfRequestControllers.add(controller);
-  const timeout = window.setTimeout(() => controller.abort(), fast ? 25000 : 60000);
+  const timeout = window.setTimeout(() => controller.abort(), fast ? 25000 : 90000);
   const progress = fast
     ? window.setTimeout(() => {
       const status = refs.discoveryResults.querySelector("[data-film-shelf-status]");
@@ -966,7 +966,7 @@ function directorShelfFilmsMarkup(primary, films, loading) {
       ${opening}
         <span class="director-film-cover">
           <span class="director-film-fallback" aria-hidden="true"><b>FR</b><span>${escapeHtml(title)}</span><small>${escapeHtml(year)}</small></span>
-          ${poster ? `<img src="${escapeHtml(poster)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()" />` : ""}
+          ${poster ? `<img src="${escapeHtml(poster)}" alt="" loading="eager" decoding="async" referrerpolicy="no-referrer" onerror="this.remove()" />` : ""}
           <i aria-hidden="true">${String(index + 1).padStart(2, "0")}</i>
         </span>
         <span class="director-film-copy">

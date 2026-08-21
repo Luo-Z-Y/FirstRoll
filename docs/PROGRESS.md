@@ -1,5 +1,43 @@
 # FirstRoll Project Progress
 
+### 21 August 2026 — Complete shelf covers and unobscured release years
+
+Delivered:
+
+1. Removed the production poster-enrichment bottleneck that could take about seventy seconds and
+   outlive the browser's former sixty-second request boundary. Director-only enrichment now reuses
+   lightweight shelf entities and resolves all Wikipedia page images in one batch.
+2. Added a bounded, four-worker Letterboxd fallback for films without a supported article image or
+   IMDb claim. A title-derived candidate is accepted only when its structured title, release year
+   and director all match the canonical Wikidata film.
+3. Cached completed enriched responses separately from fast filmography responses and increased the
+   cancellable browser safety boundary to ninety seconds, so a cold provider response can still
+   hydrate the already-usable shelf instead of being discarded.
+4. Made the at-most-twelve shelf images eager, moved the wooden shelf edge below the card metadata
+   and added a protected gap under every release year.
+
+Acceptance evidence:
+
+- all 177 automated tests, Ruff, frontend JavaScript syntax, npm audit and repository whitespace
+  checks pass;
+- a fresh live-provider adapter run returns all three related Bi Gan covers in 3.2 seconds, including
+  a strictly identity-matched cover for *The Poet and the Singer*, versus the observed seventy-second
+  production path before this change;
+- live local Chromium verification for *Resurrection* loads all four shelf images at their natural
+  dimensions, leaves about forty CSS pixels below every year label, has no horizontal overflow at
+  1,108-pixel desktop or 390-pixel mobile widths and emits no console errors.
+
+Known constraints:
+
+- upstream Wikidata, Wikipedia and Letterboxd availability still controls optional cover hydration;
+  a film keeps its designed title/year cover if no page can pass the identity checks;
+- enriched responses are process-memory caches and are rebuilt after an API restart.
+
+Next actionable work:
+
+1. Observe poster-cache rebuild latency after routine API revision restarts and retain the strict
+   identity gate if another cover provider is added.
+
 ### 21 August 2026 — Always-available native director shelf
 
 Delivered:
@@ -27,19 +65,18 @@ Acceptance evidence:
   immediately, then twelve selectable cases with no console errors or horizontal overflow;
 - the same browser run passes at 1,440-pixel desktop and 390-pixel mobile widths, while a synthetic
   provider failure leaves one selected case, no loading cases and a visible retry;
-- live local verification for Bi Gan's *Resurrection* upgrades *Long Day's Journey into Night* and
-  *Kaili Blues* to verified covers with no console warnings; *The Poet and the Singer* retains its
-  designed fallback because no supported identity-bound poster source is available;
+- live local verification for Bi Gan's *Resurrection* upgrades *Long Day's Journey into Night*,
+  *Kaili Blues* and *The Poet and the Singer* to verified covers with no console warnings;
 - the production build contains no 3D model, Three.js module or shelf-specific runtime file.
 
 Known constraint:
 
 - the expanded filmography still depends on Wikidata relationship coverage and availability; on a
   sparse or failed response the native shelf deliberately remains useful with the selected film only;
-- optional poster enrichment may continue for up to sixty seconds after the shelf is ready, but it is
-  cancellable and cannot restore loading or hide the native cases;
-- a film without a poster claim, IMDb identity or supported article image keeps its title cover rather
-  than risking an unverified title-only poster match.
+- optional poster enrichment may continue for up to ninety seconds after the shelf is ready, but it
+  is cancellable and cannot restore loading or hide the native cases;
+- a film without a poster claim, supported article image, IMDb identity or a title/year/director-
+  verified page keeps its designed cover rather than risking an unverified poster match.
 
 Next actionable work:
 

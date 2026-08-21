@@ -146,13 +146,17 @@ title/year/director query
 → title, year and director identity evidence
 → explicit user choice when more than one candidate remains
 → fast, canonical-ID director filmography
-→ cancellable background poster hydration for the same film selection
+→ cached, cancellable background poster hydration through one Wikipedia batch
+→ strict title/year/director verification for any identity-derived Letterboxd fallback
 → Wikidata/Wikipedia dossier
 → optional ratings, criticism, video and related-film enrichment
 ```
 
 Film identity is selected before Deep Study. The model never decides silently between same-title
-films.
+films. The fast shelf and enriched shelf have separate process-memory cache entries. Poster hydration
+uses lightweight film summaries rather than full cast and award expansion; a provider-local page
+found from a title is accepted only when its structured title, year and director agree with the
+canonical record.
 
 ### Local Deep Study
 

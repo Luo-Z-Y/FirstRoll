@@ -66,14 +66,16 @@ The original GPL-3.0 licence and contributor attribution remain applicable. See
 - Browse a native HTML/CSS director shelf with up to twelve front-facing film cases. The selected
   film appears immediately alongside five loading placeholders, so the shelf never waits for WebGL,
   a 3D model or the related-film provider before becoming useful. A bounded fast request adds
-  verified directing work in place, then a best-effort background request upgrades any additional
-  poster covers without returning the shelf to a loading state. Native images and designed title/year
-  covers keep every case legible. Fast and enriched responses use separate caches, and both requests
-  belong to the active film selection so a new search cancels either phase silently. If the fast
-  request fails, FirstRoll removes the placeholders, retains the selected film and offers an explicit
-  retry instead of replacing the shelf with an unavailable panel. Selecting another case rebuilds the edition and filmography, while stale
-  requests remain unable to overwrite the latest choice. Unresolved identifier-only records remain
-  hidden.
+  verified directing work in place. Background poster hydration then uses lightweight canonical
+  summaries, one batched Wikipedia image request and bounded Letterboxd fallbacks that must match the
+  film's title, release year and director. Covers load eagerly without returning the shelf to a
+  loading state, while extra case spacing keeps every release year above the shelf edge. Fast and
+  enriched responses use separate caches, and both requests belong to the active film selection so a
+  new search cancels either phase silently. If the fast request fails, FirstRoll removes the
+  placeholders, retains the selected film and offers an explicit retry instead of replacing the
+  shelf with an unavailable panel. Selecting another case rebuilds the edition and filmography,
+  while stale requests remain unable to overwrite the latest choice. A designed title/year cover
+  remains the honest fallback when no identity-verified poster source exists.
 - Compare attributed Douban and Letterboxd community scores and review up to three prominent
   Wikidata awards when those sources provide them.
 - Retrieve matched scholarly abstracts and DOI links through Crossref.
@@ -312,8 +314,11 @@ or future provider markup bypasses the parser's structural assumptions.
 
 For posters, FirstRoll accepts only Wikimedia upload URLs returned by the article summary.
 It prefers the original image, falls back to the thumbnail, rejects invalid dimensions and
-avoids landscape images that are unlikely to be posters. Wikipedia prose establishes
-attributed context, not creator intention or formal analysis.
+avoids landscape images that are unlikely to be posters. The director shelf resolves its Wikipedia
+images in one MediaWiki batch. When no supported article image exists, it may use a Letterboxd public
+film page reached through an IMDb claim or a bounded title-derived candidate; the latter must expose
+matching structured title, release year and director fields before its image is accepted. Wikipedia
+prose establishes attributed context, not creator intention or formal analysis.
 
 ### Research: Crossref scholarship
 

@@ -1,7 +1,7 @@
 # FirstRoll Architecture Decision Register
 
 **Decision owner:** FirstRoll maintainer  
-**Last reconciled:** 20 August 2026
+**Last reconciled:** 21 August 2026
 
 This register captures the major decisions that shape the current product. It does not attempt to
 record every CSS or parsing implementation detail. A choice belongs here when changing it would
@@ -150,7 +150,9 @@ study to the wrong work.
 
 Use Wikidata IDs as the canonical discovery identity, validate title/year/director signals and
 require a bounded browser choice whenever more than one candidate remains. IMDb identity is used
-where available to reconcile provider records; provider-local titles alone are insufficient.
+where available to reconcile provider records. When an IMDb claim is absent, a title-derived
+provider candidate is accepted only if its structured title, release year and director all match the
+canonical film; a provider-local title alone remains insufficient.
 
 ### Alternatives considered
 
@@ -164,6 +166,8 @@ where available to reconcile provider records; provider-local titles alone are i
 
 - Discovery can interrupt instead of pretending certainty.
 - Every downstream bundle is keyed to a canonical film ID.
+- Optional poster coverage can use a verified title-derived page without relaxing the canonical
+  identity boundary.
 - Multilingual title matching remains a provider-adapter responsibility.
 
 ## ADR-005: Use bounded provider adapters, not unconstrained LLM browsing

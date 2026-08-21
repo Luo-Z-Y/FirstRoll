@@ -3,6 +3,8 @@ from __future__ import annotations
 import html
 import json
 import re
+import unicodedata
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from datetime import date
 from difflib import SequenceMatcher
@@ -139,6 +141,7 @@ JsonRequest = Callable[[dict[str, Any]], dict[str, Any]]
 WikipediaRequest = Callable[[str], dict[str, Any]]
 SparqlRequest = Callable[[str], dict[str, Any]]
 PosterRequest = Callable[[str], dict[str, Any] | None]
+IdentityPosterRequest = Callable[[str, int | None, str], dict[str, Any] | None]
 
 
 def _clean_infobox_text(value: str, preserve_lines: bool = False) -> str:
@@ -269,6 +272,7 @@ class DiscoveryService:
         wikipedia_infobox: WikipediaRequest | None = None,
         sparql_json: SparqlRequest | None = None,
         poster_request: PosterRequest | None = None,
+        identity_poster_request: IdentityPosterRequest | None = None,
     ) -> None:
         self._request_json = request_json or self._wikidata_request
         self._wikipedia_search = wikipedia_search or (
@@ -286,8 +290,11 @@ class DiscoveryService:
         self._poster_request = poster_request or (
             self._letterboxd_poster_request if request_json is None else None
         )
+        self._identity_poster_request = identity_poster_request or (
+            self._letterboxd_identity_poster_request if request_json is None else None
+        )
         self._detail_cache: dict[str, dict[str, Any]] = {}
-        self._related_cache: dict[tuple[str, int, bool], dict[str, Any]] = {}
+        self._related_cache: dict[tuple[str, int, bool, bool], dict[str, Any]] = {}
 
     def status(self) -> dict[str, Any]:
         return {
@@ -381,8 +388,8 @@ class DiscoveryService:
         qid = film_id.removeprefix("wikidata:")
         if not self._valid_qid(qid):
             raise LookupError("The film identifier is not recognised by the Wikidata adapter.")
-        cache_key = (qid, limit, director_only)
-        if fast and cache_key in self._related_cache:
+        cache_key = (qid, limit, director_only, fast)
+        if cache_key in self._related_cache:
             return self._related_cache[cache_key]
         if qid not in self._detail_cache:
             self.detail(film_id)
@@ -466,7 +473,7 @@ LIMIT {query_limit}
             selected_ids = candidate_ids[:candidate_cap]
             entities = (
                 self._get_shelf_entities(selected_ids)
-                if fast
+                if fast or director_only
                 else self._get_entities(selected_ids)
             )
         except (DiscoveryProviderError, KeyError, TypeError, ValueError):
@@ -488,6 +495,23 @@ LIMIT {query_limit}
                 (relation, shared_id if self._valid_qid(shared_id) else None)
             )
 
+        prepared_director_candidates: dict[str, dict[str, Any]] = {}
+        if director_only and not fast:
+            for candidate_id in candidate_ids:
+                entity = entities.get(candidate_id)
+                if not entity or not self._looks_like_film(entity):
+                    continue
+                candidate = self._normalise_entity(entity)
+                cached_candidate = self._detail_cache.get(candidate_id) or {}
+                if not candidate.get("poster_url") and cached_candidate.get("poster_url"):
+                    candidate["poster_url"] = cached_candidate["poster_url"]
+                    candidate["poster_source"] = cached_candidate.get("poster_source")
+                self._detail_cache[candidate_id] = candidate
+                prepared_director_candidates[candidate_id] = candidate
+                if len(prepared_director_candidates) >= limit:
+                    break
+            self._enrich_director_posters(list(prepared_director_candidates.values()))
+
         labels_by_id = {
             **dict(zip(cast_ids, cast_names, strict=False)),
             **dict(zip(country_ids, country_names, strict=False)),
@@ -499,7 +523,7 @@ LIMIT {query_limit}
             "recommended": [],
         }
         assigned_by_group: dict[str, set[str]] = {name: set() for name in groups}
-        poster_fallbacks_remaining = limit if director_only else RELATED_POSTER_FALLBACK_LIMIT
+        poster_fallbacks_remaining = RELATED_POSTER_FALLBACK_LIMIT
         for candidate_id in candidate_ids:
             entity = entities.get(candidate_id)
             if not entity or not self._looks_like_film(entity):
@@ -519,24 +543,25 @@ LIMIT {query_limit}
                     None,
                 ):
                     candidate_relations.append(("shared_genre", shared_genre))
-            candidate = self._normalise_entity(entity)
-            if fast:
-                if any(relation == "same_director" for relation, _ in candidate_relations):
-                    candidate["directors"] = [director] if director else []
+            if director_only and not fast:
+                candidate = prepared_director_candidates.get(candidate_id)
+                if not candidate:
+                    continue
             else:
-                cached_candidate = self._detail_cache.get(candidate_id) or {}
-                if not candidate.get("poster_url") and cached_candidate.get("poster_url"):
-                    candidate["poster_url"] = cached_candidate["poster_url"]
-                    candidate["poster_source"] = cached_candidate.get("poster_source")
-                self._detail_cache[candidate_id] = candidate
-                self._enrich_poster(candidate)
-                if (
-                    poster_fallbacks_remaining > 0
-                    and not candidate.get("poster_url")
-                    and candidate.get("external_ids", {}).get("imdb")
-                ):
-                    self._enrich_letterboxd_poster(candidate)
-                    poster_fallbacks_remaining -= 1
+                candidate = self._normalise_entity(entity)
+                if fast:
+                    if any(relation == "same_director" for relation, _ in candidate_relations):
+                        candidate["directors"] = [director] if director else []
+                else:
+                    cached_candidate = self._detail_cache.get(candidate_id) or {}
+                    if not candidate.get("poster_url") and cached_candidate.get("poster_url"):
+                        candidate["poster_url"] = cached_candidate["poster_url"]
+                        candidate["poster_source"] = cached_candidate.get("poster_source")
+                    self._detail_cache[candidate_id] = candidate
+                    self._enrich_poster(candidate)
+                    if poster_fallbacks_remaining > 0 and not candidate.get("poster_url"):
+                        self._enrich_letterboxd_poster(candidate)
+                        poster_fallbacks_remaining -= 1
             summary = self._public_live_summary(candidate)
             for relation, shared_id in candidate_relations:
                 group = "recommended" if relation == "shared_genre" else relation
@@ -552,8 +577,7 @@ LIMIT {query_limit}
         for films in groups.values():
             films.sort(key=lambda item: (item.get("year") is None, -(item.get("year") or 0)))
         response.update(groups)
-        if fast:
-            self._related_cache[cache_key] = response
+        self._related_cache[cache_key] = response
         return response
 
     def _get_shelf_entities(self, qids: list[str]) -> dict[str, dict[str, Any]]:
@@ -583,6 +607,87 @@ LIMIT {query_limit}
         for entity in entities.values():
             entity["_related_labels"] = director_labels
         return entities
+
+    def _enrich_director_posters(self, films: list[dict[str, Any]]) -> None:
+        """Hydrate shelf covers with one Wikipedia request and bounded fallbacks."""
+        if not films:
+            return
+        for film in films:
+            self._discard_unverified_poster(film)
+
+        wikipedia_titles = [
+            str(film.get("_wikipedia_title") or "").strip()
+            for film in films
+            if not film.get("poster_url") and film.get("_wikipedia_title")
+        ]
+        used_wikipedia_batch = False
+        if wikipedia_titles and self._wikipedia_search:
+            try:
+                payload = self._wikipedia_search(
+                    {
+                        "action": "query",
+                        "titles": "|".join(wikipedia_titles),
+                        "prop": "pageimages|info",
+                        "piprop": "original|thumbnail|name",
+                        "pilicense": "any",
+                        "pithumbsize": 500,
+                        "inprop": "url",
+                        "redirects": 1,
+                        "format": "json",
+                        "formatversion": 2,
+                    }
+                )
+                pages = payload.get("query", {}).get("pages", [])
+                if isinstance(pages, dict):
+                    pages = list(pages.values())
+                if not isinstance(pages, list):
+                    raise TypeError("Wikipedia returned an unexpected page-image response.")
+                films_by_title = {
+                    self._normalise_identity(str(film.get("_wikipedia_title") or "")): film
+                    for film in films
+                    if film.get("_wikipedia_title")
+                }
+                for alias_group in ("normalized", "redirects"):
+                    for alias in payload.get("query", {}).get(alias_group, []):
+                        source = self._normalise_identity(str(alias.get("from") or ""))
+                        target = self._normalise_identity(str(alias.get("to") or ""))
+                        if source in films_by_title and target:
+                            films_by_title[target] = films_by_title[source]
+                for page in pages:
+                    if not isinstance(page, dict):
+                        continue
+                    film = films_by_title.get(
+                        self._normalise_identity(str(page.get("title") or ""))
+                    )
+                    if not film:
+                        continue
+                    self._apply_wikipedia_image(
+                        film,
+                        {
+                            "originalimage": page.get("original"),
+                            "thumbnail": page.get("thumbnail"),
+                            "content_urls": {"desktop": {"page": page.get("fullurl")}},
+                        },
+                        str(page.get("fullurl") or "") or None,
+                    )
+                used_wikipedia_batch = True
+            except (DiscoveryProviderError, KeyError, TypeError, ValueError):
+                used_wikipedia_batch = False
+
+        if not used_wikipedia_batch:
+            for film in films:
+                if not film.get("poster_url"):
+                    self._enrich_poster(film)
+
+        missing = [film for film in films if not film.get("poster_url")]
+        if not missing:
+            return
+        worker_count = min(4, len(missing))
+        with ThreadPoolExecutor(
+            max_workers=worker_count,
+            thread_name_prefix="filmography-poster",
+        ) as pool:
+            list(pool.map(self._enrich_letterboxd_poster, missing))
 
     def _search_wikidata(
         self,
@@ -1099,17 +1204,38 @@ LIMIT {query_limit}
         *,
         replace_existing: bool = False,
     ) -> None:
+        if film.get("poster_url") and not replace_existing:
+            return
+
         imdb_id = str(film.get("external_ids", {}).get("imdb") or "").strip()
-        if (
-            (film.get("poster_url") and not replace_existing)
-            or not self._poster_request
-            or not imdb_id
+        poster: dict[str, Any] | None = None
+        if self._poster_request and imdb_id:
+            try:
+                poster = self._poster_request(imdb_id)
+            except DiscoveryProviderError:
+                poster = None
+        if poster and not str(poster.get("image") or "").startswith(
+            "https://a.ltrbxd.com/resized/film-poster/"
         ):
-            return
-        try:
-            poster = self._poster_request(imdb_id)
-        except DiscoveryProviderError:
-            return
+            poster = None
+
+        title = str(film.get("title") or "").strip()
+        year = film.get("year") if isinstance(film.get("year"), int) else None
+        directors = film.get("directors") or []
+        director = str(directors[0] if directors else "").strip()
+        if not poster and self._identity_poster_request and title and director:
+            try:
+                candidate = self._identity_poster_request(title, year, director)
+            except DiscoveryProviderError:
+                candidate = None
+            if candidate and self._letterboxd_identity_matches(
+                candidate,
+                title=title,
+                year=year,
+                director=director,
+            ):
+                poster = candidate
+
         if not poster:
             return
         source = str(poster.get("image") or "").strip()
@@ -1121,8 +1247,51 @@ LIMIT {query_limit}
             film["runtime_minutes"] = runtime
         film["poster_source"] = {
             "name": "Letterboxd public film page",
-            "url": poster.get("url") or f"{LETTERBOXD_WEB}/imdb/{quote(imdb_id)}/",
+            "url": poster.get("url")
+            or (f"{LETTERBOXD_WEB}/imdb/{quote(imdb_id)}/" if imdb_id else LETTERBOXD_WEB),
         }
+
+    @classmethod
+    def _letterboxd_identity_matches(
+        cls,
+        poster: dict[str, Any],
+        *,
+        title: str,
+        year: int | None,
+        director: str,
+    ) -> bool:
+        candidate_title = str(poster.get("title") or "").strip()
+        candidate_year = poster.get("year")
+        candidate_directors = poster.get("directors") or []
+        if not candidate_title or year is None or candidate_year != year:
+            return False
+        expected_director = cls._normalise_identity(director)
+        if not expected_director or not any(
+            cls._normalise_identity(str(name)) == expected_director
+            for name in candidate_directors
+        ):
+            return False
+
+        def title_words(value: str) -> list[str]:
+            ascii_value = unicodedata.normalize("NFKD", value).encode(
+                "ascii", "ignore"
+            ).decode("ascii")
+            return [
+                word
+                for word in re.findall(r"[a-z0-9]+", ascii_value.casefold())
+                if word not in {"a", "an", "the"}
+            ]
+
+        expected_title = "".join(title_words(title))
+        actual_title = "".join(title_words(candidate_title))
+        return bool(
+            expected_title
+            and actual_title
+            and (
+                expected_title == actual_title
+                or SequenceMatcher(None, expected_title, actual_title).ratio() >= 0.94
+            )
+        )
 
     @staticmethod
     def _apply_wikipedia_image(
@@ -1395,6 +1564,59 @@ LIMIT {query_limit}
             raise DiscoveryProviderError("Letterboxd could not be reached.") from exc
         return DiscoveryService._parse_letterboxd_poster(page, page_url)
 
+    @classmethod
+    def _letterboxd_identity_poster_request(
+        cls,
+        title: str,
+        year: int | None,
+        director: str,
+    ) -> dict[str, Any] | None:
+        ascii_title = unicodedata.normalize("NFKD", title).encode(
+            "ascii", "ignore"
+        ).decode("ascii")
+        base_slug = re.sub(r"[^a-z0-9]+", "-", ascii_title.casefold()).strip("-")
+        if not base_slug or year is None or not director:
+            return None
+        slugs = [base_slug]
+        for original, replacement in (("-and-the-", "-and-"), ("-of-the-", "-of-")):
+            variant = base_slug.replace(original, replacement)
+            if variant not in slugs:
+                slugs.append(variant)
+        for slug in list(slugs):
+            dated = f"{slug}-{year}"
+            if dated not in slugs:
+                slugs.append(dated)
+
+        for slug in slugs[:4]:
+            request = Request(
+                f"{LETTERBOXD_WEB}/film/{quote(slug, safe='-')}/",
+                headers={
+                    "Accept": "text/html",
+                    "User-Agent": "FirstRoll/0.1 (https://github.com/Luo-Z-Y/FirstRoll)",
+                },
+            )
+            try:
+                with urlopen(request, timeout=8) as response:
+                    page_url = response.geturl()
+                    page = response.read().decode("utf-8", errors="replace")
+            except HTTPError as exc:
+                if exc.code == 404:
+                    continue
+                raise DiscoveryProviderError(
+                    f"Letterboxd returned HTTP {exc.code}."
+                ) from exc
+            except (URLError, TimeoutError) as exc:
+                raise DiscoveryProviderError("Letterboxd could not be reached.") from exc
+            poster = cls._parse_letterboxd_poster(page, page_url)
+            if poster and cls._letterboxd_identity_matches(
+                poster,
+                title=title,
+                year=year,
+                director=director,
+            ):
+                return poster
+        return None
+
     @staticmethod
     def _parse_letterboxd_poster(page: str, page_url: str) -> dict[str, Any] | None:
         scripts = re.findall(
@@ -1418,6 +1640,24 @@ LIMIT {query_limit}
                     "image": image,
                     "url": str(payload.get("url") or page_url),
                 }
+                title = str(payload.get("name") or "").strip()
+                if title:
+                    result["title"] = title
+                published = str(
+                    payload.get("dateCreated") or payload.get("datePublished") or ""
+                )
+                if published_year := re.match(r"(\d{4})", published):
+                    result["year"] = int(published_year.group(1))
+                raw_directors = payload.get("director") or []
+                if isinstance(raw_directors, dict):
+                    raw_directors = [raw_directors]
+                directors = [
+                    str(person.get("name") or "").strip()
+                    for person in raw_directors
+                    if isinstance(person, dict) and str(person.get("name") or "").strip()
+                ]
+                if directors:
+                    result["directors"] = directors
                 duration = re.fullmatch(
                     r"PT(?:(\d+)H)?(?:(\d+)M)?",
                     str(payload.get("duration") or ""),
