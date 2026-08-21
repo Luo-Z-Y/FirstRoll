@@ -250,7 +250,7 @@ def evaluate(scorecard: dict[str, Any], human_review_path: Path) -> list[dict[st
             target_result(
                 "human_packet_pass_ratio",
                 None,
-                evidence_path=".firstroll/evaluations/human-packet-review-redacted.json",
+                evidence_path="local-only human packet review aggregate",
                 status="pending_human_review",
                 threshold=human_target["threshold"],
                 comparison=human_target["comparison"],
