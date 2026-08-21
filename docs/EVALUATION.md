@@ -94,6 +94,20 @@ score. They do not by themselves reject an otherwise supported study. Missing me
 unsupported central assertions remain blocking because fluent prose cannot substitute for an
 explanatory claim tied to evidence.
 
+### Study observability contract
+
+New study results include a schema-versioned `observability` object. It uses a monotonic clock and an
+allow-list of stage and count names; it cannot accept prompts, source excerpts, credentials, model
+output or exception messages. Each stage reports `completed`, `failed`, `degraded`, `skipped` or
+`not_run`, aggregate milliseconds, attempts and failures. The complete stage order is film context,
+criticism cache, video cache, retrieval planning, lexical retrieval, semantic retrieval, fusion and
+selection, packet assembly, prompt serialisation, model transport, validation/repair and end to end.
+
+Provider-reported prompt, completion and total tokens are bounded integer counts. The evaluator
+retains this record as `study_observability` in future results. The historical 18 August baseline
+predates the schema and remains unchanged; its combined `study` timing must not be presented as a
+packet-only measurement.
+
 ## What the Score Does Not Establish
 
 The automated score is a structural, citation, calibration and verifiability proxy. It does not

@@ -111,6 +111,9 @@ The original GPL-3.0 licence and contributor attribution remain applicable. See
 - Configure a DeepSeek key from the local Settings page.
 - Build a typed evidence packet from the film record, retrieved theory, full cached review text
   and attributed text attached to relevant videos.
+- Attach redacted monotonic observability for cache, retrieval, packet, prompt, model and validation
+  stages using only allow-listed statuses, durations and aggregate counts; prompts, evidence text,
+  credentials, responses and exceptions have no measurement field.
 - Generate four to six sections with separate fields for:
   - critic reports;
   - theory explanations;
@@ -897,6 +900,7 @@ FirstRoll/
 │   │   ├── research_stream.py  # allow-listed SSE projection and owner-scoped transient runs
 │   │   ├── research_graph/      # typed LangGraph state, nodes, routing and runtime context
 │   │   ├── settings.py          # local credential store
+│   │   ├── study_observability.py # redacted stage timings and counts
 │   │   └── study_service.py     # DeepSeek synthesis and quality gate
 │   └── web/
 │       ├── app.js                 # browser workflow and native director shelf
@@ -982,7 +986,7 @@ fallback behaviour; these are tracked separately from the new FirstRoll modules.
 | Evidence-grounded Deep Study | Complete | Typed theory, criticism, review and video-text evidence; Pydantic output, citation validation and quality gate |
 | Bounded research Agent core | Implemented | LangGraph control flow, bounded reducers, deterministic tool authorisation, fake-service scenarios and optional checkpointing; production route integration remains gated |
 | Authenticated research progress | Implemented | Allow-listed SSE lifecycle events, separate owner-scoped result retrieval and secret/evidence redaction tests; final interactive browser observation remains pending |
-| Pre-Agent product hardening | Active — Step 1 complete | Flexible gated steps for interface clarity, packet observability/latency, evidence quality and fixed-workflow reliability |
+| Pre-Agent product hardening | Active — Steps 1–2 complete | Scorecard and redacted study-stage observability are complete; the measured fixed-workflow baseline is next |
 | Clip analysis web migration | Complete | Scene, shot, colour, object and export workflow |
 | Clip-to-study evidence bridge | Queued | Feed measured scenes, shots and timecodes into synthesis after the active hardening sequence |
 | Creator primary-source layer | Partial | Discovered interview descriptions and public YouTube captions are stored and cited; verified speaker attribution and dedicated interview search remain planned |

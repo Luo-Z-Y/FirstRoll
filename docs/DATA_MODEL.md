@@ -363,12 +363,26 @@ captions cannot establish creator intention.
 | `owner_id` | `provider:subject` string | Required again when reading the result; prevents cross-provider identifier collisions |
 | `created_at` | monotonic process time | TTL calculation only |
 | `status` | `running | complete | failed` | Current terminal state |
-| `result` | object or null | Complete study; never placed in SSE |
+| `result` | object or null | Complete study plus redacted observability; never placed in SSE |
 | `public_error` | allow-listed string or null | Redacted error safe for the owner |
 
 The store has a ten-minute TTL and a maximum of 50 entries. On overflow it evicts the oldest entry.
 It is intentionally not a database and cannot support multiple API instances, process restarts or
 resumable Agent threads.
+
+### Study observability
+
+`study.observability` is a transient schema-versioned measurement record, not telemetry storage. It
+contains overall status, the fixed ordered stage list and bounded aggregate counts. A stage contains
+only its allow-listed name, terminal status, aggregate milliseconds, attempts and failures. Counts
+cover retrieval/evidence totals, prompt characters, model/repair calls, provider-reported tokens and
+section totals. No field accepts film titles, user questions, prompts, source text, URLs, credentials,
+model output or exception messages.
+
+The same safe object is emitted as an application log on success or failure. Completed hosted results
+inherit the run store's owner check and ten-minute TTL; local synchronous results live only in the
+response unless the user exports them. It does not create a new database, cookie or browser-storage
+record.
 
 ### Discovery and reception caches
 

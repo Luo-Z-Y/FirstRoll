@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+from contextlib import nullcontext
 from typing import Any
+
+from app.backend.study_observability import StudyTrace
 
 
 PUBLIC_STUDY_PASSAGES = (
@@ -59,23 +62,35 @@ PUBLIC_STUDY_PASSAGES = (
 )
 
 
-def build_public_study_retrieval(film: dict[str, Any], focus: str | None) -> dict[str, Any]:
+def build_public_study_retrieval(
+    film: dict[str, Any],
+    focus: str | None,
+    *,
+    trace: StudyTrace | None = None,
+) -> dict[str, Any]:
     """Return a bounded first-party framework for the hosted, clip-free study demo."""
 
     title = str(film.get("title") or "the selected film")
     question = (focus or "formal organisation and viewing hypotheses").strip()
-    return {
-        "passages": [dict(passage) for passage in PUBLIC_STUDY_PASSAGES],
-        "method": "firstroll_public_framework",
-        "candidate_count": len(PUBLIC_STUDY_PASSAGES),
-        "plan": [
+    with trace.stage("retrieval_planning") if trace else nullcontext():
+        plan = [
             {
                 "origin": "FirstRoll public framework",
                 "lens": passage["concept"],
                 "query": f"{title}: {question}",
             }
             for passage in PUBLIC_STUDY_PASSAGES
-        ],
+        ]
+    if trace:
+        trace.skip("lexical_retrieval")
+        trace.skip("semantic_retrieval")
+    with trace.stage("fusion_and_selection") if trace else nullcontext():
+        passages = [dict(passage) for passage in PUBLIC_STUDY_PASSAGES]
+    return {
+        "passages": passages,
+        "method": "firstroll_public_framework",
+        "candidate_count": len(PUBLIC_STUDY_PASSAGES),
+        "plan": plan,
         "embedding": {
             "state": "first_party_framework",
             "model": None,

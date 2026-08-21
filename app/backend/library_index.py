@@ -4,6 +4,7 @@ import hashlib
 import os
 import re
 import sqlite3
+from contextlib import nullcontext
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -12,6 +13,7 @@ from typing import Any, Iterable, Protocol, Sequence
 import numpy as np
 
 from app.backend.library import LocalLibraryCatalogue
+from app.backend.study_observability import StudyTrace
 
 
 DEFAULT_EMBEDDING_MODEL = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
@@ -286,48 +288,68 @@ class LocalLibraryIndex:
         focus: str | None = None,
         critical_claims: Sequence[Any] | None = None,
         limit: int = 8,
+        *,
+        trace: StudyTrace | None = None,
     ) -> dict[str, Any]:
-        status = self.status()
+        with trace.stage("retrieval_planning") if trace else nullcontext():
+            status = self.status()
+            plan = (
+                QueryPlanner.plan(focus, critical_claims)
+                if status["state"] == "ready"
+                else []
+            )
         if status["state"] != "ready":
-            return {"status": status, "passages": [], "plan": [], "method": "unavailable"}
-        plan = QueryPlanner.plan(focus, critical_claims)
+            if trace:
+                trace.skip("lexical_retrieval")
+                trace.skip("semantic_retrieval")
+                trace.skip("fusion_and_selection")
+            return {"status": status, "passages": [], "plan": plan, "method": "unavailable"}
         fused: dict[str, dict[str, Any]] = {}
         with sqlite3.connect(self.path) as connection:
             connection.row_factory = sqlite3.Row
-            for item in plan:
-                rows = self._fts_candidates(connection, item["query"], 25)
-                for rank, row in enumerate(rows, start=1):
-                    candidate = fused.setdefault(str(row["chunk_id"]), self._candidate(row))
-                    candidate["score"] += 1 / (60 + rank)
-                    candidate["lexical_rank"] = min(candidate.get("lexical_rank", 999), rank)
-                    candidate["reasons"].append(f"lexical · {item['origin']} · {item['lens']}")
+            with trace.stage("lexical_retrieval") if trace else nullcontext():
+                for item in plan:
+                    rows = self._fts_candidates(connection, item["query"], 25)
+                    for rank, row in enumerate(rows, start=1):
+                        candidate = fused.setdefault(str(row["chunk_id"]), self._candidate(row))
+                        candidate["score"] += 1 / (60 + rank)
+                        candidate["lexical_rank"] = min(candidate.get("lexical_rank", 999), rank)
+                        candidate["reasons"].append(
+                            f"lexical · {item['origin']} · {item['lens']}"
+                        )
             dense_ready = status.get("embedding", {}).get("state") == "ready"
             if dense_ready:
                 try:
-                    self._add_dense_candidates(connection, plan, fused)
+                    with trace.stage("semantic_retrieval") if trace else nullcontext():
+                        self._add_dense_candidates(connection, plan, fused)
                 except (ImportError, OSError, RuntimeError, ValueError):
                     dense_ready = False
-            candidates = sorted(fused.values(), key=lambda item: item["score"], reverse=True)
-            selected = self._diverse(candidates, limit)
-        passages = []
-        for candidate in selected:
-            concept = self._concept(f"{candidate['section'] or ''} {candidate['text']}")
-            passages.append(
-                {
-                    "chunk_id": candidate["chunk_id"],
-                    "document_id": candidate["document_id"],
-                    "title": candidate["title"],
-                    "page": candidate["page"],
-                    "section": candidate["section"],
-                    "topics": str(candidate["topics"]).split(" | "),
-                    "language": candidate["language"],
-                    "concept": concept,
-                    "excerpt": self._excerpt(candidate["text"], concept),
-                    "source_kind": "private_local_document",
-                    "retrieval_score": round(candidate["score"], 6),
-                    "retrieval_reason": list(dict.fromkeys(candidate["reasons"]))[:3],
-                }
-            )
+            elif trace:
+                trace.skip("semantic_retrieval")
+            with trace.stage("fusion_and_selection") if trace else nullcontext():
+                candidates = sorted(
+                    fused.values(), key=lambda item: item["score"], reverse=True
+                )
+                selected = self._diverse(candidates, limit)
+                passages = []
+                for candidate in selected:
+                    concept = self._concept(f"{candidate['section'] or ''} {candidate['text']}")
+                    passages.append(
+                        {
+                            "chunk_id": candidate["chunk_id"],
+                            "document_id": candidate["document_id"],
+                            "title": candidate["title"],
+                            "page": candidate["page"],
+                            "section": candidate["section"],
+                            "topics": str(candidate["topics"]).split(" | "),
+                            "language": candidate["language"],
+                            "concept": concept,
+                            "excerpt": self._excerpt(candidate["text"], concept),
+                            "source_kind": "private_local_document",
+                            "retrieval_score": round(candidate["score"], 6),
+                            "retrieval_reason": list(dict.fromkeys(candidate["reasons"]))[:3],
+                        }
+                    )
         return {
             "status": status,
             "passages": passages,

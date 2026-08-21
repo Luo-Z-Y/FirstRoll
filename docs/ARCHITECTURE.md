@@ -142,6 +142,7 @@ future-enterprise path, but ADR-017 removes it from the production critical path
 | `library.py` | Private document catalogue and managed-file metadata | Text extraction or ranking |
 | `library_index.py` | PDF extraction, chunking, FTS5, local embeddings, rank fusion and page citations | Film-specific factual claims |
 | `evidence.py` | Typed evidence packet and permitted-claim boundaries | Model generation or provider access |
+| `study_observability.py` | Allow-listed monotonic stage timings, terminal status and bounded aggregate counts | Prompts, evidence text, credentials, model output or exception details |
 | `study_service.py` | DeepSeek request, Pydantic validation, citation validation, quality gate and one repair | Authentication, quota reservation or research-tool authorisation |
 | `research_stream.py` | Fixed public progress vocabulary and transient owner-scoped result store | Hidden reasoning, prompts, credentials or private evidence bodies |
 | `research_graph` | Bounded LangGraph state, reducers, routes and deterministic safety boundaries | Production provider credentials or public cut-over decision |
@@ -211,11 +212,16 @@ selected film
 → schema and citation validation
 → deterministic quality gate
 → at most one repair
+→ redacted stage observability attached to the private result
 → escaped article rendering
 ```
 
 Only selected excerpts and attributed source text in the evidence packet are sent to DeepSeek. Full
-books, vectors, local paths and uploaded clips do not leave the device.
+books, vectors, local paths and uploaded clips do not leave the device. A shared `StudyTrace` spans
+the HTTP route, cache reads, public or private retrieval, packet assembly and synthesis. It emits only
+schema-controlled stage names, durations, statuses, attempt/failure totals and bounded counts. The
+complete record appears in the owner-visible study result and as a redacted server log record;
+public SSE retains its smaller allow-list and receives no token counts or internal timings.
 
 ### Hosted Deep Study
 

@@ -1,6 +1,7 @@
 import asyncio
 import ipaddress
 import json
+import logging
 import os
 import re
 import subprocess
@@ -47,6 +48,7 @@ from app.backend.research_stream import (
 )
 from app.backend.settings import CONNECTORS, LocalSettingsStore
 from app.backend.tmdb_discovery import HybridDiscoveryService, TmdbDiscoveryService
+from app.backend.study_observability import StudyTrace
 from app.backend.study_service import DeepSeekStudyService, StudyGenerationError
 from app.backend.video_sources import (
     BilibiliPublicVideoAdapter,
@@ -218,6 +220,7 @@ video_service = FilmVideoService(youtube_video_adapter, bilibili_video_adapter, 
 auth_verifier = configured_auth_verifier()
 quota_client = configured_quota_client()
 study_run_store = StudyRunStore()
+study_observability_logger = logging.getLogger("firstroll.study_observability")
 reception_cache: dict[str, dict] = {}
 web_directory = Path(__file__).resolve().parents[1] / "web"
 
@@ -284,40 +287,52 @@ def prepare_film_study(
     question: str | None,
     *,
     public_mode: bool,
+    trace: StudyTrace | None = None,
 ) -> dict:
-    critical_bundles = criticism_store.load_all(film_id)
-    claims = [
-        claim.model_copy(update={"claim_id": f"C{index}"})
-        for index, claim in enumerate(
-            (claim for bundle in critical_bundles for claim in bundle.claims),
-            start=1,
-        )
-    ]
-    reviews = [review for bundle in critical_bundles for review in bundle.reviews]
-    video_bundle = video_service.enrich_cached(film_id)
+    trace = trace or StudyTrace()
+    with trace.stage("criticism_cache"):
+        critical_bundles = criticism_store.load_all(film_id)
+        claims = [
+            claim.model_copy(update={"claim_id": f"C{index}"})
+            for index, claim in enumerate(
+                (claim for bundle in critical_bundles for claim in bundle.claims),
+                start=1,
+            )
+        ]
+        reviews = [review for bundle in critical_bundles for review in bundle.reviews]
+    with trace.stage("video_cache"):
+        video_bundle = video_service.enrich_cached(film_id)
     reading = (
-        build_public_study_retrieval(film, question)
+        build_public_study_retrieval(film, question, trace=trace)
         if public_mode
         else library_index.retrieve_for_film(
             film,
             focus=question,
             critical_claims=claims,
             limit=10,
+            trace=trace,
         )
     )
-    packet = EvidencePacket.from_retrieval(
-        film,
-        reading,
-        question,
-        claims,
-        reviews=reviews,
-        videos=video_bundle.videos if video_bundle else [],
-    )
+    trace.set_count("retrieval_plan_items", len(reading.get("plan", [])))
+    trace.set_count("retrieval_candidates", int(reading.get("candidate_count", 0)))
+    with trace.stage("packet_assembly"):
+        packet = EvidencePacket.from_retrieval(
+            film,
+            reading,
+            question,
+            claims,
+            reviews=reviews,
+            videos=video_bundle.videos if video_bundle else [],
+        )
+    trace.set_count("theory_sources", len(packet.theory_sources))
+    trace.set_count("critical_claims", len(packet.critical_claims))
+    trace.set_count("attributed_sources", len(packet.attributed_sources))
     return {
         "film": film,
         "claims": claims,
         "reading": reading,
         "packet": packet,
+        "trace": trace,
     }
 
 
@@ -941,27 +956,34 @@ def generate_film_study(
                 status_code=503,
                 detail="Deep Study is not fully configured on this deployment yet.",
             )
+    trace = StudyTrace()
     try:
-        detail = discovery_service.detail(film_id)
-        film = detail["film"]
+        with trace.stage("film_context"):
+            detail = discovery_service.detail(film_id)
+            film = detail["film"]
         prepared = prepare_film_study(
             film_id,
             film,
             study_request.question,
             public_mode=public_mode,
+            trace=trace,
         )
         if public_mode and not is_local_test:
             quota = quota_client.reserve(quota_identity(user, request))
+        study = study_service.generate(
+            film,
+            prepared["reading"].get("passages", []),
+            study_request.question,
+            prepared["claims"],
+            evidence_packet=prepared["packet"],
+            api_key=personal_deepseek_key,
+            trace=trace,
+        )
+        trace.finish("completed")
+        study.setdefault("observability", trace.snapshot())
         result = {
             "film_id": film_id,
-            "study": study_service.generate(
-                film,
-                prepared["reading"].get("passages", []),
-                study_request.question,
-                prepared["claims"],
-                evidence_packet=prepared["packet"],
-                api_key=personal_deepseek_key,
-            ),
+            "study": study,
             "credential_source": (
                 "personal_session" if personal_deepseek_key else "firstroll_platform"
             ),
@@ -985,6 +1007,10 @@ def generate_film_study(
         raise HTTPException(status_code=502, detail=str(exc)) from exc
     except StudyGenerationError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
+    finally:
+        if trace.status == "running":
+            trace.finish("failed")
+        study_observability_logger.info("study_observability=%s", trace.as_log_json())
 
 
 @app.post("/api/discovery/films/{film_id:path}/study/stream")
@@ -1014,10 +1040,12 @@ async def stream_film_study(
 
     async def generate_events():
         progress = ResearchProgressStream(run_id)
+        trace = StudyTrace()
         try:
             yield progress.frame("film_resolving")
-            detail = await run_in_threadpool(discovery_service.detail, film_id)
-            film = detail["film"]
+            with trace.stage("film_context"):
+                detail = await run_in_threadpool(discovery_service.detail, film_id)
+                film = detail["film"]
 
             yield progress.frame("existing_evidence_loading")
             prepared = await run_in_threadpool(
@@ -1026,6 +1054,7 @@ async def stream_film_study(
                 film,
                 study_request.question,
                 public_mode=public_mode,
+                trace=trace,
             )
             packet = prepared["packet"]
             yield progress.frame(
@@ -1053,7 +1082,10 @@ async def stream_film_study(
                 prepared["claims"],
                 evidence_packet=packet,
                 api_key=personal_deepseek_key,
+                trace=trace,
             )
+            trace.finish("completed")
+            study.setdefault("observability", trace.snapshot())
             payload = {
                 "film_id": film_id,
                 "study": study,
@@ -1102,6 +1134,10 @@ async def stream_film_study(
             message = public_progress_message("run_failed", variant)
             study_run_store.fail(run_id, owner_id, message)
             yield progress.frame("run_failed", message_variant=variant)
+        finally:
+            if trace.status == "running":
+                trace.finish("failed")
+            study_observability_logger.info("study_observability=%s", trace.as_log_json())
 
     return StreamingResponse(
         generate_events(),

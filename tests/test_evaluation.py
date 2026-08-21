@@ -7,6 +7,7 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
+from app.backend.study_observability import STUDY_STAGE_NAMES  # noqa: E402
 from tools.evaluate_workflow import aggregate, identity_matches, percentile, score_study  # noqa: E402
 
 
@@ -80,6 +81,8 @@ def test_pre_agent_scorecard_freezes_steps_journeys_and_entry_targets() -> None:
     assert prompt_tokens == baseline["completed_prompt_tokens"]
     assert baseline["median_prompt_tokens_completed"] == 7882.5
     assert baseline["p95_prompt_tokens_completed"] == percentile(prompt_tokens, 0.95)
+
+    assert scorecard["latency_stages"] == list(STUDY_STAGE_NAMES)
 
     journey_ids = [journey["id"] for journey in scorecard["user_journeys"]]
     assert journey_ids == [f"J{index:02d}" for index in range(1, 7)]
