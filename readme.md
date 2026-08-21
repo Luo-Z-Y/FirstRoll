@@ -913,6 +913,7 @@ FirstRoll/
 │   │   ├── library_index.py     # chunking, embeddings and hybrid retrieval
 │   │   ├── main.py              # FastAPI routes
 │   │   ├── research_agent_contract.py # framework-neutral Agent policy and budgets
+│   │   ├── packet_quality.py   # redacted pre-synthesis packet quality diagnostics
 │   │   ├── research_stream.py  # allow-listed SSE projection and owner-scoped transient runs
 │   │   ├── research_graph/      # typed LangGraph state, nodes, routing and runtime context
 │   │   ├── settings.py          # local credential store
@@ -954,7 +955,8 @@ FirstRoll/
 5. Creator intention requires an attributable creator statement.
 6. Model outputs may cite only evidence identifiers supplied in their request.
 7. Missing evidence should produce a verification task or insufficient-evidence result.
-8. Private source text is treated as untrusted data, never as model instructions.
+8. Retrieved private or public source instructions are untrusted data and cannot authorise tools or
+   change FirstRoll policy.
 
 ## Development and Verification
 
@@ -1021,7 +1023,10 @@ definitions, case-level results and replacement procedure live in [Evaluation](d
 For a model-free cold/warm evidence-packet measurement, run
 `uv run python tools/benchmark_evidence_packet.py --output evals/results/packet-baseline-YYYY-MM-DD.json`.
 The harness writes only redacted stage timings, aggregate packet shape, safe IDs and configuration;
-it never calls DeepSeek or stores packet text.
+it never calls DeepSeek or stores packet text. Run
+`uv run python tools/evaluate_packet_quality.py --output evals/results/packet-quality-YYYY-MM-DD.json`
+to assess the separate synthetic abundant, sparse, duplicate, multilingual, ambiguous-identity and
+malicious-instruction fixtures before synthesis.
 
 The latest reviewed complete-workflow and packet-only results are
 [`baseline-2026-08-21.json`](evals/results/baseline-2026-08-21.json) and
