@@ -1,0 +1,400 @@
+{
+  "schema_version": 1,
+  "programme_id": "firstroll-pre-agent-hardening-v1",
+  "status": "active",
+  "purpose": "Stabilise the fixed FirstRoll product before any production Agent integration.",
+  "scope": {
+    "primary_runtime": "local_private_edition",
+    "regression_runtime": "hosted_public_beta",
+    "priorities": [
+      "user_interface",
+      "evidence_packet_latency",
+      "evidence_packet_quality"
+    ],
+    "excluded_until_entry_gate": [
+      "production_research_graph_adapter",
+      "agent_route_cutover",
+      "agent_model_or_tool_comparison"
+    ]
+  },
+  "frozen_baseline": {
+    "suite_path": "evals/agent_cases.json",
+    "suite_id": "firstroll-agent-comparison-v1",
+    "result_path": "evals/results/baseline-2026-08-18.json",
+    "recorded_at": "2026-08-17T18:54:33.665031+00:00",
+    "attempted_cases": 5,
+    "completed_cases": 4,
+    "operational_failure_rate": 0.2,
+    "mean_quality_score_completed": 98.94,
+    "p50_end_to_end_seconds": 66.409,
+    "p95_end_to_end_seconds": 96.451,
+    "mean_study_seconds": 58.52,
+    "completed_prompt_tokens": [
+      5238,
+      14992,
+      4257,
+      10527
+    ],
+    "median_prompt_tokens_completed": 7882.5,
+    "p95_prompt_tokens_completed": 14322.25,
+    "quality_scope": "Automated structure, citation, calibration and verifiability proxy; not factual film-analysis correctness.",
+    "unmeasured": [
+      "evidence_packet_stage_latency",
+      "evidence_packet_duplicate_ratio",
+      "evidence_packet_provenance_completeness",
+      "human_packet_usefulness",
+      "user_journey_completion"
+    ]
+  },
+  "user_journeys": [
+    {
+      "id": "J01",
+      "name": "Exact discovery to dossier",
+      "runtimes": [
+        "local_private_edition",
+        "hosted_public_beta"
+      ],
+      "success": "An exact title resolves to the intended film, opens an attributed dossier and presents a usable director shelf without stale content."
+    },
+    {
+      "id": "J02",
+      "name": "Ambiguous identity confirmation",
+      "runtimes": [
+        "local_private_edition",
+        "hosted_public_beta"
+      ],
+      "success": "A same-title query requires an explicit year-and-director choice before dossier, evidence or study work begins."
+    },
+    {
+      "id": "J03",
+      "name": "Inspect attributed evidence",
+      "runtimes": [
+        "local_private_edition",
+        "hosted_public_beta"
+      ],
+      "success": "The filmmaker can distinguish providers, source text, critic claims, theory passages and epistemic limitations and can open every applicable public source."
+    },
+    {
+      "id": "J04",
+      "name": "Generate and inspect Deep Study",
+      "runtimes": [
+        "local_private_edition",
+        "hosted_public_beta"
+      ],
+      "success": "A focused question produces immediate visible feedback, an assessable terminal result and citations that resolve to evidence supplied to synthesis."
+    },
+    {
+      "id": "J05",
+      "name": "Navigate and resume work",
+      "runtimes": [
+        "local_private_edition",
+        "hosted_public_beta"
+      ],
+      "success": "Discover, Analyse and Settings navigation and a refresh preserve the documented summary-only workspace without leaking private evidence or credentials."
+    },
+    {
+      "id": "J06",
+      "name": "Recover from sparse evidence or provider failure",
+      "runtimes": [
+        "local_private_edition",
+        "hosted_public_beta"
+      ],
+      "success": "Insufficient evidence, timeout and degraded-provider outcomes remain honest, actionable and retryable and never display stale output as a new result."
+    }
+  ],
+  "latency_stages": [
+    "film_context",
+    "criticism_cache",
+    "video_cache",
+    "retrieval_planning",
+    "lexical_retrieval",
+    "semantic_retrieval",
+    "fusion_and_selection",
+    "packet_assembly",
+    "prompt_serialisation",
+    "model_transport",
+    "validation_and_repair",
+    "end_to_end"
+  ],
+  "targets": {
+    "stage_observability_ratio": {
+      "unit": "ratio",
+      "comparison": "gte",
+      "threshold": 1.0,
+      "definition": "Applicable latency stages emit monotonic duration and status data; inapplicable stages are explicitly marked skipped."
+    },
+    "ui_visible_response_p95_ms": {
+      "unit": "milliseconds",
+      "comparison": "lte",
+      "threshold": 300,
+      "definition": "Time from a user activation to a visible pending, navigation or completed state across the frozen journeys."
+    },
+    "ui_core_journey_blockers": {
+      "unit": "count",
+      "comparison": "eq",
+      "threshold": 0,
+      "definition": "P0 or P1 defects that prevent a frozen journey at desktop or 390-pixel mobile width."
+    },
+    "ui_critical_accessibility_defects": {
+      "unit": "count",
+      "comparison": "eq",
+      "threshold": 0,
+      "definition": "Critical keyboard, focus, naming, contrast or status-announcement defects in the frozen journeys."
+    },
+    "warm_packet_prepare_p95_seconds": {
+      "unit": "seconds",
+      "comparison": "lte",
+      "threshold": 2.0,
+      "definition": "Packet preparation from prepared film context through validated packet, excluding provider acquisition and model transport, after one unrecorded warm-up."
+    },
+    "warm_packet_prepare_relative_reduction": {
+      "unit": "ratio",
+      "comparison": "gte_when_baseline_exceeds_budget",
+      "threshold": 0.3,
+      "definition": "Required reduction from the Step 3 warm P95 when that baseline exceeds the two-second budget."
+    },
+    "cold_packet_prepare_p95_seconds": {
+      "unit": "seconds",
+      "comparison": "report_only",
+      "threshold": null,
+      "definition": "The first packet preparation in a fresh process with process caches empty and the persisted local index retained."
+    },
+    "median_prompt_tokens": {
+      "unit": "tokens",
+      "comparison": "lte",
+      "threshold": 8000,
+      "definition": "Median provider-reported input tokens across completed frozen-suite studies."
+    },
+    "p95_prompt_tokens": {
+      "unit": "tokens",
+      "comparison": "lte",
+      "threshold": 12000,
+      "definition": "Linear-interpolated P95 provider-reported input tokens across completed frozen-suite studies."
+    },
+    "packet_duplicate_ratio": {
+      "unit": "ratio",
+      "comparison": "lt",
+      "threshold": 0.1,
+      "definition": "Selected evidence items duplicated by canonical source identity or normalised substantive excerpt, divided by selected evidence items."
+    },
+    "packet_provenance_completeness": {
+      "unit": "ratio",
+      "comparison": "eq",
+      "threshold": 1.0,
+      "definition": "Selected evidence has its applicable identifier, type, title, attribution, locator and public URL fields; non-applicable fields are explicit."
+    },
+    "packet_citation_integrity": {
+      "unit": "ratio",
+      "comparison": "eq",
+      "threshold": 1.0,
+      "definition": "Every generated citation resolves to an evidence identifier supplied in the packet and no omitted identifier is cited."
+    },
+    "retrieved_instruction_containment": {
+      "unit": "ratio",
+      "comparison": "eq",
+      "threshold": 1.0,
+      "definition": "All adversarial fixtures keep retrieved instructions as untrusted evidence and outside tool or policy authority."
+    },
+    "human_packet_pass_ratio": {
+      "unit": "ratio",
+      "comparison": "gte",
+      "threshold": 0.8,
+      "definition": "Proportion of frozen cases scoring at least four for focus relevance, traceability and filmmaker actionability, with no dimension below three."
+    },
+    "fixed_suite_completion_ratio": {
+      "unit": "ratio",
+      "comparison": "eq",
+      "threshold": 1.0,
+      "definition": "Assessable terminal results divided by all five frozen cases in the final controlled run."
+    },
+    "mean_quality_score_completed": {
+      "unit": "points",
+      "comparison": "gte",
+      "threshold": 96.94,
+      "definition": "Existing automated quality proxy averaged over completed studies; a two-point non-inferiority floor against 98.94, not a factual-quality claim."
+    },
+    "quality_gate_pass_ratio_completed": {
+      "unit": "ratio",
+      "comparison": "eq",
+      "threshold": 1.0,
+      "definition": "Completed final studies accepted by the deterministic quality gate."
+    },
+    "paired_end_to_end_median_reduction": {
+      "unit": "ratio",
+      "comparison": "gte",
+      "threshold": 0.15,
+      "definition": "Same-day paired reduction in median end-to-end latency with the model and provider configuration held constant."
+    },
+    "paired_end_to_end_p95_regression": {
+      "unit": "ratio",
+      "comparison": "lte",
+      "threshold": 0.0,
+      "definition": "Same-day paired proportional P95 increase; a positive value is a regression."
+    }
+  },
+  "human_packet_rubric": [
+    {
+      "id": "focus_relevance",
+      "question": "Does the selected evidence directly help answer the filmmaker's stated focus?",
+      "anchors": {
+        "1": "Mostly unrelated or generic material.",
+        "3": "A useful core with noticeable generic or peripheral material.",
+        "5": "Every retained item materially advances the stated focus."
+      }
+    },
+    {
+      "id": "traceability",
+      "question": "Can the reader tell who said what and return to the applicable source or private locator?",
+      "anchors": {
+        "1": "Claims and origins are difficult to distinguish.",
+        "3": "Most origins are understandable but some links or locators require inference.",
+        "5": "Evidence type, attribution and applicable source or locator are unambiguous throughout."
+      }
+    },
+    {
+      "id": "source_diversity",
+      "question": "Does the packet balance relevant theory, criticism and available primary or audiovisual evidence without repetitive padding?",
+      "anchors": {
+        "1": "One repetitive source class dominates without justification.",
+        "3": "More than one useful perspective is present but the balance could improve.",
+        "5": "The packet uses the strongest available complementary perspectives and explains genuine absences."
+      }
+    },
+    {
+      "id": "epistemic_calibration",
+      "question": "Does the packet preserve the boundary between observations, attributed reports, frameworks and hypotheses?",
+      "anchors": {
+        "1": "Evidence categories or certainty are materially conflated.",
+        "3": "The main boundaries are visible with occasional ambiguity.",
+        "5": "Every item has an appropriate evidence type and confidence boundary."
+      }
+    },
+    {
+      "id": "filmmaker_actionability",
+      "question": "Would this packet help a filmmaker conduct a more precise close viewing or formal experiment?",
+      "anchors": {
+        "1": "It offers little usable direction for viewing or making.",
+        "3": "It suggests useful lines of inquiry but remains partly generic.",
+        "5": "It enables specific, observable and practically useful viewing tests."
+      }
+    }
+  ],
+  "measurement_protocol": {
+    "clock": "monotonic",
+    "percentile_method": "linear_interpolation_n_minus_1",
+    "packet_warm_samples_per_case": 5,
+    "packet_cold_processes_per_case": 2,
+    "packet_cases": "the five identities and questions in evals/agent_cases.json",
+    "browser_widths_css_px": [
+      390,
+      1280
+    ],
+    "paired_run_controls": [
+      "same commit except the isolated candidate change",
+      "same machine and Python environment",
+      "same film identities, questions and cached evidence snapshot",
+      "same private-index fingerprint",
+      "same model, provider and timeout configuration",
+      "one changed variable per comparison"
+    ],
+    "provider_reliability_claim_minimum_attempts": 20,
+    "sensitive_data_policy": "Commit aggregate timings, counts and identifiers only; never commit credentials, private passages, prompts, full review bodies, vectors, caches or uploaded clips."
+  },
+  "steps": [
+    {
+      "id": "S01",
+      "name": "Define the scorecard",
+      "status": "complete"
+    },
+    {
+      "id": "S02",
+      "name": "Instrument evidence preparation",
+      "status": "next"
+    },
+    {
+      "id": "S03",
+      "name": "Capture the measured baseline",
+      "status": "queued"
+    },
+    {
+      "id": "S04",
+      "name": "Improve user-interface hierarchy",
+      "status": "queued"
+    },
+    {
+      "id": "S05",
+      "name": "Improve user-interface states and accessibility",
+      "status": "queued"
+    },
+    {
+      "id": "S06",
+      "name": "Reduce evidence-packet latency",
+      "status": "queued"
+    },
+    {
+      "id": "S07",
+      "name": "Establish packet-quality fixtures",
+      "status": "queued"
+    },
+    {
+      "id": "S08",
+      "name": "Improve packet selection quality",
+      "status": "queued"
+    },
+    {
+      "id": "S09",
+      "name": "Improve Deep Study transparency",
+      "status": "queued"
+    },
+    {
+      "id": "S10",
+      "name": "Tune synthesis reliability",
+      "status": "queued"
+    },
+    {
+      "id": "S11",
+      "name": "Freeze the fixed-workflow baseline",
+      "status": "queued"
+    },
+    {
+      "id": "S12",
+      "name": "Make the Agent go/no-go decision",
+      "status": "blocked_by_entry_gate"
+    }
+  ],
+  "agent_entry_gate": {
+    "required_completed_steps": [
+      "S01",
+      "S02",
+      "S03",
+      "S04",
+      "S05",
+      "S06",
+      "S07",
+      "S08",
+      "S09",
+      "S10",
+      "S11"
+    ],
+    "required_target_ids": [
+      "stage_observability_ratio",
+      "ui_visible_response_p95_ms",
+      "ui_core_journey_blockers",
+      "ui_critical_accessibility_defects",
+      "warm_packet_prepare_p95_seconds",
+      "median_prompt_tokens",
+      "p95_prompt_tokens",
+      "packet_duplicate_ratio",
+      "packet_provenance_completeness",
+      "packet_citation_integrity",
+      "retrieved_instruction_containment",
+      "human_packet_pass_ratio",
+      "fixed_suite_completion_ratio",
+      "mean_quality_score_completed",
+      "quality_gate_pass_ratio_completed",
+      "paired_end_to_end_median_reduction",
+      "paired_end_to_end_p95_regression"
+    ],
+    "decision": "Production Agent integration remains out of scope until every required step and target has reviewed acceptance evidence."
+  }
+}

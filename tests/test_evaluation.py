@@ -50,6 +50,75 @@ def test_frozen_agent_cases_cover_identity_and_evidence_challenges() -> None:
     }
 
 
+def test_pre_agent_scorecard_freezes_steps_journeys_and_entry_targets() -> None:
+    scorecard_path = ROOT / "evals" / "pre_agent_scorecard.json"
+    scorecard = json.loads(scorecard_path.read_text(encoding="utf-8"))
+    suite = json.loads(
+        (ROOT / scorecard["frozen_baseline"]["suite_path"]).read_text(encoding="utf-8")
+    )
+    result = json.loads(
+        (ROOT / scorecard["frozen_baseline"]["result_path"]).read_text(encoding="utf-8")
+    )
+
+    baseline = scorecard["frozen_baseline"]
+    summary = result["summary"]
+    assert scorecard["programme_id"] == "firstroll-pre-agent-hardening-v1"
+    assert baseline["suite_id"] == suite["suite_id"] == result["suite_id"]
+    assert baseline["recorded_at"] == result["recorded_at"]
+    assert baseline["attempted_cases"] == summary["case_count"]
+    assert baseline["completed_cases"] == summary["successful_cases"]
+    assert baseline["operational_failure_rate"] == summary["operational_failure_rate"]
+    assert baseline["mean_quality_score_completed"] == summary["mean_quality_score"]
+    assert baseline["p50_end_to_end_seconds"] == summary["latency_seconds"]["p50_end_to_end"]
+    assert baseline["p95_end_to_end_seconds"] == summary["latency_seconds"]["p95_end_to_end"]
+
+    prompt_tokens = [
+        call["usage"]["prompt_tokens"]
+        for case in result["cases"]
+        for call in case.get("model_calls", [])
+    ]
+    assert prompt_tokens == baseline["completed_prompt_tokens"]
+    assert baseline["median_prompt_tokens_completed"] == 7882.5
+    assert baseline["p95_prompt_tokens_completed"] == percentile(prompt_tokens, 0.95)
+
+    journey_ids = [journey["id"] for journey in scorecard["user_journeys"]]
+    assert journey_ids == [f"J{index:02d}" for index in range(1, 7)]
+    assert all(journey["success"] for journey in scorecard["user_journeys"])
+    assert all(
+        "local_private_edition" in journey["runtimes"]
+        for journey in scorecard["user_journeys"]
+    )
+
+    steps = scorecard["steps"]
+    assert [step["id"] for step in steps] == [f"S{index:02d}" for index in range(1, 13)]
+    next_indices = [index for index, step in enumerate(steps) if step["status"] == "next"]
+    assert len(next_indices) == 1
+    next_index = next_indices[0]
+    assert all(step["status"] == "complete" for step in steps[:next_index])
+    assert all(
+        step["status"] in {"queued", "blocked_by_entry_gate"}
+        for step in steps[next_index + 1 :]
+    )
+
+    target_ids = set(scorecard["targets"])
+    required_targets = set(scorecard["agent_entry_gate"]["required_target_ids"])
+    assert required_targets <= target_ids
+    assert scorecard["agent_entry_gate"]["required_completed_steps"] == [
+        f"S{index:02d}" for index in range(1, 12)
+    ]
+    assert {item["id"] for item in scorecard["human_packet_rubric"]} == {
+        "focus_relevance",
+        "traceability",
+        "source_diversity",
+        "epistemic_calibration",
+        "filmmaker_actionability",
+    }
+    assert scorecard["measurement_protocol"]["percentile_method"] == (
+        "linear_interpolation_n_minus_1"
+    )
+    assert '"week"' not in scorecard_path.read_text(encoding="utf-8").casefold()
+
+
 def test_identity_match_requires_title_year_and_director() -> None:
     expected = {"title": "The Thing", "year": 1982, "director": "John Carpenter"}
     assert identity_matches(

@@ -1,6 +1,6 @@
 # FirstRoll Evaluation
 
-**Last reconciled:** 19 August 2026
+**Last reconciled:** 21 August 2026
 
 **Canonical result directory:** `evals/results/`
 
@@ -8,6 +8,11 @@ This document defines how FirstRoll records quality, latency and failure behavio
 versioned evidence, not a timeless product claim. The source of truth is the newest reviewed JSON
 artefact committed under `evals/results/`; screenshots and copied Markdown tables are explanatory
 views only.
+
+The active fixed-workflow improvement sequence, frozen user journeys and Agent entry targets are in
+[Pre-Agent Product Hardening](PRE_AGENT_HARDENING.md), backed by the machine-readable
+[`pre_agent_scorecard.json`](../evals/pre_agent_scorecard.json). That scorecard governs future work;
+it does not replace a measured result or retroactively add unobserved metrics to this baseline.
 
 ## Latest Versioned Baseline
 
@@ -81,7 +86,7 @@ study.
 | Quality score | Weighted proxy for identity, structure, gate result, citation integrity, calibration, verifiability and evidence coverage | Each completed study |
 | Repair rate | Completed studies that required the one permitted repair call | Completed studies only |
 | End-to-end latency | Search start through terminal success or failure | All attempted cases |
-| P50/P95 | Nearest-rank latency percentiles reported by the evaluator | All attempted cases |
+| P50/P95 | Linear-interpolated `(n - 1)` percentiles reported by the evaluator | All attempted cases |
 | Model calls/tokens | Provider-reported calls and token use during the run | Complete suite |
 
 Generic wording, a generic central argument and weak causal signalling reduce the deterministic
@@ -130,3 +135,5 @@ Then:
 
 Do not overwrite a historical result or update only the README table. A baseline is reproducible
 only when its cases, policy, configuration fingerprint and raw aggregate record travel together.
+Packet-only measurements follow the cold/warm and redaction rules in the Pre-Agent scorecard and
+must remain distinguishable from provider acquisition and model transport.

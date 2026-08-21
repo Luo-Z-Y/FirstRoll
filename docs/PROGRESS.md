@@ -1,5 +1,45 @@
 # FirstRoll Project Progress
 
+### 21 August 2026 — Step-based Pre-Agent product scorecard
+
+Delivered:
+
+1. Replaced the calendar-based proposal with twelve ordered, acceptance-gated steps that can be
+   completed at a flexible pace while keeping production Agent integration out of scope until the
+   fixed workflow is stable.
+2. Froze six local-first user journeys covering exact and ambiguous discovery, evidence inspection,
+   Deep Study, navigation continuity and honest failure recovery, with hosted behaviour retained as
+   a regression lane.
+3. Added a machine-readable scorecard for interface response, packet-stage observability, cold/warm
+   latency, prompt size, provenance, duplication, citation integrity, adversarial containment,
+   human usefulness and final workflow reliability.
+4. Preserved the five existing Agent-comparison cases and the 18 August raw baseline instead of
+   rewriting unknown packet or human-quality measurements as historical claims.
+5. Defined the human packet rubric, paired-run controls, sensitive-data policy and explicit Agent
+   entry gate, and corrected the percentile documentation to match the evaluator's `(n - 1)` linear
+   interpolation.
+
+Acceptance evidence:
+
+- automated contract coverage proves that the scorecard references the frozen suite and raw
+  baseline, reproduces their recorded summary, has one ordered next step and cannot name a missing
+  Agent-entry target;
+- all 187 automated tests, scoped Ruff and repository whitespace checks pass;
+- README status, roadmap and evaluation documentation link to the same step-based contract.
+
+Known constraints:
+
+- packet-stage latency, duplicate ratio, provenance completeness, human packet usefulness and UI
+  journey timing remain explicitly unmeasured; Step 1 defines how to measure them but claims no
+  result;
+- the current 98.94 automated score remains a structural/citation/calibration proxy rather than
+  evidence of factual film-analysis correctness.
+
+Next actionable work:
+
+1. Complete Step 2 by adding redacted monotonic timing and status data for each applicable evidence,
+   model and validation stage without exposing prompts, private passages, credentials or responses.
+
 ### 21 August 2026 — Local and hosted account-shell parity
 
 Delivered:

@@ -15,8 +15,9 @@ keeps those layers visible instead of presenting one fluent but unsupported answ
 > criticism, DeepSeek synthesis and clip analysis are implemented. The hosted edition publishes
 > discovery, the native director shelf and authenticated Deep Study while keeping private-library
 > tools, clip analysis and unauthenticated model use disabled. Supabase email authentication, atomic
-> daily quotas and redacted SSE research progress are implemented. The next research milestone is
-> connecting measured clip evidence to Deep Study.
+> daily quotas and redacted SSE research progress are implemented. The active milestone is the
+> step-based fixed-workflow hardening programme for interface clarity, evidence-packet latency and
+> evidence quality; production Agent integration remains gated behind its reviewed scorecard.
 
 See [Project Progress](docs/PROGRESS.md) for completed milestones, verification results,
 known limitations and the next priorities.
@@ -33,6 +34,7 @@ environment configuration, acceptance checks and operational limits.
 | Review Supabase, SQLite, JSON and in-memory storage | [Data Model](docs/DATA_MODEL.md) |
 | Understand why the major architectural choices were made | [Architecture Decisions](docs/DECISIONS.md) |
 | Read the current versioned benchmark and update protocol | [Evaluation](docs/EVALUATION.md) |
+| Follow the flexible fixed-workflow steps before Agent work | [Pre-Agent Product Hardening](docs/PRE_AGENT_HARDENING.md) |
 | Install and run the private local edition | [Local Setup](docs/LOCAL_SETUP.md) |
 | Operate the public Azure deployment | [Public Beta Hosting](docs/HOSTING.md) |
 | Review provider, copyright and model-use boundaries | [Data Sources](docs/DATA_SOURCES.md) |
@@ -909,8 +911,13 @@ FirstRoll/
 │   ├── EVALUATION.md
 │   ├── HOSTING.md
 │   ├── LOCAL_SETUP.md
+│   ├── PRE_AGENT_HARDENING.md
 │   ├── PROGRESS.md
 │   └── RELEASE.md
+├── evals/
+│   ├── agent_cases.json
+│   ├── pre_agent_scorecard.json
+│   └── results/
 ├── tests/
 ├── tools/
 ├── .env.example
@@ -975,8 +982,9 @@ fallback behaviour; these are tracked separately from the new FirstRoll modules.
 | Evidence-grounded Deep Study | Complete | Typed theory, criticism, review and video-text evidence; Pydantic output, citation validation and quality gate |
 | Bounded research Agent core | Implemented | LangGraph control flow, bounded reducers, deterministic tool authorisation, fake-service scenarios and optional checkpointing; production route integration remains gated |
 | Authenticated research progress | Implemented | Allow-listed SSE lifecycle events, separate owner-scoped result retrieval and secret/evidence redaction tests; final interactive browser observation remains pending |
+| Pre-Agent product hardening | Active — Step 1 complete | Flexible gated steps for interface clarity, packet observability/latency, evidence quality and fixed-workflow reliability |
 | Clip analysis web migration | Complete | Scene, shot, colour, object and export workflow |
-| Clip-to-study evidence bridge | Next | Feed measured scenes, shots and timecodes into synthesis |
+| Clip-to-study evidence bridge | Queued | Feed measured scenes, shots and timecodes into synthesis after the active hardening sequence |
 | Creator primary-source layer | Partial | Discovered interview descriptions and public YouTube captions are stored and cited; verified speaker attribution and dedicated interview search remain planned |
 | Persistent film projects | Planned | Retain film records, clips, analyses, notes and studies |
 | Evaluation suite | Baseline recorded | Five frozen Agent-comparison cases now record accepted quality, operational and quality failure rates, latency, repair use and token consumption |
@@ -993,7 +1001,10 @@ definitions, case-level results and replacement procedure live in [Evaluation](d
 The source of truth is the newest reviewed JSON artefact under `evals/results/`, not a screenshot or
 copied Markdown table. Any fixed-workflow or Agent comparison must use the same identities, questions
 and rubric in [`evals/agent_cases.json`](evals/agent_cases.json), report operational and quality
-failures separately and retain its non-secret configuration fingerprint.
+failures separately and retain its non-secret configuration fingerprint. The active step order,
+packet/UI targets and Agent entry gate are versioned separately in
+[`evals/pre_agent_scorecard.json`](evals/pre_agent_scorecard.json) and explained in
+[Pre-Agent Product Hardening](docs/PRE_AGENT_HARDENING.md).
 
 ## Known Limitations
 
