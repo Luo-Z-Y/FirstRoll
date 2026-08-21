@@ -46,6 +46,7 @@ def test_packet_metrics_expose_only_aggregate_shape() -> None:
         {"title": "Private example", "year": 2026},
         {
             "method": "hybrid_rrf",
+            "candidate_count": 12,
             "passages": [
                 {
                     "title": "Private book",
@@ -60,7 +61,11 @@ def test_packet_metrics_expose_only_aggregate_shape() -> None:
 
     metrics = safe_packet_metrics(packet)
 
+    assert metrics["theory_candidates"] == 12
     assert metrics["theory_sources"] == 1
+    assert metrics["theory_unselected"] == 11
+    assert metrics["attributed_candidates"] == 0
+    assert metrics["attributed_omitted"] == 0
     assert metrics["theory_characters"] == len(PRIVATE_PASSAGE)
     assert metrics["packet_json_characters"] > len(PRIVATE_PASSAGE)
     serialised = json.dumps(metrics)

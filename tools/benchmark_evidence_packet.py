@@ -107,10 +107,17 @@ def load_case_specs(cases_path: Path, reference_path: Path) -> list[dict[str, An
 
 
 def safe_packet_metrics(packet: EvidencePacket) -> dict[str, int]:
+    attributed = packet.retrieval.get("attributed_selection", {})
+    theory_candidates = int(packet.retrieval.get("candidate_count", 0))
     return {
+        "theory_candidates": theory_candidates,
         "theory_sources": len(packet.theory_sources),
+        "theory_unselected": max(0, theory_candidates - len(packet.theory_sources)),
         "critical_claims": len(packet.critical_claims),
+        "attributed_candidates": int(attributed.get("candidate_items", 0)),
         "attributed_sources": len(packet.attributed_sources),
+        "attributed_omitted": int(attributed.get("omitted_items", 0)),
+        "attributed_truncated": int(attributed.get("truncated_items", 0)),
         "boundaries": len(packet.boundaries),
         "theory_characters": sum(len(item.content) for item in packet.theory_sources),
         "critical_claim_characters": sum(

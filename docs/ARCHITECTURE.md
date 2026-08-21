@@ -141,7 +141,7 @@ future-enterprise path, but ADR-017 removes it from the production critical path
 | `video_sources.py` | Public video discovery, classification, deduplication, captions/descriptions and private cache | Copyright adjudication or verified speaker identity by default |
 | `library.py` | Private document catalogue and managed-file metadata | Text extraction or ranking |
 | `library_index.py` | PDF extraction, chunking, FTS5, local embeddings, rank fusion and page citations | Film-specific factual claims |
-| `evidence.py` | Typed evidence packet and permitted-claim boundaries | Model generation or provider access |
+| `evidence.py` | Typed evidence packet, permitted-claim boundaries and aggregate attributed-selection/omission accounting | Model generation or provider access |
 | `study_observability.py` | Allow-listed monotonic stage timings, terminal status and bounded aggregate counts | Prompts, evidence text, credentials, model output or exception details |
 | `study_service.py` | DeepSeek request, Pydantic validation, citation validation, quality gate and one repair | Authentication, quota reservation or research-tool authorisation |
 | `research_stream.py` | Fixed public progress vocabulary and transient owner-scoped result store | Hidden reasoning, prompts, credentials or private evidence bodies |

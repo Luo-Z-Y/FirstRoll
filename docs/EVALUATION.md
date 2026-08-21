@@ -141,7 +141,8 @@ uv run python tools/benchmark_evidence_packet.py \
 The default protocol reuses the five frozen identities/questions, resolves their canonical IDs from
 the reviewed fixed-workflow baseline, runs two fresh cold processes and one unrecorded warm-up plus
 five measured warm samples per case. Film resolution happens before the packet clock. The report
-contains only stage observations, aggregate packet shape, public IDs and a non-secret configuration
+contains only stage observations, aggregate packet shape, selected/unselected theory counts,
+attributed candidate/selection/omission/truncation totals, public IDs and a non-secret configuration
 fingerprint; the harness rejects film queries, questions, titles, directors and evidence-text fields
 before writing. It never invokes `DeepSeekStudyService.generate` and records zero model calls.
 

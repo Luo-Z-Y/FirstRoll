@@ -246,6 +246,16 @@ class DeepSeekStudyService:
         trace.set_count("theory_sources", len(packet.theory_sources))
         trace.set_count("critical_claims", len(packet.critical_claims))
         trace.set_count("attributed_sources", len(packet.attributed_sources))
+        attributed_selection = packet.retrieval.get("attributed_selection", {})
+        trace.set_count(
+            "attributed_candidates", int(attributed_selection.get("candidate_items", 0))
+        )
+        trace.set_count(
+            "attributed_omitted", int(attributed_selection.get("omitted_items", 0))
+        )
+        trace.set_count(
+            "attributed_truncated", int(attributed_selection.get("truncated_items", 0))
+        )
         if not packet.theory_sources:
             raise StudyGenerationError(
                 "No cited local passages are available. Build the private library index first."

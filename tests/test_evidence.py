@@ -95,6 +95,54 @@ def test_evidence_packet_includes_review_bodies_and_typed_video_text() -> None:
     assert packet.attributed_sources[2].locator == "YouTube · auto_captions · Festival channel"
     assert packet.attributed_sources[2].evidence_type == "critic_reported"
     assert any("speaker identity" in boundary for boundary in packet.boundaries)
+    selection = packet.retrieval["attributed_selection"]
+    assert selection["candidate_items"] == 3
+    assert selection["selected_items"] == 3
+    assert selection["omitted_items"] == 0
+    assert selection["truncated_items"] == 0
+
+
+def test_evidence_packet_reports_bounded_attributed_omissions_without_source_text() -> None:
+    reviews = [
+        ReviewSource(
+            source_id=f"R{index}",
+            provider="Synthetic publication",
+            review_id=f"review-{index}",
+            title=f"Review {index}",
+            summary="x" * 7000,
+            author="Synthetic critic",
+            url=f"https://example.org/review-{index}",
+            language="en",
+        )
+        for index in range(1, 9)
+    ]
+
+    packet = EvidencePacket.from_retrieval(
+        {"title": "Example", "year": 2024},
+        {"passages": []},
+        None,
+        reviews=reviews,
+    )
+
+    selection = packet.retrieval["attributed_selection"]
+    assert len(packet.attributed_sources) == 6
+    assert selection == {
+        "candidate_items": 8,
+        "selected_items": 6,
+        "omitted_items": 2,
+        "truncated_items": 6,
+        "input_characters": 56000,
+        "selected_characters": 36000,
+        "omitted_characters": 20000,
+        "maximum_total_characters": 36000,
+        "maximum_item_characters": 6000,
+        "omission_reasons": {
+            "below_minimum_content": 0,
+            "total_budget_exhausted": 2,
+        },
+    }
+    assert "Synthetic critic" not in str(selection)
+    assert "x" * 40 not in str(selection)
 
 
 def test_quality_gate_rejects_generic_unobservable_prose() -> None:
