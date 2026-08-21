@@ -68,9 +68,10 @@ The original GPL-3.0 licence and contributor attribution remain applicable. See
   a 3D model or the related-film provider before becoming useful. A bounded fast request adds
   verified directing work in place, then a best-effort background request upgrades any additional
   poster covers without returning the shelf to a loading state. Native images and designed title/year
-  covers keep every case legible. If the fast request fails, FirstRoll removes the placeholders,
-  retains the selected film and offers an explicit retry instead of replacing the shelf with an
-  unavailable panel. Selecting another case rebuilds the edition and filmography, while stale
+  covers keep every case legible. Fast and enriched responses use separate caches, and both requests
+  belong to the active film selection so a new search cancels either phase silently. If the fast
+  request fails, FirstRoll removes the placeholders, retains the selected film and offers an explicit
+  retry instead of replacing the shelf with an unavailable panel. Selecting another case rebuilds the edition and filmography, while stale
   requests remain unable to overwrite the latest choice. Unresolved identifier-only records remain
   hidden.
 - Compare attributed Douban and Letterboxd community scores and review up to three prominent

@@ -145,6 +145,8 @@ title/year/director query
 → Wikidata candidates
 → title, year and director identity evidence
 → explicit user choice when more than one candidate remains
+→ fast, canonical-ID director filmography
+→ cancellable background poster hydration for the same film selection
 → Wikidata/Wikipedia dossier
 → optional ratings, criticism, video and related-film enrichment
 ```

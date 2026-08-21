@@ -269,6 +269,49 @@ def test_director_only_related_films_skip_other_relations_and_load_posters() -> 
     assert result["recommended"] == []
 
 
+def test_director_only_enrichment_does_not_reuse_the_fast_cache() -> None:
+    requested_imdb_ids: list[str] = []
+
+    def poster_request(imdb_id: str) -> dict[str, str]:
+        requested_imdb_ids.append(imdb_id)
+        return {
+            "image": (
+                "https://a.ltrbxd.com/resized/film-poster/7/6/5/"
+                "7654321-earlier-example-0-600-0-900-crop.jpg"
+            ),
+            "url": f"https://letterboxd.com/imdb/{imdb_id}/",
+        }
+
+    service = DiscoveryService(
+        request_json=fake_wikidata_with_related,
+        sparql_json=lambda _: {
+            "results": {
+                "bindings": [sparql_relation("Q101", "same_director", "Q200")]
+            }
+        },
+        poster_request=poster_request,
+    )
+    service.search("Example Film")
+    requested_imdb_ids.clear()
+
+    fast = service.related(
+        "wikidata:Q100",
+        limit=12,
+        fast=True,
+        director_only=True,
+    )
+    enriched = service.related(
+        "wikidata:Q100",
+        limit=12,
+        fast=False,
+        director_only=True,
+    )
+
+    assert fast["same_director"][0]["poster_url"] is None
+    assert enriched["same_director"][0]["poster_url"].startswith("https://a.ltrbxd.com/")
+    assert requested_imdb_ids == ["tt7654321"]
+
+
 def test_related_films_are_grouped_by_cast_country_and_genre() -> None:
     service = DiscoveryService(
         request_json=fake_wikidata_with_related,

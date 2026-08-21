@@ -315,6 +315,13 @@ def test_director_shelf_renders_immediately_then_enriches_posters() -> None:
     assert "enrichDirectorFilmography" in app
     assert '`${filmId}:${fast ? "fast" : "enriched"}`' in app
     assert "Director poster enrichment did not complete" in app
+    enrichment = app[
+        app.index("async function enrichDirectorFilmography"):
+        app.index("function applyDirectorShelf")
+    ]
+    assert "requestId !== state.discovery.shelfRequestId" in enrichment
+    assert "state.discovery.archiveSelectionId !== primary.id" in enrichment
+    assert "hydrateDirectorShelf(primary.id" in enrichment
     assert "FirstRollCloset" not in app
     assert "WebGL" not in app
     assert "Blender" not in app
