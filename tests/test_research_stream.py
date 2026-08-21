@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from uuid import uuid4
 
 from fastapi.testclient import TestClient
@@ -92,11 +93,18 @@ def configured_client(monkeypatch, *, fail_generation: bool = False) -> tuple[Te
                 reset_at="2099-01-01T00:00:00Z",
             )
 
-    def prepare(film_id, selected_film, question, *, public_mode):
+    def prepare(film_id, selected_film, question, *, public_mode, trace=None):
         captured["film_id"] = film_id
         captured["question"] = question
         captured["public_mode"] = public_mode
-        return {"film": selected_film, "claims": [], "reading": reading, "packet": packet}
+        captured["trace"] = trace
+        return {
+            "film": selected_film,
+            "claims": [],
+            "reading": reading,
+            "packet": packet,
+            "trace": trace,
+        }
 
     monkeypatch.setenv("FIRSTROLL_PUBLIC_MODE", "true")
     monkeypatch.setattr(main, "auth_verifier", verifier)
@@ -110,7 +118,11 @@ def configured_client(monkeypatch, *, fail_generation: bool = False) -> tuple[Te
     return TestClient(main.app), captured
 
 
-def test_authenticated_sse_progress_is_ordered_and_contains_no_private_material(monkeypatch) -> None:
+def test_authenticated_sse_progress_is_ordered_and_contains_no_private_material(
+    monkeypatch,
+    caplog,
+) -> None:
+    caplog.set_level(logging.INFO, logger="firstroll.study_observability")
     client, captured = configured_client(monkeypatch)
     headers = {
         "Authorization": "Bearer valid-token",
@@ -151,6 +163,11 @@ def test_authenticated_sse_progress_is_ordered_and_contains_no_private_material(
     assert PRIVATE_PASSAGE not in response.text
     assert "PRIVATE_CHAIN_OF_THOUGHT" not in response.text
     assert captured["api_key"] == PRIVATE_KEY
+    assert "study_observability=" in caplog.text
+    assert PRIVATE_KEY not in caplog.text
+    assert PRIVATE_PROMPT not in caplog.text
+    assert PRIVATE_PASSAGE not in caplog.text
+    assert "PRIVATE_CHAIN_OF_THOUGHT" not in caplog.text
 
     result = client.get(
         f"/api/research/runs/{run_id}",

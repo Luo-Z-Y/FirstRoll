@@ -35,6 +35,10 @@ def test_pull_request_ci_has_a_bounded_read_only_token() -> None:
     assert_uses_immutable_actions(CI)
 
 
+def test_ci_runs_the_complete_hosted_safe_test_suite() -> None:
+    assert "run: python -m pytest -q tests" in CI
+
+
 def test_frontend_dependencies_are_locked_audited_and_script_safe() -> None:
     assert "npm audit --audit-level=high" in CI
     assert "npm audit --audit-level=high" in DEPLOYMENT

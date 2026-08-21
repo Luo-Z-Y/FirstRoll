@@ -1,4 +1,11 @@
-from app.backend.library_index import LocalLibraryIndex, QueryPlanner
+import sqlite3
+import tempfile
+from pathlib import Path
+
+import numpy as np
+
+from app.backend.library_index import SCHEMA_VERSION, LocalLibraryIndex, QueryPlanner
+from app.backend.study_observability import StudyTrace
 
 
 def test_excerpt_repairs_common_pdf_extraction_spacing() -> None:
@@ -54,3 +61,89 @@ def test_query_planner_uses_focus_instead_of_fixed_generic_lenses() -> None:
     assert plan[0]["origin"] == "user_focus"
     assert plan[0]["lens"] == "cinematography"
     assert any("lens" in item["query"] for item in plan)
+
+
+def test_unavailable_index_records_planning_and_skips_retrieval_work() -> None:
+    with tempfile.TemporaryDirectory() as directory:
+        trace = StudyTrace()
+        result = LocalLibraryIndex(Path(directory) / "missing.sqlite3").retrieve_for_film(
+            {"title": "Example"},
+            focus="Framing",
+            trace=trace,
+        )
+
+    stages = {stage["name"]: stage for stage in trace.snapshot()["stages"]}
+    assert result["method"] == "unavailable"
+    assert stages["retrieval_planning"]["status"] == "completed"
+    assert stages["lexical_retrieval"]["status"] == "skipped"
+    assert stages["semantic_retrieval"]["status"] == "skipped"
+    assert stages["fusion_and_selection"]["status"] == "skipped"
+
+
+def test_hybrid_retrieval_records_each_applicable_stage() -> None:
+    class FakeEncoder:
+        model_name = "test-encoder"
+
+        @staticmethod
+        def encode(texts):
+            return np.tile(np.asarray([[1.0, 0.0]], dtype=np.float32), (len(texts), 1))
+
+    text = " ".join(
+        [
+            "Framing and camera position organise spatial relations through depth and viewpoint."
+            for _ in range(8)
+        ]
+    )
+    with tempfile.TemporaryDirectory() as directory:
+        path = Path(directory) / "library.sqlite3"
+        index = LocalLibraryIndex(path, encoder=FakeEncoder())
+        with sqlite3.connect(path) as connection:
+            index._create_schema(connection)
+            row = (
+                "chunk-1",
+                "document-1",
+                "Synthetic film-form source",
+                12,
+                "Framing",
+                "cinematography | space",
+                "en",
+                80,
+                text,
+            )
+            connection.execute("INSERT INTO chunk_records VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", row)
+            connection.execute(
+                "INSERT INTO chunks(chunk_id, document_id, title, page, section, topics, text) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (row[0], *row[1:6], text),
+            )
+            vector = np.asarray([1.0, 0.0], dtype=np.float32)
+            connection.execute(
+                "INSERT INTO embeddings VALUES (?, ?, ?)",
+                (row[0], len(vector), vector.tobytes()),
+            )
+            connection.executemany(
+                "INSERT INTO index_meta VALUES (?, ?)",
+                (
+                    ("schema_version", SCHEMA_VERSION),
+                    ("built_at", "2026-08-21T00:00:00+00:00"),
+                    ("chunking_version", "test"),
+                    ("embedding_model", "test-encoder"),
+                ),
+            )
+            connection.commit()
+
+        trace = StudyTrace()
+        result = index.retrieve_for_film(
+            {"title": "Example"},
+            focus="How does framing organise space?",
+            limit=1,
+            trace=trace,
+        )
+
+    stages = {stage["name"]: stage for stage in trace.snapshot()["stages"]}
+    assert result["method"] == "hybrid_rrf"
+    assert len(result["passages"]) == 1
+    assert stages["retrieval_planning"]["status"] == "completed"
+    assert stages["lexical_retrieval"]["status"] == "completed"
+    assert stages["semantic_retrieval"]["status"] == "completed"
+    assert stages["fusion_and_selection"]["status"] == "completed"

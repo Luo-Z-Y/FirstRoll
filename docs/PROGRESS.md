@@ -1,5 +1,52 @@
 # FirstRoll Project Progress
 
+### 21 August 2026 — Redacted study-stage observability
+
+Delivered:
+
+1. Added one shared monotonic trace spanning film-context loading, criticism/video caches, public or
+   private retrieval, fusion, packet assembly, prompt serialisation, model transport,
+   validation/repair and end-to-end study execution.
+2. Made every stage terminal and explicit: completed, failed, degraded after mixed attempts, skipped
+   when inapplicable or not run after an earlier stop. Repeated model, validation and repair attempts
+   aggregate without hiding failures.
+3. Restricted the schema to fixed stage/count allow-lists, bounded non-negative integers and timing
+   metadata. Prompts, evidence excerpts, credentials, model output, URLs and exception messages have
+   no accepted field.
+4. Attached the trace to completed owner-visible studies and emitted the same redacted object to
+   application logs on success or failure, while leaving the smaller public SSE contract unchanged.
+5. Recorded retrieval/evidence counts, prompt characters, model and repair attempts,
+   provider-reported token use and section totals, and taught the evaluator to retain this safe
+   object in future results without altering the historical baseline.
+6. Replaced CI's curated test-file subset with the complete hosted-safe `tests` suite so packet,
+   evaluator, observability, stream and study-service contracts cannot pass only on a developer
+   machine.
+
+Acceptance evidence:
+
+- all 193 automated tests, scoped Ruff, backend compilation, frontend JavaScript syntax and
+  repository whitespace checks pass;
+- deterministic-clock coverage verifies completed, skipped, failed and degraded stages, aggregate
+  attempts/failures, exact durations, token totals and rejection of arbitrary names or values;
+- public-framework tests prove lexical/semantic stages are explicitly skipped, while a synthetic
+  local SQLite/embedding index proves planning, lexical, semantic and fusion stages complete;
+- service coverage proves one repair records two prompt/model attempts and three validation passes,
+  and invalid citations produce failed validation and end-to-end stages;
+- synthetic private key, prompt, passage and hidden-reasoning sentinels remain absent from both SSE
+  and captured observability logs.
+
+Known constraints:
+
+- Step 2 makes packet-stage latency measurable but records no product-performance claim; cold/warm
+  measurements and instrumentation overhead still require the controlled Step 3 baseline;
+- failed HTTP/SSE responses remain deliberately redacted for callers; their safe trace is available
+  in server logs rather than expanding the public error schema.
+
+Next actionable work:
+
+1. Complete Step 3 by adding a packet-only benchmark harness and committing a reviewed cold/warm
+   result over the five frozen cases before making any optimisation.
+
 ### 21 August 2026 — Step-based Pre-Agent product scorecard
 
 Delivered:

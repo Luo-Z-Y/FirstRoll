@@ -1,6 +1,6 @@
 # Pre-Agent Product Hardening
 
-**Status:** active; Step 1 complete and Step 2 is next
+**Status:** active; Steps 1–2 complete and Step 3 is next
 
 **Machine-readable scorecard:** [`evals/pre_agent_scorecard.json`](../evals/pre_agent_scorecard.json)
 
@@ -87,7 +87,7 @@ entry gate in a validated repository artefact.
 **Acceptance:** the contract is machine-readable, references the existing frozen suite and raw
 baseline, distinguishes unmeasured values from claims and has automated consistency coverage.
 
-### Step 2 — Instrument evidence preparation — next
+### Step 2 — Instrument evidence preparation — complete
 
 Add monotonic, redacted measurements for film context, criticism/video cache reads, retrieval
 planning, lexical and semantic retrieval, fusion, packet assembly, prompt serialisation, model
@@ -97,7 +97,7 @@ not silently omitted.
 **Acceptance:** every applicable stage has duration and terminal status; instrumentation contains no
 prompt, credential, private passage, full review body or model response.
 
-### Step 3 — Capture the measured baseline
+### Step 3 — Capture the measured baseline — next
 
 Run the unchanged fixed workflow with the new instrumentation. Use five warm packet-only samples per
 frozen case after one unrecorded warm-up and two cold processes per case. Run model synthesis only
@@ -205,6 +205,9 @@ replaced by the automated 98.94 baseline score.
 ## Measurement Rules
 
 - Use a monotonic clock and the evaluator's linear-interpolation `(n - 1)` percentile method.
+- The versioned observability record reports only allow-listed stage names, terminal status,
+  aggregate duration, attempts, failures and bounded integer counts. Repeated validation, repair or
+  model attempts aggregate under the same stage; mixed success/failure is labelled `degraded`.
 - **Cold packet:** first preparation in a fresh process, with process caches empty and the persisted
   local index retained.
 - **Warm packet:** preparation after one unrecorded same-case warm-up in the same process.

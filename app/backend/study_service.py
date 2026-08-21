@@ -12,6 +12,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from app.backend.criticism import CriticalClaim, CriticalClaimPayload, ReviewSource
 from app.backend.evidence import EvidencePacket
 from app.backend.settings import LocalSettingsStore
+from app.backend.study_observability import StudyTrace
 
 
 DEEPSEEK_CHAT_URL = "https://api.deepseek.com/chat/completions"
@@ -189,73 +190,133 @@ class DeepSeekStudyService:
         critical_claims: list[CriticalClaim] | None = None,
         evidence_packet: EvidencePacket | None = None,
         api_key: str | None = None,
+        trace: StudyTrace | None = None,
     ) -> dict[str, Any]:
+        trace = trace or StudyTrace()
+        try:
+            result = self._generate(
+                film,
+                passages,
+                question,
+                critical_claims,
+                evidence_packet,
+                api_key,
+                trace,
+            )
+            trace.set_count("sections", len(result.get("sections", [])))
+            trace.finish("completed")
+            result["observability"] = trace.snapshot()
+            return result
+        except Exception:
+            trace.finish("failed")
+            raise
+
+    def _generate(
+        self,
+        film: dict[str, Any],
+        passages: list[dict[str, Any]],
+        question: str | None,
+        critical_claims: list[CriticalClaim] | None,
+        evidence_packet: EvidencePacket | None,
+        api_key: str | None,
+        trace: StudyTrace,
+    ) -> dict[str, Any]:
+        for stage in (
+            "film_context",
+            "criticism_cache",
+            "video_cache",
+            "retrieval_planning",
+            "lexical_retrieval",
+            "semantic_retrieval",
+            "fusion_and_selection",
+        ):
+            trace.skip(stage)
         critical_claims = critical_claims or []
-        packet = evidence_packet or EvidencePacket.from_retrieval(
-            film,
-            {"passages": passages, "method": "legacy_fts"},
-            question,
-            critical_claims,
-        )
+        if evidence_packet is None:
+            with trace.stage("packet_assembly"):
+                packet = EvidencePacket.from_retrieval(
+                    film,
+                    {"passages": passages, "method": "legacy_fts"},
+                    question,
+                    critical_claims,
+                )
+        else:
+            trace.skip("packet_assembly")
+            packet = evidence_packet
+        trace.set_count("theory_sources", len(packet.theory_sources))
+        trace.set_count("critical_claims", len(packet.critical_claims))
+        trace.set_count("attributed_sources", len(packet.attributed_sources))
         if not packet.theory_sources:
             raise StudyGenerationError(
                 "No cited local passages are available. Build the private library index first."
             )
         key = api_key or self._api_key()
         critical_claims = packet.critical_claims
-        sources = [
-            {
-                "id": item.evidence_id,
-                "evidence_type": item.evidence_type,
-                "title": item.title,
-                "page": self._page_from_locator(item.locator),
-                "locator": item.locator,
-                "excerpt": item.content,
-                "permitted_claims": item.permitted_claims,
-            }
-            for item in packet.theory_sources
-        ]
-        payload = {
-            "model": self.model,
-            "messages": [
+        with trace.stage("prompt_serialisation"):
+            sources: list[dict[str, Any]] = [
+                {
+                    "id": item.evidence_id,
+                    "evidence_type": item.evidence_type,
+                    "title": item.title,
+                    "page": self._page_from_locator(item.locator),
+                    "locator": item.locator,
+                    "excerpt": item.content,
+                    "permitted_claims": item.permitted_claims,
+                }
+                for item in packet.theory_sources
+            ]
+            messages: list[dict[str, str]] = [
                 {"role": "system", "content": self._system_prompt()},
                 {
                     "role": "user",
                     "content": self._user_prompt(packet, sources),
                 },
-            ],
-            "thinking": {"type": "disabled"},
-            "response_format": {"type": "json_object"},
-            "temperature": 0.2,
-            "max_tokens": 3600,
-        }
-        response = self._transport(DEEPSEEK_CHAT_URL, payload, key)
+            ]
+            payload = {
+                "model": self.model,
+                "messages": messages,
+                "thinking": {"type": "disabled"},
+                "response_format": {"type": "json_object"},
+                "temperature": 0.2,
+                "max_tokens": 3600,
+            }
+            trace.increment_count(
+                "prompt_characters",
+                sum(len(str(message["content"])) for message in messages),
+            )
+        trace.increment_count("model_calls")
+        with trace.stage("model_transport"):
+            response = self._transport(DEEPSEEK_CHAT_URL, payload, key)
+        trace.record_provider_usage(response)
         try:
-            choice = response["choices"][0]
-            content = choice["message"]["content"]
-            if not isinstance(content, str) or not content.strip():
-                reason = choice.get("finish_reason") or "unknown"
-                raise StudyGenerationError(
-                    f"DeepSeek returned no structured content (finish reason: {reason})."
+            with trace.stage("validation_and_repair"):
+                choice = response["choices"][0]
+                content = choice["message"]["content"]
+                if not isinstance(content, str) or not content.strip():
+                    reason = choice.get("finish_reason") or "unknown"
+                    raise StudyGenerationError(
+                        f"DeepSeek returned no structured content (finish reason: {reason})."
+                    )
+                parsed = self._parse_json(content)
+                result = GroundedStudy.model_validate(parsed).model_dump()
+                self._validate_result(
+                    result,
+                    {source["id"] for source in sources},
+                    {claim.claim_id for claim in critical_claims},
+                    {source.evidence_id for source in packet.attributed_sources},
                 )
-            parsed = self._parse_json(content)
-            result = GroundedStudy.model_validate(parsed).model_dump()
+                quality = StudyQualityGate.evaluate(result, bool(critical_claims))
         except StudyGenerationError:
             raise
         except (KeyError, IndexError, TypeError, json.JSONDecodeError, ValidationError) as exc:
             raise StudyGenerationError("DeepSeek returned an invalid study response.") from exc
-        self._validate_result(
-            result,
-            {source["id"] for source in sources},
-            {claim.claim_id for claim in critical_claims},
-            {source.evidence_id for source in packet.attributed_sources},
-        )
-        quality = StudyQualityGate.evaluate(result, bool(critical_claims))
         if quality["status"] != "passed":
-            repaired = self._repair_once(key, packet, sources, result, quality)
+            trace.increment_count("repair_attempts")
+            repaired = self._repair_once(key, packet, sources, result, quality, trace)
             if repaired is not None:
                 result = repaired
-                quality = StudyQualityGate.evaluate(result, bool(critical_claims))
+                with trace.stage("validation_and_repair"):
+                    quality = StudyQualityGate.evaluate(result, bool(critical_claims))
             quality["repair_attempted"] = True
         result["model"] = response.get("model") or self.model
         result["sources"] = sources
@@ -278,11 +339,11 @@ class DeepSeekStudyService:
         sources: list[dict[str, Any]],
         draft: dict[str, Any],
         quality: dict[str, Any],
+        trace: StudyTrace,
     ) -> dict[str, Any] | None:
         """One bounded audit pass; failure is reported rather than recursively retried."""
-        payload = {
-            "model": self.model,
-            "messages": [
+        with trace.stage("prompt_serialisation"):
+            messages: list[dict[str, str]] = [
                 {"role": "system", "content": self._repair_prompt()},
                 {
                     "role": "user",
@@ -296,24 +357,42 @@ class DeepSeekStudyService:
                         ensure_ascii=False,
                     ),
                 },
-            ],
-            "thinking": {"type": "disabled"},
-            "response_format": {"type": "json_object"},
-            "temperature": 0,
-            "max_tokens": 3600,
-        }
-        try:
-            response = self._transport(DEEPSEEK_CHAT_URL, payload, key)
-            content = response["choices"][0]["message"]["content"]
-            repaired = GroundedStudy.model_validate(self._parse_json(content)).model_dump()
-            self._validate_result(
-                repaired,
-                {source["id"] for source in sources},
-                {claim.claim_id for claim in packet.critical_claims},
-                {source.evidence_id for source in packet.attributed_sources},
+            ]
+            payload = {
+                "model": self.model,
+                "messages": messages,
+                "thinking": {"type": "disabled"},
+                "response_format": {"type": "json_object"},
+                "temperature": 0,
+                "max_tokens": 3600,
+            }
+            trace.increment_count(
+                "prompt_characters",
+                sum(len(str(message["content"])) for message in messages),
             )
+        try:
+            trace.increment_count("model_calls")
+            with trace.stage("model_transport"):
+                response = self._transport(DEEPSEEK_CHAT_URL, payload, key)
+            trace.record_provider_usage(response)
+            with trace.stage("validation_and_repair"):
+                content = response["choices"][0]["message"]["content"]
+                repaired = GroundedStudy.model_validate(self._parse_json(content)).model_dump()
+                self._validate_result(
+                    repaired,
+                    {source["id"] for source in sources},
+                    {claim.claim_id for claim in packet.critical_claims},
+                    {source.evidence_id for source in packet.attributed_sources},
+                )
             return repaired
-        except (KeyError, IndexError, TypeError, json.JSONDecodeError, ValidationError, StudyGenerationError):
+        except (
+            KeyError,
+            IndexError,
+            TypeError,
+            json.JSONDecodeError,
+            ValidationError,
+            StudyGenerationError,
+        ):
             return None
 
     def structure_reviews(

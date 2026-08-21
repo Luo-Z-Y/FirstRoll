@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 from app.backend import main
 from app.backend.auth import SupabaseAuthVerifier
 from app.backend.public_study import build_public_study_retrieval
+from app.backend.study_observability import StudyTrace
 from app.backend.quota import (
     DeepStudyQuota,
     PostgresQuotaClient,
@@ -161,9 +162,11 @@ def test_transient_result_owner_is_namespaced_by_identity_provider() -> None:
 
 
 def test_public_study_framework_is_bounded_and_first_party() -> None:
+    trace = StudyTrace()
     retrieval = build_public_study_retrieval(
         {"title": "In the Mood for Love"},
         "How is space organised?",
+        trace=trace,
     )
 
     assert retrieval["method"] == "firstroll_public_framework"
@@ -174,6 +177,11 @@ def test_public_study_framework_is_bounded_and_first_party() -> None:
         for item in retrieval["passages"]
     )
     assert all(len(item["excerpt"]) >= 300 for item in retrieval["passages"])
+    stages = {stage["name"]: stage["status"] for stage in trace.snapshot()["stages"]}
+    assert stages["retrieval_planning"] == "completed"
+    assert stages["lexical_retrieval"] == "skipped"
+    assert stages["semantic_retrieval"] == "skipped"
+    assert stages["fusion_and_selection"] == "completed"
 
 
 def test_hosted_study_reserves_quota_and_uses_public_framework(monkeypatch) -> None:
@@ -208,10 +216,19 @@ def test_hosted_study_reserves_quota_and_uses_public_framework(monkeypatch) -> N
     }
     captured = {}
 
-    def generate(film_record, passages, question, claims, evidence_packet, api_key=None):
+    def generate(
+        film_record,
+        passages,
+        question,
+        claims,
+        evidence_packet,
+        api_key=None,
+        trace=None,
+    ):
         captured["passages"] = passages
         captured["packet"] = evidence_packet
         captured["api_key"] = api_key
+        captured["trace"] = trace
         return {"title": "A bounded public study"}
 
     monkeypatch.setenv("FIRSTROLL_PUBLIC_MODE", "true")
@@ -235,6 +252,14 @@ def test_hosted_study_reserves_quota_and_uses_public_framework(monkeypatch) -> N
     assert len(captured["passages"]) == 4
     assert captured["packet"].retrieval["method"] == "firstroll_public_framework"
     assert captured["api_key"] is None
+    stages = {
+        stage["name"]: stage for stage in response.json()["study"]["observability"]["stages"]
+    }
+    assert stages["film_context"]["status"] == "completed"
+    assert stages["retrieval_planning"]["status"] == "completed"
+    assert stages["lexical_retrieval"]["status"] == "skipped"
+    assert stages["semantic_retrieval"]["status"] == "skipped"
+    assert stages["packet_assembly"]["status"] == "completed"
 
 
 def test_hosted_study_returns_429_when_account_quota_is_exhausted(monkeypatch) -> None:
@@ -357,9 +382,18 @@ def test_personal_deepseek_key_is_used_for_one_authenticated_request(monkeypatch
 
     captured = {}
 
-    def generate(_film, _passages, _question, _claims, evidence_packet, api_key=None):
+    def generate(
+        _film,
+        _passages,
+        _question,
+        _claims,
+        evidence_packet,
+        api_key=None,
+        trace=None,
+    ):
         captured["api_key"] = api_key
         captured["packet"] = evidence_packet
+        captured["trace"] = trace
         return {"title": "Personal-key study"}
 
     monkeypatch.setenv("FIRSTROLL_PUBLIC_MODE", "true")

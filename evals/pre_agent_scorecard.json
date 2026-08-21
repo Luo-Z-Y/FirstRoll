@@ -309,12 +309,12 @@
     {
       "id": "S02",
       "name": "Instrument evidence preparation",
-      "status": "next"
+      "status": "complete"
     },
     {
       "id": "S03",
       "name": "Capture the measured baseline",
-      "status": "queued"
+      "status": "next"
     },
     {
       "id": "S04",

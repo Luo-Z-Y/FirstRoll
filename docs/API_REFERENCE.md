@@ -1,7 +1,7 @@
 # FirstRoll API Reference
 
 **API version:** `0.1.0`  
-**Last reconciled:** 20 August 2026
+**Last reconciled:** 21 August 2026
 
 FirstRoll uses one FastAPI application in two modes. The local edition serves the web interface and
 API from `http://127.0.0.1:8000`. The hosted public beta serves the Azure frontend at
@@ -179,12 +179,42 @@ it does not assert that every upload is authorised or that every claim in a vide
 
 | Method | Path | Access | Request | Success response |
 |---|---|---|---|---|
-| POST | `/api/discovery/films/{film_id}/study` | Local public; hosted bearer + quota | `{"question":"…"}`; optional personal DeepSeek header | Complete study, credential source and hosted quota remainder |
+| POST | `/api/discovery/films/{film_id}/study` | Local public; hosted bearer + quota | `{"question":"…"}`; optional personal DeepSeek header | Complete study with redacted observability, credential source and hosted quota remainder |
 | POST | `/api/discovery/films/{film_id}/study/stream` | Hosted bearer | Same JSON and optional personal DeepSeek header | `text/event-stream`; run ID in response header |
 | GET | `/api/research/runs/{run_id}` | Hosted bearer and run owner | Run UUID | Complete non-cacheable study; 409 running, 502 failed, 404 unknown/cross-owner/expired |
 
 The synchronous route remains the local workflow and production fallback. Hosted browser clients use
-the stream followed by the result route.
+the stream followed by the result route. A completed study contains:
+
+```json
+{
+  "observability": {
+    "schema_version": 1,
+    "status": "completed",
+    "stages": [
+      {
+        "name": "packet_assembly",
+        "status": "completed",
+        "duration_ms": 1.25,
+        "attempts": 1,
+        "failures": 0
+      }
+    ],
+    "counts": {
+      "theory_sources": 4,
+      "model_calls": 1,
+      "prompt_tokens": 4200
+    }
+  }
+}
+```
+
+The real array always contains the twelve ordered stages from film context through end to end.
+Statuses are `completed`, `failed`, `degraded`, `skipped` or `not_run`. Count keys are restricted to
+retrieval plan/candidate totals, evidence-layer totals, prompt characters, model/repair calls,
+provider-reported token totals and output sections. Prompts, excerpts, credentials, responses and
+exception text have no field. Failed runs retain their trace only in a redacted server log and keep
+the existing safe HTTP/SSE error contract.
 
 Study request:
 

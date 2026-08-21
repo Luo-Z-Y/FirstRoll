@@ -60,18 +60,7 @@ jobs:
           assert result['cookie_configured'] is False;
           assert result['tools'] == ['list-movie-reviews', 'search-movie']"
       - name: Test hosted contracts
-        run: >-
-          python -m pytest -q
-          tests/test_discovery.py
-          tests/test_settings.py
-          tests/test_hosted_mode.py
-          tests/test_auth.py
-          tests/test_quota.py
-          tests/test_research_agent_contract.py
-          tests/test_research_graph.py
-          tests/test_video_sources.py
-          tests/test_web_assets.py
-          tests/test_frontend_ci.py
+        run: python -m pytest -q tests
       - name: Build hosted frontend
         env:
           FIRSTROLL_API_BASE: https://firstroll.example.com

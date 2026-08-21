@@ -8,6 +8,7 @@ import pytest
 from app.backend.settings import LocalSettingsStore
 from app.backend.criticism import ReviewSource
 from app.backend.evidence import EvidencePacket
+from app.backend.study_observability import StudyTrace
 from app.backend.study_service import DeepSeekStudyService, StudyGenerationError
 
 
@@ -88,6 +89,11 @@ def test_grounded_prompt_separates_frameworks_from_film_evidence() -> None:
         return {
             "model": "deepseek-v4-flash",
             "choices": [{"message": {"content": json.dumps(valid_response())}}],
+            "usage": {
+                "prompt_tokens": 120,
+                "completion_tokens": 80,
+                "total_tokens": 200,
+            },
         }
 
     with tempfile.TemporaryDirectory() as directory:
@@ -107,6 +113,22 @@ def test_grounded_prompt_separates_frameworks_from_film_evidence() -> None:
     assert "Film Form Handbook" in messages[1]["content"]
     assert result["sections"][0]["source_ids"] == ["S1"]
     assert result["sources"][0]["page"] == 42
+    observability = result["observability"]
+    stages = {stage["name"]: stage for stage in observability["stages"]}
+    assert observability["status"] == "completed"
+    assert stages["packet_assembly"]["status"] == "completed"
+    assert stages["prompt_serialisation"]["status"] == "completed"
+    assert stages["model_transport"]["status"] == "completed"
+    assert stages["validation_and_repair"]["status"] == "completed"
+    assert observability["counts"]["model_calls"] == 1
+    assert observability["counts"]["prompt_tokens"] == 120
+    assert observability["counts"]["completion_tokens"] == 80
+    assert observability["counts"]["total_tokens"] == 200
+    assert observability["counts"]["sections"] == 4
+    serialised_observability = json.dumps(observability)
+    assert "private-test-key" not in serialised_observability
+    assert "Study point of view" not in serialised_observability
+    assert "Film Form Handbook" not in serialised_observability
 
 
 def test_grounded_prompt_receives_raw_attributed_text_and_validates_its_citation() -> None:
@@ -150,6 +172,45 @@ def test_grounded_prompt_receives_raw_attributed_text_and_validates_its_citation
     assert result["attributed_sources"][0]["source_url"] == "https://example.org/interview"
 
 
+def test_repair_attempts_are_counted_without_exposing_repair_content() -> None:
+    initial = valid_response()
+    initial["central_argument"] = (
+        "The film uses deliberate framing to isolate every figure and structures the entire "
+        "conflict through an unquestionably fixed visual hierarchy."
+    )
+    repaired = valid_response()
+    calls = []
+
+    def transport(_: str, __: dict[str, Any] | None, ___: str) -> dict[str, Any]:
+        response = initial if not calls else repaired
+        calls.append(response)
+        return {
+            "model": "deepseek-v4-pro",
+            "choices": [{"message": {"content": json.dumps(response)}}],
+            "usage": {"prompt_tokens": 100, "completion_tokens": 50, "total_tokens": 150},
+        }
+
+    with tempfile.TemporaryDirectory() as directory:
+        store = LocalSettingsStore(Path(directory) / "settings.json")
+        store.set("deepseek_api_key", "private-test-key")
+        result = DeepSeekStudyService(store, transport=transport).generate(
+            film_record(), local_passages()
+        )
+
+    stages = {stage["name"]: stage for stage in result["observability"]["stages"]}
+    counts = result["observability"]["counts"]
+    assert len(calls) == 2
+    assert result["quality"]["status"] == "passed"
+    assert result["quality"]["repair_attempted"] is True
+    assert stages["prompt_serialisation"]["attempts"] == 2
+    assert stages["model_transport"]["attempts"] == 2
+    assert stages["validation_and_repair"]["attempts"] == 3
+    assert counts["model_calls"] == 2
+    assert counts["repair_attempts"] == 1
+    assert counts["prompt_tokens"] == 200
+    assert counts["total_tokens"] == 300
+
+
 def test_invalid_model_citations_are_rejected() -> None:
     response = valid_response()
     response["sections"][0]["source_ids"] = ["S99"]
@@ -161,9 +222,17 @@ def test_invalid_model_citations_are_rejected() -> None:
         store = LocalSettingsStore(Path(directory) / "settings.json")
         store.set("deepseek_api_key", "private-test-key")
         service = DeepSeekStudyService(store, transport=transport)
+        trace = StudyTrace()
 
         with pytest.raises(StudyGenerationError, match="citation"):
-            service.generate(film_record(), local_passages())
+            service.generate(film_record(), local_passages(), trace=trace)
+
+    observability = trace.snapshot()
+    stages = {stage["name"]: stage for stage in observability["stages"]}
+    assert observability["status"] == "failed"
+    assert stages["model_transport"]["status"] == "completed"
+    assert stages["validation_and_repair"]["status"] == "failed"
+    assert stages["end_to_end"]["status"] == "failed"
 
 
 def test_model_cannot_label_formal_analysis_as_record_supported() -> None:
