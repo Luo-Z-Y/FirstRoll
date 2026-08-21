@@ -207,7 +207,7 @@ characters fall 36.32%. All omitted theory, claim and attributed candidates have
 source-quota, item-limit, short-content or character-budget reasons. The only frozen packet
 limitation is *The Thing*: it correctly has theory frameworks but no film-specific attributed source.
 
-The latest complete workflow result is
+The bounded-selection comparison result is
 [`baseline-selection-2026-08-21.json`](../evals/results/baseline-selection-2026-08-21.json):
 
 | Complete workflow measure | Pre-selection | Bounded selection |
@@ -226,6 +226,36 @@ floor. This is one controlled five-case checkpoint, not a provider-reliability e
 that selection caused every latency/quality difference. It does establish both scorecard token
 budgets with no citation, provenance, duplicate or containment regression. Result scans found no
 private title or 120-character private passage fragment.
+
+## Latest Synthesis-Reliability Checkpoint
+
+Revision `c680a95` keeps the Step 8 packet fixed, adds concise central/section prose guidance, lowers
+the completion ceiling from 3,600 to 3,200 tokens and permits one total repair across either invalid
+initial schema/citations or a valid draft that fails the deterministic gate. Invalid initial output
+is retried once with the same supplied evidence and temperature zero. Transport timeout/unavailability
+is not retried automatically because a timed-out provider request may already have consumed usage;
+the user retains the explicit UI retry.
+
+[`baseline-reliability-2026-08-21.json`](../evals/results/baseline-reliability-2026-08-21.json)
+records the same five cases, machine and configuration fingerprint:
+
+| Measure | Held-packet Step 8 | Reliability checkpoint | Change |
+|---|---:|---:|---:|
+| Cases completed | 5 / 5 | 5 / 5 | No regression |
+| Mean / median quality | 98.30 / 99.25 | 98.65 / 98.25 | +0.35 mean |
+| Gate / valid citations | 100% / 100% | 100% / 100% | No regression |
+| Input-token median / P95 | 6,288 / 7,376.6 | 6,327 / 7,415.6 | Within budget |
+| Completion-token median / P95 | 2,969 / 3,225.2 | 2,287 / 2,552.4 | −22.97% / −20.86% |
+| Model-latency median / P95 | 52.887 / 55.195 s | 38.694 / 42.654 s | −26.84% / −22.72% |
+| End-to-end P50 / P95 | 66.676 / 77.798 s | 55.407 / 62.129 s | −16.9011% / −20.1406% |
+| Calls / total tokens | 5 / 42,234 | 5 / 38,875 | −7.95% tokens |
+
+All five complete without repair. Deterministic fake-transport coverage separately proves one invalid
+initial response can recover on its single schema retry, repeated invalid citations stop after two
+calls and a transport timeout receives only one call. The live five-case run therefore satisfies the
+15% paired median target with no P95 or quality regression, but it remains a regression fixture—not
+a twenty-attempt provider-reliability claim. Its redacted result contains no private title or
+120-character private passage fragment.
 
 ## Deep Study Transparency Checkpoint
 

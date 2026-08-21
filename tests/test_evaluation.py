@@ -281,6 +281,47 @@ def test_pre_agent_scorecard_freezes_steps_journeys_and_entry_targets() -> None:
     assert transparency_checkpoint["axe_incomplete_checks"] == 0
     assert transparency_checkpoint["model_calls"] == 0
 
+    reliability_checkpoint = scorecard["measured_checkpoints"]["synthesis_reliability"]
+    reliability_result = json.loads(
+        (ROOT / reliability_checkpoint["result_path"]).read_text(encoding="utf-8")
+    )
+    assert reliability_checkpoint["source_revision"] == reliability_result["source_revision"]
+    assert reliability_checkpoint["configuration_fingerprint"] == reliability_result[
+        "environment"
+    ]["configuration"]["sha256"]
+    assert reliability_checkpoint["completed_cases"] == reliability_result["summary"][
+        "successful_cases"
+    ]
+    assert reliability_checkpoint["mean_quality"] == reliability_result["summary"][
+        "mean_quality_score"
+    ]
+    reliability_prompt_tokens = [
+        call["usage"]["prompt_tokens"]
+        for case in reliability_result["cases"]
+        for call in case.get("model_calls", [])
+    ]
+    reliability_completion_tokens = [
+        call["usage"]["completion_tokens"]
+        for case in reliability_result["cases"]
+        for call in case.get("model_calls", [])
+    ]
+    assert reliability_checkpoint["prompt_token_median"] == 6327
+    assert reliability_checkpoint["prompt_token_p95"] == percentile(
+        reliability_prompt_tokens, 0.95
+    )
+    assert reliability_checkpoint["completion_token_median"] == 2287
+    assert reliability_checkpoint["completion_token_p95"] == percentile(
+        reliability_completion_tokens, 0.95
+    )
+    assert reliability_checkpoint["paired_median_reduction_from_selection"] == round(
+        1
+        - reliability_result["summary"]["latency_seconds"]["p50_end_to_end"]
+        / selected_workflow["summary"]["latency_seconds"]["p50_end_to_end"],
+        6,
+    )
+    assert all(case["quality"]["valid_citations"] for case in reliability_result["cases"])
+    assert reliability_checkpoint["provider_reliability_claim"] is False
+
     assert scorecard["latency_stages"] == list(STUDY_STAGE_NAMES)
 
     journey_ids = [journey["id"] for journey in scorecard["user_journeys"]]

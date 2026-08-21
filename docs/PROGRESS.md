@@ -1,5 +1,61 @@
 # FirstRoll Project Progress
 
+### 21 August 2026 — Bounded synthesis recovery and concise output
+
+Delivered:
+
+1. Held the Step 8 packet fixed and added explicit 120–180-word central and 140–210-word per-section
+   guidance with a 3,200-token completion ceiling, down from 3,600.
+2. Unified recovery under one total extra model call: an invalid initial schema/citation response can
+   retry once at temperature zero, while a valid draft that fails quality retains its existing one
+   repair. Either path consumes the single repair budget.
+3. Kept timeout/unavailability retries explicit and user-controlled because an upstream request may
+   already have consumed provider usage; transport failure receives no hidden second call.
+4. Added deterministic fake coverage for successful invalid-response recovery, repeated invalid
+   citation stop, total call/token accounting and one-call timeout behaviour.
+5. Ran the same five-case live workflow on the same machine/configuration and compared it with the
+   immediately preceding held-packet checkpoint.
+
+Measured comparison:
+
+| Measure | Held-packet Step 8 | Reliability checkpoint | Change |
+|---|---:|---:|---:|
+| Cases completed | 5 / 5 | 5 / 5 | No regression |
+| Mean / median quality | 98.30 / 99.25 | 98.65 / 98.25 | +0.35 mean |
+| Gate / valid citations | 100% / 100% | 100% / 100% | No regression |
+| Input-token median / P95 | 6,288 / 7,376.6 | 6,327 / 7,415.6 | Within budget |
+| Completion-token median / P95 | 2,969 / 3,225.2 | 2,287 / 2,552.4 | −22.97% / −20.86% |
+| Model-latency median / P95 | 52.887 / 55.195 s | 38.694 / 42.654 s | −26.84% / −22.72% |
+| End-to-end P50 / P95 | 66.676 / 77.798 s | 55.407 / 62.129 s | −16.9011% / −20.1406% |
+| Model calls / total tokens | 5 / 42,234 | 5 / 38,875 | −7.95% tokens |
+
+Acceptance evidence:
+
+- all 214 automated tests, scoped Ruff, backend/tool compilation, frontend JavaScript syntax, npm
+  audit and repository whitespace checks pass;
+- all five live cases complete without repair, all citations validate and all completed studies pass
+  the deterministic gate at 98.65 mean quality, above the 96.94 floor;
+- paired P50 improves more than the required 15%, P95 improves rather than regresses and provider
+  prompt P95 remains below 12,000 tokens;
+- invalid initial fake output recovers on exactly one retry with two validation attempts; repeated
+  invalid citations stop after two calls and a synthetic timeout stops after one;
+- the result contains no private title or 120-character private passage fragment.
+
+Known constraints:
+
+- five successful cases remain a regression fixture, not the twenty attempts required for a
+  provider-reliability claim;
+- provider latency varies independently of prompt/output changes, so paired results support a release
+  gate rather than a causal performance proof;
+- shorter prose still requires the final human usefulness/actionability review;
+- explicit user retry after timeout can still incur a second external charge, which the UI boundary
+  already discloses.
+
+Next actionable work:
+
+1. Complete Step 11 by freezing the integrated fixed-workflow baseline, rerunning all automated,
+   packet, adversarial, desktop/mobile and human packet gates and closing any remaining P0/P1 defect.
+
 ### 21 August 2026 — Inspectable Deep Study progress, packet and citations
 
 Delivered:

@@ -144,7 +144,7 @@ future-enterprise path, but ADR-017 removes it from the production critical path
 | `evidence.py` | Typed packet; focus-aware theory/claim/attributed ranking; exact/near deduplication; source and character budgets; permitted-claim and omission boundaries | Model generation or provider access |
 | `packet_quality.py` | Pre-synthesis identity, citation, provenance, duplication, lexical relevance, diversity and retrieved-instruction diagnostics | Source-text persistence, factual correctness, human usefulness or model grading |
 | `study_observability.py` | Allow-listed monotonic stage timings, terminal status and bounded aggregate counts | Prompts, evidence text, credentials, model output or exception details |
-| `study_service.py` | DeepSeek request, Pydantic/citation validation, generated-study gate, one repair and owner-visible redacted packet-quality attachment | Authentication, quota reservation or research-tool authorisation |
+| `study_service.py` | Concise bounded DeepSeek request, Pydantic/citation validation, generated-study gate, one total schema-or-quality repair and owner-visible redacted packet-quality attachment | Authentication, quota reservation, automatic timeout retry or research-tool authorisation |
 | `research_stream.py` | Fixed public progress vocabulary and transient owner-scoped result store | Hidden reasoning, prompts, credentials or private evidence bodies |
 | `research_graph` | Bounded LangGraph state, reducers, routes and deterministic safety boundaries | Production provider credentials or public cut-over decision |
 | `quota.py` + PostgreSQL function | Provider-neutral quota status and atomic reservation after authentication | Bearer tokens, prompts, evidence or generated studies |
@@ -212,10 +212,10 @@ selected film
 → focus-ranked, deduplicated and layer-budgeted EvidencePacket with explicit omission reasons and untrusted-instruction boundary
 → deterministic packet-quality diagnostics in evaluation paths
 → compact selected prompt records (complete selected packet remains inspectable in the result)
-→ DeepSeek structured draft
+→ concise DeepSeek structured draft (3,200-token ceiling)
 → schema and citation validation
 → deterministic quality gate
-→ at most one repair
+→ at most one total invalid-schema/citation or quality repair; transport retry remains explicit
 → redacted packet-quality and stage observability attached to the private result
 → retained progress history, packet selection/gaps and exact citation-target rendering
 → escaped article rendering

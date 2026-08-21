@@ -170,6 +170,31 @@
       "axe_incomplete_checks": 0,
       "mobile_horizontal_overflow_px": 0,
       "model_calls": 0
+    },
+    "synthesis_reliability": {
+      "result_path": "evals/results/baseline-reliability-2026-08-21.json",
+      "source_revision": "c680a95220983b510f5b6a320cbb7aa305556337",
+      "configuration_fingerprint": "42f89877219dcb53",
+      "completed_cases": 5,
+      "failed_cases": 0,
+      "mean_quality": 98.65,
+      "median_quality": 98.25,
+      "quality_gate_pass_ratio": 1.0,
+      "valid_citation_ratio": 1.0,
+      "repair_rate": 0.0,
+      "prompt_token_median": 6327,
+      "prompt_token_p95": 7415.6,
+      "completion_token_median": 2287,
+      "completion_token_p95": 2552.4,
+      "model_latency_median_seconds": 38.694,
+      "model_latency_p95_seconds": 42.6544,
+      "p50_end_to_end_seconds": 55.407,
+      "p95_end_to_end_seconds": 62.129,
+      "paired_median_reduction_from_selection": 0.169011,
+      "paired_p95_reduction_from_selection": 0.201406,
+      "model_calls": 5,
+      "total_tokens": 38875,
+      "provider_reliability_claim": false
     }
   },
   "user_journeys": [
@@ -475,12 +500,12 @@
     {
       "id": "S10",
       "name": "Tune synthesis reliability",
-      "status": "next"
+      "status": "complete"
     },
     {
       "id": "S11",
       "name": "Freeze the fixed-workflow baseline",
-      "status": "queued"
+      "status": "next"
     },
     {
       "id": "S12",
