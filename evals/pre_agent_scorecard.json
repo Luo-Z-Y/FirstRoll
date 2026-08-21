@@ -155,6 +155,21 @@
       "workflow_total_tokens": 42234,
       "workflow_p50_end_to_end_seconds": 66.676,
       "workflow_p95_end_to_end_seconds": 77.798
+    },
+    "deep_study_transparency": {
+      "result_path": "evals/results/deep-study-transparency-2026-08-21.json",
+      "source_revision": "6c63a77217c6691b7dbb59d905e10950b8191b37",
+      "progress_events_rendered": 3,
+      "packet_count_types_rendered": 4,
+      "packet_layers_rendered": 3,
+      "evidence_gap_items_rendered": 2,
+      "timing_rows_rendered": 4,
+      "inline_citations_rendered": 3,
+      "citation_navigation_failures": 0,
+      "axe_violations": 0,
+      "axe_incomplete_checks": 0,
+      "mobile_horizontal_overflow_px": 0,
+      "model_calls": 0
     }
   },
   "user_journeys": [
@@ -455,12 +470,12 @@
     {
       "id": "S09",
       "name": "Improve Deep Study transparency",
-      "status": "next"
+      "status": "complete"
     },
     {
       "id": "S10",
       "name": "Tune synthesis reliability",
-      "status": "queued"
+      "status": "next"
     },
     {
       "id": "S11",

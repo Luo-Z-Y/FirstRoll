@@ -262,6 +262,25 @@ def test_pre_agent_scorecard_freezes_steps_journeys_and_entry_targets() -> None:
         "total_tokens"
     ]
 
+    transparency_checkpoint = scorecard["measured_checkpoints"]["deep_study_transparency"]
+    transparency_result = json.loads(
+        (ROOT / transparency_checkpoint["result_path"]).read_text(encoding="utf-8")
+    )
+    assert transparency_checkpoint["source_revision"] == transparency_result["source_revision"]
+    assert transparency_checkpoint["progress_events_rendered"] == transparency_result["summary"][
+        "progress_events_rendered"
+    ]
+    assert transparency_checkpoint["packet_layers_rendered"] == transparency_result["summary"][
+        "packet_layers_rendered"
+    ]
+    assert transparency_checkpoint["inline_citations_rendered"] == transparency_result["summary"][
+        "inline_citations_rendered"
+    ]
+    assert transparency_checkpoint["citation_navigation_failures"] == 0
+    assert transparency_checkpoint["axe_violations"] == 0
+    assert transparency_checkpoint["axe_incomplete_checks"] == 0
+    assert transparency_checkpoint["model_calls"] == 0
+
     assert scorecard["latency_stages"] == list(STUDY_STAGE_NAMES)
 
     journey_ids = [journey["id"] for journey in scorecard["user_journeys"]]
