@@ -1,6 +1,6 @@
 # Pre-Agent Product Hardening
 
-**Status:** active; Steps 1–4 complete and Step 5 is next
+**Status:** active; Steps 1–5 complete and Step 6 is next
 
 **Machine-readable scorecard:** [`evals/pre_agent_scorecard.json`](../evals/pre_agent_scorecard.json)
 
@@ -126,16 +126,19 @@ overflow; the interface gives visible feedback within a 300 ms P95 budget. The r
 [`ui-hierarchy-2026-08-21.json`](../evals/results/ui-hierarchy-2026-08-21.json) records zero blockers,
 zero desktop/mobile overflow and 12.05 ms P95 immediate visible response without a model call.
 
-### Step 5 — Improve user-interface states and accessibility — next
+### Step 5 — Improve user-interface states and accessibility — complete
 
 Make loading, empty, sparse-evidence, degraded-provider, timeout, cancellation and retry states
 specific and actionable. Correct keyboard order, focus movement, accessible names, status
 announcements and critical contrast defects.
 
 **Acceptance:** no critical accessibility defect remains in the frozen journeys and every terminal
-failure has a safe next action.
+failure has a safe next action. The reviewed
+[`ui-states-accessibility-2026-08-21.json`](../evals/results/ui-states-accessibility-2026-08-21.json)
+records eight passing state scenarios, four passing keyboard tablists and zero axe violations or
+incomplete checks across landing, mobile dossier and Deep Study error contexts.
 
-### Step 6 — Reduce evidence-packet latency
+### Step 6 — Reduce evidence-packet latency — next
 
 Optimise only measured bottlenecks. Candidates include avoiding repeated cache work, deliberate
 embedding warm-up, parallel independent reads, earlier deduplication and bounded serialisation.

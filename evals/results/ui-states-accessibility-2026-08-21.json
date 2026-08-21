@@ -1,0 +1,210 @@
+{
+  "schema_version": 1,
+  "suite_id": "firstroll-ui-states-accessibility-v1",
+  "system": "local_private_edition_browser",
+  "recorded_at": "2026-08-21T16:16:07Z",
+  "source_revision": "a081947816f97762c77480da94a7367119443fc1",
+  "environment": {
+    "browser": "Chrome 151.0.7922.172 headless",
+    "browser_audit": "Chrome for Testing 151.0.7922.138",
+    "automation": "Chrome DevTools Protocol",
+    "accessibility_engine": "axe-core 4.13.0",
+    "origin": "http://127.0.0.1:8000",
+    "mobile_viewport_css_px": {
+      "width": 390,
+      "height": 844
+    }
+  },
+  "quality_scope": "Actionable asynchronous states, stale-result protection, browser-side study cancellation, focus movement, busy/status semantics, keyboard tablists and automated WCAG 2 A/AA/2.1 AA checks; not a physical-device or assistive-technology user study.",
+  "summary": {
+    "state_scenarios_assessed": 8,
+    "state_scenario_failures": 0,
+    "keyboard_tablists_assessed": 4,
+    "keyboard_tablist_failures": 0,
+    "axe_contexts_assessed": 3,
+    "axe_violations": 0,
+    "axe_incomplete_checks": 0,
+    "critical_accessibility_defects": 0,
+    "mobile_horizontal_overflow_px": 0,
+    "model_calls": 0
+  },
+  "state_scenarios": [
+    {
+      "id": "search_connection_failure",
+      "status": "passed",
+      "role": "alert",
+      "focus_moved": true,
+      "busy_cleared": true,
+      "retry_control": "Try search again",
+      "query_preserved": true,
+      "synthetic_private_error_redacted": true,
+      "mobile_horizontal_overflow_px": 0
+    },
+    {
+      "id": "search_empty_with_filters",
+      "status": "passed",
+      "role": "status",
+      "focus_moved": true,
+      "retry_control": "Search by title only",
+      "suggested_action": "Remove optional year and director filters"
+    },
+    {
+      "id": "film_dossier_failure",
+      "status": "passed",
+      "role": "alert",
+      "focus_moved": true,
+      "busy_cleared": true,
+      "canonical_film_id_preserved": "wikidata:Q210756",
+      "retry_control": "Try opening again",
+      "synthetic_private_error_redacted": true
+    },
+    {
+      "id": "video_provider_failure",
+      "status": "passed",
+      "role": "alert",
+      "focus_moved": true,
+      "busy_cleared": true,
+      "retry_control": "Try video search again",
+      "existing_dossier_preserved": true,
+      "synthetic_private_error_redacted": true
+    },
+    {
+      "id": "criticism_provider_failure",
+      "status": "passed",
+      "role": "alert",
+      "focus_moved": true,
+      "busy_cleared": true,
+      "selected_provider_tab_retained": true,
+      "retry_control": "Try Research again",
+      "other_evidence_preserved": true,
+      "synthetic_private_error_redacted": true
+    },
+    {
+      "id": "deep_study_stop_waiting",
+      "status": "passed",
+      "during_request": {
+        "generate_disabled": true,
+        "stop_control_visible": true,
+        "busy": true
+      },
+      "terminal_response_ms": 6.1,
+      "role": "status",
+      "focus_moved": true,
+      "busy_cleared": true,
+      "generate_reenabled": true,
+      "retry_control": "Start the study again",
+      "provider_usage_boundary_disclosed": true
+    },
+    {
+      "id": "deep_study_invalid_or_provider_failure",
+      "status": "passed",
+      "terminal_response_ms": 215.7,
+      "role": "alert",
+      "focus_moved": true,
+      "busy_cleared": true,
+      "retry_control": "Try Deep Study again",
+      "film_evidence_and_focus_preserved": true,
+      "synthetic_private_error_redacted": true
+    },
+    {
+      "id": "deep_study_completed_result",
+      "status": "passed",
+      "result_focus_moved": true,
+      "busy_cleared": true,
+      "stop_control_hidden": true,
+      "model_called": false,
+      "method": "Synthetic valid response exercising the existing validated-result renderer"
+    }
+  ],
+  "keyboard_tablists": [
+    {
+      "name": "Analysis sections",
+      "key": "ArrowRight",
+      "focused_tab": "Shot data",
+      "selected_tab": "Shot data",
+      "active_panel": "view-shotdata",
+      "tab_stops": 1,
+      "status": "passed"
+    },
+    {
+      "name": "Settings sections",
+      "key": "End",
+      "focused_tab": "System settings",
+      "selected_tab": "System settings",
+      "active_panel": "systemSettingsPanel",
+      "tab_stops": 1,
+      "status": "passed"
+    },
+    {
+      "name": "Account action",
+      "key": "ArrowRight",
+      "focused_tab": "Create account",
+      "selected_tab": "Create account",
+      "tab_stops": 1,
+      "status": "passed"
+    },
+    {
+      "name": "Video categories",
+      "key": "ArrowRight",
+      "focused_tab": "Interview",
+      "selected_tab": "Interview",
+      "controlled_panel": "dossier-video-panel",
+      "tab_stops": 1,
+      "status": "passed"
+    }
+  ],
+  "axe_results": [
+    {
+      "context": "Discover landing",
+      "tags": [
+        "wcag2a",
+        "wcag2aa",
+        "wcag21aa"
+      ],
+      "passed_rules": 22,
+      "violations": 0,
+      "incomplete": 0
+    },
+    {
+      "context": "Mobile film dossier",
+      "tags": [
+        "wcag2a",
+        "wcag2aa",
+        "wcag21aa"
+      ],
+      "passed_rules": 30,
+      "violations": 0,
+      "incomplete": 0
+    },
+    {
+      "context": "Mobile Deep Study error and retry state",
+      "tags": [
+        "wcag2a",
+        "wcag2aa",
+        "wcag21aa"
+      ],
+      "passed_rules": 30,
+      "violations": 0,
+      "incomplete": 0
+    }
+  ],
+  "contrast_correction": {
+    "control": "Dark-theme primary action",
+    "before_ratio": 3.05,
+    "after_ratio": 5.79,
+    "required_ratio": 4.5,
+    "status": "passed"
+  },
+  "boundaries": [
+    "Stop waiting aborts the browser fetch and prevents stale rendering; it does not claim that a provider call already running on the server was cancelled.",
+    "Synthetic network/provider responses exercised UI state transitions without spending model tokens or storing provider details.",
+    "Raw provider and exception details remain in developer console diagnostics only and do not enter user-facing state panels.",
+    "The hidden processing video and canvas are removed from the accessibility tree; visible user media remains labelled independently."
+  ],
+  "known_constraints": [
+    "Automated axe checks do not replace testing with VoiceOver, NVDA or another assistive technology user.",
+    "Safari, Firefox, physical mobile devices, browser zoom and operating-system high-contrast modes remain unmeasured.",
+    "The provider-timeout state was induced with a synthetic bounded response; no additional paid model call was made.",
+    "Detailed multi-stage evidence transparency remains Step 9 rather than being added to this state/accessibility checkpoint."
+  ]
+}
