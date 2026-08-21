@@ -129,6 +129,26 @@ Every fixed-workflow/Agent comparison must:
 7. save safe failure as a valid behavioural result where evidence is insufficient; and
 8. compare the production fixed workflow and Agent under the same rubric before a cut-over.
 
+## Packet-Only Baseline Protocol
+
+Measure local packet preparation without spending model tokens or writing packet contents:
+
+```bash
+uv run python tools/benchmark_evidence_packet.py \
+  --output evals/results/packet-baseline-YYYY-MM-DD.json
+```
+
+The default protocol reuses the five frozen identities/questions, resolves their canonical IDs from
+the reviewed fixed-workflow baseline, runs two fresh cold processes and one unrecorded warm-up plus
+five measured warm samples per case. Film resolution happens before the packet clock. The report
+contains only stage observations, aggregate packet shape, public IDs and a non-secret configuration
+fingerprint; the harness rejects film queries, questions, titles, directors and evidence-text fields
+before writing. It never invokes `DeepSeekStudyService.generate` and records zero model calls.
+
+A packet result complements rather than replaces the complete workflow baseline. Keep cold and warm
+samples separate: cold semantic retrieval includes process/model initialisation, while warm samples
+measure repeated preparation with the embedding model already resident.
+
 ## Updating the Baseline
 
 Run the evaluator from the repository root with the configured local environment:

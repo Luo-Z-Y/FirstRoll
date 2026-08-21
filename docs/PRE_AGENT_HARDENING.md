@@ -103,6 +103,11 @@ Run the unchanged fixed workflow with the new instrumentation. Use five warm pac
 frozen case after one unrecorded warm-up and two cold processes per case. Run model synthesis only
 where needed to establish the controlled end-to-end reference and cost.
 
+```bash
+uv run python tools/benchmark_evidence_packet.py \
+  --output evals/results/packet-baseline-YYYY-MM-DD.json
+```
+
 **Acceptance:** a reviewed, redacted result records packet P50/P95, prompt size, selected/omitted
 counts, failures and configuration fingerprint. No optimisation is mixed into this result.
 

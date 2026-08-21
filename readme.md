@@ -1002,6 +1002,11 @@ Evaluation results are mutable experimental records, so the README no longer dup
 metric table that can silently become stale. The frozen cases, latest committed result, metric
 definitions, case-level results and replacement procedure live in [Evaluation](docs/EVALUATION.md).
 
+For a model-free cold/warm evidence-packet measurement, run
+`uv run python tools/benchmark_evidence_packet.py --output evals/results/packet-baseline-YYYY-MM-DD.json`.
+The harness writes only redacted stage timings, aggregate packet shape, safe IDs and configuration;
+it never calls DeepSeek or stores packet text.
+
 The source of truth is the newest reviewed JSON artefact under `evals/results/`, not a screenshot or
 copied Markdown table. Any fixed-workflow or Agent comparison must use the same identities, questions
 and rubric in [`evals/agent_cases.json`](evals/agent_cases.json), report operational and quality
