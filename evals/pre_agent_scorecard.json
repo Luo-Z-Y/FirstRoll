@@ -127,6 +127,34 @@
       "flagged_instruction_items": 2,
       "contained_instruction_cases": 1,
       "model_calls": 0
+    },
+    "packet_selection_candidate": {
+      "source_revision": "88c054ce8c42365ff9b3a6c0ee5081c1fb39a3d7",
+      "packet_result_path": "evals/results/packet-selection-2026-08-21.json",
+      "synthetic_result_path": "evals/results/packet-quality-selection-2026-08-21.json",
+      "workflow_result_path": "evals/results/baseline-selection-2026-08-21.json",
+      "packet_configuration_fingerprint": "0718faef14d1de81",
+      "workflow_configuration_fingerprint": "42f89877219dcb53",
+      "packet_samples": 35,
+      "packet_failed_samples": 0,
+      "packet_provenance_completeness": 1.0,
+      "packet_mean_duplicate_ratio": 0.0,
+      "packet_maximum_duplicate_ratio": 0.0,
+      "packet_mean_focus_relevance": 0.8273,
+      "packet_prompt_character_median": 23242.0,
+      "packet_prompt_character_maximum": 29360,
+      "synthetic_passed_packets": 5,
+      "synthetic_limited_packets": 1,
+      "synthetic_duplicate_ratio": 0.0,
+      "synthetic_flagged_instruction_items": 2,
+      "synthetic_contained_instruction_cases": 1,
+      "workflow_completed_cases": 5,
+      "workflow_mean_quality": 98.3,
+      "workflow_prompt_token_median": 6288,
+      "workflow_prompt_token_p95": 7376.6,
+      "workflow_total_tokens": 42234,
+      "workflow_p50_end_to_end_seconds": 66.676,
+      "workflow_p95_end_to_end_seconds": 77.798
     }
   },
   "user_journeys": [
@@ -422,12 +450,12 @@
     {
       "id": "S08",
       "name": "Improve packet selection quality",
-      "status": "next"
+      "status": "complete"
     },
     {
       "id": "S09",
       "name": "Improve Deep Study transparency",
-      "status": "queued"
+      "status": "next"
     },
     {
       "id": "S10",

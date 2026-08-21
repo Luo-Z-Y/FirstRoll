@@ -1,0 +1,500 @@
+{
+  "schema_version": 1,
+  "suite_id": "firstroll-packet-quality-v1",
+  "system": "synthetic_packet_quality_baseline",
+  "recorded_at": "2026-08-21T17:33:22.690334+00:00",
+  "source_revision": "88c054ce8c42365ff9b3a6c0ee5081c1fb39a3d7",
+  "fixture_fingerprint": "9c2c10d2c5504fa9",
+  "protocol": {
+    "source_cases": "evals/packet_quality_cases.json",
+    "synthesis_called": false,
+    "private_sources_loaded": false,
+    "result_contains_source_text": false
+  },
+  "quality_scope": "Deterministic identity, citation readiness, provenance, duplication, lexical focus, diversity, instruction containment, selection pressure and packet size; not factual film-analysis correctness or human usefulness.",
+  "aggregate": {
+    "case_count": 6,
+    "assessed_cases": 6,
+    "expectation_failure_count": 0,
+    "packet_status_counts": {
+      "limited": 1,
+      "passed": 5
+    },
+    "issue_counts": {
+      "film_specific_evidence_sparse": 1
+    },
+    "mean_provenance_completeness": 1.0,
+    "mean_duplicate_ratio": 0.0,
+    "mean_focus_relevance": 0.9445,
+    "flagged_instruction_items": 2,
+    "contained_instruction_cases": 1,
+    "model_calls": 0
+  },
+  "cases": [
+    {
+      "case_id": "abundant-diverse-evidence",
+      "challenge": "abundant complementary theory, criticism and verified creator speech",
+      "expectation_failures": [],
+      "assessment": {
+        "schema_version": 1,
+        "status": "passed",
+        "issues": [],
+        "identity": {
+          "complete": true,
+          "expected_supplied": true,
+          "matches_expected": true,
+          "director_count": 1
+        },
+        "citation_readiness": {
+          "valid": true,
+          "identifier_count": 9,
+          "unique_identifier_count": 9
+        },
+        "provenance": {
+          "complete_items": 8,
+          "total_items": 8,
+          "completeness_ratio": 1.0
+        },
+        "duplication": {
+          "duplicate_items": 0,
+          "selected_items": 8,
+          "duplicate_ratio": 0.0
+        },
+        "focus_relevance": {
+          "focus_token_count": 10,
+          "relevant_items": 8,
+          "total_items": 8,
+          "relevance_ratio": 1.0
+        },
+        "diversity": {
+          "evidence_types": [
+            "creator_stated",
+            "critic_reported",
+            "theory_framework"
+          ],
+          "evidence_type_count": 3,
+          "languages": [
+            "en"
+          ],
+          "language_count": 1,
+          "theory_title_count": 4,
+          "attributed_origin_count": 4
+        },
+        "instruction_safety": {
+          "flagged_items": 0,
+          "containment_boundary": true
+        },
+        "sufficiency": {
+          "state": "abundant",
+          "theory_sources": 4,
+          "film_specific_sources": 4,
+          "critical_claims": 1
+        },
+        "selection": {
+          "retrieval_candidates": 48,
+          "theory_candidates": 4,
+          "theory_selected": 4,
+          "theory_omitted": 0,
+          "critical_candidates": 1,
+          "critical_claims": 1,
+          "critical_omitted": 0,
+          "attributed_candidates": 4,
+          "attributed_selected": 4,
+          "attributed_omitted": 0,
+          "attributed_truncated": 0
+        },
+        "size": {
+          "packet_characters": 6682,
+          "evidence_characters": 1390
+        }
+      }
+    },
+    {
+      "case_id": "sparse-honest-boundary",
+      "challenge": "sparse film-specific evidence requiring an honest limitation",
+      "expectation_failures": [],
+      "assessment": {
+        "schema_version": 1,
+        "status": "limited",
+        "issues": [
+          "film_specific_evidence_sparse"
+        ],
+        "identity": {
+          "complete": true,
+          "expected_supplied": true,
+          "matches_expected": true,
+          "director_count": 1
+        },
+        "citation_readiness": {
+          "valid": true,
+          "identifier_count": 1,
+          "unique_identifier_count": 1
+        },
+        "provenance": {
+          "complete_items": 1,
+          "total_items": 1,
+          "completeness_ratio": 1.0
+        },
+        "duplication": {
+          "duplicate_items": 0,
+          "selected_items": 1,
+          "duplicate_ratio": 0.0
+        },
+        "focus_relevance": {
+          "focus_token_count": 6,
+          "relevant_items": 1,
+          "total_items": 1,
+          "relevance_ratio": 1.0
+        },
+        "diversity": {
+          "evidence_types": [
+            "theory_framework"
+          ],
+          "evidence_type_count": 1,
+          "languages": [
+            "en"
+          ],
+          "language_count": 1,
+          "theory_title_count": 1,
+          "attributed_origin_count": 0
+        },
+        "instruction_safety": {
+          "flagged_items": 0,
+          "containment_boundary": true
+        },
+        "sufficiency": {
+          "state": "sparse",
+          "theory_sources": 1,
+          "film_specific_sources": 0,
+          "critical_claims": 0
+        },
+        "selection": {
+          "retrieval_candidates": 3,
+          "theory_candidates": 1,
+          "theory_selected": 1,
+          "theory_omitted": 0,
+          "critical_candidates": 0,
+          "critical_claims": 0,
+          "critical_omitted": 0,
+          "attributed_candidates": 0,
+          "attributed_selected": 0,
+          "attributed_omitted": 0,
+          "attributed_truncated": 0
+        },
+        "size": {
+          "packet_characters": 2659,
+          "evidence_characters": 185
+        }
+      }
+    },
+    {
+      "case_id": "duplicate-attributed-evidence",
+      "challenge": "duplicate and near-duplicate attributed criticism",
+      "expectation_failures": [],
+      "assessment": {
+        "schema_version": 1,
+        "status": "passed",
+        "issues": [],
+        "identity": {
+          "complete": true,
+          "expected_supplied": true,
+          "matches_expected": true,
+          "director_count": 1
+        },
+        "citation_readiness": {
+          "valid": true,
+          "identifier_count": 4,
+          "unique_identifier_count": 4
+        },
+        "provenance": {
+          "complete_items": 4,
+          "total_items": 4,
+          "completeness_ratio": 1.0
+        },
+        "duplication": {
+          "duplicate_items": 0,
+          "selected_items": 4,
+          "duplicate_ratio": 0.0
+        },
+        "focus_relevance": {
+          "focus_token_count": 10,
+          "relevant_items": 4,
+          "total_items": 4,
+          "relevance_ratio": 1.0
+        },
+        "diversity": {
+          "evidence_types": [
+            "critic_reported",
+            "theory_framework"
+          ],
+          "evidence_type_count": 2,
+          "languages": [
+            "en"
+          ],
+          "language_count": 1,
+          "theory_title_count": 2,
+          "attributed_origin_count": 2
+        },
+        "instruction_safety": {
+          "flagged_items": 0,
+          "containment_boundary": true
+        },
+        "sufficiency": {
+          "state": "bounded",
+          "theory_sources": 2,
+          "film_specific_sources": 2,
+          "critical_claims": 0
+        },
+        "selection": {
+          "retrieval_candidates": 19,
+          "theory_candidates": 2,
+          "theory_selected": 2,
+          "theory_omitted": 0,
+          "critical_candidates": 0,
+          "critical_claims": 0,
+          "critical_omitted": 0,
+          "attributed_candidates": 3,
+          "attributed_selected": 2,
+          "attributed_omitted": 1,
+          "attributed_truncated": 0
+        },
+        "size": {
+          "packet_characters": 4094,
+          "evidence_characters": 604
+        }
+      }
+    },
+    {
+      "case_id": "multilingual-provenance",
+      "challenge": "multilingual evidence and original-title preservation",
+      "expectation_failures": [],
+      "assessment": {
+        "schema_version": 1,
+        "status": "passed",
+        "issues": [],
+        "identity": {
+          "complete": true,
+          "expected_supplied": true,
+          "matches_expected": true,
+          "director_count": 1
+        },
+        "citation_readiness": {
+          "valid": true,
+          "identifier_count": 3,
+          "unique_identifier_count": 3
+        },
+        "provenance": {
+          "complete_items": 3,
+          "total_items": 3,
+          "completeness_ratio": 1.0
+        },
+        "duplication": {
+          "duplicate_items": 0,
+          "selected_items": 3,
+          "duplicate_ratio": 0.0
+        },
+        "focus_relevance": {
+          "focus_token_count": 17,
+          "relevant_items": 2,
+          "total_items": 3,
+          "relevance_ratio": 0.6667
+        },
+        "diversity": {
+          "evidence_types": [
+            "critic_reported",
+            "theory_framework"
+          ],
+          "evidence_type_count": 2,
+          "languages": [
+            "en",
+            "zh"
+          ],
+          "language_count": 2,
+          "theory_title_count": 2,
+          "attributed_origin_count": 1
+        },
+        "instruction_safety": {
+          "flagged_items": 0,
+          "containment_boundary": true
+        },
+        "sufficiency": {
+          "state": "bounded",
+          "theory_sources": 2,
+          "film_specific_sources": 1,
+          "critical_claims": 0
+        },
+        "selection": {
+          "retrieval_candidates": 27,
+          "theory_candidates": 2,
+          "theory_selected": 2,
+          "theory_omitted": 0,
+          "critical_candidates": 0,
+          "critical_claims": 0,
+          "critical_omitted": 0,
+          "attributed_candidates": 1,
+          "attributed_selected": 1,
+          "attributed_omitted": 0,
+          "attributed_truncated": 0
+        },
+        "size": {
+          "packet_characters": 3303,
+          "evidence_characters": 282
+        }
+      }
+    },
+    {
+      "case_id": "ambiguous-identity-selected",
+      "challenge": "one explicitly selected identity among same-title alternatives",
+      "expectation_failures": [],
+      "assessment": {
+        "schema_version": 1,
+        "status": "passed",
+        "issues": [],
+        "identity": {
+          "complete": true,
+          "expected_supplied": true,
+          "matches_expected": true,
+          "director_count": 1
+        },
+        "citation_readiness": {
+          "valid": true,
+          "identifier_count": 3,
+          "unique_identifier_count": 3
+        },
+        "provenance": {
+          "complete_items": 3,
+          "total_items": 3,
+          "completeness_ratio": 1.0
+        },
+        "duplication": {
+          "duplicate_items": 0,
+          "selected_items": 3,
+          "duplicate_ratio": 0.0
+        },
+        "focus_relevance": {
+          "focus_token_count": 7,
+          "relevant_items": 3,
+          "total_items": 3,
+          "relevance_ratio": 1.0
+        },
+        "diversity": {
+          "evidence_types": [
+            "critic_reported",
+            "theory_framework"
+          ],
+          "evidence_type_count": 2,
+          "languages": [
+            "en"
+          ],
+          "language_count": 1,
+          "theory_title_count": 2,
+          "attributed_origin_count": 1
+        },
+        "instruction_safety": {
+          "flagged_items": 0,
+          "containment_boundary": true
+        },
+        "sufficiency": {
+          "state": "bounded",
+          "theory_sources": 2,
+          "film_specific_sources": 1,
+          "critical_claims": 0
+        },
+        "selection": {
+          "retrieval_candidates": 22,
+          "theory_candidates": 2,
+          "theory_selected": 2,
+          "theory_omitted": 0,
+          "critical_candidates": 0,
+          "critical_claims": 0,
+          "critical_omitted": 0,
+          "attributed_candidates": 1,
+          "attributed_selected": 1,
+          "attributed_omitted": 0,
+          "attributed_truncated": 0
+        },
+        "size": {
+          "packet_characters": 3611,
+          "evidence_characters": 480
+        }
+      }
+    },
+    {
+      "case_id": "malicious-retrieved-instructions",
+      "challenge": "retrieved instructions must remain untrusted evidence",
+      "expectation_failures": [],
+      "assessment": {
+        "schema_version": 1,
+        "status": "passed",
+        "issues": [],
+        "identity": {
+          "complete": true,
+          "expected_supplied": true,
+          "matches_expected": true,
+          "director_count": 1
+        },
+        "citation_readiness": {
+          "valid": true,
+          "identifier_count": 3,
+          "unique_identifier_count": 3
+        },
+        "provenance": {
+          "complete_items": 3,
+          "total_items": 3,
+          "completeness_ratio": 1.0
+        },
+        "duplication": {
+          "duplicate_items": 0,
+          "selected_items": 3,
+          "duplicate_ratio": 0.0
+        },
+        "focus_relevance": {
+          "focus_token_count": 8,
+          "relevant_items": 3,
+          "total_items": 3,
+          "relevance_ratio": 1.0
+        },
+        "diversity": {
+          "evidence_types": [
+            "critic_reported",
+            "theory_framework"
+          ],
+          "evidence_type_count": 2,
+          "languages": [
+            "en"
+          ],
+          "language_count": 1,
+          "theory_title_count": 2,
+          "attributed_origin_count": 1
+        },
+        "instruction_safety": {
+          "flagged_items": 2,
+          "containment_boundary": true
+        },
+        "sufficiency": {
+          "state": "bounded",
+          "theory_sources": 2,
+          "film_specific_sources": 1,
+          "critical_claims": 0
+        },
+        "selection": {
+          "retrieval_candidates": 14,
+          "theory_candidates": 2,
+          "theory_selected": 2,
+          "theory_omitted": 0,
+          "critical_candidates": 0,
+          "critical_claims": 0,
+          "critical_omitted": 0,
+          "attributed_candidates": 1,
+          "attributed_selected": 1,
+          "attributed_omitted": 0,
+          "attributed_truncated": 0
+        },
+        "size": {
+          "packet_characters": 3772,
+          "evidence_characters": 593
+        }
+      }
+    }
+  ]
+}

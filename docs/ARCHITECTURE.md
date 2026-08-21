@@ -141,7 +141,7 @@ future-enterprise path, but ADR-017 removes it from the production critical path
 | `video_sources.py` | Public video discovery, classification, deduplication, captions/descriptions and private cache | Copyright adjudication or verified speaker identity by default |
 | `library.py` | Private document catalogue and managed-file metadata | Text extraction or ranking |
 | `library_index.py` | PDF extraction, chunking, FTS5, single-flight background query-encoder warm-up, local embeddings, rank fusion and page citations | Film-specific factual claims |
-| `evidence.py` | Typed evidence packet, permitted-claim boundaries and aggregate attributed-selection/omission accounting | Model generation or provider access |
+| `evidence.py` | Typed packet; focus-aware theory/claim/attributed ranking; exact/near deduplication; source and character budgets; permitted-claim and omission boundaries | Model generation or provider access |
 | `packet_quality.py` | Pre-synthesis identity, citation, provenance, duplication, lexical relevance, diversity and retrieved-instruction diagnostics | Source-text persistence, factual correctness, human usefulness or model grading |
 | `study_observability.py` | Allow-listed monotonic stage timings, terminal status and bounded aggregate counts | Prompts, evidence text, credentials, model output or exception details |
 | `study_service.py` | DeepSeek request, Pydantic validation, citation validation, quality gate and one repair | Authentication, quota reservation or research-tool authorisation |
@@ -209,8 +209,9 @@ local API startup → background query-encoder warm-up while Discover remains av
 selected film
 → cached criticism and video text
 → private hybrid library retrieval
-→ typed EvidencePacket with explicit untrusted-instruction boundary
+→ focus-ranked, deduplicated and layer-budgeted EvidencePacket with explicit omission reasons and untrusted-instruction boundary
 → deterministic packet-quality diagnostics in evaluation paths
+→ compact selected prompt records (complete selected packet remains inspectable in the result)
 → DeepSeek structured draft
 → schema and citation validation
 → deterministic quality gate
@@ -226,8 +227,12 @@ initialisation lock prevents startup and an early request from loading duplicate
 `FIRSTROLL_PREWARM_EMBEDDINGS=0` restores lazy loading, and a failed warm-up leaves FTS retrieval
 available. A shared `StudyTrace` spans
 the HTTP route, cache reads, public or private retrieval, packet assembly and synthesis. It emits only
-schema-controlled stage names, durations, statuses, attempt/failure totals and bounded counts. The
-complete record appears in the owner-visible study result and as a redacted server log record;
+schema-controlled stage names, durations, statuses, attempt/failure totals and bounded counts.
+Selection keeps at most eight theory passages, twelve critic claims and twelve attributed excerpts,
+with 12,000/18,000-character claim/attributed budgets and per-source/domain quotas. The complete
+selected evidence and aggregate omission reasons appear in the owner-visible result; prompt JSON
+omits redundant fields and whitespace rather than hiding evidence from inspection. The observability
+record also appears as a redacted server log record;
 public SSE retains its smaller allow-list and receives no token counts or internal timings.
 
 ### Hosted Deep Study

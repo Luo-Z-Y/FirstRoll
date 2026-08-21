@@ -1,5 +1,80 @@
 # FirstRoll Project Progress
 
+### 21 August 2026 — Focus-ranked bounded packet selection
+
+Delivered:
+
+1. Replaced first-in packet filling with focus-aware ranking that retains retrieval order as a
+   deterministic tie-break and gives selected critic sources plus verified creator speech explicit
+   priority.
+2. Added exact/near duplicate removal, per-title/source/domain diversity limits and inferred `en`/`zh`
+   language for otherwise-unlabelled video descriptions while preserving source URLs and locators.
+3. Bounded synthesis to eight theory passages, twelve critic claims and twelve attributed excerpts,
+   with 12,000-character claim, 18,000-character attributed and 3,000-character per-item limits.
+   Every omitted candidate receives one aggregate reason.
+4. Renumbered selected `S`, `C` and `E` identifiers contiguously and extended redacted observability
+   with candidate/omission counts; citation validation remains unchanged.
+5. Compacted only the provider prompt's JSON/fields. The complete selected typed evidence, provenance,
+   boundaries and selection manifests remain inspectable in the returned study.
+6. Reran the synthetic quality suite, all 35 frozen packet preparations and one five-case live
+   fixed-workflow evaluation at the same source revision.
+
+Packet and synthetic acceptance:
+
+| Measure | Result |
+|---|---:|
+| Frozen packet samples completed | 35 / 35 |
+| Applicable provenance completeness | 100% |
+| Mean / maximum selected duplicate ratio | 0% / 0% |
+| Mean lexical focus relevance | 82.73% |
+| Packet status | 28 passed samples · 7 honestly limited *The Thing* samples |
+| Median / maximum packet JSON | 26,150 / 33,556 characters |
+| Median / maximum compact synthesis prompt | 23,242 / 29,360 characters |
+| Synthetic packet status | 5 passed · 1 honestly sparse limited |
+| Synthetic malicious items flagged / contained | 2 / 2 |
+| Packet/synthetic model calls | 0 |
+
+Complete-workflow acceptance:
+
+| Measure | Pre-selection | Bounded selection |
+|---|---:|---:|
+| Cases completed | 4 / 5 | 5 / 5 |
+| Mean / median automated quality | 97.02 / 97.38 | 98.30 / 99.25 |
+| Valid citations / deterministic gate | 100% | 100% |
+| Completed-study prompt median / P95 | 9,577 / 14,830.6 | 6,288 / 7,376.6 |
+| P50 / P95 end to end | 77.679 / 91.225 s | 66.676 / 77.798 s |
+| Model calls / total tokens | 5 / 63,764 | 5 / 42,234 |
+
+Acceptance evidence:
+
+- all 211 automated tests, scoped Ruff, backend/tool compilation, frontend JavaScript syntax, JSON
+  parsing, npm audit and repository whitespace checks pass;
+- deterministic tests enforce contiguous IDs, 8/12/12 item limits, layer character budgets,
+  source/domain quotas, duplicate omission and redacted selection manifests;
+- the synthetic duplicate case moves from limited to passed with 0% selected duplication; the
+  intentionally sparse case remains limited and both malicious evidence items remain contained;
+- all five live workflow cases complete without repair, retain valid citations and pass the quality
+  gate; mean quality is above both the 96.94 floor and the pre-selection checkpoint;
+- completed-study median/P95 input tokens improve 34.34%/50.26%, establishing both 8,000/12,000
+  scorecard budgets, while complete-suite token use falls 33.77%;
+- scans across all three results find no private title or 120-character private passage fragment.
+
+Known constraints:
+
+- focus overlap and ranking are deterministic lexical heuristics rather than semantic or human
+  relevance judgements;
+- omission improves model context but does not delete cached source material; users can still inspect
+  provider bundles separately in the dossier;
+- *The Thing* remains honestly limited because no film-specific attributed source is cached;
+- one five-case model run is a regression checkpoint, not a provider-reliability estimate or proof
+  that selection alone caused every latency/quality change;
+- human usefulness and actionability still require the final blind rubric.
+
+Next actionable work:
+
+1. Complete Step 9 by showing packet readiness, selected/omitted counts, completed progress history,
+   evidence gaps and inspectable citation targets without exposing prompts or private text in SSE.
+
 ### 21 August 2026 — Synthetic pre-synthesis packet-quality baseline
 
 Delivered:
