@@ -1386,6 +1386,11 @@ async function loadFilmDetail(filmId, options = {}) {
     renderFilmDetail(data.film);
     persistDiscoverySession();
     loadFilmReception(data.film);
+    if (options.scroll !== false) {
+      window.requestAnimationFrame(() => {
+        refs.filmDetail.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    }
   } catch (err) {
     state.discovery.selectedFilm = null;
     state.discovery.detailFilmId = null;
@@ -1407,6 +1412,7 @@ function renderFilmDetail(film) {
   const originalTitle = film.original_title && film.original_title !== film.title
     ? `<p class="detail-original">${escapeHtml(film.original_title)}</p>`
     : "";
+  const overviewMarkup = detailOverviewMarkup(film.overview);
   const reviews = Array.isArray(film.reviews) ? film.reviews : [];
   const sourceUrl = safeHttpUrl(film.source?.url);
   const overviewSourceUrl = safeHttpUrl(film.overview_source?.url);
@@ -1433,6 +1439,12 @@ function renderFilmDetail(film) {
     letterboxd: Boolean(letterboxdStatus.configured),
   };
   const videoBundle = film.video_sources?.bundle || null;
+  const videoCount = Array.isArray(videoBundle?.videos) ? videoBundle.videos.length : 0;
+  const criticalSourceCount = Object.values(criticalBundles).reduce(
+    (total, bundle) => total + (Array.isArray(bundle?.reviews) ? bundle.reviews.length : 0),
+    0,
+  );
+  const factsOpen = window.matchMedia("(min-width: 641px)").matches ? " open" : "";
 
   refs.filmDetail.innerHTML = `
     <div class="detail-hero">
@@ -1442,9 +1454,6 @@ function renderFilmDetail(film) {
         <p class="eyebrow">Study dossier / ${escapeHtml(filmYearLabel(film))}</p>
         <h2>${escapeHtml(film.title || "Untitled")}</h2>
         ${originalTitle}
-        <p class="detail-overview">${escapeHtml(film.overview || "No synopsis is available from this source.")}</p>
-        ${overviewSourceUrl ? `<p class="detail-attribution">Overview: <a href="${escapeHtml(overviewSourceUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(overviewSourceName)}${overviewSourceLicence ? ` · ${escapeHtml(overviewSourceLicence)}` : ""} ↗</a></p>` : ""}
-        ${tmdbNotice}
         <div class="detail-actions">
           ${runtimeConfig.videoAnalysisEnabled
             ? '<button class="detail-action primary" type="button" data-analyse-film>Analyse a clip</button>'
@@ -1452,22 +1461,46 @@ function renderFilmDetail(film) {
           ${runtimeConfig.accountUi ? '<button class="detail-action" type="button" data-save-film>Save to account</button>' : ""}
           ${sourceUrl ? `<a class="detail-action" href="${escapeHtml(sourceUrl)}" target="_blank" rel="noopener noreferrer">View source ↗</a>` : ""}
         </div>
+        ${overviewMarkup}
+        ${overviewSourceUrl ? `<p class="detail-attribution">Overview: <a href="${escapeHtml(overviewSourceUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(overviewSourceName)}${overviewSourceLicence ? ` · ${escapeHtml(overviewSourceLicence)}` : ""} ↗</a></p>` : ""}
+        ${tmdbNotice}
         ${filmReceptionMarkup(film.awards || [])}
       </div>
-      <aside class="detail-facts">
-        ${detailFact("Director", directors)}
-        ${detailFact("Written by", writers)}
-        ${detailFact("Produced by", producers)}
-        ${detailFact("Cinematography", cinematographers)}
-        ${detailFact("Edited by", editors)}
-        ${detailFact("Runtime", film.runtime_minutes ? `${film.runtime_minutes} minutes` : "Not supplied")}
-        ${detailFact("Genres", genres)}
-        ${crewSourcesMarkup(film.crew_sources)}
-      </aside>
+      <details class="detail-facts"${factsOpen}>
+        <summary>Credits &amp; film facts</summary>
+        <div class="detail-facts-list">
+          ${detailFact("Director", directors)}
+          ${detailFact("Written by", writers)}
+          ${detailFact("Produced by", producers)}
+          ${detailFact("Cinematography", cinematographers)}
+          ${detailFact("Edited by", editors)}
+          ${detailFact("Runtime", film.runtime_minutes ? `${film.runtime_minutes} minutes` : "Not supplied")}
+          ${detailFact("Genres", genres)}
+          ${crewSourcesMarkup(film.crew_sources)}
+        </div>
+      </details>
     </div>
-    <section class="film-videos">
+    <nav class="study-paths" aria-label="Film dossier sections">
+      <a class="study-path" href="#dossier-watch">
+        <span>01</span><h3>Watch &amp; verify</h3>
+        <p>${videoCount ? `${videoCount} cached video source${videoCount === 1 ? "" : "s"}` : "Find interviews, lectures and film-study video"}</p>
+      </a>
+      <a class="study-path" href="#dossier-criticism">
+        <span>02</span><h3>Read perspectives</h3>
+        <p>${criticalSourceCount ? `${criticalSourceCount} attributed source${criticalSourceCount === 1 ? "" : "s"} ready` : "Compare attributed criticism and reported claims"}</p>
+      </a>
+      <a class="study-path" href="#dossier-study">
+        <span>03</span><h3>Build the study</h3>
+        <p>Turn evidence into precise hypotheses for close viewing</p>
+      </a>
+    </nav>
+    <section id="dossier-watch" class="film-videos">
       <div class="film-videos-head">
-        <h3>Watch &amp; study</h3>
+        <div class="dossier-section-copy">
+          <span>01 · Viewing context</span>
+          <h3>Watch &amp; study</h3>
+          <p>Use interviews, lectures and essays as attributed context—not direct proof of what the film does.</p>
+        </div>
         <button type="button" data-load-film-videos>${videoBundle ? "Find more videos" : "Find relevant videos"}</button>
       </div>
       <div data-film-videos-output>
@@ -1476,9 +1509,13 @@ function renderFilmDetail(film) {
           : videoProviderStatusMarkup(film.video_sources?.providers)}
       </div>
     </section>
-    <section class="critical-perspectives">
+    <section id="dossier-criticism" class="critical-perspectives">
       <div class="critical-head">
-        <h3>Critical perspectives</h3>
+        <div class="dossier-section-copy">
+          <span>02 · Attributed interpretation</span>
+          <h3>Critical perspectives</h3>
+          <p>Compare who reports each interpretation before using it to shape a viewing question.</p>
+        </div>
         ${criticismSourceTabsMarkup(
           criticalBundles,
           activeCriticismProvider,
@@ -1489,9 +1526,13 @@ function renderFilmDetail(film) {
         ${activeCriticalBundle ? criticalResearchMarkup(activeCriticalBundle) : ""}
       </div>
     </section>
-    <section class="deep-study">
+    <section id="dossier-study" class="deep-study">
       <div class="deep-study-head">
-        <h3>Deep Study</h3>
+        <div class="dossier-section-copy">
+          <span>03 · Evidence-grounded synthesis</span>
+          <h3>Deep Study</h3>
+          <p>Choose a formal focus, then build an inspectable reading from the evidence currently available.</p>
+        </div>
       </div>
       <div class="study-prompt-row">
         <textarea data-study-question rows="2" maxlength="500" aria-label="Optional focus for Deep Study" placeholder="Optional focus — for example: spatial hierarchy, cutting rhythm, or point of view"></textarea>
@@ -1535,6 +1576,26 @@ function displayCrew(values, fallback = "Not supplied") {
 
 function firstCrewName(values, fallback = "Not supplied") {
   return displayCrewNames(values)[0] || fallback;
+}
+
+function detailOverviewMarkup(value) {
+  const overview = String(value || "No synopsis is available from this source.").trim();
+  const limit = 460;
+  if (overview.length <= limit) {
+    return `<div class="detail-synopsis"><span>Catalogue synopsis</span><p class="detail-overview">${escapeHtml(overview)}</p></div>`;
+  }
+  const clipped = overview
+    .slice(0, limit)
+    .replace(/\s+\S*$/, "")
+    .trim();
+  return `<div class="detail-synopsis">
+    <span>Catalogue synopsis</span>
+    <p class="detail-overview">${escapeHtml(clipped)}…</p>
+    <details class="detail-overview-more">
+      <summary>Read the full attributed synopsis</summary>
+      <p>${escapeHtml(overview)}</p>
+    </details>
+  </div>`;
 }
 
 function detailFact(label, value) {

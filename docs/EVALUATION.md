@@ -115,6 +115,18 @@ from zero to twenty items; all current eligible attributed candidates fit, so om
 truncation totals were zero. Packet JSON shape ranged from 14,022 to 45,004 characters. These counts
 measure volume and selection pressure, not relevance, factual correctness or human usefulness.
 
+## Latest UI Hierarchy Checkpoint
+
+[`ui-hierarchy-2026-08-21.json`](../evals/results/ui-hierarchy-2026-08-21.json) records a local Chrome
+DevTools Protocol audit at 1,280 × 1,000 and 390 × 844 CSS pixels from revision `d3b3c19`. All six
+frozen journeys retained a usable hierarchy with zero P0/P1 blockers and zero horizontal overflow.
+Six immediate response observations produced P50/P95 of 7.35/12.05 ms against the 300 ms budget.
+
+The audit made no model calls. It reused the complete workflow result for synthesis coverage and
+explicitly defers detailed failure copy, retry, cancellation, keyboard, focus, announcement and
+contrast assessment to Step 5. Screenshots remain local acceptance aids; only public fixture IDs and
+redacted measurements are versioned.
+
 ## Metric Dictionary
 
 | Metric | Definition | Denominator |

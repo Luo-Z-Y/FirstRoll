@@ -1,5 +1,54 @@
 # FirstRoll Project Progress
 
+### 21 August 2026 — Task-led responsive product hierarchy
+
+Delivered:
+
+1. Replaced the nearly context-free Discover landing state with a compact product promise that tells
+   filmmakers to confirm identity, inspect attributed perspectives and prepare precise viewing
+   questions before the search form.
+2. Marked title as required, year/director as optional and added examples without changing the exact
+   identity contract or recent-search/session boundaries.
+3. Moved primary dossier actions ahead of the catalogue synopsis, bounded long synopsis copy behind
+   a native disclosure and collapsed secondary credit/fact detail by default at 390-pixel width.
+4. Added a numbered route through **Watch & verify**, **Read perspectives** and **Build the study**,
+   with evidence-aware counts and explanatory section copy that preserves the difference between
+   viewing context, attributed interpretation and synthesis.
+5. Re-applied the dossier scroll after final render, preventing asynchronously changing shelf height
+   from leaving a requested film below the viewport.
+6. Versioned a redacted Chrome DevTools Protocol hierarchy audit over all six frozen journeys; it
+   contains public fixture IDs and measurements only, with no screenshots, prompts or model call.
+
+Acceptance evidence:
+
+- all 198 automated tests, JavaScript syntax, scoped Ruff, hosted frontend build, npm audit and
+  repository whitespace checks pass;
+- six immediate-response observations report P50/P95 of 7.35/12.05 ms against the 300 ms budget;
+- exact search presents its pending state in 10.1 ms and dossier opening in 5.3 ms; external terminal
+  catalogue/detail latency remains separately visible rather than being labelled interface time;
+- the ambiguous *The Thing* journey presents fourteen explicit choices at 390 pixels with no
+  horizontal overflow;
+- the *In the Mood for Love* dossier exposes three loaded provider tabs, six visible attributed
+  sources, six applicable source links and all three dossier routes without mobile overflow;
+- loaded dossier alignment finishes at 0.328 CSS pixels from the section top; on mobile, primary
+  actions move from 792.156 to 208.609 CSS pixels and hero height falls from 1,749.688 to 1,037.688;
+- Settings and the selected film restore after reload, and sparse criticism retains four acquisition
+  actions plus a visible Deep Study route without displaying stale output.
+
+Known constraints:
+
+- this checkpoint audits hierarchy in local Chrome at 1,280 × 1,000 and 390 × 844 CSS pixels; Safari,
+  Firefox and physical-device rendering remain unmeasured;
+- Deep Study was not called again for a hierarchy-only audit; its current complete-workflow result is
+  referenced instead;
+- detailed empty/error/timeout copy, retry/cancellation, focus, keyboard, announcements and contrast
+  belong to Step 5 and are not claimed complete here.
+
+Next actionable work:
+
+1. Complete Step 5 by making every loading, empty, sparse, degraded, timeout and retry state specific
+   and actionable, then run keyboard, focus, announcement and critical-contrast checks.
+
 ### 21 August 2026 — Measured fixed-workflow and packet baselines
 
 Delivered:

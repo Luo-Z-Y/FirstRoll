@@ -70,6 +70,11 @@ The original GPL-3.0 licence and contributor attribution remain applicable. See
 - Confirm the intended film before opening the shelf whenever several records share or closely match
   a title; each choice exposes its year, director, original title and poster instead of trusting the
   provider's first-ranked result.
+- Start from a task-led Discover introduction and one clearly labelled identity form. Each completed
+  dossier keeps primary actions ahead of the bounded catalogue synopsis, collapses secondary credits
+  on narrow screens and provides numbered links through viewing context, attributed criticism and
+  Deep Study. A final loaded-dossier scroll prevents a changing shelf from leaving the requested film
+  below the viewport.
 - Read an attributed catalogue overview, poster and field-level crew provenance. TMDb results retain
   their IMDb and Wikidata external IDs so later research adapters can resolve the same work safely.
 - Browse a native HTML/CSS director shelf with up to twelve front-facing film cases. The selected
@@ -986,7 +991,7 @@ fallback behaviour; these are tracked separately from the new FirstRoll modules.
 | Evidence-grounded Deep Study | Complete | Typed theory, criticism, review and video-text evidence; Pydantic output, citation validation and quality gate |
 | Bounded research Agent core | Implemented | LangGraph control flow, bounded reducers, deterministic tool authorisation, fake-service scenarios and optional checkpointing; production route integration remains gated |
 | Authenticated research progress | Implemented | Allow-listed SSE lifecycle events, separate owner-scoped result retrieval and secret/evidence redaction tests; final interactive browser observation remains pending |
-| Pre-Agent product hardening | Active — Steps 1–3 complete | Scorecard, observability and reviewed cold/warm plus complete-workflow baselines are complete; interface hierarchy is next |
+| Pre-Agent product hardening | Active — Steps 1–4 complete | Scorecard, observability, measured baselines and task-led responsive hierarchy are complete; interface states and accessibility are next |
 | Clip analysis web migration | Complete | Scene, shot, colour, object and export workflow |
 | Clip-to-study evidence bridge | Queued | Feed measured scenes, shots and timecodes into synthesis after the active hardening sequence |
 | Creator primary-source layer | Partial | Discovered interview descriptions and public YouTube captions are stored and cited; verified speaker attribution and dedicated interview search remain planned |
@@ -1009,8 +1014,10 @@ it never calls DeepSeek or stores packet text.
 
 The latest reviewed complete-workflow and packet-only results are
 [`baseline-2026-08-21.json`](evals/results/baseline-2026-08-21.json) and
-[`packet-baseline-2026-08-21.json`](evals/results/packet-baseline-2026-08-21.json). The source of truth
-for each result family is its reviewed JSON artefact, not a screenshot or copied Markdown table. Any
+[`packet-baseline-2026-08-21.json`](evals/results/packet-baseline-2026-08-21.json); the latest
+responsive hierarchy audit is [`ui-hierarchy-2026-08-21.json`](evals/results/ui-hierarchy-2026-08-21.json).
+The source of truth for each result family is its reviewed JSON artefact, not a screenshot or copied
+Markdown table. Any
 fixed-workflow or Agent comparison must use the same identities, questions
 and rubric in [`evals/agent_cases.json`](evals/agent_cases.json), report operational and quality
 failures separately and retain its non-secret configuration fingerprint. The active step order,

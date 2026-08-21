@@ -20,7 +20,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/assets/styles.css?v=20260821-5" />
+  <link rel="stylesheet" href="/assets/styles.css?v=20260821-6" />
 </head>
 <body data-api-base="">
   <div class="app-shell">
@@ -58,18 +58,29 @@
 
     <main>
       <section id="product-discovery" class="product-view active">
-        <form id="discoveryForm" class="search-stage" role="search">
+        <header class="discovery-hero" aria-labelledby="discoveryTitle">
+          <div>
+            <p class="eyebrow">Evidence-grounded film study</p>
+            <h1 id="discoveryTitle">Find the film.<br /><em>Build the reading.</em></h1>
+          </div>
+          <p>
+            Confirm the exact edition, inspect attributed perspectives and turn available evidence
+            into precise questions for your next viewing.
+          </p>
+        </header>
+
+        <form id="discoveryForm" class="search-stage" role="search" aria-label="Find a film">
           <div class="search-field search-field-title">
-            <label for="filmTitle">Film title</label>
-            <input id="filmTitle" name="title" type="search" autocomplete="off" required />
+            <label for="filmTitle">Film title <small>Required</small></label>
+            <input id="filmTitle" name="title" type="search" autocomplete="off" placeholder="e.g. The Thing" required />
           </div>
           <div class="search-field">
-            <label for="filmYear">Year</label>
-            <input id="filmYear" name="year" type="number" min="1888" max="2100" inputmode="numeric" />
+            <label for="filmYear">Year <small>Optional</small></label>
+            <input id="filmYear" name="year" type="number" min="1888" max="2100" inputmode="numeric" placeholder="1982" />
           </div>
           <div class="search-field">
-            <label for="filmDirector">Director</label>
-            <input id="filmDirector" name="director" type="text" autocomplete="off" />
+            <label for="filmDirector">Director <small>Optional</small></label>
+            <input id="filmDirector" name="director" type="text" autocomplete="off" placeholder="e.g. John Carpenter" />
           </div>
           <button id="discoverySubmit" class="search-submit" type="submit">
             <span>Search films</span><span aria-hidden="true">↗</span>
@@ -453,6 +464,6 @@
     }
   </script>
   <script src="/assets/integrations.js?v=20260820-6"></script>
-  <script src="/assets/app.js?v=20260821-9"></script>
+  <script src="/assets/app.js?v=20260821-10"></script>
 </body>
 </html>
