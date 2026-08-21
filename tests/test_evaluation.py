@@ -158,6 +158,31 @@ def test_pre_agent_scorecard_freezes_steps_journeys_and_entry_targets() -> None:
     assert all(item["status"] == "passed" for item in state_result["state_scenarios"])
     assert all(item["status"] == "passed" for item in state_result["keyboard_tablists"])
 
+    latency_checkpoint = scorecard["measured_checkpoints"]["packet_latency_prewarm"]
+    latency_result = json.loads(
+        (ROOT / latency_checkpoint["result_path"]).read_text(encoding="utf-8")
+    )
+    assert latency_result["schema_version"] == 2
+    assert latency_checkpoint["source_revision"] == latency_result["source_revision"]
+    assert latency_checkpoint["configuration_fingerprint"] == latency_result["environment"][
+        "configuration"
+    ]["sha256"]
+    assert latency_checkpoint["cold_p95_ms"] == latency_result["summary"]["cold"]["p95_ms"]
+    assert latency_checkpoint["warm_p95_ms"] == latency_result["summary"]["warm"]["p95_ms"]
+    assert latency_checkpoint["cold_p95_relative_reduction"] == round(
+        1
+        - latency_result["summary"]["cold"]["p95_ms"]
+        / packet_result["summary"]["cold"]["p95_ms"],
+        6,
+    )
+    assert latency_checkpoint["embedding_warmup_p95_ms"] == latency_result["summary"][
+        "embedding_warmup"
+    ]["cold_processes"]["p95_ms"]
+    assert latency_checkpoint["packet_metrics_match_baseline"] is True
+    assert latency_result["summary"]["packet_metrics"] == packet_result["summary"][
+        "packet_metrics"
+    ]
+
     assert scorecard["latency_stages"] == list(STUDY_STAGE_NAMES)
 
     journey_ids = [journey["id"] for journey in scorecard["user_journeys"]]

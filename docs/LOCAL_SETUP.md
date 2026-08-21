@@ -234,8 +234,12 @@ Rebuild the index whenever you add, remove or replace documents.
 The index is stored at `.firstroll/library.sqlite3`. It contains stable token-bounded
 chunks, SQLite full-text data and 384-dimensional multilingual vectors generated locally
 with `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2`. The first build
-downloads the model; later retrieval is on-device. Set `FIRSTROLL_EMBEDDINGS=0` to build
-an FTS-only fallback index. Original file paths are not returned
+downloads the model; later retrieval is on-device. By default, `uv run firstroll` starts one
+single-flight encoder load in a background thread while the API remains responsive. Discover reports
+the temporary warm-up state, and `/api/discovery/status` exposes only `idle`, `warming`, `ready`,
+`failed` or `unavailable` plus aggregate duration. Set `FIRSTROLL_PREWARM_EMBEDDINGS=0` to defer this
+to the first semantic query, or `FIRSTROLL_EMBEDDINGS=0` to build an FTS-only fallback index.
+Original file paths are not returned
 to the browser. The entire `.firstroll` directory is excluded from Git, so neither the
 documents nor the derived index are published with the project.
 

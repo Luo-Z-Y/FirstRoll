@@ -1,10 +1,18 @@
 import sqlite3
+import sys
 import tempfile
 from pathlib import Path
+from threading import Event, Thread
+from types import SimpleNamespace
 
 import numpy as np
 
-from app.backend.library_index import SCHEMA_VERSION, LocalLibraryIndex, QueryPlanner
+from app.backend.library_index import (
+    SCHEMA_VERSION,
+    LocalLibraryIndex,
+    QueryPlanner,
+    SentenceTransformerEncoder,
+)
 from app.backend.study_observability import StudyTrace
 
 
@@ -78,6 +86,94 @@ def test_unavailable_index_records_planning_and_skips_retrieval_work() -> None:
     assert stages["lexical_retrieval"]["status"] == "skipped"
     assert stages["semantic_retrieval"]["status"] == "skipped"
     assert stages["fusion_and_selection"]["status"] == "skipped"
+
+
+def test_embedding_warmup_is_background_bounded_and_idempotent() -> None:
+    started = Event()
+    release = Event()
+
+    class RecordingEncoder:
+        model_name = "test-encoder"
+        calls = []
+
+        @classmethod
+        def encode(cls, texts):
+            cls.calls.append(tuple(texts))
+            started.set()
+            release.wait(2)
+            return np.zeros((len(texts), 2), dtype=np.float32)
+
+    class ReadyIndex(LocalLibraryIndex):
+        def status(self):
+            return {
+                "state": "ready",
+                "embedding": {"state": "ready"},
+                "warmup": self.embedding_warmup_status(),
+            }
+
+    index = ReadyIndex(Path("unused.sqlite3"), encoder=RecordingEncoder())
+    assert index.start_embedding_warmup()["state"] == "warming"
+    assert started.wait(1)
+    assert index.embedding_warmup_status()["state"] == "warming"
+    release.set()
+    status = index.wait_for_embedding_warmup(timeout=2)
+
+    assert status["state"] == "ready"
+    assert status["duration_ms"] >= 0
+    assert RecordingEncoder.calls == [("FirstRoll local film-form retrieval warm-up.",)]
+    assert index.start_embedding_warmup()["state"] == "ready"
+    assert len(RecordingEncoder.calls) == 1
+
+
+def test_embedding_warmup_failure_exposes_no_exception_detail() -> None:
+    class FailingEncoder:
+        model_name = "test-encoder"
+
+        @staticmethod
+        def encode(_texts):
+            raise RuntimeError("PRIVATE_WARMUP_DETAIL")
+
+    class ReadyIndex(LocalLibraryIndex):
+        def status(self):
+            return {
+                "state": "ready",
+                "embedding": {"state": "ready"},
+                "warmup": self.embedding_warmup_status(),
+            }
+
+    index = ReadyIndex(Path("unused.sqlite3"), encoder=FailingEncoder())
+    status = index.wait_for_embedding_warmup(timeout=2)
+
+    assert status["state"] == "failed"
+    assert status["duration_ms"] >= 0
+    assert "PRIVATE_WARMUP_DETAIL" not in str(status)
+
+
+def test_sentence_transformer_initialisation_is_single_flight(monkeypatch) -> None:
+    constructed = []
+
+    class FakeModel:
+        def __init__(self, model_name):
+            constructed.append(model_name)
+
+        @staticmethod
+        def encode(texts, **_kwargs):
+            return np.zeros((len(texts), 2), dtype=np.float32)
+
+    monkeypatch.setitem(
+        sys.modules,
+        "sentence_transformers",
+        SimpleNamespace(SentenceTransformer=FakeModel),
+    )
+    encoder = SentenceTransformerEncoder("test-model")
+    workers = [Thread(target=encoder.encode, args=([f"query-{index}"],)) for index in range(2)]
+    for worker in workers:
+        worker.start()
+    for worker in workers:
+        worker.join(timeout=2)
+
+    assert constructed == ["test-model"]
+    assert all(not worker.is_alive() for worker in workers)
 
 
 def test_hybrid_retrieval_records_each_applicable_stage() -> None:

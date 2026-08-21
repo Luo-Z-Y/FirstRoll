@@ -94,6 +94,22 @@
       "critical_accessibility_defects": 0,
       "mobile_horizontal_overflow_px": 0,
       "model_calls": 0
+    },
+    "packet_latency_prewarm": {
+      "result_path": "evals/results/packet-latency-prewarm-2026-08-21.json",
+      "source_revision": "a272d5bdaaab61f5ee05ac6688b8de7f0da3f3ca",
+      "configuration_fingerprint": "0718faef14d1de81",
+      "model_calls": 0,
+      "attempted_samples": 35,
+      "failed_samples": 0,
+      "cold_p50_ms": 272.919,
+      "cold_p95_ms": 361.549,
+      "cold_p95_relative_reduction": 0.963895,
+      "warm_p50_ms": 149.896,
+      "warm_p95_ms": 182.709,
+      "warm_budget_ms": 2000,
+      "packet_metrics_match_baseline": true,
+      "embedding_warmup_p95_ms": 10155.338
     }
   },
   "user_journeys": [
@@ -379,12 +395,12 @@
     {
       "id": "S06",
       "name": "Reduce evidence-packet latency",
-      "status": "next"
+      "status": "complete"
     },
     {
       "id": "S07",
       "name": "Establish packet-quality fixtures",
-      "status": "queued"
+      "status": "next"
     },
     {
       "id": "S08",

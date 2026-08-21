@@ -758,8 +758,18 @@ async function loadDiscoveryStatus() {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
     state.discovery.mode = data.mode || "unknown";
-    refs.discoveryConnection.textContent = "";
-    refs.discoveryConnection.classList.add("hidden");
+    const warmup = data.local_library?.index?.warmup;
+    if (warmup?.state === "warming") {
+      refs.discoveryConnection.textContent = "Preparing local semantic study search in the background…";
+      refs.discoveryConnection.classList.remove("hidden");
+      window.setTimeout(loadDiscoveryStatus, 1000);
+    } else if (warmup?.state === "failed") {
+      refs.discoveryConnection.textContent = "Semantic warm-up did not complete; lexical study retrieval remains available.";
+      refs.discoveryConnection.classList.remove("hidden");
+    } else {
+      refs.discoveryConnection.textContent = "";
+      refs.discoveryConnection.classList.add("hidden");
+    }
   } catch (_) {
     refs.discoveryConnection.textContent = "Search unavailable";
     refs.discoveryConnection.classList.remove("hidden");
