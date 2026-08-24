@@ -1,7 +1,7 @@
 # FirstRoll API Reference
 
 **API version:** `0.1.0`  
-**Last reconciled:** 21 August 2026
+**Last reconciled:** 24 August 2026
 
 FirstRoll uses one FastAPI application in two modes. The local edition serves the web interface and
 API from `http://127.0.0.1:8000`. The hosted public beta serves the Azure frontend at
@@ -9,7 +9,9 @@ API from `http://127.0.0.1:8000`. The hosted public beta serves the Azure fronte
 document uses relative paths so it remains correct when those deployment URLs change.
 
 FastAPI also exposes generated OpenAPI documentation at `/docs` and the machine-readable schema at
-`/openapi.json` unless deployment configuration disables them in future.
+`/openapi.json` unless deployment configuration disables them in future. The approved local Agent
+comparison is a Python evaluation factory only: `FIRSTROLL_LOCAL_AGENT_ENABLED` registers no HTTP
+endpoint and does not alter any route in this reference.
 
 ## Access Classes
 

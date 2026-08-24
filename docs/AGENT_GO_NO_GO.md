@@ -14,6 +14,18 @@ and a local paired evaluation. It does not authorise public traffic, a route cut
 access, durable hosted execution or removal of the fixed fallback. A **NO-GO** leaves the tested graph
 core dormant and the fixed workflow unchanged.
 
+## Adapter Checkpoint
+
+The default-off local adapter is now implemented over the existing film detail, fixed packet,
+Guardian/Douban/Letterboxd/video and DeepSeek services. It uses the unchanged packet-quality result as
+its sufficiency decision: a passing packet makes zero planner/external calls, while a limited packet
+may enter the bounded graph policy. The planner receives aggregate issue/count fields but no evidence
+text. New attributed sources remain ephemeral, then pass through unchanged packet selection and
+synthesis. No Agent HTTP route is registered.
+
+This is implementation evidence only. A real frozen-suite run, human Agent-packet review, latency,
+token and provider-recovery result remain unmeasured and cannot be inferred from contract tests.
+
 ## Measured Deficiency
 
 The fixed workflow passes every machine target and four of five human packet cases. The one failed
@@ -52,8 +64,8 @@ The fixed workflow loads its current caches and synthesises once. The dormant gr
 5. try another provider after one bounded failure; and
 6. stop with explicit insufficiency when budgets expire.
 
-Those behaviours exist only behind fake `ResearchGraphServices` tests today. They support the
-hypothesis but do not count as product evidence.
+Those behaviours now exist in the default-off adapter and are exercised with fake provider/model
+outcomes. They support the hypothesis but do not count as real-packet product evidence.
 
 ## Current Comparison
 
@@ -64,7 +76,7 @@ hypothesis but do not count as product evidence.
 | Recovery | One bounded synthesis repair; explicit timeout/failure states | Fake provider fallback and one repair pass | Real adapters and failures must be measured |
 | Latency | P50/P95 55.407/62.129 seconds | Unmeasured; sequential planning/acquisition can add tail latency | Cut-over is prohibited without paired timings |
 | Cost | 5 synthesis calls; 38,875 total tokens | Budgets permit multiple planning/tool/model actions; actual usage unknown | Cost must be bounded and reported, not assumed |
-| Operational complexity | Deployed, observable fixed path and fallback | No production adapter, feature flag, durable owner checkpoint or route integration | Current production cut-over is a no-go |
+| Operational complexity | Deployed, observable fixed path and fallback | Default-off local adapter; no paired evaluator, durable owner checkpoint or route integration | Current production cut-over is a no-go |
 
 ## Frozen Paired Experiment
 

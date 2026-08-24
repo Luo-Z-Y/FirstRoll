@@ -257,6 +257,25 @@ Documents stored elsewhere can be registered in `.firstroll/library.json`:
 Rebuild the index after changing the library. Its current status is available in Settings or
 at `http://127.0.0.1:8000/api/library/status`.
 
+## Default-Off Local Agent Comparison
+
+The owner-approved Agent work begins as a local paired-evaluation adapter, not a product route. The
+factory remains disabled unless the terminal process explicitly sets:
+
+```bash
+FIRSTROLL_LOCAL_AGENT_ENABLED=1
+```
+
+Even when enabled, FirstRoll registers no Agent HTTP endpoint and the existing Deep Study route is
+unchanged. The adapter reads the current fixed packet, skips planning and external calls when its
+quality diagnostic already passes, and permits at most the experiment's separately supplied graph
+budgets for a sparse packet. A planner receives public film identity, the stated focus, allow-listed
+provider states and aggregate packet issue/count fields only—never source text. Newly acquired review
+or video text remains ephemeral in the local run and is not written to the private caches.
+
+The paired evaluator and its exact invocation are added only after this adapter checkpoint passes;
+do not treat this switch as a supported interactive product capability or hosted configuration.
+
 ## Troubleshooting
 
 ### `uv: command not found`

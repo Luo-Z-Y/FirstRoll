@@ -64,11 +64,13 @@
     "total_tokens": 38875
   },
   "agent_evidence_state": {
-    "real_service_adapter": false,
+    "real_service_adapter": true,
+    "real_adapter_contract_tests": true,
     "real_frozen_suite_run": false,
     "real_packet_human_review": false,
     "production_route_enabled": false,
-    "fake_graph_tests_only": true
+    "hosted_route_registered": false,
+    "live_provider_or_model_claim": false
   },
   "paired_controls": [
     "same five film identities and questions",

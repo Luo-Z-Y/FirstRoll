@@ -1,5 +1,59 @@
 # FirstRoll Project Progress
 
+### 24 August 2026 — Default-off local Agent adapter implemented
+
+Delivered:
+
+1. Added a concrete local `ResearchGraphServices` adapter over the existing selected-film detail,
+   fixed packet, attributed provider and DeepSeek synthesis services without registering an HTTP
+   route.
+2. Reused the unchanged aggregate packet-quality status as the sufficiency boundary: a passing packet
+   skips both planner and external acquisition, while a limited packet may enter the two-call graph
+   budget.
+3. Added one aggregate-only DeepSeek tool-selection call. It receives public film identity, focus,
+   allow-listed provider state and safe packet issue/count fields; tests prove injected evidence text
+   and provider secrets cannot enter that request.
+4. Mapped Guardian, Douban, official-or-public Letterboxd and YouTube/Bilibili adapters into ephemeral
+   acquisitions. Candidate sources rebuild the unchanged `EvidencePacket` but are not written to
+   criticism or video caches.
+5. Reused unchanged synthesis and validation, counted planner tokens separately, and exposed only
+   safe planner/tool durations, statuses, counts and packet diagnostics to the future evaluator.
+6. Added `FIRSTROLL_LOCAL_AGENT_ENABLED=0`; even when explicitly enabled, it exposes only a Python
+   factory and cannot alter local or hosted Deep Study routes.
+
+Acceptance evidence:
+
+- all 229 automated tests pass with scoped Ruff, compilation, JSON parsing, documentation links and
+  whitespace checks;
+- the frozen aggregate packets prove the diagnostic boundary targets exactly the one human-failed
+  case; sufficient packet shapes complete with zero planning/external calls, while a sparse shape
+  acquires one review and completes through unchanged synthesis;
+- one unavailable provider falls back exactly once within the two-call budget;
+- invalid/out-of-policy planner output remains fail-safe, boolean/negative token usage is rejected and
+  tool requests still pass deterministic authorisation;
+- safe metrics contain no injected review text, prompts, credentials or provider exception details;
+- hosted mode forces the flag off, OpenAPI contains no Agent route, and production remains the fixed
+  workflow;
+- no real provider or DeepSeek comparison call was made, so quality, latency, cost and recovery gains
+  remain unclaimed.
+
+Known constraints:
+
+- the adapter currently starts from an explicitly selected canonical film ID; ambiguity remains the
+  unchanged pre-research user decision;
+- graph evidence is bounded in memory and this local comparison compiles without a checkpointer;
+  durable owner-scoped persistence remains mandatory before any hosted proposal;
+- integrated synthesis already owns its one repair decision, so the graph cannot spend an additional
+  hidden repair call;
+- the paired evaluator and real five-case run are still pending.
+
+Next actionable work:
+
+1. Add the redacted same-day paired evaluator with fixed control first and ephemeral Agent acquisition.
+2. Run fake timeout/empty/invalid-planner acceptance, then the five frozen cases only when configuration
+   fingerprints match.
+3. Request human review of Agent packets only if every machine target passes.
+
 ### 24 August 2026 — Owner authorises bounded local Agent comparison
 
 Decision:

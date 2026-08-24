@@ -144,6 +144,21 @@ then fetches only confidently matched Guardian URLs. Headline and author come fr
 article text is restricted to paragraphs inside the Guardian body container. Retrieved text
 remains attributed professional criticism and is not treated as direct film observation.
 
+## Default-Off Local Agent Acquisition
+
+The approved local comparison reuses Guardian, Douban, Letterboxd and YouTube/Bilibili adapters only
+when the existing packet is diagnostically limited. A passing packet makes no planner or provider
+call. `fetch_letterboxd_reviews` uses the official adapter when credentials are configured and the
+separate public-web adapter otherwise; this orchestration choice does not make either adapter silently
+fall back during its own request.
+
+Acquired review summaries, descriptions and captions remain attributed source text. They are merged
+in memory, passed through the unchanged evidence selector and discarded with the comparison service;
+they are not written to `.firstroll/criticism` or `.firstroll/videos`. The comparison deliberately
+does not structure new reviews into model-generated critical claims, because that would introduce a
+second causal change. Provider rights, identity checks, response limits and epistemic boundaries
+remain unchanged.
+
 ## Planned Research Adapters
 
 Good candidates should be evaluated separately for metadata access and content reuse:
