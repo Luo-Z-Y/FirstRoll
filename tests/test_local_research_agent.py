@@ -258,7 +258,10 @@ def test_sparse_packet_acquires_one_source_then_uses_unchanged_synthesis() -> No
     assert acquirer.calls == [ToolName.FETCH_GUARDIAN_REVIEWS]
     assert metrics["acquired_reviews"] == 1
     assert metrics["acquired_videos"] == 0
+    assert metrics["initial_packet_quality"]["status"] == "limited"
     assert metrics["packet_quality"]["status"] == "passed"
+    assert metrics["packet_fingerprint"] != metrics["initial_packet_fingerprint"]
+    assert len(adapter.private_packet("local-agent-test").attributed_sources) == 1
     assert [
         (item["tool"], item["status"]) for item in metrics["tool_attempts"]
     ] == [("fetch_guardian_reviews", "completed")]

@@ -311,6 +311,18 @@ sufficiency, one fallback and redaction boundaries. Every real frozen-suite Agen
 cost field remains unmeasured. On 24 August 2026 the owner authorised this bounded local comparison
 only. Step 12 is complete, while hosted integration and production route cut-over remain unauthorised.
 
+The paired harness runs the fixed control immediately before the Agent candidate for each case after
+one unrecorded packet warm-up. It rejects partial suites as acceptance, fingerprints every initial
+packet, records failed model attempts, checks zero calls/mutations for sufficient packets and keeps
+human and no-route cut-over targets explicitly pending/deferred. Its committed JSON guard rejects
+source, prompt, question, title, draft and evidence-packet fields. Only a complete local machine pass
+writes full candidate packets to ignored mode-`0600` storage for review.
+
+```bash
+FIRSTROLL_LOCAL_AGENT_ENABLED=1 uv run python tools/evaluate_local_agent.py \
+  --output evals/results/local-agent-paired-YYYY-MM-DD.json
+```
+
 ## Deep Study Transparency Checkpoint
 
 [`deep-study-transparency-2026-08-21.json`](../evals/results/deep-study-transparency-2026-08-21.json)

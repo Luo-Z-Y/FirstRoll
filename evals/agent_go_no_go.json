@@ -66,6 +66,8 @@
   "agent_evidence_state": {
     "real_service_adapter": true,
     "real_adapter_contract_tests": true,
+    "redacted_paired_evaluator": true,
+    "private_packet_snapshot_machine_gated": true,
     "real_frozen_suite_run": false,
     "real_packet_human_review": false,
     "production_route_enabled": false,

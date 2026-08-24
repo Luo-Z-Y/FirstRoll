@@ -23,8 +23,14 @@ may enter the bounded graph policy. The planner receives aggregate issue/count f
 text. New attributed sources remain ephemeral, then pass through unchanged packet selection and
 synthesis. No Agent HTTP route is registered.
 
-This is implementation evidence only. A real frozen-suite run, human Agent-packet review, latency,
-token and provider-recovery result remain unmeasured and cannot be inferred from contract tests.
+A redacted paired harness is now ready. It fingerprints the warmed packet snapshot, runs fixed control
+then Agent per case, retains failed model attempts, enforces zero calls/mutations for sufficient
+packets and refuses to mark a partial suite ready. Full packets can leave memory only as an ignored
+mode-`0600` human-review snapshot after all local machine targets pass.
+
+This remains implementation evidence only. A real frozen-suite run, human Agent-packet review,
+latency, token and provider-recovery result remain unmeasured and cannot be inferred from contract
+tests.
 
 ## Measured Deficiency
 
