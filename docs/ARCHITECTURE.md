@@ -1,7 +1,7 @@
 # FirstRoll Architecture
 
 **Status:** Current implementation  
-**Last reconciled:** 21 August 2026
+**Last reconciled:** 24 August 2026
 
 FirstRoll is a local-first film-study system with an Azure-hosted public beta. “Local-first”
 describes where private books, credentials, derived vectors and uploaded film clips are kept; it does
@@ -319,6 +319,16 @@ film-form statements generated without a clip remain viewing hypotheses.
 
 Retrieved reviews, captions and webpages are untrusted evidence. They may support attributed claims,
 but they cannot authorise tools, change system policy or become model instructions.
+
+## Development-agent boundary
+
+The repository's `.pi` directory is coding-harness configuration, not a FirstRoll product Agent.
+Trusted Pi sessions may delegate isolated scout, planner, reviewer or bounded-worker tasks to child Pi
+processes. The extension is absent from the web build, backend runtime and OpenAPI contract; it cannot
+change local or hosted research routing. Children share the developer working tree and provider
+allowance, so parallel dispatch is reserved for read-only work and the parent retains diff review,
+Git integration and delivery. Private `.firstroll` material remains outside every delegated role.
+See [FirstRoll Pi subagents](../.pi/README.md) for the operational boundary.
 
 ## Availability and Scaling
 
