@@ -373,14 +373,8 @@ def test_pre_agent_scorecard_freezes_steps_journeys_and_entry_targets() -> None:
 
     steps = scorecard["steps"]
     assert [step["id"] for step in steps] == [f"S{index:02d}" for index in range(1, 13)]
-    next_indices = [index for index, step in enumerate(steps) if step["status"] == "next"]
-    assert len(next_indices) == 1
-    next_index = next_indices[0]
-    assert all(step["status"] == "complete" for step in steps[:next_index])
-    assert all(
-        step["status"] in {"queued", "blocked_by_entry_gate"}
-        for step in steps[next_index + 1 :]
-    )
+    assert all(step["status"] == "complete" for step in steps[:11])
+    assert steps[11]["status"] == "awaiting_owner_decision"
 
     target_ids = set(scorecard["targets"])
     required_targets = set(scorecard["agent_entry_gate"]["required_target_ids"])
@@ -399,6 +393,55 @@ def test_pre_agent_scorecard_freezes_steps_journeys_and_entry_targets() -> None:
         "linear_interpolation_n_minus_1"
     )
     assert '"week"' not in scorecard_path.read_text(encoding="utf-8").casefold()
+
+
+def test_agent_go_no_go_contract_is_tied_to_the_frozen_evidence() -> None:
+    scorecard = json.loads(
+        (ROOT / "evals" / "pre_agent_scorecard.json").read_text(encoding="utf-8")
+    )
+    decision = json.loads(
+        (ROOT / "evals" / "agent_go_no_go.json").read_text(encoding="utf-8")
+    )
+    human = json.loads(
+        (ROOT / decision["measured_deficiency"]["result_path"]).read_text(encoding="utf-8")
+    )
+    fixed = json.loads(
+        (ROOT / decision["fixed_control"]["workflow_result_path"]).read_text(encoding="utf-8")
+    )
+    failed_case = next(case for case in human["cases"] if not case["passed"])
+
+    assert decision["status"] == scorecard["agent_decision"]["status"]
+    assert decision["owner_decision"] is None
+    assert decision["entry_gate"]["agent_entry_ready"] is True
+    assert decision["recommendation"]["agent_adapter_and_paired_evaluation"] == (
+        "conditional_go"
+    )
+    assert decision["recommendation"]["production_route_cutover"] == (
+        "no_go_until_paired_targets_pass"
+    )
+    assert decision["agent_evidence_state"] == {
+        "real_service_adapter": False,
+        "real_frozen_suite_run": False,
+        "real_packet_human_review": False,
+        "production_route_enabled": False,
+        "fake_graph_tests_only": True,
+    }
+    assert decision["measured_deficiency"]["case_id"] == failed_case["case_id"]
+    for dimension, target in decision["measured_deficiency"]["failed_dimensions"].items():
+        assert target["observed"] == failed_case["scores"][dimension]
+    assert decision["fixed_control"]["completed_cases"] == fixed["summary"][
+        "successful_cases"
+    ]
+    assert decision["fixed_control"]["mean_automated_quality"] == fixed["summary"][
+        "mean_quality_score"
+    ]
+    assert decision["fixed_control"]["human_passed_cases"] == human["summary"][
+        "passed_cases"
+    ]
+    assert decision["candidate_limits"]["feature_flag_default"] is False
+    assert decision["candidate_limits"]["production_route_cutover"] is False
+    assert decision["candidate_targets"]["human_packet_passed_cases"]["threshold"] == 5
+    assert decision["candidate_targets"]["paired_total_token_ratio"]["threshold"] == 1.25
 
 
 def test_identity_match_requires_title_year_and_director() -> None:

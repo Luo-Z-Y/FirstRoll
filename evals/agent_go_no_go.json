@@ -1,0 +1,154 @@
+{
+  "schema_version": 1,
+  "decision_id": "firstroll-production-agent-go-no-go-v1",
+  "programme_id": "firstroll-pre-agent-hardening-v1",
+  "status": "awaiting_owner_decision",
+  "prepared_at": "2026-08-24T14:42:54Z",
+  "entry_gate": {
+    "result_path": "evals/results/pre-agent-final-gate-2026-08-21.json",
+    "required_targets": 17,
+    "passed_targets": 17,
+    "required_steps": 11,
+    "completed_required_steps": 11,
+    "agent_entry_ready": true
+  },
+  "recommendation": {
+    "agent_adapter_and_paired_evaluation": "conditional_go",
+    "production_route_cutover": "no_go_until_paired_targets_pass",
+    "fixed_workflow_fallback_required": true
+  },
+  "measured_deficiency": {
+    "result_path": "evals/results/human-packet-review-2026-08-21.json",
+    "case_id": "the-thing-ambiguous-identity",
+    "failed_dimensions": {
+      "source_diversity": {
+        "observed": 2,
+        "required": 3
+      },
+      "filmmaker_actionability": {
+        "observed": 3,
+        "required": 4
+      }
+    },
+    "passing_dimensions": {
+      "focus_relevance": 4,
+      "traceability": 5,
+      "epistemic_calibration": 5
+    }
+  },
+  "causal_hypothesis": {
+    "changed_layer": "gap_directed_attributed_source_acquisition",
+    "statement": "For a deterministically insufficient existing packet, at most two previously unattempted attributed public-source acquisitions raise the failed case to source diversity at least 3 and filmmaker actionability at least 4 without changing identity, theory retrieval, packet selection, synthesis or validation.",
+    "excluded_changes": [
+      "identity_resolution",
+      "theory_retrieval",
+      "packet_selection",
+      "synthesis_prompt",
+      "synthesis_model",
+      "validation",
+      "clip_analysis",
+      "user_interface"
+    ]
+  },
+  "fixed_control": {
+    "workflow_result_path": "evals/results/baseline-reliability-2026-08-21.json",
+    "human_result_path": "evals/results/human-packet-review-2026-08-21.json",
+    "completed_cases": 5,
+    "human_passed_cases": 4,
+    "mean_automated_quality": 98.65,
+    "quality_gate_pass_ratio": 1.0,
+    "valid_citation_ratio": 1.0,
+    "p50_end_to_end_seconds": 55.407,
+    "p95_end_to_end_seconds": 62.129,
+    "model_calls": 5,
+    "total_tokens": 38875
+  },
+  "agent_evidence_state": {
+    "real_service_adapter": false,
+    "real_frozen_suite_run": false,
+    "real_packet_human_review": false,
+    "production_route_enabled": false,
+    "fake_graph_tests_only": true
+  },
+  "paired_controls": [
+    "same five film identities and questions",
+    "same machine and Python environment",
+    "same provider and synthesis model configuration",
+    "same private-index fingerprint and cached evidence snapshot",
+    "same packet selection, synthesis and validation",
+    "same-day fixed control and Agent candidate",
+    "all failures and safe stops retained in denominator"
+  ],
+  "candidate_limits": {
+    "external_calls_for_sufficient_packet": 0,
+    "maximum_planner_calls_for_insufficient_packet": 2,
+    "maximum_external_calls_for_insufficient_packet": 2,
+    "maximum_calls_per_external_provider": 1,
+    "feature_flag_default": false,
+    "production_route_cutover": false
+  },
+  "candidate_targets": {
+    "human_packet_passed_cases": {
+      "comparison": "eq",
+      "threshold": 5
+    },
+    "failed_case_source_diversity": {
+      "comparison": "gte",
+      "threshold": 3
+    },
+    "failed_case_filmmaker_actionability": {
+      "comparison": "gte",
+      "threshold": 4
+    },
+    "fixed_suite_completion_ratio": {
+      "comparison": "eq",
+      "threshold": 1.0
+    },
+    "mean_automated_quality": {
+      "comparison": "gte",
+      "threshold": 96.94
+    },
+    "quality_gate_pass_ratio": {
+      "comparison": "eq",
+      "threshold": 1.0
+    },
+    "valid_citation_ratio": {
+      "comparison": "eq",
+      "threshold": 1.0
+    },
+    "identity_match_ratio": {
+      "comparison": "eq",
+      "threshold": 1.0
+    },
+    "instruction_containment_ratio": {
+      "comparison": "eq",
+      "threshold": 1.0
+    },
+    "visible_response_p95_ms": {
+      "comparison": "lte",
+      "threshold": 300
+    },
+    "paired_end_to_end_p50_ratio": {
+      "comparison": "lte",
+      "threshold": 1.1
+    },
+    "paired_end_to_end_p95_ratio": {
+      "comparison": "lte",
+      "threshold": 1.25
+    },
+    "paired_total_token_ratio": {
+      "comparison": "lte",
+      "threshold": 1.25
+    }
+  },
+  "cutover_preconditions": [
+    "all candidate targets pass",
+    "default-off feature flag and fixed fallback remain",
+    "authenticated quota and ownership checks stay outside graph state",
+    "safe redacted progress and result observability pass",
+    "durable owner-scoped checkpoints exist before multi-instance hosted execution",
+    "repository owner reviews a separate production cutover decision"
+  ],
+  "owner_decision": null,
+  "privacy_scope": "Aggregate scores, limits and result references only; no prompts, private passages, review bodies, vectors, caches, credentials or uploaded clips."
+}
