@@ -273,7 +273,7 @@ budgets for a sparse packet. A planner receives public film identity, the stated
 provider states and aggregate packet issue/count fields only—never source text. Newly acquired review
 or video text remains ephemeral in the local run and is not written to the private caches.
 
-Run the approved full paired evaluator explicitly:
+The approved full paired evaluator was invoked explicitly as:
 
 ```bash
 FIRSTROLL_LOCAL_AGENT_ENABLED=1 uv run python tools/evaluate_local_agent.py \
@@ -285,8 +285,13 @@ before the Agent candidate for each of the five cases. This spends real DeepSeek
 at most two ephemeral attributed-provider calls for a diagnostically limited packet. The versioned
 report rejects prompt/evidence fields. Full candidate packets are written with mode `0600` beneath
 `.firstroll/evaluations/` only when every local machine target passes. A `--case` subset is diagnostic
-only and can never mark the frozen suite ready. Do not treat this switch as an interactive product
-capability or hosted configuration.
+only and can never mark the frozen suite ready.
+
+The authorised run has already completed and returned NO-GO (4/5 Agent completion and 94.77 mean
+quality against 5/5 and 96.94). The command remains a historical protocol record; the evaluator now
+refuses another run because the machine-readable decision is no longer `approved`. Do not change that
+status or the controls without an explicit owner REVISE decision. This switch is not an interactive
+product capability or hosted configuration.
 
 ## Troubleshooting
 

@@ -2,7 +2,7 @@
   "schema_version": 1,
   "decision_id": "firstroll-production-agent-go-no-go-v1",
   "programme_id": "firstroll-pre-agent-hardening-v1",
-  "status": "approved_bounded_local_comparison",
+  "status": "bounded_local_comparison_failed_no_go",
   "prepared_at": "2026-08-24T14:42:54Z",
   "entry_gate": {
     "result_path": "evals/results/pre-agent-final-gate-2026-08-21.json",
@@ -68,11 +68,11 @@
     "real_adapter_contract_tests": true,
     "redacted_paired_evaluator": true,
     "private_packet_snapshot_machine_gated": true,
-    "real_frozen_suite_run": false,
+    "real_frozen_suite_run": true,
     "real_packet_human_review": false,
     "production_route_enabled": false,
     "hosted_route_registered": false,
-    "live_provider_or_model_claim": false
+    "live_provider_and_model_run": true
   },
   "paired_controls": [
     "same five film identities and questions",
@@ -144,6 +144,29 @@
       "comparison": "lte",
       "threshold": 1.25
     }
+  },
+  "comparison_result": {
+    "result_path": "evals/results/local-agent-paired-2026-08-24.json",
+    "source_revision": "10a587e366c121270b9515fec27bb3b886e46155",
+    "full_frozen_suite": true,
+    "fixed_completed_cases": 5,
+    "agent_completed_cases": 4,
+    "fixed_mean_automated_quality": 97.4,
+    "agent_mean_automated_quality_completed": 94.77,
+    "paired_p50_ratio": 0.993373,
+    "paired_p95_ratio": 1.057397,
+    "paired_total_token_ratio": 1.241565,
+    "failed_machine_targets": [
+      "fixed_suite_completion_ratio",
+      "mean_automated_quality"
+    ],
+    "target_packet_initial_status": "limited",
+    "target_packet_final_status": "passed",
+    "target_packet_attributed_sources_before": 0,
+    "target_packet_attributed_sources_after": 3,
+    "local_machine_targets_passed": false,
+    "human_review_performed": false,
+    "outcome": "no_go"
   },
   "cutover_preconditions": [
     "all candidate targets pass",

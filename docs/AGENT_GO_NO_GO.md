@@ -1,7 +1,6 @@
 # Production Agent Go/No-Go Brief
 
-**Status:** owner-approved **GO** for the bounded local comparison; production cut-over remains
-**NO-GO**
+**Status:** bounded local comparison completed — **NO-GO**; keep the fixed workflow
 
 ## Recorded Decision
 
@@ -28,9 +27,34 @@ then Agent per case, retains failed model attempts, enforces zero calls/mutation
 packets and refuses to mark a partial suite ready. Full packets can leave memory only as an ignored
 mode-`0600` human-review snapshot after all local machine targets pass.
 
-This remains implementation evidence only. A real frozen-suite run, human Agent-packet review,
-latency, token and provider-recovery result remain unmeasured and cannot be inferred from contract
-tests.
+## Paired Result
+
+The single authorised full run is
+[`local-agent-paired-2026-08-24.json`](../evals/results/local-agent-paired-2026-08-24.json).
+The fixed control completed 5/5 at 97.4 mean automated quality. The Agent completed 4/5 at 94.77 mean
+quality over completed cases, failing both the 100% completion and 96.94 quality floor.
+
+| Measure | Fixed control | Agent candidate | Gate |
+|---|---:|---:|---|
+| Completed cases | 5 / 5 | 4 / 5 | **Failed** |
+| Mean automated quality | 97.4 | 94.77 completed | **Failed** |
+| Quality gate / valid citations | 100% / 100% | 100% / 100% completed | Passed |
+| P50 ratio | 1.0 | 0.993373 | Passed (≤1.10) |
+| P95 ratio | 1.0 | 1.057397 | Passed (≤1.25) |
+| Total tokens | 39,124 | 48,575 (1.241565×) | Passed (≤1.25×) |
+
+The causal acquisition path itself behaved selectively: four passing packets made zero planner or
+external calls and retained identical fingerprints. The ambiguous-identity packet used one 417-token
+planner call and one ephemeral Letterboxd acquisition, increasing selected attributed sources from 0
+to 3 and moving the automated packet status from `limited` to `passed` in 2.566 seconds. This is a
+promising packet result, not an accepted Agent result.
+
+The unchanged sufficient cinematography packet produced a synthesis that remained below the
+quality gate after the fixed service's one repair, so the graph stopped `failed_safe`. A separate
+completed sound case scored 86, contributing to quality non-inferiority failure. The predeclared rule
+makes completion failure an immediate no-go regardless of passing latency/cost. No private packet
+snapshot or human Agent review was produced, and the candidate was not rerun after observing the
+failure.
 
 ## Measured Deficiency
 
@@ -77,12 +101,12 @@ outcomes. They support the hypothesis but do not count as real-packet product ev
 
 | Dimension | Fixed workflow evidence | Agent evidence today | Decision implication |
 |---|---|---|---|
-| Human packet quality | 4/5 passed; mean relevance 4.4, diversity 3.8, actionability 4.2 | No real-packet run | A targeted experiment is justified; a quality claim is not |
-| Automated quality | 5/5 completed; 98.65 mean; 100% quality-gate/citation pass | Fake draft/validation only | Agent must use the same evaluator and remain non-inferior |
-| Recovery | One bounded synthesis repair; explicit timeout/failure states | Fake provider fallback and one repair pass | Real adapters and failures must be measured |
-| Latency | P50/P95 55.407/62.129 seconds | Unmeasured; sequential planning/acquisition can add tail latency | Cut-over is prohibited without paired timings |
-| Cost | 5 synthesis calls; 38,875 total tokens | Budgets permit multiple planning/tool/model actions; actual usage unknown | Cost must be bounded and reported, not assumed |
-| Operational complexity | Deployed, observable fixed path and fallback | Default-off local adapter; no paired evaluator, durable owner checkpoint or route integration | Current production cut-over is a no-go |
+| Human packet quality | 4/5 passed; mean relevance 4.4, diversity 3.8, actionability 4.2 | Not reviewed because machine gates failed | No human quality claim |
+| Automated quality | 5/5 completed; paired control 97.4 mean | 4/5 completed; 94.77 mean completed | Failed completion and quality |
+| Recovery | One bounded synthesis repair; explicit timeout/failure states | One unchanged packet stopped safely after synthesis repair remained insufficient | Safe but not operationally non-inferior |
+| Latency | Paired P50/P95 45.573/52.964 seconds | 45.271/56.004 seconds | Ratios pass |
+| Cost | 5 calls; 39,124 tokens | 7 calls; 48,575 tokens | 1.241565× passes narrowly |
+| Operational complexity | Deployed, observable fixed path and fallback | Local adapter/evaluator, one planner/provider call, no route/checkpoint | Benefit does not justify cut-over |
 
 ## Frozen Paired Experiment
 
@@ -141,5 +165,7 @@ is mandatory before any multi-instance hosted Agent route could be considered.
 - **REVISE:** change the hypothesis or thresholds before implementation; do not alter them after
   seeing Agent results.
 
-The owner selected **GO — bounded comparison only**. Step 12 is complete. Adapter and evaluation work
-may proceed within this document's frozen scope; production Agent routing remains prohibited.
+The owner selected **GO — bounded comparison only**, and that comparison is now complete. It failed
+the frozen completion and mean-quality targets, so the resulting decision is **NO-GO**. The fixed
+workflow remains production. Any further Agent experiment requires an explicit **REVISE** decision
+with a new hypothesis and thresholds frozen before another paid run.

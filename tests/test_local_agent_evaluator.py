@@ -35,6 +35,17 @@ def safe_agent_case(case_id: str, *, initial_status: str = "passed") -> dict[str
     }
 
 
+def test_completed_no_go_decision_cannot_authorise_a_rerun() -> None:
+    completed = json.loads(
+        (ROOT / "evals" / "agent_go_no_go.json").read_text(encoding="utf-8")
+    )
+    approved = dict(completed)
+    approved["status"] = "approved_bounded_local_comparison"
+
+    assert evaluator.comparison_authorised(completed) is False
+    assert evaluator.comparison_authorised(approved) is True
+
+
 def test_only_the_complete_frozen_suite_can_be_acceptance_ready() -> None:
     fingerprint = evaluator.json_fingerprint(ROOT / "evals" / "agent_cases.json")
 
@@ -115,6 +126,31 @@ def test_policy_checks_require_selective_non_repeating_acquisition() -> None:
     assert failed["sufficient_packet_mutations"]["status"] == "failed"
 
 
+def test_safe_study_score_removes_generated_lens_text() -> None:
+    study = {
+        "quality": {
+            "status": "passed",
+            "score": 0.8,
+            "sections": [
+                {
+                    "section": 1,
+                    "lens": "PRIVATE_GENERATED_LENS",
+                    "score": 0.8,
+                    "issues": ["generic_language"],
+                }
+            ],
+        },
+        "sections": [],
+    }
+
+    score = evaluator.safe_study_score(study, identity_ok=True)
+
+    assert score["quality_gate_failed_sections"] == [
+        {"section": 1, "score": 0.8, "issues": ["generic_language"]}
+    ]
+    assert "PRIVATE_GENERATED_LENS" not in str(score)
+
+
 def test_report_guard_rejects_source_or_prompt_fields() -> None:
     evaluator.assert_safe_report({"summary": {"quality": 98.0}})
 
@@ -122,6 +158,8 @@ def test_report_guard_rejects_source_or_prompt_fields() -> None:
         evaluator.assert_safe_report({"cases": [{"packet": {"content": "private"}}]})
     with pytest.raises(ValueError, match="Unsafe report key"):
         evaluator.assert_safe_report({"model_calls": [{"messages": []}]})
+    with pytest.raises(ValueError, match="Unsafe report key"):
+        evaluator.assert_safe_report({"quality": {"lens": "generated response"}})
 
 
 def test_private_packet_snapshot_is_restricted_and_mode_hardened(

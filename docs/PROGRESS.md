@@ -1,5 +1,61 @@
 # FirstRoll Project Progress
 
+### 24 August 2026 — Local Agent comparison fails gates; NO-GO retained
+
+Measured result:
+
+| Measure | Fixed control | Agent candidate | Gate |
+|---|---:|---:|---|
+| Completed cases | 5 / 5 | 4 / 5 | **Failed** (required 5 / 5) |
+| Mean automated quality | 97.4 | 94.77 completed | **Failed** (required ≥ 96.94) |
+| Quality gate / valid citations | 100% / 100% | 100% / 100% completed | Passed |
+| P50 end-to-end | 45.573 s | 45.271 s · 0.993373× | Passed |
+| P95 end-to-end | 52.964 s | 56.004 s · 1.057397× | Passed |
+| Model calls / total tokens | 5 / 39,124 | 7 / 48,575 · 1.241565× | Passed narrowly |
+| Local machine gate | Passed control | Failed candidate | **NO-GO** |
+
+Findings:
+
+1. Selectivity behaved as designed: all four initially passing packets made zero planner/external calls
+   and retained identical packet fingerprints.
+2. The target ambiguous-identity packet used one 417-token planner call, selected Letterboxd, fetched
+   three ephemeral attributed sources in 2.566 seconds and moved automated packet quality from
+   `limited` to `passed` without a second provider call.
+3. The unchanged passing cinematography packet generated an insufficient synthesis even after the
+   fixed service's one repair. The graph stopped `failed_safe`; no hidden extra repair was made.
+4. A completed sound case scored 86, so mean quality over the four completed Agent studies was 94.77.
+5. The frozen contract makes a completion failure an immediate no-go regardless of packet gain,
+   passing latency or passing cost. The paid candidate was not rerun after observing the result.
+6. No private packet snapshot or human Agent review was produced because local machine targets failed.
+7. Post-run hardening removes model-generated section lens text from the redacted artefact and now
+   rejects that field alongside prompts, drafts and evidence text.
+
+Acceptance evidence:
+
+- `evals/results/local-agent-paired-2026-08-24.json` contains the complete five-pair denominator,
+  target statuses, safe failures, model attempts, token usage and aggregate packet/tool evidence;
+- all identity, citation, instruction containment, selectivity, mutation, provider-repeat and graph
+  budget checks pass, while completion and mean quality remain visibly failed;
+- all 239 automated tests, scoped Ruff, compilation, JSON parsing, documentation links, report privacy
+  scans and whitespace checks pass;
+- the decision contract and scorecard now record `no_go`; production and hosted routes remain absent.
+
+Known constraints:
+
+- five pairs cannot distinguish provider/model sampling variance from stable quality differences, but
+  the predeclared acceptance rule does not permit discarding or rerunning the failed attempt;
+- automated packet improvement does not establish the missing human diversity/actionability gain;
+- a revised packet-only or deterministic-synthesis experiment would be a new hypothesis and requires
+  explicit owner approval before changing controls or spending calls.
+
+Next actionable work:
+
+1. Keep the fixed workflow in production and retain the default-off Agent code as non-production
+   experimental infrastructure.
+2. Do not rerun or tune against this result. If the owner wants another experiment, record REVISE with
+   a new causal hypothesis and thresholds first.
+3. Continue fixed-workflow improvements or the separately planned clip-to-study evidence bridge.
+
 ### 24 August 2026 — Redacted local Agent paired evaluator ready
 
 Delivered:

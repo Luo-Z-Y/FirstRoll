@@ -410,7 +410,7 @@ def test_agent_go_no_go_contract_is_tied_to_the_frozen_evidence() -> None:
     failed_case = next(case for case in human["cases"] if not case["passed"])
 
     assert decision["status"] == scorecard["agent_decision"]["status"]
-    assert decision["status"] == "approved_bounded_local_comparison"
+    assert decision["status"] == "bounded_local_comparison_failed_no_go"
     assert decision["owner_decision"]["decision"] == "go_bounded_local_comparison"
     assert decision["owner_decision"]["decided_by"] == "repository_owner"
     assert decision["owner_decision"]["authorised_scope"] == [
@@ -433,11 +433,11 @@ def test_agent_go_no_go_contract_is_tied_to_the_frozen_evidence() -> None:
         "real_adapter_contract_tests": True,
         "redacted_paired_evaluator": True,
         "private_packet_snapshot_machine_gated": True,
-        "real_frozen_suite_run": False,
+        "real_frozen_suite_run": True,
         "real_packet_human_review": False,
         "production_route_enabled": False,
         "hosted_route_registered": False,
-        "live_provider_or_model_claim": False,
+        "live_provider_and_model_run": True,
     }
     assert decision["measured_deficiency"]["case_id"] == failed_case["case_id"]
     for dimension, target in decision["measured_deficiency"]["failed_dimensions"].items():
@@ -455,6 +455,36 @@ def test_agent_go_no_go_contract_is_tied_to_the_frozen_evidence() -> None:
     assert decision["candidate_limits"]["production_route_cutover"] is False
     assert decision["candidate_targets"]["human_packet_passed_cases"]["threshold"] == 5
     assert decision["candidate_targets"]["paired_total_token_ratio"]["threshold"] == 1.25
+
+
+def test_failed_local_agent_comparison_enforces_no_go_without_human_review() -> None:
+    decision = json.loads(
+        (ROOT / "evals" / "agent_go_no_go.json").read_text(encoding="utf-8")
+    )
+    checkpoint = decision["comparison_result"]
+    result = json.loads((ROOT / checkpoint["result_path"]).read_text(encoding="utf-8"))
+    targets = {item["target_id"]: item for item in result["candidate_targets"]}
+    cases = {item["case_id"]: item for item in result["cases"]}
+
+    assert checkpoint["source_revision"] == result["source_revision"]
+    assert result["summary"]["full_frozen_suite"] is True
+    assert result["summary"]["fixed"]["successful_cases"] == 5
+    assert result["summary"]["agent"]["successful_cases"] == 4
+    assert result["summary"]["local_machine_targets_passed"] is False
+    assert result["summary"]["human_review_ready"] is False
+    assert result["summary"]["production_cutover_ready"] is False
+    assert targets["fixed_suite_completion_ratio"]["status"] == "failed"
+    assert targets["mean_automated_quality"]["status"] == "failed"
+    assert cases["the-thing-ambiguous-identity"]["agent"]["initial_packet_quality"][
+        "status"
+    ] == "limited"
+    assert cases["the-thing-ambiguous-identity"]["agent"]["packet_quality"][
+        "status"
+    ] == "passed"
+    assert cases["syndromes-cinematography"]["agent"]["terminal_status"] == "failed_safe"
+    assert checkpoint["human_review_performed"] is False
+    assert checkpoint["outcome"] == "no_go"
+    assert '"lens"' not in json.dumps(result)
 
 
 def test_agent_sufficiency_boundary_targets_only_the_human_failed_case() -> None:

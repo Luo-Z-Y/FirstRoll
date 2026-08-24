@@ -17,8 +17,8 @@ keeps those layers visible instead of presenting one fluent but unsupported answ
 > tools, clip analysis and unauthenticated model use disabled. Supabase email authentication, atomic
 > daily quotas and redacted SSE research progress are implemented. The fixed-workflow entry gate now
 > passes all 17 targets and 11 required steps. The owner has authorised a default-off local Agent
-> adapter and paired comparison. The adapter is implemented without an HTTP route; its real frozen
-> run is pending, while hosted integration and production route cut-over remain off.
+> adapter and paired comparison. The full comparison failed completion and mean-quality targets, so
+> the decision is NO-GO and the fixed workflow remains production; hosted Agent routing stays off.
 
 See [Project Progress](docs/PROGRESS.md) for completed milestones, verification results,
 known limitations and the next priorities.
@@ -269,10 +269,9 @@ provider failure, invalid planning and quality-gate failure. It is not yet the p
 execution path: the fixed workflow remains the production comparison and fallback. The
 [Agent Go/No-Go Brief](docs/AGENT_GO_NO_GO.md) authorises only a default-off adapter and paired local
 experiment targeting the one failed human packet. The adapter now reuses fixed packet/synthesis
-services, keeps new provider evidence ephemeral and exposes no HTTP route. A redacted paired evaluator
-is ready, but no real Agent quality or latency result exists yet. Any hosted integration or later
-route cut-over requires a separate explicit
-reviewed decision.
+services, keeps new provider evidence ephemeral and exposes no HTTP route. Its full paired run improved
+the target packet mechanically but completed only 4/5 cases below the quality floor, so no human Agent
+review or cut-over was permitted. Any revised experiment requires a new explicit reviewed decision.
 
 The public beta is intentionally narrower than the local edition. Azure Static Web Apps and Azure
 Container Apps use separate origins and custom domains. Public mode does not publish local settings,
@@ -1029,9 +1028,9 @@ fallback behaviour; these are tracked separately from the new FirstRoll modules.
 | Private RAG foundation | Complete | Token chunking, FTS5, local vectors, hybrid retrieval and citations |
 | Attributed criticism | Complete | Crossref, Douban, Letterboxd and Guardian retrieval with structured critic claims |
 | Evidence-grounded Deep Study | Complete | Typed theory, criticism, review and video-text evidence; Pydantic output, citation validation and quality gate |
-| Bounded research Agent core | Local paired evaluator ready, real run pending | Default-off real-service adapter, aggregate-only planning, ephemeral acquisition and redacted paired harness; no HTTP route or production cut-over |
+| Bounded research Agent core | Local comparison complete — NO-GO | Target packet gained three attributed sources, but Agent completed 4/5 below the quality floor; no HTTP route or production cut-over |
 | Authenticated research progress | Implemented | Allow-listed SSE lifecycle events, separate owner-scoped result retrieval and secret/evidence redaction tests; final interactive browser observation remains pending |
-| Pre-Agent product hardening | Complete — bounded local comparison authorised | All 17 targets pass; the owner approved only a default-off local Agent adapter and paired evaluation |
+| Pre-Agent product hardening | Complete — fixed workflow retained | Entry gate passed, but the authorised local Agent comparison failed 4/5 completion and quality non-inferiority; outcome NO-GO |
 | Clip analysis web migration | Complete | Scene, shot, colour, object and export workflow |
 | Clip-to-study evidence bridge | Queued | Feed measured scenes, shots and timecodes into synthesis after the active hardening sequence |
 | Creator primary-source layer | Partial | Discovered interview descriptions and public YouTube captions are stored and cited; verified speaker attribution and dedicated interview search remain planned |
@@ -1067,8 +1066,9 @@ uv run python tools/check_pre_agent_gate.py \
   --output evals/results/pre-agent-machine-gate-YYYY-MM-DD.json
 ```
 
-The owner-approved local Agent comparison is a separate, paid paired run. It remains default-off,
-registers no route and writes private candidate packets only after local machine targets pass:
+The owner-approved local Agent comparison was a separate, paid paired run. It remains default-off,
+registers no route and writes private candidate packets only after local machine targets pass. The
+recorded run failed those targets; do not rerun it without an explicit revised decision:
 
 ```bash
 FIRSTROLL_LOCAL_AGENT_ENABLED=1 uv run python tools/evaluate_local_agent.py \
@@ -1095,8 +1095,9 @@ the latest responsive hierarchy and state/accessibility audits are
 The attested score-only human result and combined entry gate are
 [`human-packet-review-2026-08-21.json`](evals/results/human-packet-review-2026-08-21.json) and
 [`pre-agent-final-gate-2026-08-21.json`](evals/results/pre-agent-final-gate-2026-08-21.json). The
-approved local-comparison decision and predeclared Agent targets are in
-[`agent_go_no_go.json`](evals/agent_go_no_go.json).
+decision, predeclared targets and no-go outcome are in
+[`agent_go_no_go.json`](evals/agent_go_no_go.json), with the redacted paired result in
+[`local-agent-paired-2026-08-24.json`](evals/results/local-agent-paired-2026-08-24.json).
 The source of truth for each result family is its reviewed JSON artefact, not a screenshot or copied
 Markdown table. Any
 fixed-workflow or Agent comparison must use the same identities, questions

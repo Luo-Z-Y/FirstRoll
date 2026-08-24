@@ -307,9 +307,9 @@ not a production route cut-over. The candidate must retain 5/5 terminal results,
 automated quality, 100% quality-gate/citation/identity/instruction integrity, P50/P95 no greater than
 110%/125% of the paired control and total model tokens no greater than 125%. The default-off local
 adapter and its real-service factory now exist, with fake provider/model contract tests proving
-sufficiency, one fallback and redaction boundaries. Every real frozen-suite Agent quality, latency and
-cost field remains unmeasured. On 24 August 2026 the owner authorised this bounded local comparison
-only. Step 12 is complete, while hosted integration and production route cut-over remain unauthorised.
+sufficiency, one fallback and redaction boundaries. On 24 August 2026 the owner authorised this
+bounded local comparison only. Step 12 is complete, while hosted integration and production route
+cut-over remain unauthorised.
 
 The paired harness runs the fixed control immediately before the Agent candidate for each case after
 one unrecorded packet warm-up. It rejects partial suites as acceptance, fingerprints every initial
@@ -322,6 +322,19 @@ writes full candidate packets to ignored mode-`0600` storage for review.
 FIRSTROLL_LOCAL_AGENT_ENABLED=1 uv run python tools/evaluate_local_agent.py \
   --output evals/results/local-agent-paired-YYYY-MM-DD.json
 ```
+
+The authorised
+[`local-agent-paired-2026-08-24.json`](../evals/results/local-agent-paired-2026-08-24.json) is a
+**NO-GO** result. Fixed control completes 5/5 at 97.4 mean automated quality; Agent completes 4/5 at
+94.77 mean over completed cases. Completion `0.8 < 1.0` and quality `94.77 < 96.94` fail. P50/P95
+ratios `0.993373`/`1.057397` and token ratio `1.241565` pass, as do all identity, citation,
+instruction, selectivity and tool-budget checks.
+
+The target packet changes from zero to three attributed sources and automated `limited` to `passed`
+after one Letterboxd acquisition, but the Agent's unchanged sufficient cinematography packet stops
+`failed_safe` after synthesis remains below the gate following its one repair. Human targets remain
+pending by design; no private packet snapshot was written. The failed candidate was not rerun, and
+production remains the fixed workflow.
 
 ## Deep Study Transparency Checkpoint
 
