@@ -16,8 +16,8 @@ keeps those layers visible instead of presenting one fluent but unsupported answ
 > discovery, the native director shelf and authenticated Deep Study while keeping private-library
 > tools, clip analysis and unauthenticated model use disabled. Supabase email authentication, atomic
 > daily quotas and redacted SSE research progress are implemented. The fixed-workflow entry gate now
-> passes all 17 targets and 11 required steps. A scoped Agent comparison recommendation awaits the
-> repository owner's explicit go/no-go decision; production integration and route cut-over remain off.
+> passes all 17 targets and 11 required steps. The owner has authorised a default-off local Agent
+> adapter and paired comparison; hosted integration and production route cut-over remain off.
 
 See [Project Progress](docs/PROGRESS.md) for completed milestones, verification results,
 known limitations and the next priorities.
@@ -266,9 +266,9 @@ framework-neutral research contract, keeps application policy around model-propo
 deduplicates and caps graph state, and terminates explicitly under ambiguity, weak evidence,
 provider failure, invalid planning and quality-gate failure. It is not yet the public Deep Study
 execution path: the fixed workflow remains the production comparison and fallback. The
-[Agent Go/No-Go Brief](docs/AGENT_GO_NO_GO.md) recommends only a default-off adapter and paired local
-experiment targeting the one failed human packet; both implementation and any later cut-over require
-explicit reviewed decisions.
+[Agent Go/No-Go Brief](docs/AGENT_GO_NO_GO.md) authorises only a default-off adapter and paired local
+experiment targeting the one failed human packet. Any hosted integration or later route cut-over
+requires a separate explicit reviewed decision.
 
 The public beta is intentionally narrower than the local edition. Azure Static Web Apps and Azure
 Container Apps use separate origins and custom domains. Public mode does not publish local settings,
@@ -1020,7 +1020,7 @@ fallback behaviour; these are tracked separately from the new FirstRoll modules.
 | Evidence-grounded Deep Study | Complete | Typed theory, criticism, review and video-text evidence; Pydantic output, citation validation and quality gate |
 | Bounded research Agent core | Implemented | LangGraph control flow, bounded reducers, deterministic tool authorisation, fake-service scenarios and optional checkpointing; production route integration remains gated |
 | Authenticated research progress | Implemented | Allow-listed SSE lifecycle events, separate owner-scoped result retrieval and secret/evidence redaction tests; final interactive browser observation remains pending |
-| Pre-Agent product hardening | Entry gate passed — Step 12 decision pending | All 17 targets pass; a conditional default-off Agent comparison recommendation awaits explicit owner review |
+| Pre-Agent product hardening | Complete — bounded local comparison authorised | All 17 targets pass; the owner approved only a default-off local Agent adapter and paired evaluation |
 | Clip analysis web migration | Complete | Scene, shot, colour, object and export workflow |
 | Clip-to-study evidence bridge | Queued | Feed measured scenes, shots and timecodes into synthesis after the active hardening sequence |
 | Creator primary-source layer | Partial | Discovered interview descriptions and public YouTube captions are stored and cited; verified speaker attribution and dedicated interview search remain planned |
@@ -1076,7 +1076,7 @@ the latest responsive hierarchy and state/accessibility audits are
 The attested score-only human result and combined entry gate are
 [`human-packet-review-2026-08-21.json`](evals/results/human-packet-review-2026-08-21.json) and
 [`pre-agent-final-gate-2026-08-21.json`](evals/results/pre-agent-final-gate-2026-08-21.json). The
-pending scoped decision and predeclared Agent comparison targets are in
+approved local-comparison decision and predeclared Agent targets are in
 [`agent_go_no_go.json`](evals/agent_go_no_go.json).
 The source of truth for each result family is its reviewed JSON artefact, not a screenshot or copied
 Markdown table. Any
