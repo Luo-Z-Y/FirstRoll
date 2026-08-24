@@ -36,9 +36,11 @@ Acceptance evidence:
   target statuses, safe failures, model attempts, token usage and aggregate packet/tool evidence;
 - all identity, citation, instruction containment, selectivity, mutation, provider-repeat and graph
   budget checks pass, while completion and mean quality remain visibly failed;
-- all 239 automated tests, scoped Ruff, compilation, JSON parsing, documentation links, report privacy
-  scans and whitespace checks pass;
-- the decision contract and scorecard now record `no_go`; production and hosted routes remain absent.
+- all 242 automated tests, including the concurrently merged Pi-subagent contract, pass with scoped
+  Ruff, compilation, JSON parsing, documentation links, report privacy scans and whitespace checks;
+- the decision contract and scorecard now record `no_go`; production and hosted routes remain absent;
+- `.agents/` is ignored because local conversion/agent workspaces currently contain extracted private
+  book text and must never enter Git.
 
 Known constraints:
 
