@@ -36,7 +36,9 @@ The tool prepares the same five frozen packets without calling DeepSeek. For eac
 6. the automated packet diagnostic, clearly separated from the human score.
 
 Enter a whole-number score from 1 to 5 for every dimension. Enter `q` to save and resume later. After
-all five cases, type uppercase `YES` only if you personally inspected every displayed packet.
+all five cases, type uppercase `YES` only if you personally inspected every displayed packet. Input is
+decoded as UTF-8 with malformed terminal bytes replaced, so a pasted optional note cannot discard the
+current case through a decoding crash.
 
 ## Rubric
 

@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "programme_id": "firstroll-pre-agent-hardening-v1",
-  "status": "active",
+  "status": "entry_gate_passed_pending_agent_decision",
   "purpose": "Stabilise the fixed FirstRoll product before any production Agent integration.",
   "scope": {
     "primary_runtime": "local_private_edition",
@@ -206,6 +206,36 @@
       "all_machine_targets_passed": true,
       "agent_entry_ready": false,
       "pending_target": "human_packet_pass_ratio"
+    },
+    "human_packet_review": {
+      "result_path": "evals/results/human-packet-review-2026-08-21.json",
+      "source_revision": "6b24f1b8bf752b204af6b3be812db51b068e8ffe",
+      "reviewer_attested": true,
+      "case_count": 5,
+      "passed_cases": 4,
+      "failed_cases": 1,
+      "pass_ratio": 0.8,
+      "dimension_means": {
+        "focus_relevance": 4.4,
+        "traceability": 5.0,
+        "source_diversity": 3.8,
+        "epistemic_calibration": 5.0,
+        "filmmaker_actionability": 4.2
+      },
+      "failed_case_ids": [
+        "the-thing-ambiguous-identity"
+      ],
+      "private_notes_committed": false
+    },
+    "pre_agent_final_gate": {
+      "result_path": "evals/results/pre-agent-final-gate-2026-08-21.json",
+      "source_revision": "6b24f1b8bf752b204af6b3be812db51b068e8ffe",
+      "required_targets": 17,
+      "passed_targets": 17,
+      "failed_targets": 0,
+      "pending_targets": 0,
+      "all_machine_targets_passed": true,
+      "agent_entry_ready": true
     }
   },
   "user_journeys": [
@@ -516,12 +546,12 @@
     {
       "id": "S11",
       "name": "Freeze the fixed-workflow baseline",
-      "status": "next"
+      "status": "complete"
     },
     {
       "id": "S12",
       "name": "Make the Agent go/no-go decision",
-      "status": "blocked_by_entry_gate"
+      "status": "next"
     }
   ],
   "agent_entry_gate": {

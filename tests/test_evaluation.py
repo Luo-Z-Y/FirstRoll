@@ -334,6 +334,33 @@ def test_pre_agent_scorecard_freezes_steps_journeys_and_entry_targets() -> None:
     assert gate_checkpoint["agent_entry_ready"] is False
     assert gate_result["blocking_reasons"] == ["pending:human_packet_pass_ratio"]
 
+    human_checkpoint = scorecard["measured_checkpoints"]["human_packet_review"]
+    human_result = json.loads(
+        (ROOT / human_checkpoint["result_path"]).read_text(encoding="utf-8")
+    )
+    assert human_checkpoint["source_revision"] == human_result["source_revision"]
+    assert human_result["reviewer_attested"] is True
+    assert human_checkpoint["case_count"] == human_result["summary"]["case_count"] == 5
+    assert human_checkpoint["passed_cases"] == human_result["summary"]["passed_cases"] == 4
+    assert human_checkpoint["pass_ratio"] == human_result["summary"]["pass_ratio"] == 0.8
+    assert human_checkpoint["private_notes_committed"] is False
+    assert human_checkpoint["failed_case_ids"] == [
+        case["case_id"] for case in human_result["cases"] if not case["passed"]
+    ]
+    assert all(set(case) == {"case_id", "scores", "passed"} for case in human_result["cases"])
+
+    final_checkpoint = scorecard["measured_checkpoints"]["pre_agent_final_gate"]
+    final_result = json.loads(
+        (ROOT / final_checkpoint["result_path"]).read_text(encoding="utf-8")
+    )
+    assert final_checkpoint["source_revision"] == final_result["source_revision"]
+    assert final_result["summary"]["passed_targets"] == 17
+    assert final_result["summary"]["completed_required_steps"] == 11
+    assert final_result["summary"]["failed_targets"] == 0
+    assert final_result["summary"]["pending_targets"] == 0
+    assert final_result["summary"]["agent_entry_ready"] is True
+    assert final_result["blocking_reasons"] == []
+
     assert scorecard["latency_stages"] == list(STUDY_STAGE_NAMES)
 
     journey_ids = [journey["id"] for journey in scorecard["user_journeys"]]
