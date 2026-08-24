@@ -15,9 +15,9 @@ keeps those layers visible instead of presenting one fluent but unsupported answ
 > criticism, DeepSeek synthesis and clip analysis are implemented. The hosted edition publishes
 > discovery, the native director shelf and authenticated Deep Study while keeping private-library
 > tools, clip analysis and unauthenticated model use disabled. Supabase email authentication, atomic
-> daily quotas and redacted SSE research progress are implemented. The active milestone is the
-> step-based fixed-workflow hardening programme for interface clarity, evidence-packet latency and
-> evidence quality; production Agent integration remains gated behind its reviewed scorecard.
+> daily quotas and redacted SSE research progress are implemented. The fixed-workflow entry gate now
+> passes all 17 targets and 11 required steps. A scoped Agent comparison recommendation awaits the
+> repository owner's explicit go/no-go decision; production integration and route cut-over remain off.
 
 See [Project Progress](docs/PROGRESS.md) for completed milestones, verification results,
 known limitations and the next priorities.
@@ -35,6 +35,7 @@ environment configuration, acceptance checks and operational limits.
 | Understand why the major architectural choices were made | [Architecture Decisions](docs/DECISIONS.md) |
 | Read the current versioned benchmark and update protocol | [Evaluation](docs/EVALUATION.md) |
 | Follow the flexible fixed-workflow steps before Agent work | [Pre-Agent Product Hardening](docs/PRE_AGENT_HARDENING.md) |
+| Review the scoped production Agent decision | [Agent Go/No-Go Brief](docs/AGENT_GO_NO_GO.md) |
 | Complete the private filmmaker packet-rating gate | [Human Evidence-Packet Review](docs/HUMAN_PACKET_REVIEW.md) |
 | Install and run the private local edition | [Local Setup](docs/LOCAL_SETUP.md) |
 | Operate the public Azure deployment | [Public Beta Hosting](docs/HOSTING.md) |
@@ -264,9 +265,10 @@ The repository also contains a bounded LangGraph research Agent core. It reuses 
 framework-neutral research contract, keeps application policy around model-proposed tools,
 deduplicates and caps graph state, and terminates explicitly under ambiguity, weak evidence,
 provider failure, invalid planning and quality-gate failure. It is not yet the public Deep Study
-execution path: the fixed workflow remains the production comparison and fallback. The safe
-progress transport and fixed-workflow baseline now exist; production service adapters and a
-like-for-like Agent evaluation are still required before any cut-over.
+execution path: the fixed workflow remains the production comparison and fallback. The
+[Agent Go/No-Go Brief](docs/AGENT_GO_NO_GO.md) recommends only a default-off adapter and paired local
+experiment targeting the one failed human packet; both implementation and any later cut-over require
+explicit reviewed decisions.
 
 The public beta is intentionally narrower than the local edition. Azure Static Web Apps and Azure
 Container Apps use separate origins and custom domains. Public mode does not publish local settings,
@@ -941,6 +943,7 @@ FirstRoll/
 │   ├── DATA_SOURCES.md
 │   ├── DECISIONS.md
 │   ├── EVALUATION.md
+│   ├── AGENT_GO_NO_GO.md
 │   ├── HOSTING.md
 │   ├── HUMAN_PACKET_REVIEW.md
 │   ├── LOCAL_SETUP.md
@@ -949,6 +952,7 @@ FirstRoll/
 │   └── RELEASE.md
 ├── evals/
 │   ├── agent_cases.json
+│   ├── agent_go_no_go.json
 │   ├── pre_agent_scorecard.json
 │   └── results/
 ├── tests/
@@ -1016,7 +1020,7 @@ fallback behaviour; these are tracked separately from the new FirstRoll modules.
 | Evidence-grounded Deep Study | Complete | Typed theory, criticism, review and video-text evidence; Pydantic output, citation validation and quality gate |
 | Bounded research Agent core | Implemented | LangGraph control flow, bounded reducers, deterministic tool authorisation, fake-service scenarios and optional checkpointing; production route integration remains gated |
 | Authenticated research progress | Implemented | Allow-listed SSE lifecycle events, separate owner-scoped result retrieval and secret/evidence redaction tests; final interactive browser observation remains pending |
-| Pre-Agent product hardening | Entry gate passed — Steps 1–11 complete | All 17 targets pass, including an attested 4/5 human packet review; the explicit Agent go/no-go decision is next |
+| Pre-Agent product hardening | Entry gate passed — Step 12 decision pending | All 17 targets pass; a conditional default-off Agent comparison recommendation awaits explicit owner review |
 | Clip analysis web migration | Complete | Scene, shot, colour, object and export workflow |
 | Clip-to-study evidence bridge | Queued | Feed measured scenes, shots and timecodes into synthesis after the active hardening sequence |
 | Creator primary-source layer | Partial | Discovered interview descriptions and public YouTube captions are stored and cited; verified speaker attribution and dedicated interview search remain planned |
@@ -1071,7 +1075,9 @@ the latest responsive hierarchy and state/accessibility audits are
 [`ui-states-accessibility-2026-08-21.json`](evals/results/ui-states-accessibility-2026-08-21.json).
 The attested score-only human result and combined entry gate are
 [`human-packet-review-2026-08-21.json`](evals/results/human-packet-review-2026-08-21.json) and
-[`pre-agent-final-gate-2026-08-21.json`](evals/results/pre-agent-final-gate-2026-08-21.json).
+[`pre-agent-final-gate-2026-08-21.json`](evals/results/pre-agent-final-gate-2026-08-21.json). The
+pending scoped decision and predeclared Agent comparison targets are in
+[`agent_go_no_go.json`](evals/agent_go_no_go.json).
 The source of truth for each result family is its reviewed JSON artefact, not a screenshot or copied
 Markdown table. Any
 fixed-workflow or Agent comparison must use the same identities, questions

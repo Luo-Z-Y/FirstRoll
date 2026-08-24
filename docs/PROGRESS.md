@@ -1,5 +1,56 @@
 # FirstRoll Project Progress
 
+### 24 August 2026 — Scoped Agent decision prepared; owner review pending
+
+Delivered:
+
+1. Wrote the Step 12 go/no-go brief against the frozen fixed-workflow evidence rather than treating
+   the existence of a LangGraph core as proof of value.
+2. Isolated one measurable hypothesis: at most two gap-directed attributed-source acquisitions should
+   raise the failed ambiguous-identity packet from diversity/actionability `2/3` to at least `3/4`
+   without changing identity, theory retrieval, packet selection, synthesis, validation, model or UI.
+3. Predeclared same-day paired quality, recovery, identity, safety, latency, cost and operational
+   targets before implementing or observing a real Agent adapter.
+4. Recommended a conditional GO only for a default-off local adapter/evaluation and recorded an
+   explicit NO-GO for production route cut-over until every comparison target passes.
+5. Kept all real Agent fields honest: the current graph has fake-service policy tests but no real
+   service adapter, frozen-suite run, human packet review, latency, token or production-route result.
+
+Decision evidence:
+
+| Dimension | Fixed control | Agent evidence now | Required candidate |
+|---|---:|---:|---:|
+| Human packets | 4 / 5 | Unmeasured | 5 / 5 |
+| Failed-case diversity / actionability | 2 / 3 | Unmeasured | ≥ 3 / ≥ 4 |
+| Complete workflow / automated quality | 5 / 5 · 98.65 | Unmeasured | 5 / 5 · ≥ 96.94 |
+| Quality gate / citations | 100% / 100% | Fake only | 100% / 100% |
+| End-to-end P50 / P95 | 55.407 / 62.129 s | Unmeasured | ≤ 110% / ≤ 125% of paired control |
+| Calls / total tokens | 5 / 38,875 | Unmeasured | ≤ 2 extra planner calls · ≤ 125% tokens |
+| Production route | Fixed workflow live | Disabled | Remains disabled during comparison |
+
+Acceptance evidence:
+
+- all 220 automated tests, scoped Ruff, JSON parsing, documentation links and whitespace checks pass;
+- the machine-readable decision is tied to the final gate, human failed case and reliability result;
+- tests prevent a recommendation from being represented as observed Agent evidence and require the
+  default-off flag, fixed fallback and no-cut-over state;
+- the brief compares quality, recovery, latency, cost and operational complexity under the same
+  frozen identities/questions and explicitly retains failures and safe stops in the denominator;
+- the decision artefact contains aggregate metrics and limits only—no prompt, source text, private
+  passage, review body, vector, cache, credential or uploaded clip.
+
+Blocked:
+
+- Step 12 requires the repository owner's explicit GO, NO-GO or REVISE decision;
+- no production-compatible Agent adapter or Agent evaluation may begin before that decision;
+- public route cut-over remains a separate no-go even if the bounded comparison is authorised.
+
+Next actionable work:
+
+1. Owner reviews `docs/AGENT_GO_NO_GO.md` and records GO, NO-GO or REVISE.
+2. On GO, implement only the default-off local adapter and paired evaluation contract; on NO-GO,
+   leave the fixed workflow live; on REVISE, freeze changed targets before implementation.
+
 ### 21 August 2026 — Fixed-workflow baseline frozen; Agent entry gate passed
 
 Delivered:

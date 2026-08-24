@@ -293,6 +293,22 @@ uv run python tools/check_pre_agent_gate.py \
   --output evals/results/pre-agent-final-gate-YYYY-MM-DD.json
 ```
 
+## Agent Go/No-Go Contract
+
+[Production Agent Go/No-Go](AGENT_GO_NO_GO.md) and
+[`agent_go_no_go.json`](../evals/agent_go_no_go.json) predeclare the only permitted first comparison.
+The primary hypothesis is that gap-directed acquisition of at most two new attributed public sources
+can raise the failed ambiguous-identity packet from diversity/actionability `2/3` to at least `3/4`,
+so all five human packets pass. Identity, theory retrieval, packet selection, synthesis, validation,
+model and UI remain fixed.
+
+The recommendation is conditional GO for a local, default-off adapter and same-day paired evaluation,
+not a production route cut-over. The candidate must retain 5/5 terminal results, at least 96.94 mean
+automated quality, 100% quality-gate/citation/identity/instruction integrity, P50/P95 no greater than
+110%/125% of the paired control and total model tokens no greater than 125%. Existing fake graph
+tests establish policy behaviour only; every real Agent quality, latency and cost field remains
+unmeasured. Step 12 therefore remains `awaiting_owner_decision`.
+
 ## Deep Study Transparency Checkpoint
 
 [`deep-study-transparency-2026-08-21.json`](../evals/results/deep-study-transparency-2026-08-21.json)

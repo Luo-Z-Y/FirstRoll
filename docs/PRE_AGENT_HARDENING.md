@@ -1,6 +1,6 @@
 # Pre-Agent Product Hardening
 
-**Status:** entry gate passed; Steps 1–11 complete and Step 12 is next
+**Status:** entry gate passed; Steps 1–11 complete and Step 12 awaits the owner decision
 
 **Machine-readable scorecard:** [`evals/pre_agent_scorecard.json`](../evals/pre_agent_scorecard.json)
 
@@ -223,14 +223,22 @@ epistemic calibration. The ambiguous-identity case remains a disclosed non-block
 records 17/17 targets and 11/11 required steps passed with no blocking reason. Step 11 is frozen; this
 entry-gate result permits the Step 12 decision but does not itself authorise Agent integration.
 
-### Step 12 — Make the Agent go/no-go decision — next
+### Step 12 — Make the Agent go/no-go decision — awaiting owner decision
 
 Only after Steps 1–11 pass, write the comparison brief for the production Agent. It must identify a
 measurable deficiency the fixed workflow still has and compare quality, recovery, latency, cost and
 operational complexity under the same frozen contract.
 
-**Acceptance:** production Agent integration starts only after an explicit reviewed go decision. A no-go
-leaves the stable fixed workflow in production.
+The prepared [Production Agent Go/No-Go Brief](AGENT_GO_NO_GO.md) isolates one hypothesis: at most two
+gap-directed attributed-source acquisitions may improve the failed ambiguous-identity packet from
+diversity/actionability `2/3` to at least `3/4`, while all other packet, synthesis and validation
+behaviour remains fixed. It recommends a conditional GO only for a default-off adapter and local
+paired evaluation. It records a NO-GO for route cut-over until the predeclared targets pass. The
+machine-readable decision is [`agent_go_no_go.json`](../evals/agent_go_no_go.json).
+
+**Acceptance:** production Agent integration starts only after an explicit reviewed go decision. A
+no-go leaves the stable fixed workflow in production. Until the owner chooses GO, NO-GO or REVISE,
+Step 12 remains open.
 
 ## Human Packet Rubric
 

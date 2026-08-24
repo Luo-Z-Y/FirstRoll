@@ -551,9 +551,16 @@
     {
       "id": "S12",
       "name": "Make the Agent go/no-go decision",
-      "status": "next"
+      "status": "awaiting_owner_decision"
     }
   ],
+  "agent_decision": {
+    "brief_path": "docs/AGENT_GO_NO_GO.md",
+    "contract_path": "evals/agent_go_no_go.json",
+    "status": "awaiting_owner_decision",
+    "recommendation": "conditional_go_to_default_off_paired_evaluation",
+    "production_route_cutover": "no_go_until_paired_targets_pass"
+  },
   "agent_entry_gate": {
     "required_completed_steps": [
       "S01",
@@ -587,6 +594,6 @@
       "paired_end_to_end_median_reduction",
       "paired_end_to_end_p95_regression"
     ],
-    "decision": "Production Agent integration remains out of scope until every required step and target has reviewed acceptance evidence."
+    "decision": "The entry gate is satisfied; Agent adapter work remains prohibited until an explicit owner GO, and production route cutover remains prohibited until the paired candidate targets pass and receive separate review."
   }
 }
