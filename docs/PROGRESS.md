@@ -46,6 +46,53 @@ Next actionable work:
 3. If every local machine target passes, ask the owner to review only candidate packets whose hashes
    changed; otherwise retain the no-go and diagnose the failed causal layer.
 
+### 24 August 2026 — Project-local Pi subagents available
+
+Delivered:
+
+1. Added a trusted `.pi/extensions/subagent` tool adapted from Pi 0.84.2. It starts each delegated
+   task in a separate non-persistent Pi process and supports single, sequential-chain and bounded
+   parallel execution, with a fifteen-minute deadline per child.
+2. Added project-local scout, planner, reviewer and worker roles. They inherit the dispatching
+   session's model and thinking level rather than requiring a second provider account or hard-coded
+   model.
+3. Made project agents the default scope, added `/subagents` plus three reusable workflow prompts,
+   limited chains to six steps and parallel dispatch to eight tasks with four live children, and
+   capped total model-visible tool output at 50 KB.
+4. Kept reconnaissance, planning and review roles read-only, rejected project-agent directory/file
+   symlinks, and made parallel mode refuse agents with write or unrestricted default tools. The
+   one-worker-at-a-time contract keeps Git and delivery with the parent and excludes `.firstroll`,
+   credentials, private books, extracted text, vectors, cookies and uploaded clips from every role.
+5. Documented project trust, `/reload`, provider-cost multiplication, shared-working-tree risks and
+   the prompt-level rather than sandboxed nature of the controls. Added the upstream MIT notice.
+
+Acceptance evidence:
+
+- Pi loads the extension from a trusted clean worktree without startup errors;
+- a live isolated `gpt-5.4-mini` scout smoke test reads only `AGENTS.md`, returns its first heading,
+  reports nested usage, creates no child session and leaves the worktree unchanged;
+- live negative smokes reject a symlinked project-agent directory and two parallel workers before any
+  child process starts; a final isolated reviewer reports no remaining critical issues or warnings;
+- all 239 automated tests pass; focused static coverage verifies project-default discovery, inherited
+  models, role tool bounds, output and concurrency caps, private-data exclusions, workflow prompts
+  and attribution;
+- scoped Ruff, extension and frontend JavaScript syntax, npm audit and repository whitespace checks
+  pass.
+
+Known constraints:
+
+- subagents share the parent's working tree and provider allowance; they are not containers, account
+  quota boundaries or safe concurrent writers;
+- project-agent restrictions are prompts plus parent review, not operating-system enforcement;
+- an existing Pi session needs `/reload`, and a new checkout must be trusted before project code can
+  execute.
+
+Next actionable work:
+
+1. Use parallel delegation only for independent read-only work and observe token/latency value before
+   raising either concurrency limit.
+2. Reconcile the adaptation against Pi release notes when upgrading beyond the tested 0.84.2 API.
+
 ### 24 August 2026 — Default-off local Agent adapter implemented
 
 Delivered:
