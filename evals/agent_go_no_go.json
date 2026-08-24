@@ -2,7 +2,7 @@
   "schema_version": 1,
   "decision_id": "firstroll-production-agent-go-no-go-v1",
   "programme_id": "firstroll-pre-agent-hardening-v1",
-  "status": "awaiting_owner_decision",
+  "status": "approved_bounded_local_comparison",
   "prepared_at": "2026-08-24T14:42:54Z",
   "entry_gate": {
     "result_path": "evals/results/pre-agent-final-gate-2026-08-21.json",
@@ -149,6 +149,21 @@
     "durable owner-scoped checkpoints exist before multi-instance hosted execution",
     "repository owner reviews a separate production cutover decision"
   ],
-  "owner_decision": null,
+  "owner_decision": {
+    "decision": "go_bounded_local_comparison",
+    "recorded_at": "2026-08-24T15:13:42Z",
+    "decided_by": "repository_owner",
+    "authorised_scope": [
+      "default_off_local_research_graph_services_adapter",
+      "same_day_fixed_vs_agent_paired_evaluation",
+      "local_human_packet_review_if_machine_targets_pass"
+    ],
+    "explicitly_not_authorised": [
+      "hosted_agent_route",
+      "production_route_cutover",
+      "removal_of_fixed_workflow_fallback",
+      "unbounded_tools_or_model_calls"
+    ]
+  },
   "privacy_scope": "Aggregate scores, limits and result references only; no prompts, private passages, review bodies, vectors, caches, credentials or uploaded clips."
 }

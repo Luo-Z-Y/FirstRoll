@@ -307,7 +307,8 @@ not a production route cut-over. The candidate must retain 5/5 terminal results,
 automated quality, 100% quality-gate/citation/identity/instruction integrity, P50/P95 no greater than
 110%/125% of the paired control and total model tokens no greater than 125%. Existing fake graph
 tests establish policy behaviour only; every real Agent quality, latency and cost field remains
-unmeasured. Step 12 therefore remains `awaiting_owner_decision`.
+unmeasured. On 24 August 2026 the owner authorised this bounded local comparison only. Step 12 is
+complete, while hosted integration and production route cut-over remain unauthorised.
 
 ## Deep Study Transparency Checkpoint
 

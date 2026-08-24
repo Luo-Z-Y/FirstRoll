@@ -1,16 +1,15 @@
 # Production Agent Go/No-Go Brief
 
-**Status:** awaiting explicit repository-owner decision
-**Recommendation:** conditional **GO** for a feature-flagged, evaluation-only adapter and paired
-comparison; **NO-GO** for production route cut-over
+**Status:** owner-approved **GO** for the bounded local comparison; production cut-over remains
+**NO-GO**
 
-## Decision Being Requested
+## Recorded Decision
 
-The Pre-Agent entry gate has passed, but that does not establish that LangGraph improves FirstRoll.
-The owner is being asked whether to permit one bounded implementation/evaluation step—not whether to
-replace the fixed production workflow.
+On 24 August 2026, the repository owner authorised the default-off local adapter and paired evaluation
+by directing FirstRoll to “go local first”. This completes Step 12 without claiming that LangGraph
+improves FirstRoll and without enabling a hosted or production Agent route.
 
-A **GO** authorises a production-compatible `ResearchGraphServices` adapter behind a default-off flag
+The **GO** authorises a production-compatible `ResearchGraphServices` adapter behind a default-off flag
 and a local paired evaluation. It does not authorise public traffic, a route cut-over, broader tool
 access, durable hosted execution or removal of the fixed fallback. A **NO-GO** leaves the tested graph
 core dormant and the fixed workflow unchanged.
@@ -124,5 +123,5 @@ is mandatory before any multi-instance hosted Agent route could be considered.
 - **REVISE:** change the hypothesis or thresholds before implementation; do not alter them after
   seeing Agent results.
 
-Until the owner records one of these decisions explicitly, Step 12 remains open and production Agent
-integration remains prohibited.
+The owner selected **GO — bounded comparison only**. Step 12 is complete. Adapter and evaluation work
+may proceed within this document's frozen scope; production Agent routing remains prohibited.

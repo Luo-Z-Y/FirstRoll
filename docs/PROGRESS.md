@@ -1,5 +1,36 @@
 # FirstRoll Project Progress
 
+### 24 August 2026 — Owner authorises bounded local Agent comparison
+
+Decision:
+
+1. The repository owner selected **GO — bounded comparison only** with the direction “go local
+   first”.
+2. The authorised scope is a default-off local `ResearchGraphServices` adapter, same-day fixed/Agent
+   paired evaluation and a local human packet review only if machine targets pass.
+3. Hosted Agent routing, production cut-over, removal of the fixed fallback and unbounded tool/model
+   calls remain explicitly unauthorised.
+4. The causal hypothesis, controls and acceptance thresholds in `evals/agent_go_no_go.json` are now
+   frozen before implementation.
+
+Acceptance evidence:
+
+- the decision record names the repository owner role, UTC decision time, authorised scope and
+  explicit exclusions without storing personal data;
+- all 220 automated tests, scoped Ruff, JSON parsing, documentation links and whitespace checks pass;
+- the scorecard marks all twelve Pre-Agent steps complete while retaining a separate no-go for
+  production route cut-over;
+- no Agent quality, latency, token or recovery result is invented: real adapter/evaluation fields
+  remain false until measured.
+
+Next actionable work:
+
+1. Implement the default-off local adapter over existing identity, packet, provider and synthesis
+   services without adding a hosted route.
+2. Prove deterministic sufficiency and tool-authorisation behaviour with fake failure coverage.
+3. Run the same-day paired five-case evaluation and request human review only if every machine target
+   passes.
+
 ### 24 August 2026 — Scoped Agent decision prepared; owner review pending
 
 Delivered:

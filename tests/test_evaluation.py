@@ -373,8 +373,7 @@ def test_pre_agent_scorecard_freezes_steps_journeys_and_entry_targets() -> None:
 
     steps = scorecard["steps"]
     assert [step["id"] for step in steps] == [f"S{index:02d}" for index in range(1, 13)]
-    assert all(step["status"] == "complete" for step in steps[:11])
-    assert steps[11]["status"] == "awaiting_owner_decision"
+    assert all(step["status"] == "complete" for step in steps)
 
     target_ids = set(scorecard["targets"])
     required_targets = set(scorecard["agent_entry_gate"]["required_target_ids"])
@@ -411,7 +410,17 @@ def test_agent_go_no_go_contract_is_tied_to_the_frozen_evidence() -> None:
     failed_case = next(case for case in human["cases"] if not case["passed"])
 
     assert decision["status"] == scorecard["agent_decision"]["status"]
-    assert decision["owner_decision"] is None
+    assert decision["status"] == "approved_bounded_local_comparison"
+    assert decision["owner_decision"]["decision"] == "go_bounded_local_comparison"
+    assert decision["owner_decision"]["decided_by"] == "repository_owner"
+    assert decision["owner_decision"]["authorised_scope"] == [
+        "default_off_local_research_graph_services_adapter",
+        "same_day_fixed_vs_agent_paired_evaluation",
+        "local_human_packet_review_if_machine_targets_pass",
+    ]
+    assert "production_route_cutover" in decision["owner_decision"][
+        "explicitly_not_authorised"
+    ]
     assert decision["entry_gate"]["agent_entry_ready"] is True
     assert decision["recommendation"]["agent_adapter_and_paired_evaluation"] == (
         "conditional_go"
