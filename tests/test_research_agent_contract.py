@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
+import pytest
+
 from app.backend.research_agent_contract import (
     ActionOrigin,
     EvidenceKind,
@@ -12,6 +14,7 @@ from app.backend.research_agent_contract import (
     TerminalStatus,
     ToolFailure,
     ToolName,
+    ToolPlan,
     ToolRequest,
     authorise_tool_request,
     decide_next_action,
@@ -53,6 +56,21 @@ def evidence(evidence_id: str = "S1", content: str = "A bounded analytical sourc
         locator="Framework p. 1",
         content=content,
     )
+
+
+def test_planner_usage_rejects_unbounded_or_boolean_token_counts() -> None:
+    with pytest.raises(ValueError, match="non-negative"):
+        ToolPlan(ToolName.FETCH_GUARDIAN_REVIEWS, "planner", total_tokens=-1)
+    with pytest.raises(ValueError, match="non-negative"):
+        ToolPlan(ToolName.FETCH_GUARDIAN_REVIEWS, "planner", prompt_tokens=True)
+    with pytest.raises(ValueError, match="cannot be lower"):
+        ToolPlan(
+            ToolName.FETCH_GUARDIAN_REVIEWS,
+            "planner",
+            prompt_tokens=2,
+            completion_tokens=1,
+            total_tokens=2,
+        )
 
 
 def test_existing_evidence_goes_directly_to_synthesis_without_external_call() -> None:

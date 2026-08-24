@@ -1,7 +1,7 @@
 # FirstRoll Data Model
 
 **Status:** Current implementation and staged identity-neutral migration
-**Last reconciled:** 21 August 2026
+**Last reconciled:** 24 August 2026
 
 FirstRoll deliberately uses different stores for different privacy and durability requirements. The
 hosted edition persists account identity, profile, preferences, saved films and quota counters in Supabase. The replacement
@@ -28,6 +28,13 @@ bounded Discover workspace in per-tab session storage solely to survive view cha
 | Discovery/reception dictionaries | Local and hosted | No | TMDb or Wikidata/Wikipedia details, related-film and reception cache | In memory only |
 | Browser `sessionStorage` | Local and hosted browser | Per tab, ≤24 hours | Public Discover query/candidates/shelf, active product view, scroll offsets and optional dossier film ID | Not applicable; browser-managed |
 | `StudyRunStore` | Hosted | No | Owner UUID, status and final study for a maximum of ten minutes | In memory only |
+| Local Agent workspace | Local comparison only | No | Current film/focus, fixed packet, ephemeral acquired reviews/videos, planner usage and final study | In memory only; no checkpointer |
+
+The default-off local Agent adapter does not write newly acquired comparison sources to
+`.firstroll/criticism` or `.firstroll/videos`. Its runtime objects and provider credentials remain
+outside graph state. The current comparison compiles without a checkpointer, so bounded evidence in
+graph state is not persisted. Durable owner-scoped checkpoint design remains mandatory before any
+hosted Agent proposal.
 
 ## Per-tab Discover continuity
 

@@ -181,6 +181,13 @@ def video_analysis_enabled() -> bool:
     )
 
 
+def local_agent_enabled() -> bool:
+    return bool(
+        not public_mode_enabled()
+        and environment_flag("FIRSTROLL_LOCAL_AGENT_ENABLED", default=False)
+    )
+
+
 allowed_origins = [
     origin.strip().rstrip("/")
     for origin in os.getenv("FIRSTROLL_CORS_ALLOWED_ORIGINS", "").split(",")
@@ -359,10 +366,37 @@ def prepare_film_study(
     return {
         "film": film,
         "claims": claims,
+        "reviews": reviews,
+        "videos": video_bundle.videos if video_bundle else [],
         "reading": reading,
         "packet": packet,
         "trace": trace,
     }
+
+
+def build_local_agent_services():
+    """Build the approved local-only adapter without exposing an HTTP route."""
+
+    if not local_agent_enabled():
+        raise RuntimeError("The local Agent comparison is disabled.")
+    from app.backend.local_research_agent import (
+        LocalAttributedSourceAcquirer,
+        LocalResearchGraphServices,
+    )
+
+    return LocalResearchGraphServices(
+        detail=discovery_service.detail,
+        prepare=prepare_film_study,
+        acquirer=LocalAttributedSourceAcquirer(
+            douban=douban_adapter,
+            guardian=guardian_web_adapter,
+            letterboxd=letterboxd_adapter,
+            letterboxd_web=letterboxd_web_adapter,
+            youtube=youtube_video_adapter,
+            bilibili=bilibili_video_adapter,
+        ),
+        study_service=study_service,
+    )
 
 
 def authenticated_user(request: Request) -> dict[str, str | None]:

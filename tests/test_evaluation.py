@@ -429,11 +429,13 @@ def test_agent_go_no_go_contract_is_tied_to_the_frozen_evidence() -> None:
         "no_go_until_paired_targets_pass"
     )
     assert decision["agent_evidence_state"] == {
-        "real_service_adapter": False,
+        "real_service_adapter": True,
+        "real_adapter_contract_tests": True,
         "real_frozen_suite_run": False,
         "real_packet_human_review": False,
         "production_route_enabled": False,
-        "fake_graph_tests_only": True,
+        "hosted_route_registered": False,
+        "live_provider_or_model_claim": False,
     }
     assert decision["measured_deficiency"]["case_id"] == failed_case["case_id"]
     for dimension, target in decision["measured_deficiency"]["failed_dimensions"].items():
@@ -451,6 +453,27 @@ def test_agent_go_no_go_contract_is_tied_to_the_frozen_evidence() -> None:
     assert decision["candidate_limits"]["production_route_cutover"] is False
     assert decision["candidate_targets"]["human_packet_passed_cases"]["threshold"] == 5
     assert decision["candidate_targets"]["paired_total_token_ratio"]["threshold"] == 1.25
+
+
+def test_agent_sufficiency_boundary_targets_only_the_human_failed_case() -> None:
+    packets = json.loads(
+        (ROOT / "evals" / "results" / "packet-selection-2026-08-21.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    human = json.loads(
+        (ROOT / "evals" / "results" / "human-packet-review-2026-08-21.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    diagnostically_limited = {
+        case["case_id"]
+        for case in packets["cases"]
+        if case["warm"]["samples"][0]["packet_quality"]["status"] != "passed"
+    }
+    human_failed = {case["case_id"] for case in human["cases"] if not case["passed"]}
+
+    assert diagnostically_limited == human_failed == {"the-thing-ambiguous-identity"}
 
 
 def test_identity_match_requires_title_year_and_director() -> None:

@@ -50,6 +50,26 @@ def test_local_startup_prewarms_embeddings_without_blocking_public_mode(monkeypa
     assert index.calls == 1
 
 
+def test_local_agent_adapter_is_default_off_and_has_no_http_route(monkeypatch) -> None:
+    monkeypatch.delenv("FIRSTROLL_PUBLIC_MODE", raising=False)
+    monkeypatch.delenv("FIRSTROLL_LOCAL_AGENT_ENABLED", raising=False)
+
+    assert main.local_agent_enabled() is False
+    with pytest.raises(RuntimeError, match="disabled"):
+        main.build_local_agent_services()
+
+    monkeypatch.setenv("FIRSTROLL_LOCAL_AGENT_ENABLED", "true")
+    assert main.local_agent_enabled() is True
+    adapter = main.build_local_agent_services()
+    assert adapter.detail == main.discovery_service.detail
+    assert adapter.study_service is main.study_service
+    assert not any("agent" in getattr(route, "path", "") for route in main.app.routes)
+    assert not any("agent" in path for path in main.app.openapi()["paths"])
+
+    monkeypatch.setenv("FIRSTROLL_PUBLIC_MODE", "true")
+    assert main.local_agent_enabled() is False
+
+
 def test_local_embedding_prewarm_can_be_disabled(monkeypatch) -> None:
     class FakeIndex:
         calls = 0

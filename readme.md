@@ -17,7 +17,8 @@ keeps those layers visible instead of presenting one fluent but unsupported answ
 > tools, clip analysis and unauthenticated model use disabled. Supabase email authentication, atomic
 > daily quotas and redacted SSE research progress are implemented. The fixed-workflow entry gate now
 > passes all 17 targets and 11 required steps. The owner has authorised a default-off local Agent
-> adapter and paired comparison; hosted integration and production route cut-over remain off.
+> adapter and paired comparison. The adapter is implemented without an HTTP route; its real frozen
+> run is pending, while hosted integration and production route cut-over remain off.
 
 See [Project Progress](docs/PROGRESS.md) for completed milestones, verification results,
 known limitations and the next priorities.
@@ -267,8 +268,10 @@ deduplicates and caps graph state, and terminates explicitly under ambiguity, we
 provider failure, invalid planning and quality-gate failure. It is not yet the public Deep Study
 execution path: the fixed workflow remains the production comparison and fallback. The
 [Agent Go/No-Go Brief](docs/AGENT_GO_NO_GO.md) authorises only a default-off adapter and paired local
-experiment targeting the one failed human packet. Any hosted integration or later route cut-over
-requires a separate explicit reviewed decision.
+experiment targeting the one failed human packet. The adapter now reuses fixed packet/synthesis
+services, keeps new provider evidence ephemeral and exposes no HTTP route; no real Agent quality or
+latency result exists yet. Any hosted integration or later route cut-over requires a separate explicit
+reviewed decision.
 
 The public beta is intentionally narrower than the local edition. Azure Static Web Apps and Azure
 Container Apps use separate origins and custom domains. Public mode does not publish local settings,
@@ -697,11 +700,17 @@ YOUTUBE_API_KEY=
 FIRSTROLL_EMBEDDINGS=1
 FIRSTROLL_PREWARM_EMBEDDINGS=1
 FIRSTROLL_EMBEDDING_MODEL=sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+FIRSTROLL_LOCAL_AGENT_ENABLED=0
 FIRSTROLL_LIBRARY_PATH=
 FIRSTROLL_LIBRARY_MANIFEST=
 FIRSTROLL_LIBRARY_INDEX=
 FIRSTROLL_DOUBAN_MCP_PATH=
 ```
+
+`FIRSTROLL_LOCAL_AGENT_ENABLED` is fail-closed and defaults to `0`. It permits only the approved
+local adapter/evaluation factory; it does not register an Agent HTTP route, alter Deep Study or enable
+hosted execution. Newly acquired comparison evidence remains ephemeral rather than being written to
+the existing criticism/video caches.
 
 The hosted public beta additionally uses `SUPABASE_URL`,
 `SUPABASE_PUBLISHABLE_KEY` and the fail-closed `FIRSTROLL_DEEP_STUDY_ENABLED` switch. Its
@@ -924,6 +933,7 @@ FirstRoll/
 │   │   ├── evidence.py          # typed synthesis boundary
 │   │   ├── library.py           # private document catalogue
 │   │   ├── library_index.py     # chunking, embeddings and hybrid retrieval
+│   │   ├── local_research_agent.py # default-off local graph service adapter
 │   │   ├── main.py              # FastAPI routes
 │   │   ├── research_agent_contract.py # framework-neutral Agent policy and budgets
 │   │   ├── packet_quality.py   # redacted pre-synthesis packet quality diagnostics
@@ -1018,7 +1028,7 @@ fallback behaviour; these are tracked separately from the new FirstRoll modules.
 | Private RAG foundation | Complete | Token chunking, FTS5, local vectors, hybrid retrieval and citations |
 | Attributed criticism | Complete | Crossref, Douban, Letterboxd and Guardian retrieval with structured critic claims |
 | Evidence-grounded Deep Study | Complete | Typed theory, criticism, review and video-text evidence; Pydantic output, citation validation and quality gate |
-| Bounded research Agent core | Implemented | LangGraph control flow, bounded reducers, deterministic tool authorisation, fake-service scenarios and optional checkpointing; production route integration remains gated |
+| Bounded research Agent core | Local adapter implemented, evaluation pending | Default-off real-service adapter, aggregate-only planning, ephemeral acquisition and deterministic authorisation; no HTTP route or production cut-over |
 | Authenticated research progress | Implemented | Allow-listed SSE lifecycle events, separate owner-scoped result retrieval and secret/evidence redaction tests; final interactive browser observation remains pending |
 | Pre-Agent product hardening | Complete — bounded local comparison authorised | All 17 targets pass; the owner approved only a default-off local Agent adapter and paired evaluation |
 | Clip analysis web migration | Complete | Scene, shot, colour, object and export workflow |

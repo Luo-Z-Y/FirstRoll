@@ -107,6 +107,22 @@ class ToolRequest:
 
 
 @dataclass(frozen=True)
+class ToolPlan:
+    tool: ToolName
+    model: str
+    prompt_tokens: int = 0
+    completion_tokens: int = 0
+    total_tokens: int = 0
+
+    def __post_init__(self) -> None:
+        for value in (self.prompt_tokens, self.completion_tokens, self.total_tokens):
+            if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+                raise ValueError("Planner token counts must be non-negative integers.")
+        if self.total_tokens < self.prompt_tokens + self.completion_tokens:
+            raise ValueError("Planner total tokens cannot be lower than component counts.")
+
+
+@dataclass(frozen=True)
 class ResearchBudgets:
     max_graph_steps: int = 8
     max_planning_calls: int = 4

@@ -372,6 +372,12 @@ Implement and test the graph core with fake service interfaces, deterministic to
 bounded reducers and explicit terminal states. Keep the fixed workflow as production and fallback
 until a real adapter runs the same frozen cases and demonstrates a justified gain.
 
+**24 August 2026 update:** after the fixed-workflow entry gate passed, the owner authorised a
+fail-closed local adapter and paired evaluation only. The adapter may acquire ephemeral attributed
+sources for a diagnostically limited packet and must skip planning for a passing packet. No HTTP
+route, hosted execution or production cut-over is authorised; the original decision boundary remains
+in force until the frozen comparison passes and receives separate review.
+
 ### Alternatives considered
 
 | Option | Assessment |

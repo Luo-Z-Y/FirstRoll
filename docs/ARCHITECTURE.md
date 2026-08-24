@@ -143,6 +143,7 @@ future-enterprise path, but ADR-017 removes it from the production critical path
 | `library_index.py` | PDF extraction, chunking, FTS5, single-flight background query-encoder warm-up, local embeddings, rank fusion and page citations | Film-specific factual claims |
 | `evidence.py` | Typed packet; focus-aware theory/claim/attributed ranking; exact/near deduplication; source and character budgets; permitted-claim and omission boundaries | Model generation or provider access |
 | `packet_quality.py` | Pre-synthesis identity, citation, provenance, duplication, lexical relevance, diversity and retrieved-instruction diagnostics | Source-text persistence, factual correctness, human usefulness or model grading |
+| `local_research_agent.py` | Default-off local graph adapter, aggregate-only planning context and ephemeral attributed-source acquisition | HTTP routing, cache mutation, credentials in graph state or production cut-over |
 | `study_observability.py` | Allow-listed monotonic stage timings, terminal status and bounded aggregate counts | Prompts, evidence text, credentials, model output or exception details |
 | `study_service.py` | Concise bounded DeepSeek request, Pydantic/citation validation, generated-study gate, one total schema-or-quality repair and owner-visible redacted packet-quality attachment | Authentication, quota reservation, automatic timeout retry or research-tool authorisation |
 | `research_stream.py` | Fixed public progress vocabulary and transient owner-scoped result store | Hidden reasoning, prompts, credentials or private evidence bodies |
@@ -235,6 +236,26 @@ selected evidence and aggregate omission reasons appear in the owner-visible res
 omits redundant fields and whitespace rather than hiding evidence from inspection. The observability
 record also appears as a redacted server log record;
 public SSE retains its smaller allow-list and receives no token counts or internal timings.
+
+### Default-Off Local Agent Comparison
+
+```text
+explicit selected film + frozen focus
+→ build the unchanged fixed evidence packet
+→ deterministic packet-quality sufficiency check
+→ if passed: zero planner or external acquisition calls
+→ if limited: aggregate gap + public identity/focus → one model tool choice
+→ deterministic allow-list/budget authorisation
+→ ephemeral review/video acquisition without cache writes
+→ rebuild through unchanged EvidencePacket selection
+→ unchanged DeepSeek synthesis and deterministic quality gate
+```
+
+`FIRSTROLL_LOCAL_AGENT_ENABLED=0` is the default. Enabling it makes a Python service factory
+available to the paired evaluator but registers no HTTP route. The planner sees no evidence text,
+credentials or private locators. Provider objects and credentials remain in runtime context; graph
+state receives bounded evidence only for the non-checkpointed local run. The production fixed route
+and fallback are unchanged, and hosted execution remains prohibited.
 
 ### Hosted Deep Study
 
