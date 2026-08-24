@@ -36,6 +36,13 @@ RUBRIC_QUESTIONS = {
 }
 
 
+def configure_input_encoding(stream: Any | None = None) -> None:
+    stream = stream or sys.stdin
+    reconfigure = getattr(stream, "reconfigure", None)
+    if callable(reconfigure):
+        reconfigure(encoding="utf-8", errors="replace")
+
+
 def source_revision() -> str:
     try:
         return subprocess.check_output(
@@ -198,6 +205,7 @@ def parse_args() -> argparse.Namespace:
 
 
 def main_cli() -> int:
+    configure_input_encoding()
     args = parse_args()
     from app.backend import main
     from app.backend.packet_quality import assess_evidence_packet

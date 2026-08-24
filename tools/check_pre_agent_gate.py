@@ -31,9 +31,12 @@ def source_revision() -> str:
 
 def safe_evidence_path(path: Path) -> str:
     try:
-        return path.resolve().relative_to(ROOT.resolve()).as_posix()
+        relative = path.resolve().relative_to(ROOT.resolve())
     except ValueError:
         return path.name
+    if relative.parts and relative.parts[0] == ".firstroll":
+        return "local-only human packet review aggregate"
+    return relative.as_posix()
 
 
 def target_result(
@@ -259,6 +262,56 @@ def evaluate(scorecard: dict[str, Any], human_review_path: Path) -> list[dict[st
     return results
 
 
+def build_report(
+    scorecard: dict[str, Any],
+    results: list[dict[str, Any]],
+    *,
+    revision: str | None = None,
+) -> dict[str, Any]:
+    required_targets = set(scorecard["agent_entry_gate"]["required_target_ids"])
+    result_ids = {item["target_id"] for item in results}
+    missing = required_targets - result_ids
+    if missing:
+        raise ValueError(f"Missing gate target results: {', '.join(sorted(missing))}")
+    step_status = {item["id"]: item["status"] for item in scorecard["steps"]}
+    required_steps = set(scorecard["agent_entry_gate"]["required_completed_steps"])
+    incomplete_steps = sorted(
+        step_id for step_id in required_steps if step_status.get(step_id) != "complete"
+    )
+    failures = [item for item in results if item["status"] == "failed"]
+    pending = [item for item in results if item["status"].startswith("pending")]
+    targets_ready = not failures and not pending
+    entry_ready = targets_ready and not incomplete_steps
+    return {
+        "schema_version": 1,
+        "suite_id": "firstroll-pre-agent-machine-gate-v1",
+        "programme_id": scorecard["programme_id"],
+        "recorded_at": datetime.now(timezone.utc).isoformat(),
+        "source_revision": revision or source_revision(),
+        "summary": {
+            "required_targets": len(required_targets),
+            "passed_targets": sum(item["status"] == "passed" for item in results),
+            "failed_targets": len(failures),
+            "pending_targets": len(pending),
+            "required_steps": len(required_steps),
+            "completed_required_steps": len(required_steps) - len(incomplete_steps),
+            "all_machine_targets_passed": not failures,
+            "agent_entry_ready": entry_ready,
+        },
+        "targets": sorted(results, key=lambda item: item["target_id"]),
+        "blocking_reasons": [
+            *[f"failed:{item['target_id']}" for item in failures],
+            *[f"pending:{item['target_id']}" for item in pending],
+            *[f"incomplete:{step_id}" for step_id in incomplete_steps],
+        ],
+        "step_status": step_status,
+        "privacy_scope": (
+            "Reads versioned aggregate results and an optional redacted human score only; never "
+            "loads packets, prompts, private books, source text, vectors or provider caches."
+        ),
+    }
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Evaluate FirstRoll's Pre-Agent scorecard without reading private evidence."
@@ -273,45 +326,15 @@ def main_cli() -> int:
     args = parse_args()
     scorecard = load_json(args.scorecard)
     results = evaluate(scorecard, args.human_review)
-    required = set(scorecard["agent_entry_gate"]["required_target_ids"])
-    result_ids = {item["target_id"] for item in results}
-    missing = required - result_ids
-    if missing:
-        raise SystemExit(f"Missing gate target results: {', '.join(sorted(missing))}")
-    failures = [item for item in results if item["status"] == "failed"]
-    pending = [item for item in results if item["status"].startswith("pending")]
-    report = {
-        "schema_version": 1,
-        "suite_id": "firstroll-pre-agent-machine-gate-v1",
-        "programme_id": scorecard["programme_id"],
-        "recorded_at": datetime.now(timezone.utc).isoformat(),
-        "source_revision": source_revision(),
-        "summary": {
-            "required_targets": len(required),
-            "passed_targets": sum(item["status"] == "passed" for item in results),
-            "failed_targets": len(failures),
-            "pending_targets": len(pending),
-            "all_machine_targets_passed": not failures,
-            "agent_entry_ready": not failures and not pending,
-        },
-        "targets": sorted(results, key=lambda item: item["target_id"]),
-        "blocking_reasons": [
-            *[f"failed:{item['target_id']}" for item in failures],
-            *[f"pending:{item['target_id']}" for item in pending],
-        ],
-        "step_status": {
-            item["id"]: item["status"] for item in scorecard["steps"]
-        },
-        "privacy_scope": (
-            "Reads versioned aggregate results and an optional redacted human score only; never "
-            "loads packets, prompts, private books, source text, vectors or provider caches."
-        ),
-    }
+    try:
+        report = build_report(scorecard, results)
+    except ValueError as exc:
+        raise SystemExit(str(exc)) from exc
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
     print(json.dumps(report["summary"], indent=2), flush=True)
     print(f"Report: {args.output}", flush=True)
-    return 1 if failures else 0
+    return 1 if report["summary"]["failed_targets"] else 0
 
 
 if __name__ == "__main__":

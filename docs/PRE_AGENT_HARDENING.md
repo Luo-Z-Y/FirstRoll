@@ -1,6 +1,6 @@
 # Pre-Agent Product Hardening
 
-**Status:** active; Steps 1–10 complete and Step 11 is next
+**Status:** entry gate passed; Steps 1–11 complete and Step 12 is next
 
 **Machine-readable scorecard:** [`evals/pre_agent_scorecard.json`](../evals/pre_agent_scorecard.json)
 
@@ -207,20 +207,23 @@ completes 5/5 at 98.65 mean quality; relative to the held-packet Step 8 run, P50
 16.9011%/20.1406%, completion-token P95 is 2,552.4 and total tokens fall to 38,875. The result makes
 no provider-reliability claim.
 
-### Step 11 — Freeze the fixed-workflow baseline — next
+### Step 11 — Freeze the fixed-workflow baseline — complete
 
 Run the full automated suite, desktop/mobile journeys, cold/warm packet benchmark, adversarial
 fixtures, human packet rubric and final fixed workflow evaluation. Review every retained artefact for
 private data before committing it.
 
 **Acceptance:** all scorecard targets pass, no P0/P1 defect remains and the newest reviewed JSON
-artefact, documentation and progress evidence agree. The current
-[`pre-agent-machine-gate-2026-08-21.json`](../evals/results/pre-agent-machine-gate-2026-08-21.json)
-passes all 16 machine-assessable targets with zero failure. `human_packet_pass_ratio` is the sole
-pending target, so Step 11 and Agent entry remain blocked. The repository owner must complete
-[Human Evidence-Packet Review](HUMAN_PACKET_REVIEW.md) against the current stable revision.
+artefact, documentation and progress evidence agree. The attested
+[`human-packet-review-2026-08-21.json`](../evals/results/human-packet-review-2026-08-21.json) passes
+four of five packets for the exact required ratio of `0.8`; all five score 5 for traceability and
+epistemic calibration. The ambiguous-identity case remains a disclosed non-blocking limitation at
+2 for diversity and 3 for actionability rather than being padded with unsupported evidence. The
+[`pre-agent-final-gate-2026-08-21.json`](../evals/results/pre-agent-final-gate-2026-08-21.json)
+records 17/17 targets and 11/11 required steps passed with no blocking reason. Step 11 is frozen; this
+entry-gate result permits the Step 12 decision but does not itself authorise Agent integration.
 
-### Step 12 — Make the Agent go/no-go decision
+### Step 12 — Make the Agent go/no-go decision — next
 
 Only after Steps 1–11 pass, write the comparison brief for the production Agent. It must identify a
 measurable deficiency the fixed workflow still has and compare quality, recovery, latency, cost and

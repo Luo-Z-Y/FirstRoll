@@ -8,11 +8,12 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from tools.check_pre_agent_gate import evaluate
+from tools.check_pre_agent_gate import build_report, evaluate
 from tools.review_evidence_packets import (
     RUBRIC_DIMENSIONS,
     aggregate_review,
     case_passes,
+    configure_input_encoding,
 )
 
 
@@ -66,6 +67,49 @@ def test_redacted_attested_human_review_can_complete_the_gate(tmp_path) -> None:
     assert "PRIVATE_REVIEW_NOTE" not in json.dumps(redacted)
     assert human["status"] == "passed"
     assert human["observed"] == 0.8
+    report = build_report(scorecard, results, revision="reviewed-revision")
+    assert report["summary"]["completed_required_steps"] == 11
+    assert report["summary"]["agent_entry_ready"] is True
+    assert report["blocking_reasons"] == []
+
+
+def test_incomplete_required_step_blocks_agent_entry(tmp_path) -> None:
+    scorecard = json.loads(
+        (ROOT / "evals" / "pre_agent_scorecard.json").read_text(encoding="utf-8")
+    )
+    for step in scorecard["steps"]:
+        if step["id"] == "S11":
+            step["status"] = "next"
+    review = {
+        "recorded_at": "2026-08-21T00:00:00+00:00",
+        "source_revision": "test-revision",
+        "reviewer_attested": True,
+        "cases": [
+            {"case_id": f"case-{index}", "scores": complete_scores()}
+            for index in range(1, 6)
+        ],
+    }
+    path = tmp_path / "human-review-redacted.json"
+    path.write_text(json.dumps(aggregate_review(review)), encoding="utf-8")
+
+    report = build_report(scorecard, evaluate(scorecard, path), revision="test")
+
+    assert report["summary"]["passed_targets"] == 17
+    assert report["summary"]["agent_entry_ready"] is False
+    assert report["blocking_reasons"] == ["incomplete:S11"]
+
+
+def test_review_input_replaces_invalid_utf8_instead_of_crashing() -> None:
+    class RecordingInput:
+        configured: dict[str, str] | None = None
+
+        def reconfigure(self, **values: str) -> None:
+            self.configured = values
+
+    stream = RecordingInput()
+    configure_input_encoding(stream)
+
+    assert stream.configured == {"encoding": "utf-8", "errors": "replace"}
 
 
 def test_human_case_gate_requires_core_dimensions_and_no_low_score() -> None:

@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "suite_id": "firstroll-human-packet-review-v1",
+  "programme_id": "firstroll-pre-agent-hardening-v1",
+  "recorded_at": "2026-08-24T14:27:40.253801+00:00",
+  "source_revision": "6b24f1b8bf752b204af6b3be812db51b068e8ffe",
+  "reviewer_attested": true,
+  "quality_scope": "Human packet focus relevance, traceability, source diversity, epistemic calibration and filmmaker actionability; no private evidence or reviewer notes.",
+  "summary": {
+    "case_count": 5,
+    "passed_cases": 4,
+    "failed_cases": 1,
+    "pass_ratio": 0.8,
+    "dimension_means": {
+      "focus_relevance": 4.4,
+      "traceability": 5.0,
+      "source_diversity": 3.8,
+      "epistemic_calibration": 5.0,
+      "filmmaker_actionability": 4.2
+    }
+  },
+  "cases": [
+    {
+      "case_id": "syndromes-cinematography",
+      "scores": {
+        "focus_relevance": 5,
+        "traceability": 5,
+        "source_diversity": 4,
+        "epistemic_calibration": 5,
+        "filmmaker_actionability": 5
+      },
+      "passed": true
+    },
+    {
+      "case_id": "in-the-mood-for-love-space",
+      "scores": {
+        "focus_relevance": 5,
+        "traceability": 5,
+        "source_diversity": 5,
+        "epistemic_calibration": 5,
+        "filmmaker_actionability": 5
+      },
+      "passed": true
+    },
+    {
+      "case_id": "memoria-sound",
+      "scores": {
+        "focus_relevance": 4,
+        "traceability": 5,
+        "source_diversity": 4,
+        "epistemic_calibration": 5,
+        "filmmaker_actionability": 4
+      },
+      "passed": true
+    },
+    {
+      "case_id": "the-thing-ambiguous-identity",
+      "scores": {
+        "focus_relevance": 4,
+        "traceability": 5,
+        "source_diversity": 2,
+        "epistemic_calibration": 5,
+        "filmmaker_actionability": 3
+      },
+      "passed": false
+    },
+    {
+      "case_id": "we-are-all-strangers-sparse",
+      "scores": {
+        "focus_relevance": 4,
+        "traceability": 5,
+        "source_diversity": 4,
+        "epistemic_calibration": 5,
+        "filmmaker_actionability": 4
+      },
+      "passed": true
+    }
+  ]
+}

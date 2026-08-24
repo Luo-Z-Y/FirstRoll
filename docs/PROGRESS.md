@@ -1,5 +1,61 @@
 # FirstRoll Project Progress
 
+### 21 August 2026 — Fixed-workflow baseline frozen; Agent entry gate passed
+
+Delivered:
+
+1. Accepted the repository owner's five-case personal packet review at runtime revision `6b24f1b8`
+   and versioned only its attested score aggregate; private notes and packet evidence remain local.
+2. Combined the human result with every versioned machine result and checked both target and required
+   step completion rather than allowing green metrics to bypass an incomplete programme step.
+3. Froze Step 11 and moved Step 12 to `next`; `agent_entry_ready` now means the comparison decision is
+   permitted, not that production Agent integration is approved.
+4. Hardened interactive review input to replace malformed terminal bytes instead of losing a
+   completed score set to `UnicodeDecodeError`.
+5. Preserved the failed ambiguous-identity packet as a visible limitation rather than altering the
+   frozen threshold or padding sparse evidence.
+
+Final gate:
+
+| Measure | Observed | Required | Status |
+|---|---:|---:|---|
+| Required targets | 17 / 17 | 17 / 17 | Passed |
+| Required steps | 11 / 11 | 11 / 11 | Passed |
+| Failed / pending targets | 0 / 0 | 0 / 0 | Passed |
+| Human packet cases | 4 / 5 | ≥ 4 / 5 | Passed |
+| Human packet ratio | 0.8 | ≥ 0.8 | Passed |
+| Mean relevance / traceability | 4.4 / 5.0 | Reported | Passed |
+| Mean diversity / calibration / actionability | 3.8 / 5.0 / 4.2 | Reported | Passed |
+
+Acceptance evidence:
+
+- all 219 automated tests, scoped Ruff, backend/tool compilation, JSON parsing, documentation links
+  and repository whitespace checks pass;
+- the attested review contains exactly five safe case IDs, numeric dimension scores and pass flags;
+  no reviewer note, private passage, prompt, review body, vector or cache is versioned;
+- four cases pass all human rules; the ambiguous-identity case fails honestly at diversity 2 and
+  actionability 3 while retaining traceability 5 and calibration 5;
+- the final gate records 17 passed targets, 11 completed required steps, no blockers and
+  `agent_entry_ready: true`;
+- tests prove that an incomplete required step still blocks entry even when all 17 target values
+  pass, and malformed input bytes are replaced rather than crashing the private review.
+
+Known constraint:
+
+- passing at the exact 0.8 threshold does not erase the failed packet: complementary film-specific
+  evidence and immediate viewing actionability remain weak for the ambiguous-identity case;
+- the five-case synthesis run remains a regression fixture, not a provider-reliability claim;
+- production Agent integration remains prohibited until Step 12 reaches an explicit reviewed go
+  decision.
+
+Next actionable work:
+
+1. Write the Step 12 comparison brief around the measured fixed-workflow deficiency rather than a
+   generic Agent aspiration.
+2. Decide whether a bounded Agent can improve sparse film-specific evidence diversity/actionability
+   under the same identities, questions, quality, latency, token, cost and recovery contract.
+3. Keep the fixed workflow in production unless that comparison supports an explicit go decision.
+
 ### 21 August 2026 — Final machine gate passes; human packet review pending
 
 Delivered:

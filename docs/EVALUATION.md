@@ -257,23 +257,40 @@ calls and a transport timeout receives only one call. The live five-case run the
 a twenty-attempt provider-reliability claim. Its redacted result contains no private title or
 120-character private passage fragment.
 
-## Pre-Agent Machine Gate
+## Pre-Agent Final Gate
 
+The historical
 [`pre-agent-machine-gate-2026-08-21.json`](../evals/results/pre-agent-machine-gate-2026-08-21.json)
-reads the versioned aggregate artefacts only. At revision `703e1ad`, all 16 machine-assessable targets
-pass and none fail: observability, UI response/blockers/accessibility, warm packet latency,
-prompt-token budgets, duplicate/provenance/citation/instruction integrity, five-case completion,
-quality gate and paired P50/P95 targets.
+passes all 16 machine-assessable targets and honestly leaves the seventeenth target pending. The
+repository owner then inspected all five real local packets and supplied the attested score-only
+[`human-packet-review-2026-08-21.json`](../evals/results/human-packet-review-2026-08-21.json). No
+private note or evidence text is present in that artefact.
 
-The seventeenth target, `human_packet_pass_ratio >= 0.8`, is `pending_human_review`. Consequently
-`agent_entry_ready` is false and Step 11 remains open. The reviewer must inspect the five real local
-packets and attest personally by following [Human Evidence-Packet Review](HUMAN_PACKET_REVIEW.md).
-The review tool writes private notes only under `.firstroll`; the gate reads only its redacted scores.
-An agent cannot substitute automated or model ratings for this target.
+| Human packet measure | Result | Target |
+|---|---:|---:|
+| Cases passed | 4 / 5 | At least 4 / 5 |
+| Pass ratio | 0.8 | At least 0.8 |
+| Mean focus relevance | 4.4 / 5 | Core dimension at least 4 per passing case |
+| Mean traceability | 5.0 / 5 | Core dimension at least 4 per passing case |
+| Mean source diversity | 3.8 / 5 | No dimension below 3 per passing case |
+| Mean epistemic calibration | 5.0 / 5 | No dimension below 3 per passing case |
+| Mean filmmaker actionability | 4.2 / 5 | Core dimension at least 4 per passing case |
+
+The ambiguous-identity packet is the one failed case: diversity is 2 and actionability is 3. It
+remains useful and perfectly traceable/calibrated but lacks enough complementary film-specific
+evidence to make the formal test immediately actionable. This is a disclosed non-P0/P1 limitation,
+not concealed synthetic sufficiency.
+
+[`pre-agent-final-gate-2026-08-21.json`](../evals/results/pre-agent-final-gate-2026-08-21.json)
+combines that redacted review with versioned aggregate results. At reviewed runtime revision
+`6b24f1b`, all 17 targets and all 11 required steps pass, no target fails or remains pending, and
+`agent_entry_ready` is true. This completes Step 11 and opens the Step 12 go/no-go decision; it does
+not authorise production Agent integration by itself.
 
 ```bash
 uv run python tools/check_pre_agent_gate.py \
-  --output evals/results/pre-agent-machine-gate-YYYY-MM-DD.json
+  --human-review .firstroll/evaluations/human-packet-review-redacted.json \
+  --output evals/results/pre-agent-final-gate-YYYY-MM-DD.json
 ```
 
 ## Deep Study Transparency Checkpoint

@@ -1016,7 +1016,7 @@ fallback behaviour; these are tracked separately from the new FirstRoll modules.
 | Evidence-grounded Deep Study | Complete | Typed theory, criticism, review and video-text evidence; Pydantic output, citation validation and quality gate |
 | Bounded research Agent core | Implemented | LangGraph control flow, bounded reducers, deterministic tool authorisation, fake-service scenarios and optional checkpointing; production route integration remains gated |
 | Authenticated research progress | Implemented | Allow-listed SSE lifecycle events, separate owner-scoped result retrieval and secret/evidence redaction tests; final interactive browser observation remains pending |
-| Pre-Agent product hardening | Active — Steps 1–10 complete | All 16 machine targets pass; the private five-case human packet review is the sole pending target before the integrated baseline freeze |
+| Pre-Agent product hardening | Entry gate passed — Steps 1–11 complete | All 17 targets pass, including an attested 4/5 human packet review; the explicit Agent go/no-go decision is next |
 | Clip analysis web migration | Complete | Scene, shot, colour, object and export workflow |
 | Clip-to-study evidence bridge | Queued | Feed measured scenes, shots and timecodes into synthesis after the active hardening sequence |
 | Creator primary-source layer | Partial | Discovered interview descriptions and public YouTube captions are stored and cited; verified speaker attribution and dedicated interview search remain planned |
@@ -1040,10 +1040,11 @@ it never calls DeepSeek or stores packet text. Run
 to assess the separate synthetic abundant, sparse, duplicate, multilingual, ambiguous-identity and
 malicious-instruction fixtures before synthesis.
 
-The final human packet gate must run locally because it deliberately displays selected private
-passages in the terminal. Resumable scores and notes remain under Git-ignored
-`.firstroll/evaluations/`, while its redacted aggregate contains scores only. Agents cannot supply the
-human ratings or attestation.
+The human packet gate runs locally because it deliberately displays selected private passages in the
+terminal. Resumable scores and notes remain under Git-ignored `.firstroll/evaluations/`, while its
+redacted aggregate contains scores only. Agents cannot supply the human ratings or attestation. The
+reviewed checkpoint passed four of five cases; the final combined gate passes all 17 targets and 11
+required steps without authorising Agent integration by itself.
 
 ```bash
 uv run python tools/review_evidence_packets.py
@@ -1068,6 +1069,9 @@ latest synthesis-reliability and Deep Study transparency checkpoints are
 the latest responsive hierarchy and state/accessibility audits are
 [`ui-hierarchy-2026-08-21.json`](evals/results/ui-hierarchy-2026-08-21.json) and
 [`ui-states-accessibility-2026-08-21.json`](evals/results/ui-states-accessibility-2026-08-21.json).
+The attested score-only human result and combined entry gate are
+[`human-packet-review-2026-08-21.json`](evals/results/human-packet-review-2026-08-21.json) and
+[`pre-agent-final-gate-2026-08-21.json`](evals/results/pre-agent-final-gate-2026-08-21.json).
 The source of truth for each result family is its reviewed JSON artefact, not a screenshot or copied
 Markdown table. Any
 fixed-workflow or Agent comparison must use the same identities, questions
