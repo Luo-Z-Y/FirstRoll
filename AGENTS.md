@@ -7,6 +7,17 @@
   actionable work in `docs/PROGRESS.md` as part of the same change.
 - Treat documentation maintenance as part of implementation, not as a separate optional task.
 
+## Pi subagent workflow
+
+- Trusted Pi sessions may use the project-local `subagent` tool for isolated reconnaissance,
+  planning, review or one bounded implementation task.
+- Parallel delegation is for independent read-only scout, planner or reviewer work only. Never run
+  workers in parallel or edit overlapping files in the parent while a worker is active.
+- Delegated agents must not inspect `.firstroll` or other private material and must not recursively
+  delegate, commit, push, deploy, switch branches or otherwise alter Git integration state.
+- Treat every subagent result as advisory. The parent session owns complete-diff inspection, tests,
+  documentation reconciliation, commits, pull requests and delivery.
+
 ## Protected delivery workflow
 
 - Treat `master` as the production source and as read-only during development. Never commit or push

@@ -924,6 +924,10 @@ curl http://127.0.0.1:8000/api/health
 
 ```text
 FirstRoll/
+├── .pi/                       # trusted project-local Pi subagents and workflow prompts
+│   ├── agents/                # scout, planner, reviewer and bounded worker roles
+│   ├── extensions/subagent/   # isolated child-process delegation tool
+│   └── prompts/               # reusable scout/plan/implement workflows
 ├── app/
 │   ├── backend/
 │   │   ├── algorithms/          # inherited and adapted pyCinemetrics analysis
@@ -1000,6 +1004,22 @@ uv run ruff check app/backend/library_index.py app/backend/evidence.py \
 node --check app/web/app.js
 git diff --check
 ```
+
+### Pi subagents
+
+Trusted Pi sessions in this repository auto-discover a project-local `subagent` tool. It can run the
+read-only scout, planner and reviewer roles, or one bounded worker, in separate non-persistent Pi
+processes. Child agents inherit the active model and thinking level while keeping their conversation
+out of the parent context. Run `/reload` after pulling the extension into an existing session, use
+`/subagents` to list roles, or invoke `/scout-and-plan`, `/implement` and
+`/implement-and-review` for the bundled workflows.
+
+Delegation is optional rather than automatic. Parallel work is capped at four children and should be
+read-only; workers must never run in parallel or overlap parent edits. Every child consumes provider
+quota independently. Project-agent prompts exclude private `.firstroll` material and reserve Git,
+commit, push and deployment control for the parent, but these are prompt-level controls rather than
+an operating-system sandbox. Review every worker diff before integration. Setup, usage and material
+limitations are in [`.pi/README.md`](.pi/README.md).
 
 Development uses short-lived `feat/...`, `fix/...`, `docs/...` or `chore/...` branches rather than
 direct work on production-backed `master`; there is no permanent `local` or `develop` branch. Push a
