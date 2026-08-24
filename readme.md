@@ -269,8 +269,9 @@ provider failure, invalid planning and quality-gate failure. It is not yet the p
 execution path: the fixed workflow remains the production comparison and fallback. The
 [Agent Go/No-Go Brief](docs/AGENT_GO_NO_GO.md) authorises only a default-off adapter and paired local
 experiment targeting the one failed human packet. The adapter now reuses fixed packet/synthesis
-services, keeps new provider evidence ephemeral and exposes no HTTP route; no real Agent quality or
-latency result exists yet. Any hosted integration or later route cut-over requires a separate explicit
+services, keeps new provider evidence ephemeral and exposes no HTTP route. A redacted paired evaluator
+is ready, but no real Agent quality or latency result exists yet. Any hosted integration or later
+route cut-over requires a separate explicit
 reviewed decision.
 
 The public beta is intentionally narrower than the local edition. Azure Static Web Apps and Azure
@@ -1028,7 +1029,7 @@ fallback behaviour; these are tracked separately from the new FirstRoll modules.
 | Private RAG foundation | Complete | Token chunking, FTS5, local vectors, hybrid retrieval and citations |
 | Attributed criticism | Complete | Crossref, Douban, Letterboxd and Guardian retrieval with structured critic claims |
 | Evidence-grounded Deep Study | Complete | Typed theory, criticism, review and video-text evidence; Pydantic output, citation validation and quality gate |
-| Bounded research Agent core | Local adapter implemented, evaluation pending | Default-off real-service adapter, aggregate-only planning, ephemeral acquisition and deterministic authorisation; no HTTP route or production cut-over |
+| Bounded research Agent core | Local paired evaluator ready, real run pending | Default-off real-service adapter, aggregate-only planning, ephemeral acquisition and redacted paired harness; no HTTP route or production cut-over |
 | Authenticated research progress | Implemented | Allow-listed SSE lifecycle events, separate owner-scoped result retrieval and secret/evidence redaction tests; final interactive browser observation remains pending |
 | Pre-Agent product hardening | Complete — bounded local comparison authorised | All 17 targets pass; the owner approved only a default-off local Agent adapter and paired evaluation |
 | Clip analysis web migration | Complete | Scene, shot, colour, object and export workflow |
@@ -1064,6 +1065,14 @@ required steps without authorising Agent integration by itself.
 uv run python tools/review_evidence_packets.py
 uv run python tools/check_pre_agent_gate.py \
   --output evals/results/pre-agent-machine-gate-YYYY-MM-DD.json
+```
+
+The owner-approved local Agent comparison is a separate, paid paired run. It remains default-off,
+registers no route and writes private candidate packets only after local machine targets pass:
+
+```bash
+FIRSTROLL_LOCAL_AGENT_ENABLED=1 uv run python tools/evaluate_local_agent.py \
+  --output evals/results/local-agent-paired-YYYY-MM-DD.json
 ```
 
 The latest reviewed complete-workflow and packet-only results are

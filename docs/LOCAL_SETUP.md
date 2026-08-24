@@ -273,8 +273,20 @@ budgets for a sparse packet. A planner receives public film identity, the stated
 provider states and aggregate packet issue/count fields only—never source text. Newly acquired review
 or video text remains ephemeral in the local run and is not written to the private caches.
 
-The paired evaluator and its exact invocation are added only after this adapter checkpoint passes;
-do not treat this switch as a supported interactive product capability or hosted configuration.
+Run the approved full paired evaluator explicitly:
+
+```bash
+FIRSTROLL_LOCAL_AGENT_ENABLED=1 uv run python tools/evaluate_local_agent.py \
+  --output evals/results/local-agent-paired-YYYY-MM-DD.json
+```
+
+It warms and fingerprints the existing packet snapshot, then runs the fixed control immediately
+before the Agent candidate for each of the five cases. This spends real DeepSeek calls and may make
+at most two ephemeral attributed-provider calls for a diagnostically limited packet. The versioned
+report rejects prompt/evidence fields. Full candidate packets are written with mode `0600` beneath
+`.firstroll/evaluations/` only when every local machine target passes. A `--case` subset is diagnostic
+only and can never mark the frozen suite ready. Do not treat this switch as an interactive product
+capability or hosted configuration.
 
 ## Troubleshooting
 

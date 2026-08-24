@@ -1,5 +1,51 @@
 # FirstRoll Project Progress
 
+### 24 August 2026 — Redacted local Agent paired evaluator ready
+
+Delivered:
+
+1. Added a fail-closed evaluator that requires both the environment switch and the machine-readable
+   owner GO before constructing the local Agent service.
+2. Stabilises caches and the embedding encoder once, hashes each private initial packet, then runs
+   fixed control immediately before Agent candidate for every frozen identity/question.
+3. Records completed and failed model attempts, aggregate planner/tool timing and tokens, graph
+   budgets, packet diagnostics, identity/citation/quality results and paired latency/cost ratios
+   without serialising questions, titles, prompts, drafts or evidence text.
+4. Enforces zero external calls and zero packet mutation for initially sufficient packets, at most two
+   planner/external calls for a limited packet and no repeated provider tool.
+5. Keeps three human targets pending and the no-route UI target deferred rather than manufacturing a
+   result. A partial `--case` run is diagnostic and cannot pass the local comparison.
+6. Writes full candidate packets only after a complete local machine pass, under ignored
+   `.firstroll/evaluations/` with directory mode `0700` and file mode `0600`.
+
+Acceptance evidence:
+
+- all 236 automated tests pass with scoped Ruff, compilation, JSON parsing, documentation links and
+  whitespace checks;
+- pure target tests prove quality/identity/citation/instruction, P50/P95 and token thresholds map to
+  the frozen decision while human/no-route targets remain distinct;
+- policy tests fail sufficient-packet acquisition or mutation and repeated/over-budget tool use;
+- report guards reject nested source/prompt fields, failed provider exceptions never enter call
+  records and private packet output outside `.firstroll` is refused;
+- the evaluator help path and full static contract run without any provider or model call.
+
+Known constraints:
+
+- a full paired run spends five fixed synthesis calls, five Agent synthesis calls and up to two
+  planner calls plus bounded public-provider acquisition;
+- same-day pairing controls timing/configuration drift but five cases still cannot establish provider
+  reliability;
+- the local CLI has no product route, so visible-response and hosted operational targets remain
+  deferred to a separately authorised phase.
+
+Next actionable work:
+
+1. Merge and release this no-production-behaviour checkpoint.
+2. Run the complete five-case paired evaluation once with the current configuration and inspect the
+   redacted result before versioning it.
+3. If every local machine target passes, ask the owner to review only candidate packets whose hashes
+   changed; otherwise retain the no-go and diagnose the failed causal layer.
+
 ### 24 August 2026 — Default-off local Agent adapter implemented
 
 Delivered:

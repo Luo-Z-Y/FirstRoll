@@ -431,6 +431,8 @@ def test_agent_go_no_go_contract_is_tied_to_the_frozen_evidence() -> None:
     assert decision["agent_evidence_state"] == {
         "real_service_adapter": True,
         "real_adapter_contract_tests": True,
+        "redacted_paired_evaluator": True,
+        "private_packet_snapshot_machine_gated": True,
         "real_frozen_suite_run": False,
         "real_packet_human_review": False,
         "production_route_enabled": False,

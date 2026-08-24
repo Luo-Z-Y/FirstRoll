@@ -63,6 +63,8 @@ class _RunWorkspace:
     reviews: list[ReviewSource]
     videos: list[FilmVideo]
     packet: EvidencePacket
+    initial_packet_quality: dict[str, Any]
+    initial_packet_fingerprint: str
     trace: StudyTrace
     planner_calls: list[ToolPlan] = field(default_factory=list)
     planner_latency_seconds: list[float] = field(default_factory=list)
@@ -221,6 +223,8 @@ class LocalResearchGraphServices:
             reviews=list(prepared.get("reviews", [])),
             videos=list(prepared.get("videos", [])),
             packet=packet,
+            initial_packet_quality=assess_evidence_packet(packet),
+            initial_packet_fingerprint=self._packet_fingerprint(packet),
             trace=trace,
         )
         self._workspaces[state["run_id"]] = workspace
@@ -336,9 +340,17 @@ class LocalResearchGraphServices:
             "tool_attempts": list(workspace.tool_attempts),
             "acquired_reviews": workspace.acquired_review_count,
             "acquired_videos": workspace.acquired_video_count,
+            "initial_packet_quality": workspace.initial_packet_quality,
+            "initial_packet_fingerprint": workspace.initial_packet_fingerprint,
             "packet_quality": quality,
+            "packet_fingerprint": self._packet_fingerprint(workspace.packet),
             "study_observability": workspace.trace.snapshot(),
         }
+
+    def private_packet(self, run_id: str) -> EvidencePacket:
+        """Return a detached packet only to the local private evaluation harness."""
+
+        return self._workspaces[run_id].packet.model_copy(deep=True)
 
     def _workspace(self, state: ResearchState | ResearchGraphState) -> _RunWorkspace:
         try:
@@ -390,6 +402,10 @@ class LocalResearchGraphServices:
             )
             for kind, provider, locator, content in records
         )
+
+    @staticmethod
+    def _packet_fingerprint(packet: EvidencePacket) -> str:
+        return hashlib.sha256(packet.model_dump_json().encode("utf-8")).hexdigest()[:16]
 
     @staticmethod
     def _stable_evidence_id(
