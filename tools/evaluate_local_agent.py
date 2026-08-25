@@ -562,13 +562,18 @@ def assert_safe_report(value: Any, path: str = "root") -> None:
             assert_safe_report(item, f"{path}[{index}]")
 
 
-def write_private_packets(path: Path, payload: dict[str, Any]) -> None:
+def validate_private_packet_output_path(path: Path, *, root: Path | None = None) -> None:
+    boundary = (root or ROOT).resolve()
     try:
-        relative = path.resolve().relative_to(ROOT.resolve())
+        relative = path.resolve().relative_to(boundary)
     except ValueError as exc:
         raise ValueError("Private packet output must stay under .firstroll.") from exc
     if not relative.parts or relative.parts[0] != ".firstroll":
         raise ValueError("Private packet output must stay under .firstroll.")
+
+
+def write_private_packets(path: Path, payload: dict[str, Any]) -> None:
+    validate_private_packet_output_path(path)
     path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
     os.chmod(path.parent, 0o700)
     temporary = path.with_suffix(".tmp")

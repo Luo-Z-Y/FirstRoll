@@ -70,9 +70,18 @@ def test_text_programme_freezes_retry_comparison_and_no_clip_boundaries() -> Non
         "maximum_external_provider_calls": 10,
         "paid_run_requires_separate_budget_confirmation": True,
     }
-    assert contract["latency_revision_budget_confirmation"]["confirmed"] is False
+    assert contract["latency_revision_budget_confirmation"] == {
+        "confirmed": True,
+        "recorded_at": "2026-08-25T15:32:19Z",
+        "decided_by": "repository_owner",
+        "approved_minimum_synthesis_calls": 30,
+        "approved_maximum_synthesis_calls": 90,
+        "approved_maximum_planner_calls": 10,
+        "approved_maximum_external_provider_calls": 10,
+        "authorisation_consumed": True,
+    }
     assert contract["latency_revision"] == {
-        "status": "implementation_complete_without_provider_calls",
+        "status": "paid_run_complete_machine_pass_artifact_failure",
         "diagnosis": (
             "Invalid parseable generations were discarded, so graph repair repeated the complete "
             "6926-token prompt and full study."
@@ -94,11 +103,11 @@ def test_text_programme_freezes_retry_comparison_and_no_clip_boundaries() -> Non
         "previous_latency_targets_unchanged": True,
         "paid_validation_authorised": False,
         "meaningful_agent_claim": (
-            "not_yet_supported_without_provider_latency_and_quality_evidence"
+            "not_supported_structural_repair_unexercised_and_human_artifact_unavailable"
         ),
     }
     assert contract["stages"][0]["status"] == (
-        "structural_repair_revision_implemented_awaiting_paid_validation"
+        "machine_passed_artifact_failure_human_review_unavailable"
     )
     assert all(
         stage["status"] == "blocked_by_revised_t01_validation" for stage in contract["stages"][1:]
@@ -115,27 +124,19 @@ def test_text_programme_freezes_retry_comparison_and_no_clip_boundaries() -> Non
     )
 
 
-def test_latency_revision_needs_a_new_exact_budget_confirmation() -> None:
+def test_consumed_latency_revision_cannot_authorise_a_rerun() -> None:
     completed = programme()
     approved = json.loads(json.dumps(completed))
     approved["status"] = "approved_t01_structural_repair_comparison"
+    approved["latency_revision"]["status"] = "implementation_complete_without_provider_calls"
     approved["latency_revision"]["paid_validation_authorised"] = True
     approved["latency_revision_run_budget"]["paid_run_requires_separate_budget_confirmation"] = (
         False
     )
-    approved["latency_revision_budget_confirmation"] = {
-        "confirmed": True,
-        "recorded_at": "2026-08-25T12:00:00Z",
-        "decided_by": "repository_owner",
-        "approved_minimum_synthesis_calls": 30,
-        "approved_maximum_synthesis_calls": 90,
-        "approved_maximum_planner_calls": 10,
-        "approved_maximum_external_provider_calls": 10,
-        "authorisation_consumed": False,
-    }
+    approved["latency_revision_budget_confirmation"]["authorisation_consumed"] = False
     mismatched = json.loads(json.dumps(approved))
     mismatched["latency_revision_budget_confirmation"]["approved_maximum_synthesis_calls"] = 91
-    reused_historical = json.loads(json.dumps(completed))
+    reused_historical = json.loads(json.dumps(approved))
     reused_historical["status"] = "approved_revised_local_comparison"
     reused_historical["owner_budget_confirmation"]["authorisation_consumed"] = False
 
@@ -144,7 +145,7 @@ def test_latency_revision_needs_a_new_exact_budget_confirmation() -> None:
     assert evaluator.comparison_authorised(mismatched) is False
     assert evaluator.comparison_authorised(reused_historical) is False
     assert completed["owner_budget_confirmation"]["authorisation_consumed"] is True
-    assert completed["latency_revision_budget_confirmation"]["confirmed"] is False
+    assert completed["latency_revision_budget_confirmation"]["authorisation_consumed"] is True
 
 
 def test_repeated_comparison_requires_a_committed_source(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -169,6 +170,31 @@ def test_repeated_comparison_refuses_to_overwrite_evidence(tmp_path: Path) -> No
     packets.write_text("{}", encoding="utf-8")
     with pytest.raises(SystemExit, match="packet snapshot"):
         evaluator.require_fresh_output_paths(report, packets)
+
+
+def test_private_artifact_failure_forces_human_readiness_false() -> None:
+    report = {
+        "summary": {
+            "local_machine_targets_passed": True,
+            "human_packet_review_ready": True,
+            "evaluation_artifacts_complete": True,
+        }
+    }
+
+    evaluator.mark_private_artifact_failure(report, "private_output_write_failed")
+
+    assert report["summary"]["local_machine_targets_passed"] is True
+    assert report["summary"]["human_packet_review_ready"] is False
+    assert report["summary"]["evaluation_artifacts_complete"] is False
+    assert report["post_run_artifact"] == {
+        "status": "failed_safe",
+        "failure_category": "private_output_write_failed",
+        "private_packet_snapshot_written": False,
+        "human_review_available": False,
+        "paid_comparison_calls_completed": True,
+        "rerun_performed": False,
+    }
+    evaluator.assert_safe_report(report)
 
 
 def test_versioned_repeated_result_matches_the_frozen_contract() -> None:
@@ -197,6 +223,56 @@ def test_versioned_repeated_result_matches_the_frozen_contract() -> None:
     assert target_case["acquired_reviews"] == 3
     assert result["summary"]["human_packet_review_ready"] is False
     assert contract["comparison_result"]["private_packet_snapshot_written"] is False
+    evaluator.assert_safe_report(result)
+
+
+def test_structural_revision_result_records_machine_pass_and_artifact_failure() -> None:
+    contract = programme()
+    result = json.loads(
+        (ROOT / "evals" / "results" / "text-agent-structural-repair-2026-08-25.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    failed = {target["target_id"] for target in result["targets"] if target["status"] == "failed"}
+    target_case = next(
+        case
+        for case in result["acquisition_cases"]
+        if case["case_id"] == "the-thing-ambiguous-identity"
+    )
+
+    assert result["schema_version"] == 3
+    assert result["source_revision"] == contract["latency_revision_result"]["source_revision"]
+    assert len(result["samples"]) == 30
+    assert result["summary"]["fixed"]["completed_samples"] == 15
+    assert result["summary"]["agent"]["completed_samples"] == 15
+    assert result["summary"]["fixed"]["mean_quality_all_scheduled"] == 98.32
+    assert result["summary"]["agent"]["mean_quality_all_scheduled"] == 97.88
+    assert result["summary"]["comparison"]["agent_minus_fixed_mean_quality"] == -0.44
+    assert result["summary"]["comparison"]["p50_latency_ratio"] == 1.003191
+    assert result["summary"]["comparison"]["p95_latency_ratio"] == 0.888329
+    assert result["summary"]["comparison"]["total_token_ratio"] == 1.002379
+    assert failed == set()
+    assert result["summary"]["local_machine_targets_passed"] is True
+    assert result["summary"]["human_packet_review_ready"] is False
+    assert result["summary"]["evaluation_artifacts_complete"] is False
+    assert result["summary"]["agent"]["initial_generation_failure_samples"] == 0
+    assert result["summary"]["agent"]["targeted_structural_repair_samples"] == 0
+    assert target_case["initial_packet_status"] == "limited"
+    assert target_case["final_packet_status"] == "passed"
+    assert target_case["acquired_reviews"] == 3
+    assert result["post_run_artifact"]["status"] == "failed_safe"
+    assert result["post_run_artifact"]["failure_category"] == ("private_output_boundary_rejected")
+    assert result["post_run_artifact"]["private_packet_snapshot_written"] is False
+    assert result["post_run_artifact"]["rerun_performed"] is False
+    assert contract["latency_revision_result"]["target_packet_fixed_mean_automated_quality"] == (
+        98.25
+    )
+    assert contract["latency_revision_result"]["target_packet_agent_mean_automated_quality"] == (
+        95.97
+    )
+    assert contract["latency_revision_result"]["outcome"] == (
+        "machine_pass_artifact_failure_no_human_evidence"
+    )
     evaluator.assert_safe_report(result)
 
 

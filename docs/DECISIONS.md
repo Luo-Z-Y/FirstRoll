@@ -401,7 +401,18 @@ and thresholds. A parseable invalid response may remain in process memory long e
 to request at most four exact field updates with an 800-token cap. Deterministic code merges the
 patch and revalidates the whole study; safe telemetry records category and strategy only. Agent
 initial temperature becomes `0`, while fixed production remains `0.2`. This is not evidence of a
-latency improvement; a fresh paid validation needs separate approval before T02 can begin.
+latency improvement.
+
+**25 August 2026 validation budget:** the owner approved one complete structural-repair comparison:
+30–90 synthesis calls, at most ten planner calls and at most ten provider calls. The confirmation is
+distinct from the consumed historical budget and does not authorise T02 or production routing.
+
+**25 August 2026 structural result:** all frozen machine targets passed with 15/15 completion in both
+lanes, P50/P95 ratios `1.003191/0.888329` and no repair. The target packet changed, but its study mean
+was 2.28 points below fixed. The private snapshot was then rejected because its worktree symlink
+resolved outside the allowed boundary. Preserve the machine result, consume the budget, do not
+reacquire/rerun, add preflight and keep T02 blocked because neither human evidence nor provider-backed
+structural-repair evidence exists.
 
 ### Alternatives considered
 

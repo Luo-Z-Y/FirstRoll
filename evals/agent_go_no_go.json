@@ -181,9 +181,14 @@
     "continued_latency_revision_authorised": true,
     "structural_repair_revision_implemented": true,
     "revision_paid_validation_authorised": false,
+    "revision_paid_validation_authorisation_consumed": true,
+    "revision_result_path": "evals/results/text-agent-structural-repair-2026-08-25.json",
+    "revision_result_status": "machine_pass_artifact_failure",
+    "revision_machine_targets_passed": true,
+    "revision_private_packet_snapshot_written": false,
     "human_review_performed": false,
     "production_cutover_authorised": false,
-    "reason": "The isolated repeated run passed completion, quality, safety and cost but failed both frozen latency-ratio targets. A no-call structural-repair revision now requires separate paid validation."
+    "reason": "The structural-repair run passed every frozen machine target without a retry, but its private snapshot was rejected by the output boundary; no human review or meaningful structural-repair claim is available."
   },
   "cutover_preconditions": [
     "all candidate targets pass",

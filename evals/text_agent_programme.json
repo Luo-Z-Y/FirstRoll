@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "programme_id": "firstroll-text-agent-v1",
-  "status": "t01_structural_repair_revision_implemented_awaiting_paid_validation",
+  "status": "t01_machine_passed_artifact_failure_human_review_unavailable",
   "recorded_at": "2026-08-25T04:28:00Z",
   "owner_revision": {
     "decision": "revise_text_agent",
@@ -73,14 +73,14 @@
     "paid_run_requires_separate_budget_confirmation": true
   },
   "latency_revision_budget_confirmation": {
-    "confirmed": false,
-    "recorded_at": null,
-    "decided_by": null,
-    "approved_minimum_synthesis_calls": null,
-    "approved_maximum_synthesis_calls": null,
-    "approved_maximum_planner_calls": null,
-    "approved_maximum_external_provider_calls": null,
-    "authorisation_consumed": false
+    "confirmed": true,
+    "recorded_at": "2026-08-25T15:32:19Z",
+    "decided_by": "repository_owner",
+    "approved_minimum_synthesis_calls": 30,
+    "approved_maximum_synthesis_calls": 90,
+    "approved_maximum_planner_calls": 10,
+    "approved_maximum_external_provider_calls": 10,
+    "authorisation_consumed": true
   },
   "comparison_targets": {
     "fixed_sample_completion_ratio": {
@@ -182,7 +182,7 @@
     {
       "id": "T01",
       "name": "Agent-owned retries and isolated repeated comparison",
-      "status": "structural_repair_revision_implemented_awaiting_paid_validation"
+      "status": "machine_passed_artifact_failure_human_review_unavailable"
     },
     {
       "id": "T02",
@@ -233,7 +233,7 @@
     "outcome": "no_go_under_frozen_latency_contract"
   },
   "latency_revision": {
-    "status": "implementation_complete_without_provider_calls",
+    "status": "paid_run_complete_machine_pass_artifact_failure",
     "diagnosis": "Invalid parseable generations were discarded, so graph repair repeated the complete 6926-token prompt and full study.",
     "agent_initial_temperature": 0,
     "fixed_production_initial_temperature": 0.2,
@@ -251,7 +251,37 @@
     "previous_result_immutable": true,
     "previous_latency_targets_unchanged": true,
     "paid_validation_authorised": false,
-    "meaningful_agent_claim": "not_yet_supported_without_provider_latency_and_quality_evidence"
+    "meaningful_agent_claim": "not_supported_structural_repair_unexercised_and_human_artifact_unavailable"
+  },
+  "latency_revision_result": {
+    "result_path": "evals/results/text-agent-structural-repair-2026-08-25.json",
+    "source_revision": "038392dff2dcd0127c9b5b15d3b747953d9a722f",
+    "fixed_completed_samples": 15,
+    "agent_completed_samples": 15,
+    "fixed_mean_automated_quality": 98.32,
+    "agent_mean_automated_quality": 97.88,
+    "agent_minus_fixed_mean_quality": -0.44,
+    "fixed_total_tokens": 116037,
+    "agent_total_tokens_including_acquisition": 116313,
+    "total_token_ratio": 1.002379,
+    "p50_latency_ratio": 1.003191,
+    "p95_latency_ratio": 0.888329,
+    "failed_machine_targets": [],
+    "initial_generation_failures": 0,
+    "targeted_structural_repairs": 0,
+    "targeted_quality_repairs": 0,
+    "full_regenerations": 0,
+    "target_packet_initial_status": "limited",
+    "target_packet_final_status": "passed",
+    "target_packet_acquired_reviews": 3,
+    "target_packet_fixed_mean_automated_quality": 98.25,
+    "target_packet_agent_mean_automated_quality": 95.97,
+    "local_machine_targets_passed": true,
+    "private_packet_snapshot_written": false,
+    "artifact_failure_category": "private_output_boundary_rejected",
+    "human_review_performed": false,
+    "rerun_performed": false,
+    "outcome": "machine_pass_artifact_failure_no_human_evidence"
   },
   "privacy_scope": "No prompts, film questions, private passages, generated prose, review bodies, vectors, credentials, cookies or uploaded clips may enter a versioned report."
 }

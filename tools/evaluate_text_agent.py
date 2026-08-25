@@ -43,6 +43,7 @@ from tools.evaluate_local_agent import (
     safe_model_calls,
     safe_study_score,
     source_revision,
+    validate_private_packet_output_path,
     write_private_packets,
 )
 
@@ -609,6 +610,19 @@ def build_report(
     return report
 
 
+def mark_private_artifact_failure(report: dict[str, Any], category: str) -> None:
+    report["summary"]["human_packet_review_ready"] = False
+    report["summary"]["evaluation_artifacts_complete"] = False
+    report["post_run_artifact"] = {
+        "status": "failed_safe",
+        "failure_category": category,
+        "private_packet_snapshot_written": False,
+        "human_review_available": False,
+        "paid_comparison_calls_completed": True,
+        "rerun_performed": False,
+    }
+
+
 def require_committed_source() -> None:
     completed = subprocess.run(
         ["git", "diff", "--quiet", "HEAD", "--"],
@@ -654,6 +668,10 @@ def main_cli() -> int:
         )
     require_committed_source()
     require_fresh_output_paths(args.output, args.private_packets)
+    try:
+        validate_private_packet_output_path(args.private_packets)
+    except ValueError as exc:
+        raise SystemExit(str(exc)) from exc
     suite_id, specs = case_specs(args.cases, args.reference)
     expected_count = int(programme["comparison_protocol"]["case_count"])
     if len(specs) != expected_count:
@@ -754,23 +772,29 @@ def main_cli() -> int:
         acquisition_cases=acquisition_cases,
         samples=samples,
     )
+    exit_code = 0 if report["summary"]["local_machine_targets_passed"] else 2
+    report["summary"]["evaluation_artifacts_complete"] = True
+    if report["summary"]["local_machine_targets_passed"]:
+        try:
+            write_private_packets(
+                args.private_packets,
+                {
+                    "schema_version": 1,
+                    "programme_id": programme["programme_id"],
+                    "source_revision": report["source_revision"],
+                    "suite_fingerprint": report["suite_fingerprint"],
+                    "cases": private_cases,
+                },
+            )
+        except (OSError, ValueError):
+            mark_private_artifact_failure(report, "private_output_write_failed")
+            exit_code = 3
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(
         json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
     )
-    if report["summary"]["local_machine_targets_passed"]:
-        write_private_packets(
-            args.private_packets,
-            {
-                "schema_version": 1,
-                "programme_id": programme["programme_id"],
-                "source_revision": report["source_revision"],
-                "suite_fingerprint": report["suite_fingerprint"],
-                "cases": private_cases,
-            },
-        )
     print(json.dumps(report["summary"], indent=2))
-    return 0 if report["summary"]["local_machine_targets_passed"] else 2
+    return exit_code
 
 
 if __name__ == "__main__":

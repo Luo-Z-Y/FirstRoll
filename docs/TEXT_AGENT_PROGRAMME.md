@@ -1,6 +1,6 @@
 # Text-Agent Programme
 
-**Status:** latency revision implemented without provider calls; paid validation and later text stages blocked
+**Status:** revised machine targets passed, but private artifact failed; human review and later stages blocked
 
 ## Purpose
 
@@ -65,7 +65,8 @@ The full five-case comparison schedules 15 samples per lane. It therefore requir
 synthesis calls. If every sample uses both repairs, the hard maximum is 90 synthesis calls, plus at
 most ten planner and ten external-provider calls across the suite. The owner separately confirmed
 that budget, and the single authorised run consumed 32 synthesis calls, one planner call and one
-external-provider call. Its authorisation is now consumed; the evaluator refuses a rerun.
+external-provider call. Its authorisation is consumed and cannot authorise the separately approved
+structural-repair revision.
 
 ### Recorded result
 
@@ -95,9 +96,9 @@ human review was produced, and the paid candidate was not rerun.
 
 ### T01 latency revision
 
-The owner subsequently asked FirstRoll to continue revising until it finds meaningful Agent value.
-That instruction authorises non-paid implementation work, not another model/provider budget or any
-hosted route.
+The owner subsequently asked FirstRoll to continue revising until it finds meaningful Agent value,
+then separately approved one exact paid validation budget. Neither instruction authorises a hosted
+route.
 
 The two slow recoveries exposed a concrete defect: when an initial response was parseable but failed
 schema or citation validation, the service discarded it. With no valid draft available, the graph's
@@ -131,9 +132,45 @@ candidate.
 This is an implementation candidate, **not measured latency evidence**. Provider latency does not
 scale reliably from a token cap, and the exact invalid category from the completed run was not stored.
 The old result and `1.10/1.25` thresholds remain immutable. A separate fail-closed revision budget
-slot declares the same 30–90 synthesis, ten planner and ten provider-call maxima, but its confirmation
-is false. The old consumed confirmation cannot authorise it; a run also requires committed tracked
-code and fresh report/snapshot paths, so prior evidence cannot be overwritten.
+slot declares the same 30–90 synthesis, ten planner and ten provider-call maxima. On 25 August the
+owner confirmed those exact limits for one complete run. The old consumed confirmation cannot
+authorise it. The new confirmation was bound to committed tracked code plus fresh report/snapshot
+paths and is now consumed.
+
+### Structural-repair revision result
+
+The redacted report is
+[`text-agent-structural-repair-2026-08-25.json`](../evals/results/text-agent-structural-repair-2026-08-25.json).
+
+| Measure | Fixed packet lane | Agent packet lane | Gate |
+|---|---:|---:|---|
+| Completed samples | 15 / 15 | 15 / 15 | Passed |
+| Mean automated quality | 98.32 | 97.88 (`−0.44`) | Passed |
+| Quality standard deviation | 1.27 | 2.08 | Descriptive |
+| P50 latency | 42.304 s | 42.439 s (`1.003191×`) | Passed (`≤1.10×`) |
+| P95 latency | 52.413 s | 46.560 s (`0.888329×`) | Passed (`≤1.25×`) |
+| Total tokens | 116,037 | 116,313 including planning (`1.002379×`) | Passed |
+
+All 30 scheduled generations completed on their initial call. There were zero invalid generations,
+structural repairs, quality repairs or full regenerations, so the run demonstrates stable
+single-call behaviour at temperature `0` but does **not** exercise the new field-patch path. The
+Agent again made zero calls for four sufficient packets. One 417-token plan and one 2.902-second
+Letterboxd call added three reviews to the target and moved it `limited → passed`.
+
+Every frozen machine target passed. However, the sole changed packet's generated-study mean was
+`95.97`, compared with `98.25` for its fixed packet. The aggregate non-inferiority result therefore
+does not demonstrate that acquisition improved final prose.
+
+After the redacted report was written, the machine-pass path attempted to write the private changed
+packet. The evaluation worktree's `.firstroll` path resolved through a symlink outside that worktree,
+so the existing output-boundary control correctly rejected it. The command exited non-zero after all
+paid calls; no private packet exists and the process-local candidate cannot be recovered. The report
+therefore records machine pass but sets human-review readiness and artifact completeness false.
+
+The run was not repeated and its authorisation is consumed. A preflight now validates the resolved
+private-output boundary before any paid call. Without the packet, the owner cannot attest diversity
+or filmmaker actionability. Combined with zero exercised structural repairs, this result does not yet
+support a meaningful-Agent claim or T02 entry.
 
 ### Machine targets
 
@@ -147,8 +184,9 @@ code and fresh report/snapshot paths, so prior evidence cannot be overwritten.
 - repeated P50/P95 ratios are at most `1.10/1.25`;
 - total Agent tokens, including acquisition planning, are at most `1.25×` fixed tokens.
 
-Passing every machine target would have written only changed packets to mode-`0600` private storage.
-That condition was not met, so the following review command remains unavailable for this run:
+The original run did not pass every machine target. The structural revision did pass them, but its
+private write was safely rejected by the resolved-path boundary. Therefore the following review
+command remains unavailable for both runs:
 
 ```bash
 uv run python tools/review_text_agent_packets.py
@@ -165,8 +203,9 @@ Add a reviewer that labels important statements as directly supported, reasonabl
 unsupported or stronger than the cited source permits. It may suggest a correction but cannot invent
 or approve citation identifiers. Deterministic code remains the final citation authority.
 
-**Entry condition:** the revised T01 implementation must pass a separately authorised comparison.
-The implementation exists, but no new paid validation is authorised, so T02 remains blocked.
+**Entry condition:** revised T01 needs complete machine and owner-attested human evidence. Machine
+targets passed, but the private packet was not written and structural repair was unexercised, so T02
+remains blocked.
 
 ## Stage T03 — Genuine Evidence-Gap and Source-Diversity Reviewer
 

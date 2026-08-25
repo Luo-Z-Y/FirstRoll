@@ -40,10 +40,13 @@ graph state is not persisted. `evidence_only` and `synthesis_only` are local eva
 stored product states: one freezes acquisition before prose generation and the other gives both
 packet lanes the same graph-owned two-repair policy. Optional packet snapshots are separate
 mode-`0600`, Git-ignored human-review artefacts; versioned reports contain hashes and aggregate
-metrics only. The repeated run failed latency gates, so neither revised snapshot/review file was
-created. Its structural-repair revision retains a parseable invalid candidate only until completion
-or safe stop; only allow-listed failure categories and repair strategies can reach report schema 3.
-Durable owner-scoped checkpoint design remains mandatory before any hosted Agent proposal.
+metrics only. The repeated run failed latency gates, so it wrote no snapshot. The structural-repair
+run passed machine targets, but its resolved private path escaped the worktree boundary and the safe
+write was rejected; its process-local changed packet was then lost, so no snapshot/review exists for
+that run either. Future execution preflights the resolved boundary. A parseable invalid candidate is
+retained only until completion or safe stop; only allow-listed failure categories and repair
+strategies can reach report schema 3. Durable owner-scoped checkpoint design remains mandatory before
+any hosted Agent proposal.
 
 ## Per-tab Discover continuity
 

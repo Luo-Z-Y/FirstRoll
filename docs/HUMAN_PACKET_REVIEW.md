@@ -2,8 +2,9 @@
 
 This procedure records the completed fixed-workflow human gate. An Agent cannot supply these ratings
 or attest that a filmmaker personally inspected the evidence. The revised repeated text comparison
-failed its latency gates, so it produced no mode-`0600` changed-packet snapshot and
-`tools/review_text_agent_packets.py` must not be used for that run.
+failed its latency gates, so it produced no changed-packet snapshot. The later structural run passed
+machine targets, but its private write was rejected by the resolved-path boundary and its packet was
+lost. `tools/review_text_agent_packets.py` must not be used for either run.
 
 ## Privacy Boundary
 
