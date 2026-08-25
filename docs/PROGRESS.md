@@ -1,5 +1,34 @@
 # FirstRoll Project Progress
 
+### 25 August 2026 — Production-generated API documentation disabled
+
+Delivered:
+
+1. Made FastAPI application construction mode-aware: local development retains Swagger, ReDoc and
+   OpenAPI, while `FIRSTROLL_PUBLIC_MODE=true` registers none of their HTTP routes.
+2. Kept `/api/health` public for Azure Container Apps health probes and left endpoint-level bearer,
+   quota and local-only controls unchanged.
+3. Added regression coverage for both route sets and reconciled README, API-reference, hosting and
+   Obsidian project documentation with the production security boundary.
+
+Acceptance evidence:
+
+- the public application shell has no `/docs`, `/redoc` or `/openapi.json` route;
+- the local application shell retains all three development aids;
+- existing public-mode acceptance still requires `/api/health` to return HTTP 200;
+- the production smoke check requires all three documentation URLs to return HTTP 404 after the new
+  Container App image is approved and deployed.
+
+Boundary:
+
+- removing generated documentation reduces endpoint enumeration and accidental public discovery;
+  it does not replace authentication or authorisation on protected API operations.
+
+Next action:
+
+- merge the green protected-branch change, approve its exact production deployment, then verify the
+  live 404/404/404/200 documentation-and-health contract.
+
 ### 24 August 2026 — Local Agent comparison fails gates; NO-GO retained
 
 Measured result:

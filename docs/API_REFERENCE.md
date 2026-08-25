@@ -1,17 +1,21 @@
 # FirstRoll API Reference
 
 **API version:** `0.1.0`  
-**Last reconciled:** 24 August 2026
+**Last reconciled:** 25 August 2026
 
 FirstRoll uses one FastAPI application in two modes. The local edition serves the web interface and
 API from `http://127.0.0.1:8000`. The hosted public beta serves the Azure frontend at
 `https://firstroll.app` and the Azure Container Apps API at `https://api.firstroll.app`. This
 document uses relative paths so it remains correct when those deployment URLs change.
 
-FastAPI also exposes generated OpenAPI documentation at `/docs` and the machine-readable schema at
-`/openapi.json` unless deployment configuration disables them in future. The approved local Agent
-comparison is a Python evaluation factory only: `FIRSTROLL_LOCAL_AGENT_ENABLED` registers no HTTP
-endpoint and does not alter any route in this reference.
+The local edition exposes FastAPI's generated Swagger UI at `/docs`, ReDoc at `/redoc` and the
+machine-readable schema at `/openapi.json`. Public mode does not register any of those routes, so
+all three return HTTP 404 on `api.firstroll.app`; `/api/health` remains public for Azure health
+checks. Hiding generated documentation reduces the production discovery surface but is not an
+authentication control: every protected operation still enforces its own bearer boundary. The
+approved local Agent comparison is a Python evaluation factory only:
+`FIRSTROLL_LOCAL_AGENT_ENABLED` registers no HTTP endpoint and does not alter any route in this
+reference.
 
 ## Access Classes
 

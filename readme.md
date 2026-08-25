@@ -832,6 +832,12 @@ never returned to the browser or committed to Git.
 
 ## API Overview
 
+The local edition exposes FastAPI's generated `/docs`, `/redoc` and
+`/openapi.json` development aids. The public Azure API deliberately registers
+none of those routes when `FIRSTROLL_PUBLIC_MODE=true`; `/api/health` remains
+public for platform health checks. This reduces production endpoint discovery
+surface without replacing the authentication enforced by protected operations.
+
 | Endpoint | Purpose |
 |---|---|
 | `GET /api/health` | Local process health |

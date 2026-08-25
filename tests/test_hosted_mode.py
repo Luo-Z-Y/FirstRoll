@@ -27,6 +27,25 @@ def test_public_mode_keeps_health_and_discovery_status_available(monkeypatch) ->
     assert "local_library" not in response.json()
 
 
+def test_public_mode_does_not_register_generated_api_documentation() -> None:
+    public_app = main.create_api_application(public_mode=True)
+    local_app = main.create_api_application(public_mode=False)
+
+    assert public_app.docs_url is None
+    assert public_app.redoc_url is None
+    assert public_app.openapi_url is None
+    assert {route.path for route in public_app.routes}.isdisjoint(
+        {"/docs", "/redoc", "/openapi.json"}
+    )
+
+    assert local_app.docs_url == "/docs"
+    assert local_app.redoc_url == "/redoc"
+    assert local_app.openapi_url == "/openapi.json"
+    assert {"/docs", "/redoc", "/openapi.json"}.issubset(
+        {route.path for route in local_app.routes}
+    )
+
+
 def test_local_startup_prewarms_embeddings_without_blocking_public_mode(monkeypatch) -> None:
     class FakeIndex:
         calls = 0

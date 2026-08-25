@@ -341,6 +341,8 @@ rate limits can still make this optional source temporarily unavailable.
 ## 6. Current public-beta acceptance checks
 
 - `/api/health` returns HTTP 200.
+- `/docs`, `/redoc` and `/openapi.json` return HTTP 404 in public mode; generated API documentation
+  remains available only in the local development edition.
 - `https://firstroll.app` serves the interface and native shelf assets without waiting for the backend.
 - The backend root identifies itself as the FirstRoll API.
 - Search begins working after the backend wakes.

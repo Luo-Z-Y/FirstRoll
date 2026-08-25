@@ -58,11 +58,36 @@ from app.backend.video_sources import (
     YouTubeVideoAdapter,
 )
 
-app = FastAPI(
-    title="FirstRoll API",
-    version="0.1.0",
-    description="Evidence-grounded film discovery and scene analysis for filmmakers.",
-)
+
+def _flag_value(name: str, default: bool = False) -> bool:
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    return raw.strip().casefold() in {"1", "true", "yes", "on"}
+
+
+def create_api_application(*, public_mode: bool | None = None) -> FastAPI:
+    """Create the API shell with production-only documentation hardening.
+
+    The public Container App does not register generated documentation routes,
+    while the local edition retains Swagger, ReDoc and OpenAPI for development.
+    Endpoint authentication remains independent of this discovery-surface rule.
+    """
+    hosted = _flag_value("FIRSTROLL_PUBLIC_MODE") if public_mode is None else public_mode
+    documentation_url = None if hosted else "/docs"
+    redoc_url = None if hosted else "/redoc"
+    openapi_url = None if hosted else "/openapi.json"
+    return FastAPI(
+        title="FirstRoll API",
+        version="0.1.0",
+        description="Evidence-grounded film discovery and scene analysis for filmmakers.",
+        docs_url=documentation_url,
+        redoc_url=redoc_url,
+        openapi_url=openapi_url,
+    )
+
+
+app = create_api_application()
 
 LOCAL_TEST_ACCOUNT_EMAIL = "luo_zhiyang@outlook.com"
 LOCAL_TEST_ACCOUNT_ID = "firstroll-local-luo-zhiyang"
@@ -70,10 +95,7 @@ LOCAL_TEST_ACCOUNT_TOKEN = "firstroll-local-test-account"
 
 
 def environment_flag(name: str, default: bool = False) -> bool:
-    raw = os.getenv(name)
-    if raw is None:
-        return default
-    return raw.strip().casefold() in {"1", "true", "yes", "on"}
+    return _flag_value(name, default)
 
 
 def public_mode_enabled() -> bool:
