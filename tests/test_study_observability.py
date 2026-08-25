@@ -106,6 +106,7 @@ def test_study_trace_rejects_unbounded_names_values_and_payload_text() -> None:
         "prompt_characters",
         "model_calls",
         "repair_attempts",
+        "structural_repair_attempts",
         "prompt_tokens",
         "completion_tokens",
         "total_tokens",

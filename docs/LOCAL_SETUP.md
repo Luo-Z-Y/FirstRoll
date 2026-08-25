@@ -303,8 +303,12 @@ synthesis samples using the same graph-owned limit of two repairs. The separatel
 complete: both lanes reached 15/15 and Agent mean quality was 97.80, but P50/P95 latency ratios failed
 at `1.100404/1.993109`. Its one-off budget authorisation is consumed, so the command now refuses a
 rerun. No mode-`0600` changed-packet snapshot exists because machine targets failed; do not invoke the
-human-review tool or bypass the run guard. This switch is not an interactive product capability or
-hosted configuration.
+human-review tool or bypass the run guard.
+
+A later local-only revision uses deterministic Agent generation and bounded field patches for
+parseable schema/citation failures. Its synthetic tests make no provider call and do not authorise the
+command above. Malformed or unpatchable output remains within the same graph-owned fallback budget.
+This switch is not an interactive product capability or hosted configuration.
 
 ## Troubleshooting
 

@@ -145,7 +145,7 @@ future-enterprise path, but ADR-017 removes it from the production critical path
 | `packet_quality.py` | Pre-synthesis identity, citation, provenance, duplication, lexical relevance, diversity and retrieved-instruction diagnostics | Source-text persistence, factual correctness, human usefulness or model grading |
 | `local_research_agent.py` | Default-off local graph adapter, aggregate-only planning context and ephemeral attributed-source acquisition | HTTP routing, cache mutation, credentials in graph state or production cut-over |
 | `study_observability.py` | Allow-listed monotonic stage timings, terminal status and bounded aggregate counts | Prompts, evidence text, credentials, model output or exception details |
-| `study_service.py` | Concise bounded DeepSeek request, Pydantic/citation validation, generated-study gate, one total schema-or-quality repair and owner-visible redacted packet-quality attachment | Authentication, quota reservation, automatic timeout retry or research-tool authorisation |
+| `study_service.py` | Concise bounded DeepSeek request, Pydantic/citation validation, generated-study gate, fixed-workflow repair and local Agent field-patch repair with complete revalidation | Authentication, quota reservation, automatic timeout retry or research-tool authorisation |
 | `research_stream.py` | Fixed public progress vocabulary and transient owner-scoped result store | Hidden reasoning, prompts, credentials or private evidence bodies |
 | `research_graph` | Bounded LangGraph state, reducers, routes and deterministic safety boundaries | Production provider credentials or public cut-over decision |
 | `quota.py` + PostgreSQL function | Provider-neutral quota status and atomic reservation after authentication | Bearer tokens, prompts, evidence or generated studies |
@@ -248,7 +248,7 @@ explicit selected film + frozen focus
 → deterministic allow-list/budget authorisation
 → ephemeral review/video acquisition without cache writes
 → rebuild through unchanged EvidencePacket selection
-→ unchanged DeepSeek synthesis and deterministic quality gate
+→ deterministic Agent synthesis, bounded field-patch recovery and complete quality/citation validation
 ```
 
 `FIRSTROLL_LOCAL_AGENT_ENABLED=0` is the default. Enabling it makes a Python service factory
@@ -256,16 +256,22 @@ available to local evaluators but registers no HTTP route. The planner sees no e
 credentials or private locators. Provider objects and credentials remain in runtime context; graph
 state receives bounded evidence only for the non-checkpointed local run.
 
-The revised text graph owns synthesis retries. `generate_once()` makes one call with no hidden repair;
-a failed deterministic validation may route through `repair_once()` at most twice. The graph enforces
-one initial generation, two repairs and the total model-call budget, while the production fixed route
-keeps its existing single internal repair. Evaluator-only context modes stop cleanly at
+The revised text graph owns synthesis retries. `generate_once()` makes one deterministic-temperature
+call with no hidden repair. A quality-valid structure may route through `repair_once()`; a parseable
+schema/citation failure retains only a process-local candidate and routes through
+`repair_invalid_once()`. That method requests at most four exact field paths in an 800-token patch,
+merges it without changing accepted fields and revalidates the whole study. Malformed or unpatchable
+output may use one graph-budgeted full regeneration. Safe metrics expose strategy/category counts but
+never the candidate or patch. The graph still enforces one initial generation, two repairs and the
+total model-call budget, while the production fixed route keeps temperature `0.2` and its existing
+single internal repair. Evaluator-only context modes stop cleanly at
 `evidence_ready` or force synthesis over a frozen packet. They allow acquisition to run once and both
 packet lanes to use the same retry controller during three alternating repetitions, so packet content
 is the only synthesis difference. Reports contain safe aggregate quality/tool/timing/token fields.
 Private packets may be written under ignored mode-`0600` `.firstroll` storage only after every machine
 gate passes. The completed repeated run failed P50/P95 ratios `1.100404/1.993109`, so it wrote no
-packet and its consumed authorisation now prevents rerun. Hosted execution remains prohibited.
+packet and its consumed authorisation now prevents rerun. The structural-repair revision has only
+synthetic evidence; a fresh paid run is not authorised. Hosted execution remains prohibited.
 
 ### Hosted Deep Study
 

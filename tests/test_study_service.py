@@ -166,7 +166,10 @@ def test_grounded_prompt_receives_raw_attributed_text_and_validates_its_citation
 
     def transport(url: str, payload: dict[str, Any] | None, key: str) -> dict[str, Any]:
         captured["payload"] = payload
-        return {"model": "deepseek-v4-pro", "choices": [{"message": {"content": json.dumps(response)}}]}
+        return {
+            "model": "deepseek-v4-pro",
+            "choices": [{"message": {"content": json.dumps(response)}}],
+        }
 
     with tempfile.TemporaryDirectory() as directory:
         store = LocalSettingsStore(Path(directory) / "settings.json")
@@ -251,6 +254,216 @@ def test_generate_once_leaves_quality_retry_to_the_agent() -> None:
     assert result["quality"]["repair_attempted"] is False
     assert result["observability"]["counts"]["model_calls"] == 1
     assert result["observability"]["counts"].get("repair_attempts", 0) == 0
+
+
+def test_generate_once_uses_deterministic_temperature_without_changing_fixed_default() -> None:
+    payloads: list[dict[str, Any]] = []
+
+    def transport(_: str, payload: dict[str, Any] | None, ___: str) -> dict[str, Any]:
+        assert payload is not None
+        payloads.append(payload)
+        return {
+            "model": "deepseek-v4-pro",
+            "choices": [{"message": {"content": json.dumps(valid_response())}}],
+        }
+
+    with tempfile.TemporaryDirectory() as directory:
+        store = LocalSettingsStore(Path(directory) / "settings.json")
+        store.set("deepseek_api_key", "private-test-key")
+        service = DeepSeekStudyService(store, transport=transport)
+        service.generate_once(film_record(), local_passages())
+        service.generate(film_record(), local_passages())
+
+    assert [payload["temperature"] for payload in payloads] == [0, 0.2]
+
+
+def test_parseable_invalid_citation_receives_a_bounded_field_patch() -> None:
+    invalid = valid_response()
+    invalid["sections"][0]["source_ids"] = ["S99"]
+    patch = {
+        "updates": [
+            {
+                "path": "sections.0.source_ids",
+                "value": ["S1"],
+            }
+        ]
+    }
+    payloads: list[dict[str, Any]] = []
+
+    def transport(_: str, payload: dict[str, Any] | None, ___: str) -> dict[str, Any]:
+        assert payload is not None
+        payloads.append(payload)
+        content = invalid if len(payloads) == 1 else patch
+        return {
+            "model": "deepseek-v4-pro",
+            "choices": [{"message": {"content": json.dumps(content)}}],
+            "usage": {"prompt_tokens": 100, "completion_tokens": 50, "total_tokens": 150},
+        }
+
+    packet = EvidencePacket.from_retrieval(
+        film_record(),
+        {"passages": local_passages(), "method": "hybrid_rrf"},
+        "Study point of view",
+    )
+    with tempfile.TemporaryDirectory() as directory:
+        store = LocalSettingsStore(Path(directory) / "settings.json")
+        store.set("deepseek_api_key", "private-test-key")
+        service = DeepSeekStudyService(store, transport=transport)
+        with pytest.raises(StudyGenerationError) as captured:
+            service.generate_once(
+                film_record(),
+                local_passages(),
+                evidence_packet=packet,
+            )
+        error = captured.value
+        result = service.repair_invalid_once(
+            error.repair_candidate or {},
+            error.repair_paths,
+            evidence_packet=packet,
+        )
+
+    assert error.category == "citation_validation"
+    assert error.repair_paths == ("sections.0.source_ids",)
+    assert payloads[0]["max_tokens"] == 3200
+    assert payloads[1]["max_tokens"] == 800
+    assert payloads[1]["temperature"] == 0
+    assert sum(len(message["content"]) for message in payloads[1]["messages"]) < sum(
+        len(message["content"]) for message in payloads[0]["messages"]
+    )
+    repair_request = json.loads(payloads[1]["messages"][1]["content"])
+    assert repair_request["repair_paths"] == ["sections.0.source_ids"]
+    assert repair_request["field_requirements"] == {
+        "sections.0.source_ids": "array of 1–6 supplied S identifiers"
+    }
+    repair_context = repair_request["evidence_context"]
+    assert set(repair_context["candidate_sections"]) == {"0"}
+    assert repair_context["theory_sources"][0]["id"] == "S1"
+    assert "critical_claims" not in repair_context
+    assert "attributed_sources" not in repair_context
+    assert result["sections"][0]["source_ids"] == ["S1"]
+    assert result["sections"][1:] == error.repair_candidate["sections"][1:]
+    assert result["observability"]["counts"]["model_calls"] == 1
+    assert result["observability"]["counts"]["structural_repair_attempts"] == 1
+
+
+def test_second_invalid_citation_remains_eligible_for_the_final_field_patch() -> None:
+    invalid = valid_response()
+    invalid["sections"][0]["source_ids"] = ["S99"]
+    invalid["sections"][1]["source_ids"] = ["S98"]
+    responses = [
+        invalid,
+        {"updates": [{"path": "sections.0.source_ids", "value": ["S1"]}]},
+        {"updates": [{"path": "sections.1.source_ids", "value": ["S1"]}]},
+    ]
+    payloads: list[dict[str, Any]] = []
+
+    def transport(_: str, payload: dict[str, Any] | None, ___: str) -> dict[str, Any]:
+        assert payload is not None
+        payloads.append(payload)
+        return {
+            "choices": [{"message": {"content": json.dumps(responses.pop(0))}}],
+            "usage": {"prompt_tokens": 100, "completion_tokens": 20, "total_tokens": 120},
+        }
+
+    packet = EvidencePacket.from_retrieval(
+        film_record(),
+        {"passages": local_passages(), "method": "hybrid_rrf"},
+        "Study point of view",
+    )
+    with tempfile.TemporaryDirectory() as directory:
+        store = LocalSettingsStore(Path(directory) / "settings.json")
+        store.set("deepseek_api_key", "private-test-key")
+        service = DeepSeekStudyService(store, transport=transport)
+        with pytest.raises(StudyGenerationError) as initial_failure:
+            service.generate_once(
+                film_record(),
+                local_passages(),
+                evidence_packet=packet,
+            )
+        with pytest.raises(StudyGenerationError) as first_repair_failure:
+            service.repair_invalid_once(
+                initial_failure.value.repair_candidate or {},
+                initial_failure.value.repair_paths,
+                evidence_packet=packet,
+            )
+        result = service.repair_invalid_once(
+            first_repair_failure.value.repair_candidate or {},
+            first_repair_failure.value.repair_paths,
+            evidence_packet=packet,
+        )
+
+    assert initial_failure.value.repair_paths == ("sections.0.source_ids",)
+    assert first_repair_failure.value.repair_paths == ("sections.1.source_ids",)
+    assert [payload["max_tokens"] for payload in payloads] == [3200, 800, 800]
+    assert result["sections"][0]["source_ids"] == ["S1"]
+    assert result["sections"][1]["source_ids"] == ["S1"]
+
+
+def test_schema_failure_exposes_only_bounded_repair_paths() -> None:
+    invalid = valid_response()
+    del invalid["sections"][0]["confidence"]
+
+    def transport(_: str, __: dict[str, Any] | None, ___: str) -> dict[str, Any]:
+        return {
+            "choices": [{"message": {"content": json.dumps(invalid)}}],
+        }
+
+    with tempfile.TemporaryDirectory() as directory:
+        store = LocalSettingsStore(Path(directory) / "settings.json")
+        store.set("deepseek_api_key", "private-test-key")
+        with pytest.raises(StudyGenerationError) as captured:
+            DeepSeekStudyService(store, transport=transport).generate_once(
+                film_record(), local_passages()
+            )
+
+    assert captured.value.category == "schema_validation"
+    assert captured.value.repair_paths == ("sections.0.confidence",)
+    assert captured.value.repair_candidate is not None
+
+
+def test_malformed_json_has_safe_category_but_no_candidate() -> None:
+    def transport(_: str, __: dict[str, Any] | None, ___: str) -> dict[str, Any]:
+        return {"choices": [{"message": {"content": "not-json"}}]}
+
+    with tempfile.TemporaryDirectory() as directory:
+        store = LocalSettingsStore(Path(directory) / "settings.json")
+        store.set("deepseek_api_key", "private-test-key")
+        with pytest.raises(StudyGenerationError) as captured:
+            DeepSeekStudyService(store, transport=transport).generate_once(
+                film_record(), local_passages()
+            )
+
+    assert captured.value.category == "malformed_json"
+    assert captured.value.repair_candidate is None
+    assert captured.value.repair_paths == ()
+
+
+def test_structural_patch_cannot_change_an_accepted_field() -> None:
+    candidate = valid_response()
+    candidate["sections"][0]["source_ids"] = ["S99"]
+
+    def transport(_: str, __: dict[str, Any] | None, ___: str) -> dict[str, Any]:
+        patch = {"updates": [{"path": "central_argument", "value": "not allowed"}]}
+        return {"choices": [{"message": {"content": json.dumps(patch)}}]}
+
+    packet = EvidencePacket.from_retrieval(
+        film_record(),
+        {"passages": local_passages(), "method": "hybrid_rrf"},
+        "Study point of view",
+    )
+    with tempfile.TemporaryDirectory() as directory:
+        store = LocalSettingsStore(Path(directory) / "settings.json")
+        store.set("deepseek_api_key", "private-test-key")
+        service = DeepSeekStudyService(store, transport=transport)
+        with pytest.raises(StudyGenerationError) as captured:
+            service.repair_invalid_once(
+                candidate,
+                ("sections.0.source_ids",),
+                evidence_packet=packet,
+            )
+
+    assert captured.value.category == "structural_repair_invalid"
+    assert candidate["central_argument"] == valid_response()["central_argument"]
 
 
 def test_repair_once_makes_exactly_one_agent_owned_attempt() -> None:

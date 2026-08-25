@@ -38,6 +38,7 @@ STUDY_COUNT_NAMES = (
     "prompt_characters",
     "model_calls",
     "repair_attempts",
+    "structural_repair_attempts",
     "prompt_tokens",
     "completion_tokens",
     "total_tokens",
@@ -167,9 +168,7 @@ class StudyTrace:
                     }
                 )
             counts = {
-                name: self._counts[name]
-                for name in STUDY_COUNT_NAMES
-                if name in self._counts
+                name: self._counts[name] for name in STUDY_COUNT_NAMES if name in self._counts
             }
             return {
                 "schema_version": self.schema_version,

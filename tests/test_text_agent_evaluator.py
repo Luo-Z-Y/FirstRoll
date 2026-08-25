@@ -62,6 +62,47 @@ def test_text_programme_freezes_retry_comparison_and_no_clip_boundaries() -> Non
     assert contract["boundaries"]["clip_analysis"] == ("blocked_until_text_programme_complete")
     assert contract["boundaries"]["hosted_route"] is False
     assert contract["boundaries"]["production_cutover"] is False
+    assert contract["owner_continuation"]["paid_model_or_provider_calls_authorised"] is False
+    assert contract["latency_revision_run_budget"] == {
+        "expected_minimum_synthesis_calls": 30,
+        "maximum_synthesis_calls": 90,
+        "maximum_acquisition_planner_calls": 10,
+        "maximum_external_provider_calls": 10,
+        "paid_run_requires_separate_budget_confirmation": True,
+    }
+    assert contract["latency_revision_budget_confirmation"]["confirmed"] is False
+    assert contract["latency_revision"] == {
+        "status": "implementation_complete_without_provider_calls",
+        "diagnosis": (
+            "Invalid parseable generations were discarded, so graph repair repeated the complete "
+            "6926-token prompt and full study."
+        ),
+        "agent_initial_temperature": 0,
+        "fixed_production_initial_temperature": 0.2,
+        "safe_failure_categories": True,
+        "parseable_candidate_retention": "process_memory_only",
+        "maximum_structural_repair_paths": 4,
+        "maximum_structural_repair_completion_tokens": 800,
+        "accepted_fields_preserved": True,
+        "complete_merged_study_revalidated": True,
+        "malformed_or_unpatchable_fallback": "one_graph_budgeted_full_regeneration",
+        "future_report_schema_version": 3,
+        "per_strategy_latency_reported": True,
+        "committed_source_required": True,
+        "fresh_output_paths_required": True,
+        "previous_result_immutable": True,
+        "previous_latency_targets_unchanged": True,
+        "paid_validation_authorised": False,
+        "meaningful_agent_claim": (
+            "not_yet_supported_without_provider_latency_and_quality_evidence"
+        ),
+    }
+    assert contract["stages"][0]["status"] == (
+        "structural_repair_revision_implemented_awaiting_paid_validation"
+    )
+    assert all(
+        stage["status"] == "blocked_by_revised_t01_validation" for stage in contract["stages"][1:]
+    )
     assert (
         contract["human_targets_after_machine_pass"]["changed_packet_source_diversity"]["threshold"]
         == 3
@@ -74,28 +115,60 @@ def test_text_programme_freezes_retry_comparison_and_no_clip_boundaries() -> Non
     )
 
 
-def test_consumed_budget_confirmation_cannot_authorise_a_rerun() -> None:
+def test_latency_revision_needs_a_new_exact_budget_confirmation() -> None:
     completed = programme()
     approved = json.loads(json.dumps(completed))
-    approved["status"] = "approved_revised_local_comparison"
-    approved["run_budget"]["paid_run_requires_separate_budget_confirmation"] = False
-    approved["owner_budget_confirmation"]["authorisation_consumed"] = False
-    mismatched = json.loads(json.dumps(approved))
-    mismatched["owner_budget_confirmation"]["approved_maximum_synthesis_calls"] = 91
-
-    assert evaluator.comparison_authorised(completed) is False
-    assert evaluator.comparison_authorised(approved) is True
-    assert evaluator.comparison_authorised(mismatched) is False
-    assert completed["owner_budget_confirmation"] == {
+    approved["status"] = "approved_t01_structural_repair_comparison"
+    approved["latency_revision"]["paid_validation_authorised"] = True
+    approved["latency_revision_run_budget"]["paid_run_requires_separate_budget_confirmation"] = (
+        False
+    )
+    approved["latency_revision_budget_confirmation"] = {
         "confirmed": True,
-        "recorded_at": "2026-08-25T05:07:00Z",
+        "recorded_at": "2026-08-25T12:00:00Z",
         "decided_by": "repository_owner",
         "approved_minimum_synthesis_calls": 30,
         "approved_maximum_synthesis_calls": 90,
         "approved_maximum_planner_calls": 10,
         "approved_maximum_external_provider_calls": 10,
-        "authorisation_consumed": True,
+        "authorisation_consumed": False,
     }
+    mismatched = json.loads(json.dumps(approved))
+    mismatched["latency_revision_budget_confirmation"]["approved_maximum_synthesis_calls"] = 91
+    reused_historical = json.loads(json.dumps(completed))
+    reused_historical["status"] = "approved_revised_local_comparison"
+    reused_historical["owner_budget_confirmation"]["authorisation_consumed"] = False
+
+    assert evaluator.comparison_authorised(completed) is False
+    assert evaluator.comparison_authorised(approved) is True
+    assert evaluator.comparison_authorised(mismatched) is False
+    assert evaluator.comparison_authorised(reused_historical) is False
+    assert completed["owner_budget_confirmation"]["authorisation_consumed"] is True
+    assert completed["latency_revision_budget_confirmation"]["confirmed"] is False
+
+
+def test_repeated_comparison_requires_a_committed_source(monkeypatch: pytest.MonkeyPatch) -> None:
+    class DirtyResult:
+        returncode = 1
+
+    monkeypatch.setattr(evaluator.subprocess, "run", lambda *args, **kwargs: DirtyResult())
+
+    with pytest.raises(SystemExit, match="Commit all tracked"):
+        evaluator.require_committed_source()
+
+
+def test_repeated_comparison_refuses_to_overwrite_evidence(tmp_path: Path) -> None:
+    report = tmp_path / "report.json"
+    packets = tmp_path / "packets.json"
+
+    evaluator.require_fresh_output_paths(report, packets)
+    report.write_text("{}", encoding="utf-8")
+    with pytest.raises(SystemExit, match="report"):
+        evaluator.require_fresh_output_paths(report, packets)
+    report.unlink()
+    packets.write_text("{}", encoding="utf-8")
+    with pytest.raises(SystemExit, match="packet snapshot"):
+        evaluator.require_fresh_output_paths(report, packets)
 
 
 def test_versioned_repeated_result_matches_the_frozen_contract() -> None:
@@ -164,6 +237,67 @@ def test_lane_summary_fails_closed_when_provider_token_usage_is_missing() -> Non
     assert summary["token_usage_complete_ratio"] == pytest.approx(2 / 3, abs=1e-6)
 
 
+def test_lane_summary_reports_safe_repair_strategy_diagnostics() -> None:
+    samples = [sample("case-1", "agent", repetition) for repetition in range(1, 4)]
+    samples[0]["study_attempts"] = [
+        {
+            "kind": "initial",
+            "strategy": "initial_generation",
+            "status": "failed",
+            "quality_status": "invalid",
+            "failure_category": "citation_validation",
+            "duration_seconds": 40.0,
+        },
+        {
+            "kind": "repair",
+            "strategy": "targeted_structural_repair",
+            "status": "completed",
+            "quality_status": "passed",
+            "duration_seconds": 8.0,
+        },
+    ]
+    samples[1]["study_attempts"] = [
+        {
+            "kind": "initial",
+            "strategy": "initial_generation",
+            "status": "completed",
+            "quality_status": "insufficient_evidence",
+            "duration_seconds": 42.0,
+        },
+        {
+            "kind": "repair",
+            "strategy": "targeted_quality_repair",
+            "status": "completed",
+            "quality_status": "passed",
+            "duration_seconds": 14.0,
+        },
+    ]
+    samples[2]["study_attempts"] = [
+        {
+            "kind": "repair",
+            "strategy": "full_regeneration",
+            "status": "completed",
+            "quality_status": "passed",
+            "duration_seconds": 45.0,
+        }
+    ]
+
+    summary = evaluator.summarise_lane(samples, scheduled=3)
+
+    assert summary["initial_generation_failure_samples"] == 1
+    assert summary["targeted_structural_repair_samples"] == 1
+    assert summary["targeted_quality_repair_samples"] == 1
+    assert summary["full_regeneration_samples"] == 1
+    assert summary["failure_categories"] == {"citation_validation": 1}
+    assert summary["strategy_latency_seconds"] == {
+        "initial_generation": {"attempts": 2, "p50": 41.0, "p95": 41.9},
+        "targeted_structural_repair": {"attempts": 1, "p50": 8.0, "p95": 8.0},
+        "targeted_quality_repair": {"attempts": 1, "p50": 14.0, "p95": 14.0},
+        "full_regeneration": {"attempts": 1, "p50": 45.0, "p95": 45.0},
+    }
+    assert "PRIVATE" not in json.dumps(summary)
+
+
 def test_comparison_includes_one_off_acquisition_planner_tokens() -> None:
     fixed = {
         "mean_quality_all_scheduled": 98.0,
@@ -229,6 +363,10 @@ def test_safe_report_represents_all_three_samples_in_both_lanes() -> None:
         samples=samples,
     )
 
+    assert report["schema_version"] == 3
+    assert report["protocol"]["agent_initial_generation_temperature"] == 0
+    assert report["protocol"]["maximum_structural_repair_paths"] == 4
+    assert report["protocol"]["maximum_structural_repair_completion_tokens"] == 800
     assert report["summary"]["fixed"]["scheduled_samples"] == 15
     assert report["summary"]["agent"]["scheduled_samples"] == 15
     assert report["summary"]["local_machine_targets_passed"] is True

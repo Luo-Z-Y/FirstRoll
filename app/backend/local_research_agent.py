@@ -74,6 +74,8 @@ class _RunWorkspace:
     acquired_video_count: int = 0
     draft: dict[str, Any] | None = None
     last_valid_draft: dict[str, Any] | None = None
+    structural_repair_candidate: dict[str, Any] | None = None
+    structural_repair_paths: tuple[str, ...] = ()
     study_attempts: list[dict[str, Any]] = field(default_factory=list)
     repair_attempts: int = 0
 
@@ -335,14 +337,20 @@ class LocalResearchGraphServices:
         workspace = self._workspace(state)
         draft = state.get("draft") or workspace.draft or {}
         quality = draft.get("quality") if isinstance(draft, dict) else None
-        report = quality if isinstance(quality, dict) else {
-            "status": "invalid",
-            "issues": ["missing_quality_report"],
-        }
+        report = (
+            quality
+            if isinstance(quality, dict)
+            else {
+                "status": "invalid",
+                "issues": ["missing_quality_report"],
+            }
+        )
         passed = report.get("status") == "passed"
         if passed:
             workspace.trace.finish("completed")
         elif workspace.repair_attempts >= MAX_AGENT_REPAIR_CALLS:
+            workspace.structural_repair_candidate = None
+            workspace.structural_repair_paths = ()
             workspace.trace.finish("failed")
         return ValidationResult(passed, report)
 
@@ -363,10 +371,14 @@ class LocalResearchGraphServices:
         kind: str,
     ) -> dict[str, Any]:
         attempt_trace = StudyTrace()
+        started_at = monotonic()
         result: dict[str, Any]
         status = "failed"
+        failure_category: str | None = None
+        strategy = "initial_generation"
         try:
             if kind == "repair" and workspace.last_valid_draft is not None:
+                strategy = "targeted_quality_repair"
                 prior_quality = workspace.last_valid_draft.get("quality")
                 result = self.study_service.repair_once(
                     workspace.last_valid_draft,
@@ -374,7 +386,16 @@ class LocalResearchGraphServices:
                     evidence_packet=workspace.packet,
                     trace=attempt_trace,
                 )
+            elif kind == "repair" and workspace.structural_repair_candidate is not None:
+                strategy = "targeted_structural_repair"
+                result = self.study_service.repair_invalid_once(
+                    workspace.structural_repair_candidate,
+                    workspace.structural_repair_paths,
+                    evidence_packet=workspace.packet,
+                    trace=attempt_trace,
+                )
             else:
+                strategy = "full_regeneration" if kind == "repair" else strategy
                 result = self.study_service.generate_once(
                     workspace.film,
                     workspace.reading.get("passages", []),
@@ -383,28 +404,34 @@ class LocalResearchGraphServices:
                     evidence_packet=workspace.packet,
                     trace=attempt_trace,
                 )
+            workspace.structural_repair_candidate = None
+            workspace.structural_repair_paths = ()
             status = "completed"
-        except StudyGenerationError:
+        except StudyGenerationError as exc:
+            failure_category = exc.category
+            workspace.structural_repair_candidate = exc.repair_candidate
+            workspace.structural_repair_paths = exc.repair_paths
             result = {
                 "quality": {
                     "status": "invalid",
-                    "issues": ["generation_attempt_failed"],
+                    "issues": [exc.category],
                 }
             }
         snapshot = attempt_trace.snapshot()
         self._merge_study_counts(workspace.trace, snapshot)
         quality = result.get("quality") if isinstance(result, dict) else None
-        workspace.study_attempts.append(
-            {
-                "kind": kind,
-                "status": status,
-                "quality_status": quality.get("status")
-                if isinstance(quality, dict)
-                else "invalid",
-                "model_calls": int(snapshot.get("counts", {}).get("model_calls", 0)),
-                "total_tokens": int(snapshot.get("counts", {}).get("total_tokens", 0)),
-            }
-        )
+        attempt = {
+            "kind": kind,
+            "strategy": strategy,
+            "status": status,
+            "quality_status": quality.get("status") if isinstance(quality, dict) else "invalid",
+            "model_calls": int(snapshot.get("counts", {}).get("model_calls", 0)),
+            "total_tokens": int(snapshot.get("counts", {}).get("total_tokens", 0)),
+            "duration_seconds": round(max(0.0, monotonic() - started_at), 3),
+        }
+        if failure_category is not None:
+            attempt["failure_category"] = failure_category
+        workspace.study_attempts.append(attempt)
         return result
 
     @staticmethod
@@ -418,6 +445,7 @@ class LocalResearchGraphServices:
             "prompt_tokens",
             "completion_tokens",
             "total_tokens",
+            "structural_repair_attempts",
         ):
             value = counts.get(name)
             if isinstance(value, int) and not isinstance(value, bool) and value >= 0:
@@ -426,8 +454,7 @@ class LocalResearchGraphServices:
     @staticmethod
     def _is_valid_study(study: dict[str, Any]) -> bool:
         return bool(
-            isinstance(study.get("sections"), list)
-            and isinstance(study.get("quality"), dict)
+            isinstance(study.get("sections"), list) and isinstance(study.get("quality"), dict)
         )
 
     def safe_metrics(self, run_id: str) -> dict[str, Any]:
@@ -560,10 +587,6 @@ class LocalResearchGraphServices:
         trace.set_count("theory_omitted", int(theory.get("omitted_items", 0) or 0))
         trace.set_count("critical_candidates", int(critical.get("candidate_items", 0) or 0))
         trace.set_count("critical_omitted", int(critical.get("omitted_items", 0) or 0))
-        trace.set_count(
-            "attributed_candidates", int(attributed.get("candidate_items", 0) or 0)
-        )
+        trace.set_count("attributed_candidates", int(attributed.get("candidate_items", 0) or 0))
         trace.set_count("attributed_omitted", int(attributed.get("omitted_items", 0) or 0))
-        trace.set_count(
-            "attributed_truncated", int(attributed.get("truncated_items", 0) or 0)
-        )
+        trace.set_count("attributed_truncated", int(attributed.get("truncated_items", 0) or 0))

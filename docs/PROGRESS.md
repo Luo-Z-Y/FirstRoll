@@ -1,5 +1,69 @@
 # FirstRoll Project Progress
 
+### 25 August 2026 — Parseable Agent failures now receive bounded structural patches
+
+Diagnosis:
+
+1. The two 95.411/103.249-second samples did not use the service's targeted repair path. Their
+   initial responses were invalid, so no `last_valid_draft` survived and the graph made a second full
+   generation with the same 6,926-token prompt.
+2. Those model transport pairs took `42.739 + 49.344` and `48.168 + 51.636` seconds. A full second
+   study cannot fit the previous 61.313-second Agent P95 ceiling.
+3. Safe telemetry recorded only `invalid`, so the historical result cannot distinguish schema,
+   citation, empty-content or malformed-JSON failures. The generated responses were correctly not
+   retained and cannot be replayed.
+
+Delivered without a provider call:
+
+1. Added a bounded failure taxonomy. Safe attempt metrics may record only category, strategy, calls
+   and tokens; candidate text never enters graph state, logs or reports.
+2. Made Agent initial synthesis deterministic at temperature `0`. The fixed production workflow
+   remains at `0.2` with its existing single internal repair.
+3. Retain a parseable invalid candidate only inside the process workspace and derive at most four
+   deterministic field paths from schema/citation validation.
+4. Added structural repair responses of the form `{"updates":[{"path":...,"value":...}]}` with an
+   800-token completion ceiling. The repair prompt includes only affected candidate sections and the
+   evidence classes needed by those fields; it must cover exactly the requested paths and cannot
+   change an accepted field.
+5. Merge patches in deterministic code, then revalidate the complete `GroundedStudy`, all source,
+   critic and attributed-evidence IDs, evidence status and the quality gate.
+6. Keep a second invalid field eligible for the graph's final repair. Malformed, unpatchable or
+   failed patches fall back within the existing maximum of three generation calls.
+7. Extended future report schema 3 with initial-failure, targeted structural/quality repair, full
+   regeneration, per-strategy P50/P95 and safe failure-category aggregates.
+8. Added a distinct unconfirmed revision budget slot. The consumed historical approval cannot be
+   reused, and the evaluator requires committed tracked code and refuses to overwrite an existing
+   report or private snapshot.
+
+Acceptance evidence:
+
+- synthetic transports prove one and two invalid citations use 800-token field patches while every
+  unrequested section remains byte-for-byte equivalent after validation;
+- malformed JSON exposes no candidate; an out-of-scope patch is rejected; private synthetic prose
+  never appears in `safe_metrics`;
+- graph tests prove a patchable initial failure dispatches `targeted_structural_repair` rather than
+  `generate_once()` and remains within the existing two-repair budget;
+- all 275 automated tests, scoped Ruff, compilation, JSON parsing, documentation links and whitespace
+  checks pass without a model or provider call;
+- the historical result, latency thresholds, fixed production workflow, HTTP surface and hosted
+  routing remain unchanged.
+
+Known constraints:
+
+- the completed paid run did not retain the invalid-response subtype, so this patch targets the
+  demonstrated control-flow defect but cannot prove those exact responses were patchable;
+- an 800-token ceiling does not guarantee a 10–15-second provider response;
+- malformed JSON still requires a full generation because FirstRoll will not guess missing prose;
+- no fresh paid comparison, meaningful-value claim, human packet review or T02 entry is authorised.
+
+Next actionable work:
+
+1. Keep the fixed workflow and the evaluator's new budget slot unconfirmed.
+2. Obtain a separate, explicit budget decision before any provider compatibility probe or repeated
+   comparison; do not reuse the consumed authorisation.
+3. On approval, keep every retry in end-to-end P95 and report normal generation, structural repair,
+   full regeneration and failure categories separately. Advance T02 only if revised T01 passes.
+
 ### 25 August 2026 — Repeated text-Agent run recovers quality but fails latency gates
 
 Measured result:

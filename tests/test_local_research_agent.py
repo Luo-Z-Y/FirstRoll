@@ -261,8 +261,9 @@ def test_frozen_packet_synthesis_does_not_repeat_packet_preparation() -> None:
 
     assert result["status"] is TerminalStatus.COMPLETE
     assert prepare_calls == 0
-    assert adapter.safe_metrics("local-agent-test")["initial_packet_fingerprint"] == (
-        adapter.safe_metrics("local-agent-test")["packet_fingerprint"]
+    assert (
+        adapter.safe_metrics("local-agent-test")["initial_packet_fingerprint"]
+        == (adapter.safe_metrics("local-agent-test")["packet_fingerprint"])
     )
 
 
@@ -311,6 +312,70 @@ def test_agent_owns_two_repairs_and_can_pass_on_the_final_attempt() -> None:
     assert metrics["repair_attempts"] == 2
     assert metrics["study_observability"]["counts"]["model_calls"] == 3
     assert metrics["study_observability"]["counts"]["repair_attempts"] == 2
+
+
+def test_agent_uses_structural_patch_instead_of_full_regeneration() -> None:
+    class StructuralRepairService(RecordingStudyService):
+        def __init__(self) -> None:
+            super().__init__()
+            self.structural_repair_calls = 0
+
+        def generate_once(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
+            self.generation_calls += 1
+            trace = kwargs["trace"]
+            trace.increment_count("model_calls")
+            trace.increment_count("total_tokens", 100)
+            trace.finish("failed")
+            raise StudyGenerationError(
+                "synthetic invalid citation",
+                category="citation_validation",
+                repair_candidate={"private_draft": "PRIVATE_GENERATED_PROSE"},
+                repair_paths=("sections.0.source_ids",),
+            )
+
+        def repair_invalid_once(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
+            self.structural_repair_calls += 1
+            assert args[0] == {"private_draft": "PRIVATE_GENERATED_PROSE"}
+            assert args[1] == ("sections.0.source_ids",)
+            trace = kwargs["trace"]
+            trace.increment_count("model_calls")
+            trace.increment_count("total_tokens", 25)
+            trace.increment_count("structural_repair_attempts")
+            trace.finish("completed")
+            return {
+                "title": "A bounded study",
+                "sections": [{"section": 1}],
+                "quality": {"status": "passed", "score": 1.0},
+                "observability": trace.snapshot(),
+            }
+
+        def repair_once(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
+            raise AssertionError("A parseable invalid response must use structural repair.")
+
+    study = StructuralRepairService()
+    adapter = services(
+        existing_reviews=[review()],
+        acquirer=RecordingAcquirer(),
+        study=study,
+    )
+
+    result = run_agent(adapter)
+    metrics = adapter.safe_metrics("local-agent-test")
+
+    assert result["status"] is TerminalStatus.COMPLETE
+    assert result["repair_calls"] == 1
+    assert study.generation_calls == 1
+    assert study.structural_repair_calls == 1
+    assert [attempt["strategy"] for attempt in metrics["study_attempts"]] == [
+        "initial_generation",
+        "targeted_structural_repair",
+    ]
+    assert metrics["study_attempts"][0]["failure_category"] == "citation_validation"
+    assert all(attempt["duration_seconds"] >= 0 for attempt in metrics["study_attempts"])
+    assert metrics["study_observability"]["counts"]["model_calls"] == 2
+    assert metrics["study_observability"]["counts"]["total_tokens"] == 125
+    assert metrics["study_observability"]["counts"]["structural_repair_attempts"] == 1
+    assert "PRIVATE_GENERATED_PROSE" not in str(metrics)
 
 
 def test_agent_stops_insufficient_after_two_failed_repairs() -> None:
@@ -376,9 +441,9 @@ def test_sparse_packet_acquires_one_source_then_uses_unchanged_synthesis() -> No
     assert metrics["packet_quality"]["status"] == "passed"
     assert metrics["packet_fingerprint"] != metrics["initial_packet_fingerprint"]
     assert len(adapter.private_packet("local-agent-test").attributed_sources) == 1
-    assert [
-        (item["tool"], item["status"]) for item in metrics["tool_attempts"]
-    ] == [("fetch_guardian_reviews", "completed")]
+    assert [(item["tool"], item["status"]) for item in metrics["tool_attempts"]] == [
+        ("fetch_guardian_reviews", "completed")
+    ]
     assert metrics["tool_attempts"][0]["duration_seconds"] >= 0
     assert metrics["planner_total_tokens"] == 22
     assert len(metrics["planner_latency_seconds"]) == 1
@@ -476,9 +541,7 @@ def test_deepseek_planner_rejects_tool_outside_policy_set() -> None:
             return "test-deepseek-key"
 
     def transport(url: str, payload: dict[str, Any] | None, key: str) -> dict[str, Any]:
-        return {
-            "choices": [{"message": {"content": '{"tool":"fetch_douban_reviews"}'}}]
-        }
+        return {"choices": [{"message": {"content": '{"tool":"fetch_douban_reviews"}'}}]}
 
     service = DeepSeekStudyService(cast(Any, Settings()), transport=transport)
     with pytest.raises(StudyGenerationError, match="outside the approved set"):
