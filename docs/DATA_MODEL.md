@@ -28,15 +28,20 @@ bounded Discover workspace in per-tab session storage solely to survive view cha
 | Discovery/reception dictionaries | Local and hosted | No | TMDb or Wikidata/Wikipedia details, related-film and reception cache | In memory only |
 | Browser `sessionStorage` | Local and hosted browser | Per tab, ≤24 hours | Public Discover query/candidates/shelf, active product view, scroll offsets and optional dossier film ID | Not applicable; browser-managed |
 | `StudyRunStore` | Hosted | No | Owner UUID, status and final study for a maximum of ten minutes | In memory only |
-| Local Agent workspace | Local comparison only | No | Current film/focus, fixed packet, ephemeral acquired reviews/videos, planner usage and final study | In memory only; no checkpointer |
-| `.firstroll/evaluations/local-agent-packets.json` | Local comparison only | Conditional | Full candidate packets for human review, written only after local machine targets pass | Yes |
+| Local Agent workspace | Local comparison only | No | Current film/focus, fixed or frozen packet, ephemeral acquired reviews/videos, planner usage, up to three redacted study attempts and final study | In memory only; no checkpointer |
+| `.firstroll/evaluations/local-agent-packets.json` | Historical local comparison | Conditional | Full candidate packets for human review; the failed original run wrote none | Yes |
+| `.firstroll/evaluations/text-agent-packets.json` | Revised local comparison | Conditional | Changed candidate packets, written only after all repeated machine targets pass | Yes |
+| `.firstroll/evaluations/text-agent-human-review*.json` | Revised local comparison | Conditional | Private scores/notes and a separate score-only local aggregate | Yes |
 
 The default-off local Agent adapter does not write newly acquired comparison sources to
 `.firstroll/criticism` or `.firstroll/videos`. Its runtime objects and provider credentials remain
 outside graph state. The current comparison compiles without a checkpointer, so bounded evidence in
-graph state is not persisted. The evaluator's optional packet snapshot is a separate mode-`0600`,
-Git-ignored human-review artefact; its versioned paired report contains hashes and aggregate metrics
-only. Durable owner-scoped checkpoint design remains mandatory before any hosted Agent proposal.
+graph state is not persisted. `evidence_only` and `synthesis_only` are local evaluator modes, not
+stored product states: one freezes acquisition before prose generation and the other gives both
+packet lanes the same graph-owned two-repair policy. Optional packet snapshots are separate
+mode-`0600`, Git-ignored human-review artefacts; versioned reports contain hashes and aggregate
+metrics only. Durable owner-scoped checkpoint design remains mandatory before any hosted Agent
+proposal.
 
 ## Per-tab Discover continuity
 

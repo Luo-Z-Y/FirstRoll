@@ -336,6 +336,29 @@ after one Letterboxd acquisition, but the Agent's unchanged sufficient cinematog
 pending by design; no private packet snapshot was written. The failed candidate was not rerun, and
 production remains the fixed workflow.
 
+### Revised text-only protocol
+
+The owner has now selected **REVISE** under the
+[Text-Agent Programme](TEXT_AGENT_PROGRAMME.md). The graph, rather than the synthesis service, owns
+one initial generation plus at most two repairs. Acquisition runs once per case; then the fixed and
+Agent-enriched packets each receive three independent generations through the same synthesis-only
+graph. Order alternates by repetition and every failure contributes zero to the mean. This isolates
+the packet difference from orchestration and reduces one-draw noise without making a reliability
+claim.
+
+```bash
+FIRSTROLL_LOCAL_AGENT_ENABLED=1 uv run python tools/evaluate_text_agent.py \
+  --output evals/results/text-agent-repeated-YYYY-MM-DD.json
+```
+
+This command currently refuses to run. The full protocol requires at least 30 and at most 90 paid
+synthesis calls, plus bounded acquisition calls, so implementation approval is not budget approval.
+The machine-readable state in
+[`text_agent_programme.json`](../evals/text_agent_programme.json) must record separate confirmation
+before the frozen run. A complete machine pass writes only changed packets to ignored mode-`0600`
+storage for `tools/review_text_agent_packets.py`; human ratings and attestation cannot be supplied by
+an Agent. No hosted route or production cut-over is implied.
+
 ## Deep Study Transparency Checkpoint
 
 [`deep-study-transparency-2026-08-21.json`](../evals/results/deep-study-transparency-2026-08-21.json)
@@ -386,7 +409,7 @@ testing remain separate known constraints.
 | Quality-gate pass rate | Completed studies whose deterministic gate accepts the central argument and required sections | Completed studies only |
 | Quality acceptance failure rate | Completed studies rejected after the permitted repair policy | Completed studies only |
 | Quality score | Weighted proxy for identity, structure, gate result, citation integrity, calibration, verifiability and evidence coverage | Each completed study |
-| Repair rate | Completed studies that required the one permitted repair call | Completed studies only |
+| Repair rate | Completed studies that required one or more permitted repair calls | Completed studies only |
 | End-to-end latency | Search start through terminal success or failure | All attempted cases |
 | P50/P95 | Linear-interpolated `(n - 1)` percentiles reported by the evaluator | All attempted cases |
 | Model calls/tokens | Provider-reported calls and token use during the run | Complete suite |

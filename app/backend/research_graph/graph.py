@@ -10,6 +10,7 @@ from app.backend.research_graph.nodes import (
     authorise_tool,
     choose_tool,
     complete,
+    evidence_ready,
     execute_tool,
     failed_safe,
     insufficient_evidence,
@@ -47,6 +48,7 @@ def build_research_graph(*, checkpointer: Any = None) -> Any:
     builder.add_node("repair", repair)
     builder.add_node("needs_user", needs_user)
     builder.add_node("complete", complete)
+    builder.add_node("evidence_ready", evidence_ready)
     builder.add_node("insufficient_evidence", insufficient_evidence)
     builder.add_node("failed_safe", failed_safe)
 
@@ -63,6 +65,7 @@ def build_research_graph(*, checkpointer: Any = None) -> Any:
             "synthesise": "synthesise",
             "repair": "repair",
             "complete": "complete",
+            "evidence_ready": "evidence_ready",
             "insufficient_evidence": "insufficient_evidence",
             "failed_safe": "failed_safe",
             "stop": END,
@@ -83,6 +86,7 @@ def build_research_graph(*, checkpointer: Any = None) -> Any:
     builder.add_edge("repair", "validate")
     builder.add_edge("needs_user", END)
     builder.add_edge("complete", END)
+    builder.add_edge("evidence_ready", END)
     builder.add_edge("insufficient_evidence", END)
     builder.add_edge("failed_safe", END)
     return builder.compile(checkpointer=checkpointer, name="firstroll_research_agent")

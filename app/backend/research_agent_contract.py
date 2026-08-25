@@ -41,6 +41,7 @@ class NextAction(StrEnum):
     SYNTHESISE = "synthesise"
     REPAIR = "repair"
     COMPLETE = "complete"
+    COMPLETE_EVIDENCE = "complete_evidence"
     RETURN_INSUFFICIENT_EVIDENCE = "return_insufficient_evidence"
     FAIL_SAFE = "fail_safe"
     STOP = "stop"
@@ -50,6 +51,7 @@ class TerminalStatus(StrEnum):
     RUNNING = "running"
     NEEDS_USER = "needs_user"
     COMPLETE = "complete"
+    EVIDENCE_READY = "evidence_ready"
     INSUFFICIENT_EVIDENCE = "insufficient_evidence"
     BUDGET_EXHAUSTED = "budget_exhausted"
     FAILED_SAFE = "failed_safe"
@@ -122,6 +124,9 @@ class ToolPlan:
             raise ValueError("Planner total tokens cannot be lower than component counts.")
 
 
+MAX_AGENT_REPAIR_CALLS = 2
+
+
 @dataclass(frozen=True)
 class ResearchBudgets:
     max_graph_steps: int = 8
@@ -132,8 +137,16 @@ class ResearchBudgets:
     max_evidence_characters: int = 36_000
     research_deadline_seconds: int = 45
     max_synthesis_calls: int = 1
-    max_repair_calls: int = 1
+    max_repair_calls: int = 2
     max_total_model_calls: int = 6
+
+    def __post_init__(self) -> None:
+        if (
+            isinstance(self.max_repair_calls, bool)
+            or not isinstance(self.max_repair_calls, int)
+            or not 0 <= self.max_repair_calls <= MAX_AGENT_REPAIR_CALLS
+        ):
+            raise ValueError("Agent repair calls must stay between zero and two.")
 
 
 DEFAULT_BUDGETS = ResearchBudgets()
@@ -216,6 +229,15 @@ def decide_next_action(
             "The run has already reached a terminal state.",
             state["status"],
         )
+    model_calls = (
+        state["planning_calls"] + state["synthesis_calls"] + state["repair_calls"]
+    )
+    if state["draft_available"] and state["quality_passed"] is True:
+        return PolicyDecision(
+            NextAction.COMPLETE,
+            "The draft passed deterministic validation and quality checks.",
+            TerminalStatus.COMPLETE,
+        )
     if state["deadline_exceeded"]:
         return PolicyDecision(
             NextAction.RETURN_INSUFFICIENT_EVIDENCE,
@@ -257,16 +279,13 @@ def decide_next_action(
             "Inspect existing evidence before spending an external-call budget.",
         )
     if state["draft_available"]:
-        if state["quality_passed"] is True:
-            return PolicyDecision(
-                NextAction.COMPLETE,
-                "The draft passed deterministic validation and quality checks.",
-                TerminalStatus.COMPLETE,
-            )
-        if state["repair_calls"] < budgets.max_repair_calls:
+        if (
+            state["repair_calls"] < budgets.max_repair_calls
+            and model_calls < budgets.max_total_model_calls
+        ):
             return PolicyDecision(
                 NextAction.REPAIR,
-                "One bounded repair remains available.",
+                "A bounded Agent-owned repair remains available.",
             )
         return PolicyDecision(
             NextAction.RETURN_INSUFFICIENT_EVIDENCE,
@@ -274,6 +293,12 @@ def decide_next_action(
             TerminalStatus.INSUFFICIENT_EVIDENCE,
         )
     if state["evidence_sufficient"]:
+        if model_calls >= budgets.max_total_model_calls:
+            return PolicyDecision(
+                NextAction.RETURN_INSUFFICIENT_EVIDENCE,
+                "The total model-call budget was exhausted before synthesis.",
+                TerminalStatus.BUDGET_EXHAUSTED,
+            )
         if state["synthesis_calls"] >= budgets.max_synthesis_calls:
             return PolicyDecision(
                 NextAction.FAIL_SAFE,
@@ -289,6 +314,7 @@ def decide_next_action(
     if (
         state["external_tool_calls"] >= budgets.max_external_tool_calls
         or state["planning_calls"] >= budgets.max_planning_calls
+        or model_calls >= budgets.max_total_model_calls
         or not remaining
     ):
         return PolicyDecision(

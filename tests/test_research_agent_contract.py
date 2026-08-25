@@ -10,6 +10,7 @@ from app.backend.research_agent_contract import (
     EvidenceRef,
     FailureKind,
     NextAction,
+    ResearchBudgets,
     ResearchState,
     TerminalStatus,
     ToolFailure,
@@ -144,6 +145,64 @@ def test_one_provider_timeout_leaves_other_bounded_tools_available() -> None:
     assert ToolName.FETCH_GUARDIAN_REVIEWS not in decision.allowed_tools
     assert ToolName.FETCH_DOUBAN_REVIEWS in decision.allowed_tools
     assert decision.terminal_status is None
+
+
+def test_agent_repair_budget_cannot_exceed_two() -> None:
+    with pytest.raises(ValueError, match="between zero and two"):
+        ResearchBudgets(max_repair_calls=3)
+    with pytest.raises(ValueError, match="between zero and two"):
+        ResearchBudgets(max_repair_calls=True)
+
+
+def test_agent_can_use_two_repairs_but_not_a_third() -> None:
+    first_repair_used = state(
+        draft_available=True,
+        quality_passed=False,
+        synthesis_calls=1,
+        repair_calls=1,
+    )
+    both_repairs_used = state(
+        draft_available=True,
+        quality_passed=False,
+        synthesis_calls=1,
+        repair_calls=2,
+    )
+
+    assert decide_next_action(first_repair_used).action is NextAction.REPAIR
+    exhausted = decide_next_action(both_repairs_used)
+    assert exhausted.action is NextAction.RETURN_INSUFFICIENT_EVIDENCE
+    assert exhausted.terminal_status is TerminalStatus.INSUFFICIENT_EVIDENCE
+
+
+def test_passing_final_repair_completes_at_the_step_boundary() -> None:
+    decision = decide_next_action(
+        state(
+            draft_available=True,
+            quality_passed=True,
+            synthesis_calls=1,
+            repair_calls=2,
+            step_count=8,
+        )
+    )
+
+    assert decision.action is NextAction.COMPLETE
+    assert decision.terminal_status is TerminalStatus.COMPLETE
+
+
+def test_total_model_call_budget_blocks_another_repair() -> None:
+    decision = decide_next_action(
+        state(
+            draft_available=True,
+            quality_passed=False,
+            planning_calls=2,
+            synthesis_calls=1,
+            repair_calls=1,
+        ),
+        ResearchBudgets(max_total_model_calls=4),
+    )
+
+    assert decision.action is NextAction.RETURN_INSUFFICIENT_EVIDENCE
+    assert decision.terminal_status is TerminalStatus.INSUFFICIENT_EVIDENCE
 
 
 def test_retrieved_review_is_untrusted_data_and_cannot_request_a_tool() -> None:

@@ -1,0 +1,173 @@
+{
+  "schema_version": 1,
+  "programme_id": "firstroll-text-agent-v1",
+  "status": "implementation_complete_run_requires_budget_confirmation",
+  "recorded_at": "2026-08-25T04:28:00Z",
+  "owner_revision": {
+    "decision": "revise_text_agent",
+    "instruction": "Make the Agent own generation retries, allow two retries, compare repeated average results fairly, complete text stages one through five, and defer clip analysis.",
+    "decided_by": "repository_owner"
+  },
+  "boundaries": {
+    "local_only": true,
+    "feature_flag_default": false,
+    "hosted_route": false,
+    "production_cutover": false,
+    "fixed_production_workflow_unchanged": true,
+    "clip_analysis": "blocked_until_text_programme_complete"
+  },
+  "retry_contract": {
+    "owner": "research_graph",
+    "initial_generation_attempts": 1,
+    "maximum_repair_attempts": 2,
+    "maximum_generation_model_calls_per_run": 3,
+    "service_internal_repairs": 0,
+    "fixed_production_internal_repairs": 1
+  },
+  "comparison_protocol": {
+    "suite_path": "evals/agent_cases.json",
+    "case_count": 5,
+    "generation_repetitions_per_lane_per_case": 3,
+    "scheduled_generation_samples_per_lane": 15,
+    "quality_denominator": "all_scheduled_samples_with_failures_scored_zero",
+    "packet_preparation": "once_per_case_before_repeated_generation",
+    "agent_acquisition": "once_per_case_before_repeated_generation",
+    "generation_policy": "same_agent_owned_retry_controller_for_both_packet_lanes",
+    "lane_order": "alternate_fixed_first_and_agent_first_by_repetition",
+    "comparison_difference": "fixed_packet_versus_agent_enriched_packet_only",
+    "provider_and_model_configuration": "same_machine_same_day",
+    "failures_retained": true,
+    "reliability_claim": "none_from_three_repetitions"
+  },
+  "run_budget": {
+    "expected_minimum_synthesis_calls": 30,
+    "maximum_synthesis_calls": 90,
+    "maximum_acquisition_planner_calls": 10,
+    "maximum_external_provider_calls": 10,
+    "paid_run_requires_separate_budget_confirmation": true
+  },
+  "comparison_targets": {
+    "fixed_sample_completion_ratio": {
+      "comparison": "eq",
+      "threshold": 1.0
+    },
+    "agent_sample_completion_ratio": {
+      "comparison": "eq",
+      "threshold": 1.0
+    },
+    "agent_mean_automated_quality": {
+      "comparison": "gte",
+      "threshold": 96.94
+    },
+    "agent_minus_fixed_mean_quality": {
+      "comparison": "gte",
+      "threshold": -1.71
+    },
+    "quality_gate_pass_ratio": {
+      "comparison": "eq",
+      "threshold": 1.0
+    },
+    "valid_citation_ratio": {
+      "comparison": "eq",
+      "threshold": 1.0
+    },
+    "token_usage_complete_ratio": {
+      "comparison": "eq",
+      "threshold": 1.0
+    },
+    "planner_token_usage_complete": {
+      "comparison": "eq",
+      "threshold": true
+    },
+    "identity_match_ratio": {
+      "comparison": "eq",
+      "threshold": 1.0
+    },
+    "instruction_containment_ratio": {
+      "comparison": "eq",
+      "threshold": 1.0
+    },
+    "sufficient_packet_external_calls": {
+      "comparison": "eq",
+      "threshold": 0
+    },
+    "sufficient_packet_mutations": {
+      "comparison": "eq",
+      "threshold": 0
+    },
+    "target_packet_final_status": {
+      "comparison": "eq",
+      "threshold": "passed"
+    },
+    "target_packet_changed": {
+      "comparison": "eq",
+      "threshold": true
+    },
+    "repeated_provider_calls": {
+      "comparison": "eq",
+      "threshold": 0
+    },
+    "repeated_p50_latency_ratio": {
+      "comparison": "lte",
+      "threshold": 1.1
+    },
+    "repeated_p95_latency_ratio": {
+      "comparison": "lte",
+      "threshold": 1.25
+    },
+    "repeated_total_token_ratio": {
+      "comparison": "lte",
+      "threshold": 1.25
+    }
+  },
+  "human_targets_after_machine_pass": {
+    "changed_packet_source_diversity": {
+      "comparison": "gte",
+      "threshold": 3
+    },
+    "changed_packet_filmmaker_actionability": {
+      "comparison": "gte",
+      "threshold": 4
+    },
+    "changed_packet_focus_relevance": {
+      "comparison": "gte",
+      "threshold": 4
+    },
+    "changed_packet_traceability": {
+      "comparison": "gte",
+      "threshold": 4
+    },
+    "changed_packet_epistemic_calibration": {
+      "comparison": "gte",
+      "threshold": 3
+    }
+  },
+  "stages": [
+    {
+      "id": "T01",
+      "name": "Agent-owned retries and isolated repeated comparison",
+      "status": "implementation_complete_awaiting_run"
+    },
+    {
+      "id": "T02",
+      "name": "Bounded claim and citation reviewer",
+      "status": "pending"
+    },
+    {
+      "id": "T03",
+      "name": "Genuine evidence-gap and source-diversity reviewer",
+      "status": "pending"
+    },
+    {
+      "id": "T04",
+      "name": "Targeted weak-section editor",
+      "status": "pending"
+    },
+    {
+      "id": "T05",
+      "name": "Evidence-grounded filmmaker coach",
+      "status": "pending"
+    }
+  ],
+  "privacy_scope": "No prompts, film questions, private passages, generated prose, review bodies, vectors, credentials, cookies or uploaded clips may enter a versioned report."
+}

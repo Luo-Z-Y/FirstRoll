@@ -9,7 +9,11 @@ from app.backend.settings import LocalSettingsStore
 from app.backend.criticism import ReviewSource
 from app.backend.evidence import EvidencePacket
 from app.backend.study_observability import StudyTrace
-from app.backend.study_service import DeepSeekStudyService, StudyGenerationError
+from app.backend.study_service import (
+    DeepSeekStudyService,
+    StudyGenerationError,
+    StudyQualityGate,
+)
 
 
 def film_record() -> dict[str, Any]:
@@ -217,6 +221,74 @@ def test_repair_attempts_are_counted_without_exposing_repair_content() -> None:
     assert counts["repair_attempts"] == 1
     assert counts["prompt_tokens"] == 200
     assert counts["total_tokens"] == 300
+
+
+def test_generate_once_leaves_quality_retry_to_the_agent() -> None:
+    weak = valid_response()
+    weak["central_argument"] = (
+        "The film uses deliberate framing to isolate every figure and structures the entire "
+        "conflict through an unquestionably fixed visual hierarchy."
+    )
+    calls = []
+
+    def transport(_: str, __: dict[str, Any] | None, ___: str) -> dict[str, Any]:
+        calls.append(weak)
+        return {
+            "model": "deepseek-v4-pro",
+            "choices": [{"message": {"content": json.dumps(weak)}}],
+            "usage": {"prompt_tokens": 100, "completion_tokens": 50, "total_tokens": 150},
+        }
+
+    with tempfile.TemporaryDirectory() as directory:
+        store = LocalSettingsStore(Path(directory) / "settings.json")
+        store.set("deepseek_api_key", "private-test-key")
+        result = DeepSeekStudyService(store, transport=transport).generate_once(
+            film_record(), local_passages()
+        )
+
+    assert len(calls) == 1
+    assert result["quality"]["status"] == "insufficient_evidence"
+    assert result["quality"]["repair_attempted"] is False
+    assert result["observability"]["counts"]["model_calls"] == 1
+    assert result["observability"]["counts"].get("repair_attempts", 0) == 0
+
+
+def test_repair_once_makes_exactly_one_agent_owned_attempt() -> None:
+    weak = valid_response()
+    weak["central_argument"] = (
+        "The film uses deliberate framing to isolate every figure and structures the entire "
+        "conflict through an unquestionably fixed visual hierarchy."
+    )
+    repaired = valid_response()
+    packet = EvidencePacket.from_retrieval(
+        film_record(),
+        {"passages": local_passages(), "method": "hybrid_rrf"},
+        "Study point of view",
+    )
+    calls = []
+
+    def transport(_: str, __: dict[str, Any] | None, ___: str) -> dict[str, Any]:
+        calls.append(repaired)
+        return {
+            "model": "deepseek-v4-pro",
+            "choices": [{"message": {"content": json.dumps(repaired)}}],
+            "usage": {"prompt_tokens": 100, "completion_tokens": 50, "total_tokens": 150},
+        }
+
+    with tempfile.TemporaryDirectory() as directory:
+        store = LocalSettingsStore(Path(directory) / "settings.json")
+        store.set("deepseek_api_key", "private-test-key")
+        result = DeepSeekStudyService(store, transport=transport).repair_once(
+            weak,
+            StudyQualityGate.evaluate(weak, False),
+            evidence_packet=packet,
+        )
+
+    assert len(calls) == 1
+    assert result["quality"]["status"] == "passed"
+    assert result["quality"]["repair_attempted"] is True
+    assert result["observability"]["counts"]["model_calls"] == 1
+    assert result["observability"]["counts"]["repair_attempts"] == 1
 
 
 def test_invalid_initial_response_receives_one_bounded_schema_retry() -> None:

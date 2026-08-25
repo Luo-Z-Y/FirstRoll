@@ -12,6 +12,7 @@ ACTION_ROUTES = {
     NextAction.SYNTHESISE: "synthesise",
     NextAction.REPAIR: "repair",
     NextAction.COMPLETE: "complete",
+    NextAction.COMPLETE_EVIDENCE: "evidence_ready",
     NextAction.RETURN_INSUFFICIENT_EVIDENCE: "insufficient_evidence",
     NextAction.FAIL_SAFE: "failed_safe",
     NextAction.STOP: "stop",

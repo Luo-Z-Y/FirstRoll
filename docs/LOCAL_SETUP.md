@@ -289,9 +289,22 @@ only and can never mark the frozen suite ready.
 
 The authorised run has already completed and returned NO-GO (4/5 Agent completion and 94.77 mean
 quality against 5/5 and 96.94). The command remains a historical protocol record; the evaluator now
-refuses another run because the machine-readable decision is no longer `approved`. Do not change that
-status or the controls without an explicit owner REVISE decision. This switch is not an interactive
-product capability or hosted configuration.
+refuses another run because the machine-readable decision is no longer `approved`.
+
+The owner has since selected REVISE for a new text-only implementation. Its future command is:
+
+```bash
+FIRSTROLL_LOCAL_AGENT_ENABLED=1 uv run python tools/evaluate_text_agent.py \
+  --output evals/results/text-agent-repeated-YYYY-MM-DD.json
+```
+
+It prepares/acquires each packet once, then alternates three fixed-packet and three Agent-packet
+synthesis samples using the same graph-owned limit of two repairs. It currently fails closed because
+the complete suite costs at least 30 and at most 90 synthesis calls; a separate owner budget
+confirmation must first update `evals/text_agent_programme.json`. Do not bypass that guard or use a
+partial run as acceptance. If every machine target later passes, review only the mode-`0600` changed
+packet snapshot with `uv run python tools/review_text_agent_packets.py`; its evidence and notes remain
+under `.firstroll`. This switch is not an interactive product capability or hosted configuration.
 
 ## Troubleshooting
 

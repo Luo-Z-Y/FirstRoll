@@ -21,7 +21,7 @@ DEEPSEEK_CHAT_URL = "https://api.deepseek.com/chat/completions"
 DEEPSEEK_MODELS_URL = "https://api.deepseek.com/models"
 DEFAULT_DEEPSEEK_MODEL = "deepseek-v4-pro"
 MAX_STUDY_COMPLETION_TOKENS = 3_200
-MAX_STUDY_MODEL_CALLS = 2
+MAX_FIXED_STUDY_MODEL_CALLS = 2
 
 
 class StudyGenerationError(RuntimeError):
@@ -355,6 +355,54 @@ class DeepSeekStudyService:
         api_key: str | None = None,
         trace: StudyTrace | None = None,
     ) -> dict[str, Any]:
+        """Run the fixed workflow with its existing single internal repair."""
+
+        return self._run_generation(
+            film,
+            passages,
+            question,
+            critical_claims,
+            evidence_packet,
+            api_key,
+            trace,
+            max_internal_repairs=1,
+        )
+
+    def generate_once(
+        self,
+        film: dict[str, Any],
+        passages: list[dict[str, Any]],
+        question: str | None = None,
+        critical_claims: list[CriticalClaim] | None = None,
+        evidence_packet: EvidencePacket | None = None,
+        api_key: str | None = None,
+        trace: StudyTrace | None = None,
+    ) -> dict[str, Any]:
+        """Generate exactly once so an external Agent owns every retry decision."""
+
+        return self._run_generation(
+            film,
+            passages,
+            question,
+            critical_claims,
+            evidence_packet,
+            api_key,
+            trace,
+            max_internal_repairs=0,
+        )
+
+    def _run_generation(
+        self,
+        film: dict[str, Any],
+        passages: list[dict[str, Any]],
+        question: str | None,
+        critical_claims: list[CriticalClaim] | None,
+        evidence_packet: EvidencePacket | None,
+        api_key: str | None,
+        trace: StudyTrace | None,
+        *,
+        max_internal_repairs: int,
+    ) -> dict[str, Any]:
         trace = trace or StudyTrace()
         try:
             result = self._generate(
@@ -365,6 +413,7 @@ class DeepSeekStudyService:
                 evidence_packet,
                 api_key,
                 trace,
+                max_internal_repairs=max_internal_repairs,
             )
             trace.set_count("sections", len(result.get("sections", [])))
             trace.finish("completed")
@@ -383,6 +432,8 @@ class DeepSeekStudyService:
         evidence_packet: EvidencePacket | None,
         api_key: str | None,
         trace: StudyTrace,
+        *,
+        max_internal_repairs: int,
     ) -> dict[str, Any]:
         for stage in (
             "film_context",
@@ -472,6 +523,8 @@ class DeepSeekStudyService:
                 trace,
             )
         except StudyGenerationError as initial_error:
+            if max_internal_repairs < 1:
+                raise
             trace.increment_count("repair_attempts")
             retry_response = self._retry_invalid_response_once(key, payload, trace)
             if retry_response is None:
@@ -490,7 +543,11 @@ class DeepSeekStudyService:
                     "DeepSeek returned an invalid study response after one repair attempt."
                 ) from retry_error
             repair_attempted = True
-        if quality["status"] != "passed" and not repair_attempted:
+        if (
+            quality["status"] != "passed"
+            and not repair_attempted
+            and max_internal_repairs >= 1
+        ):
             trace.increment_count("repair_attempts")
             repaired = self._repair_once(key, packet, sources, result, quality, trace)
             if repaired is not None:
@@ -499,7 +556,100 @@ class DeepSeekStudyService:
                     quality = StudyQualityGate.evaluate(result, bool(critical_claims))
             repair_attempted = True
         quality["repair_attempted"] = repair_attempted
-        result["model"] = response.get("model") or self.model
+        return self._decorate_result(
+            result,
+            quality=quality,
+            packet=packet,
+            sources=sources,
+            critical_claims=critical_claims,
+            model=str(response.get("model") or self.model),
+        )
+
+    def repair_once(
+        self,
+        draft: dict[str, Any],
+        quality: dict[str, Any],
+        *,
+        evidence_packet: EvidencePacket,
+        api_key: str | None = None,
+        trace: StudyTrace | None = None,
+    ) -> dict[str, Any]:
+        """Make exactly one targeted repair under an external Agent's budget."""
+
+        trace = trace or StudyTrace()
+        try:
+            for stage in (
+                "film_context",
+                "criticism_cache",
+                "video_cache",
+                "retrieval_planning",
+                "lexical_retrieval",
+                "semantic_retrieval",
+                "fusion_and_selection",
+                "packet_assembly",
+            ):
+                trace.skip(stage)
+            packet = evidence_packet
+            if not packet.theory_sources:
+                raise StudyGenerationError(
+                    "No cited local passages are available. Build the private library index first."
+                )
+            self._record_packet_trace(trace, packet)
+            sources = self._theory_source_records(packet)
+            trace.increment_count("repair_attempts")
+            grounded_draft = {
+                key: draft[key]
+                for key in GroundedStudy.model_fields
+                if key in draft
+            }
+            repaired = self._repair_once(
+                api_key or self._api_key(),
+                packet,
+                sources,
+                grounded_draft,
+                quality,
+                trace,
+            )
+            if repaired is None:
+                raise StudyGenerationError("DeepSeek returned an invalid targeted repair.")
+            repaired_quality = StudyQualityGate.evaluate(
+                repaired,
+                bool(packet.critical_claims),
+            )
+            repaired_quality["repair_attempted"] = True
+            result = self._decorate_result(
+                repaired,
+                quality=repaired_quality,
+                packet=packet,
+                sources=sources,
+                critical_claims=packet.critical_claims,
+                model=self.model,
+            )
+            trace.set_count("sections", len(result.get("sections", [])))
+            trace.finish("completed")
+            result["observability"] = trace.snapshot()
+            return result
+        except Exception:
+            trace.finish("failed")
+            raise
+
+    @staticmethod
+    def _record_packet_trace(trace: StudyTrace, packet: EvidencePacket) -> None:
+        trace.set_count("theory_sources", len(packet.theory_sources))
+        trace.set_count("critical_claims", len(packet.critical_claims))
+        trace.set_count("attributed_sources", len(packet.attributed_sources))
+
+    @staticmethod
+    def _decorate_result(
+        result: dict[str, Any],
+        *,
+        quality: dict[str, Any],
+        packet: EvidencePacket,
+        sources: list[dict[str, Any]],
+        critical_claims: list[CriticalClaim],
+        model: str,
+    ) -> dict[str, Any]:
+        result["model"] = model
         result["sources"] = sources
         result["critical_claims"] = [claim.model_dump() for claim in critical_claims]
         result["attributed_sources"] = [
@@ -552,7 +702,7 @@ class DeepSeekStudyService:
         original_payload: dict[str, Any],
         trace: StudyTrace,
     ) -> dict[str, Any] | None:
-        if MAX_STUDY_MODEL_CALLS < 2:
+        if MAX_FIXED_STUDY_MODEL_CALLS < 2:
             return None
         with trace.stage("prompt_serialisation"):
             messages = list(original_payload.get("messages", [])) + [

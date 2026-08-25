@@ -46,6 +46,17 @@ def policy(
     runtime: Runtime[ResearchGraphContext],
 ) -> dict[str, Any]:
     decision = decide_next_action(_contract_state(state), runtime.context.budgets)
+    if (
+        runtime.context.mode == "evidence_only"
+        and decision.action is NextAction.SYNTHESISE
+    ):
+        return {
+            "next_action": NextAction.COMPLETE_EVIDENCE,
+            "decision_reason": "The bounded evidence packet is ready for isolated evaluation.",
+            "allowed_tools": (),
+            "status": TerminalStatus.EVIDENCE_READY,
+            "terminal_reason": "The bounded evidence packet is ready.",
+        }
     update: dict[str, Any] = {
         "next_action": decision.action,
         "decision_reason": decision.reason,
@@ -120,7 +131,10 @@ def assess_evidence(
     runtime: Runtime[ResearchGraphContext],
 ) -> dict[str, Any]:
     try:
-        sufficient = bool(runtime.context.services.evidence_is_sufficient(state))
+        sufficient = bool(
+            runtime.context.mode == "synthesis_only"
+            or runtime.context.services.evidence_is_sufficient(state)
+        )
     except Exception:
         return {
             "status": TerminalStatus.FAILED_SAFE,
@@ -328,6 +342,13 @@ def complete(state: ResearchGraphState) -> dict[str, Any]:
     return {
         "terminal_reason": state["terminal_reason"] or "The study passed all checks.",
         "events": event("run_completed", "The evidence-grounded study is ready."),
+    }
+
+
+def evidence_ready(state: ResearchGraphState) -> dict[str, Any]:
+    return {
+        "terminal_reason": state["terminal_reason"] or "The evidence packet is ready.",
+        "events": event("evidence_ready", "The bounded evidence packet is ready."),
     }
 
 

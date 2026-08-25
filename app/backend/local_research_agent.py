@@ -17,6 +17,7 @@ from app.backend.criticism import (
 from app.backend.evidence import EvidencePacket
 from app.backend.packet_quality import assess_evidence_packet
 from app.backend.research_agent_contract import (
+    MAX_AGENT_REPAIR_CALLS,
     EvidenceKind,
     EvidenceRef,
     ResearchState,
@@ -72,6 +73,9 @@ class _RunWorkspace:
     acquired_review_count: int = 0
     acquired_video_count: int = 0
     draft: dict[str, Any] | None = None
+    last_valid_draft: dict[str, Any] | None = None
+    study_attempts: list[dict[str, Any]] = field(default_factory=list)
+    repair_attempts: int = 0
 
 
 class LocalAttributedSourceAcquirer:
@@ -186,12 +190,25 @@ class LocalResearchGraphServices:
         prepare: StudyPreparation,
         acquirer: LocalAttributedSourceAcquirer,
         study_service: DeepSeekStudyService,
+        packet_override: EvidencePacket | None = None,
     ) -> None:
         self.detail = detail
         self.prepare = prepare
         self.acquirer = acquirer
         self.study_service = study_service
+        self.packet_override = packet_override.model_copy(deep=True) if packet_override else None
         self._workspaces: dict[str, _RunWorkspace] = {}
+
+    def for_frozen_packet(self, packet: EvidencePacket) -> LocalResearchGraphServices:
+        """Create an isolated synthesis lane over one already-selected packet."""
+
+        return LocalResearchGraphServices(
+            detail=self.detail,
+            prepare=self.prepare,
+            acquirer=self.acquirer,
+            study_service=self.study_service,
+            packet_override=packet,
+        )
 
     def resolve_film(self, state: ResearchGraphState) -> FilmResolution:
         return FilmResolution(film_id=state.get("film_id"))
@@ -206,14 +223,24 @@ class LocalResearchGraphServices:
         trace = StudyTrace()
         with trace.stage("film_context"):
             film = self.detail(film_id)["film"]
-        prepared = self.prepare(
-            film_id,
-            film,
-            state["question"],
-            public_mode=False,
-            trace=trace,
-        )
-        packet = prepared["packet"]
+        if self.packet_override is not None:
+            packet = self.packet_override.model_copy(deep=True)
+            prepared = {
+                "reading": {"passages": []},
+                "claims": list(packet.critical_claims),
+                "reviews": [],
+                "videos": [],
+            }
+            trace.skip("packet_assembly")
+        else:
+            prepared = self.prepare(
+                film_id,
+                film,
+                state["question"],
+                public_mode=False,
+                trace=trace,
+            )
+            packet = prepared["packet"]
         workspace = _RunWorkspace(
             film_id=film_id,
             film=film,
@@ -298,15 +325,10 @@ class LocalResearchGraphServices:
 
     def synthesise(self, state: ResearchGraphState) -> DraftResult:
         workspace = self._workspace(state)
-        study = self.study_service.generate(
-            workspace.film,
-            workspace.reading.get("passages", []),
-            workspace.focus,
-            workspace.packet.critical_claims,
-            evidence_packet=workspace.packet,
-            trace=workspace.trace,
-        )
+        study = self._run_study_attempt(workspace, kind="initial")
         workspace.draft = study
+        if self._is_valid_study(study):
+            workspace.last_valid_draft = study
         return DraftResult(study)
 
     def validate(self, state: ResearchGraphState) -> ValidationResult:
@@ -317,11 +339,95 @@ class LocalResearchGraphServices:
             "status": "invalid",
             "issues": ["missing_quality_report"],
         }
-        return ValidationResult(report.get("status") == "passed", report)
+        passed = report.get("status") == "passed"
+        if passed:
+            workspace.trace.finish("completed")
+        elif workspace.repair_attempts >= MAX_AGENT_REPAIR_CALLS:
+            workspace.trace.finish("failed")
+        return ValidationResult(passed, report)
 
     def repair(self, state: ResearchGraphState) -> DraftResult:
-        raise StudyGenerationError(
-            "The fixed synthesis service already consumed its single bounded repair decision."
+        workspace = self._workspace(state)
+        workspace.repair_attempts += 1
+        workspace.trace.increment_count("repair_attempts")
+        study = self._run_study_attempt(workspace, kind="repair")
+        workspace.draft = study
+        if self._is_valid_study(study):
+            workspace.last_valid_draft = study
+        return DraftResult(study)
+
+    def _run_study_attempt(
+        self,
+        workspace: _RunWorkspace,
+        *,
+        kind: str,
+    ) -> dict[str, Any]:
+        attempt_trace = StudyTrace()
+        result: dict[str, Any]
+        status = "failed"
+        try:
+            if kind == "repair" and workspace.last_valid_draft is not None:
+                prior_quality = workspace.last_valid_draft.get("quality")
+                result = self.study_service.repair_once(
+                    workspace.last_valid_draft,
+                    prior_quality if isinstance(prior_quality, dict) else {},
+                    evidence_packet=workspace.packet,
+                    trace=attempt_trace,
+                )
+            else:
+                result = self.study_service.generate_once(
+                    workspace.film,
+                    workspace.reading.get("passages", []),
+                    workspace.focus,
+                    workspace.packet.critical_claims,
+                    evidence_packet=workspace.packet,
+                    trace=attempt_trace,
+                )
+            status = "completed"
+        except StudyGenerationError:
+            result = {
+                "quality": {
+                    "status": "invalid",
+                    "issues": ["generation_attempt_failed"],
+                }
+            }
+        snapshot = attempt_trace.snapshot()
+        self._merge_study_counts(workspace.trace, snapshot)
+        quality = result.get("quality") if isinstance(result, dict) else None
+        workspace.study_attempts.append(
+            {
+                "kind": kind,
+                "status": status,
+                "quality_status": quality.get("status")
+                if isinstance(quality, dict)
+                else "invalid",
+                "model_calls": int(snapshot.get("counts", {}).get("model_calls", 0)),
+                "total_tokens": int(snapshot.get("counts", {}).get("total_tokens", 0)),
+            }
+        )
+        return result
+
+    @staticmethod
+    def _merge_study_counts(trace: StudyTrace, snapshot: dict[str, Any]) -> None:
+        counts = snapshot.get("counts") if isinstance(snapshot, dict) else None
+        if not isinstance(counts, dict):
+            return
+        for name in (
+            "model_calls",
+            "prompt_characters",
+            "prompt_tokens",
+            "completion_tokens",
+            "total_tokens",
+        ):
+            value = counts.get(name)
+            if isinstance(value, int) and not isinstance(value, bool) and value >= 0:
+                trace.increment_count(name, value)
+
+    @staticmethod
+    def _is_valid_study(study: dict[str, Any]) -> bool:
+        return bool(
+            isinstance(study.get("sections"), list)
+            and isinstance(study.get("quality"), dict)
         )
 
     def safe_metrics(self, run_id: str) -> dict[str, Any]:
@@ -340,6 +446,8 @@ class LocalResearchGraphServices:
             "tool_attempts": list(workspace.tool_attempts),
             "acquired_reviews": workspace.acquired_review_count,
             "acquired_videos": workspace.acquired_video_count,
+            "study_attempts": list(workspace.study_attempts),
+            "repair_attempts": workspace.repair_attempts,
             "initial_packet_quality": workspace.initial_packet_quality,
             "initial_packet_fingerprint": workspace.initial_packet_fingerprint,
             "packet_quality": quality,

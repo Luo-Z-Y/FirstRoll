@@ -240,7 +240,10 @@ machine-readable decision is [`agent_go_no_go.json`](../evals/agent_go_no_go.jso
 owner selected **GO — bounded comparison only** on 24 August 2026. The resulting full run completed
 only 4/5 Agent cases and scored 94.77 mean quality over completed cases, failing the 100% completion
 and 96.94 quality targets. The comparison outcome is therefore **NO-GO**: the stable fixed workflow
-remains live and no human Agent packet review or route cut-over is permitted.
+remains live and no human Agent packet review or route cut-over is permitted. On 25 August the owner
+selected **REVISE** for a separate [Text-Agent Programme](TEXT_AGENT_PROGRAMME.md) that isolates
+packet effects across repeated generations and gives the graph two repairs. This does not change the
+completed Pre-Agent gate or authorise another paid run by itself.
 
 ## Human Packet Rubric
 
