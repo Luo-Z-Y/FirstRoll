@@ -1,5 +1,73 @@
 # FirstRoll Project Progress
 
+### 25 August 2026 — Revised Agent passes machine gates but loses private review artifact
+
+Measured result:
+
+| Measure | Fixed packet lane | Agent packet lane | Gate |
+|---|---:|---:|---|
+| Completion | 15 / 15 | 15 / 15 | Passed |
+| Mean automated quality | 98.32 | 97.88 · `−0.44` | Passed |
+| Quality standard deviation | 1.27 | 2.08 | Descriptive |
+| P50 latency | 42.304 s | 42.439 s · `1.003191×` | Passed |
+| P95 latency | 52.413 s | 46.560 s · `0.888329×` | Passed |
+| Synthesis calls | 15 | 15 | No repairs |
+| Total tokens | 116,037 | 116,313 including planner · `1.002379×` | Passed |
+
+What worked:
+
+1. All 30 scheduled generations completed on their first attempt. Temperature-zero Agent synthesis
+   had no invalid response, quality repair or full regeneration, eliminating the previous 95–103
+   second recovery tail in this draw.
+2. Every frozen completion, quality, citation, identity, instruction, selectivity, packet-change,
+   provider-repeat, telemetry, latency and token target passed.
+3. Four sufficient packets remained byte-identical and made no planner/provider call. The target used
+   one 417-token plan and one 2.902-second Letterboxd acquisition, added three reviews and moved
+   `limited → passed`.
+4. Actual spend was 30 synthesis calls, one planner call and one provider call, within the approved
+   90/10/10 maxima. Every call and sample remains in the report.
+
+What did not work:
+
+1. No response needed structural repair, so the new field-patch mechanism has synthetic coverage but
+   no provider-backed exercise. The run supports stable one-call behaviour, not patch reliability.
+2. The sole changed packet's three studies averaged 95.97 versus 98.25 for the fixed packet. Overall
+   non-inferiority therefore does not establish that the extra evidence improved generated prose.
+3. After the redacted machine-pass report was written, private snapshot output resolved through the
+   evaluation worktree's `.firstroll` symlink to a location outside the worktree. The security
+   boundary correctly rejected it and the command exited with status 1 after all paid calls.
+4. The process-local changed packet was lost when the command exited. No private snapshot or human
+   review can be reconstructed without another acquisition, which is not authorised.
+
+Integrity response:
+
+- the run was not repeated, tuned or partially replaced;
+- `evals/results/text-agent-structural-repair-2026-08-25.json` keeps the machine pass, all 30 samples,
+  exact calls/tokens/timings and a safe `private_output_boundary_rejected` post-run status;
+- human readiness and artifact completeness are forced false despite all machine targets passing;
+- the one-run authorisation is consumed;
+- the evaluator now preflights the resolved private-output boundary before any paid call, with a
+  regression test for an escaping symlink;
+- all 278 automated tests, scoped Ruff, compilation, JSON parsing, report privacy, documentation links
+  and whitespace checks pass after the result was recorded;
+- production remains fixed and T02–T05 plus clip-Agent work remain blocked.
+
+Known constraints:
+
+- three repetitions still do not establish reliability;
+- no provider evidence exists for structural patch latency or success;
+- no owner-attested diversity/actionability evidence exists for the changed packet;
+- machine non-inferiority is not a meaningful Agent-value claim when the only changed packet scored
+  lower and cannot be reviewed.
+
+Next actionable work:
+
+1. Do not rerun this comparison or reacquire the packet under the consumed budget.
+2. Continue no-call T01 analysis around a reproducible private-artifact fixture and a more causal
+   changed-packet measure before asking for any new spend.
+3. Keep T02 blocked until a future, separately approved design can produce complete machine and human
+   evidence without weakening the path boundary.
+
 ### 25 August 2026 — Structural-repair deployment and one paid validation approved
 
 Recorded decisions:
@@ -9,8 +77,8 @@ Recorded decisions:
    health endpoint returns `{"status":"ok"}`.
 2. The owner separately approved one complete structural-repair comparison with 30–90 synthesis
    calls, up to ten planner calls and up to ten external-provider calls.
-3. The historical comparison authorisation remains consumed. The new confirmation is a distinct,
-   currently unconsumed record; it cannot overwrite the historical report or private paths.
+3. The historical comparison authorisation remained consumed. The new confirmation was recorded as a
+   distinct unconsumed record; the result above documents its later consumption.
 4. The run must use committed tracked code, the complete five-case/three-repetition schedule, frozen
    thresholds, alternating lane order and zero-scored failures. It does not authorise T02, hosted
    routing or production Agent cut-over.

@@ -245,8 +245,9 @@ selected **REVISE** for a separate [Text-Agent Programme](TEXT_AGENT_PROGRAMME.m
 packet effects across repeated generations and gives the graph two repairs. Its separately approved
 run completed 15/15 in both lanes and passed quality/cost, but failed frozen P50/P95 latency ratios
 `1.100404/1.993109`. A later no-call revision replaces full regeneration of parseable invalid output
-with bounded field patches. One provider-backed comparison is approved but has no result yet. This
-does not change the completed Pre-Agent gate or permit production routing.
+with bounded field patches. Its provider-backed comparison passed machine targets without a repair,
+but failed to write the private review artifact; no human evidence exists. This does not change the
+completed Pre-Agent gate or permit production routing.
 
 ## Human Packet Rubric
 

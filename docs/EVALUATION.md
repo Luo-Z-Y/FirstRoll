@@ -361,14 +361,25 @@ The consumed authorisation now makes this command refuse a rerun. Because machin
 pass, no changed-packet snapshot or human review was created. Human ratings cannot be supplied by an
 Agent, and no hosted route or production cut-over is implied.
 
-The subsequent no-call latency revision does not rewrite that result. It classifies failures safely,
-uses deterministic Agent generation and gives parseable schema/citation failures an exact field-patch
+The subsequent latency revision does not rewrite that result. It classifies failures safely, uses
+deterministic Agent generation and gives parseable schema/citation failures an exact field-patch
 repair capped at four paths and 800 completion tokens. Accepted fields are merged unchanged and the
-complete study is revalidated. Future report schema 3 counts initial failures, structural repairs,
-quality repairs, full regenerations, per-strategy P50/P95 and allow-listed failure categories; it
-model call and terminal latency. Synthetic transport tests establish control flow and privacy, not
-provider latency. The owner has now confirmed the staged 30–90 synthesis-call budget for one complete
-comparison; no result exists yet and every retry remains in terminal latency.
+complete study is revalidated. Report schema 3 counts initial failures, structural repairs, quality
+repairs, full regenerations, per-strategy P50/P95 and allow-listed failure categories while retaining
+every model call and terminal latency.
+
+The separately authorised result is
+[`text-agent-structural-repair-2026-08-25.json`](../evals/results/text-agent-structural-repair-2026-08-25.json).
+Both lanes completed 15/15 without repair. Fixed/Agent quality was `98.32/97.88`; P50/P95 ratios
+`1.003191/0.888329` and total-token ratio `1.002379` passed. The target again gained three reviews and
+moved `limited → passed`, but its study mean was `95.97` against fixed `98.25`. Structural repair was
+not exercised.
+
+After report creation, the private packet write was rejected because its symlink resolved outside the
+worktree boundary. This operational failure is recorded rather than omitted: machine targets remain
+passed, but artifact completeness and human-review readiness are false. No snapshot exists, the run
+was not repeated and the authorisation is consumed. A new preflight checks the resolved private path
+before any future paid call.
 
 ## Deep Study Transparency Checkpoint
 

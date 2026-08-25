@@ -305,11 +305,12 @@ at `1.100404/1.993109`. Its historical authorisation is consumed. No mode-`0600`
 snapshot exists because machine targets failed; do not invoke the human-review tool for that result.
 
 The local-only structural revision uses deterministic Agent generation and bounded field patches for
-parseable schema/citation failures. The owner has separately authorised one complete run at 30–90
-synthesis calls and at most ten planner/provider calls. The evaluator still requires committed source
-and fresh paths; do not bypass those guards or rerun after the confirmation is consumed. Malformed or
-unpatchable output remains within the same graph-owned fallback budget. This switch is not an
-interactive product capability or hosted configuration.
+parseable schema/citation failures. Its one authorised run is complete and consumed: all machine
+targets passed without a repair, but the private snapshot was rejected because the worktree symlink
+resolved outside its allowed `.firstroll` boundary. The evaluator now checks committed source, fresh
+paths and the resolved private boundary before any spend. Do not bypass those guards, rerun the
+comparison or invoke human review because no packet exists. This switch is not an interactive product
+capability or hosted configuration.
 
 ## Troubleshooting
 

@@ -271,8 +271,10 @@ is the only synthesis difference. Reports contain safe aggregate quality/tool/ti
 Private packets may be written under ignored mode-`0600` `.firstroll` storage only after every machine
 gate passes. The completed repeated run failed P50/P95 ratios `1.100404/1.993109`, so it wrote no
 packet and its consumed authorisation now prevents rerun. The structural-repair revision has only
-synthetic evidence; one complete local paid validation is authorised under a distinct unconsumed
-budget. Hosted execution remains prohibited.
+synthetic evidence. Its paid validation used no repair and passed machine targets, but a worktree
+symlink escaped the private-output boundary, so the safe write was rejected and no human artifact
+exists. The evaluator now preflights resolved private paths; the budget is consumed. Hosted execution
+remains prohibited.
 
 ### Hosted Deep Study
 

@@ -15,8 +15,8 @@ checks. Hiding generated documentation reduces the production discovery surface 
 authentication control: every protected operation still enforces its own bearer boundary. The
 local Agent evaluation work is a Python factory only. The completed run's authorisation remains
 consumed, while a local revision adds safe failure categories and process-only field-patch repair.
-One complete local validation budget is now approved, but `FIRSTROLL_LOCAL_AGENT_ENABLED` still
-registers no HTTP endpoint and does not alter any route in this reference.
+Its one local validation is complete, machine-passed and artifact-incomplete; the consumed run does
+not change that `FIRSTROLL_LOCAL_AGENT_ENABLED` registers no HTTP endpoint or alter any route here.
 
 ## Access Classes
 

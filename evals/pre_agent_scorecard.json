@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "programme_id": "firstroll-pre-agent-hardening-v1",
-  "status": "complete_repeated_text_agent_comparison_no_go",
+  "status": "complete_structural_text_agent_machine_pass_artifact_incomplete",
   "purpose": "Stabilise the fixed FirstRoll product before any production Agent integration.",
   "scope": {
     "primary_runtime": "local_private_edition",
@@ -558,14 +558,15 @@
     "brief_path": "docs/AGENT_GO_NO_GO.md",
     "contract_path": "evals/agent_go_no_go.json",
     "status": "bounded_local_comparison_failed_no_go",
-    "recommendation": "retain_fixed_workflow_after_revised_latency_failure",
+    "recommendation": "retain_fixed_workflow_after_artifact_incomplete_machine_pass",
     "result_path": "evals/results/local-agent-paired-2026-08-24.json",
     "production_route_cutover": "no_go",
     "successor_text_programme": {
       "contract_path": "evals/text_agent_programme.json",
-      "status": "structural_repair_revision_approved_for_one_paid_validation",
-      "result_path": "evals/results/text-agent-repeated-2026-08-25.json",
-      "revision_paid_validation_authorised": true
+      "status": "machine_passed_artifact_failure_human_review_unavailable",
+      "result_path": "evals/results/text-agent-structural-repair-2026-08-25.json",
+      "revision_paid_validation_authorised": false,
+      "revision_paid_validation_authorisation_consumed": true
     }
   },
   "agent_entry_gate": {
@@ -601,6 +602,6 @@
       "paired_end_to_end_median_reduction",
       "paired_end_to_end_p95_regression"
     ],
-    "decision": "The original comparison failed completion and quality. The revised isolated comparison restored 15/15 completion and passed quality/cost but failed both frozen latency-ratio targets. Keep the fixed workflow; production Agent route cutover remains no-go."
+    "decision": "The original comparison failed completion and quality. The isolated retry comparison restored completion but failed latency. The structural revision passed every machine target without exercising repair, then failed to produce its private human-review artifact. Keep the fixed workflow; production Agent route cutover remains no-go."
   }
 }

@@ -177,6 +177,20 @@ def test_private_packet_snapshot_is_restricted_and_mode_hardened(
         evaluator.write_private_packets(tmp_path / "evals" / "unsafe.json", {})
 
 
+def test_private_packet_preflight_rejects_a_symlink_outside_the_worktree(tmp_path) -> None:
+    worktree = tmp_path / "worktree"
+    outside = tmp_path / "outside-private"
+    worktree.mkdir()
+    outside.mkdir()
+    (worktree / ".firstroll").symlink_to(outside, target_is_directory=True)
+
+    with pytest.raises(ValueError, match="must stay under .firstroll"):
+        evaluator.validate_private_packet_output_path(
+            worktree / ".firstroll" / "evaluations" / "packets.json",
+            root=worktree,
+        )
+
+
 def test_recording_transport_counts_failed_attempt_without_error_detail(monkeypatch) -> None:
     def fail(url: str, payload: dict[str, Any] | None, key: str) -> dict[str, Any]:
         raise RuntimeError("PRIVATE_PROVIDER_ERROR")
