@@ -1,0 +1,2591 @@
+{
+  "schema_version": 2,
+  "programme_id": "firstroll-text-agent-v1",
+  "suite_id": "firstroll-agent-comparison-v1",
+  "suite_fingerprint": "d649d2937fe0a9d0",
+  "recorded_at": "2026-08-25T05:35:41.111754+00:00",
+  "source_revision": "f442f5cedf800d0be09f2d5051453f7441debca5",
+  "environment": {
+    "python": "3.11.7",
+    "platform": "macOS-26.5.2-arm64-arm-64bit",
+    "model": "deepseek-v4-pro",
+    "local_agent_enabled": true
+  },
+  "protocol": {
+    "generation_repetitions_per_lane_per_case": 3,
+    "scheduled_generation_samples_per_lane": 15,
+    "maximum_repairs_per_sample": 2,
+    "failures_scored_zero": true,
+    "alternating_lane_order": true,
+    "packet_acquired_once_before_generation": true,
+    "same_generation_controller_for_both_lanes": true
+  },
+  "summary": {
+    "fixed": {
+      "scheduled_samples": 15,
+      "completed_samples": 15,
+      "failed_samples": 0,
+      "completion_ratio": 1.0,
+      "mean_quality_all_scheduled": 97.17,
+      "quality_standard_deviation": 1.57,
+      "minimum_quality": 94.0,
+      "maximum_quality": 99.0,
+      "quality_gate_pass_ratio": 1.0,
+      "valid_citation_ratio": 1.0,
+      "p50_latency_seconds": 41.881,
+      "p95_latency_seconds": 49.05,
+      "model_calls": 15,
+      "token_usage_complete_ratio": 1.0,
+      "total_tokens": 114737
+    },
+    "agent": {
+      "scheduled_samples": 15,
+      "completed_samples": 15,
+      "failed_samples": 0,
+      "completion_ratio": 1.0,
+      "mean_quality_all_scheduled": 97.8,
+      "quality_standard_deviation": 1.38,
+      "minimum_quality": 95.0,
+      "maximum_quality": 100.0,
+      "quality_gate_pass_ratio": 1.0,
+      "valid_citation_ratio": 1.0,
+      "p50_latency_seconds": 46.086,
+      "p95_latency_seconds": 97.762,
+      "model_calls": 17,
+      "token_usage_complete_ratio": 1.0,
+      "total_tokens": 135759
+    },
+    "comparison": {
+      "agent_minus_fixed_mean_quality": 0.63,
+      "p50_latency_ratio": 1.100404,
+      "p95_latency_ratio": 1.993109,
+      "total_token_ratio": 1.186853,
+      "agent_acquisition_planner_calls": 1,
+      "agent_total_model_calls_including_acquisition": 18,
+      "agent_acquisition_planner_tokens": 417,
+      "agent_total_tokens_including_acquisition": 136176
+    },
+    "local_machine_targets_passed": false,
+    "human_packet_review_ready": false,
+    "production_cutover_ready": false
+  },
+  "targets": [
+    {
+      "target_id": "fixed_sample_completion_ratio",
+      "status": "passed",
+      "observed": 1.0,
+      "comparison": "eq",
+      "threshold": 1.0
+    },
+    {
+      "target_id": "agent_sample_completion_ratio",
+      "status": "passed",
+      "observed": 1.0,
+      "comparison": "eq",
+      "threshold": 1.0
+    },
+    {
+      "target_id": "agent_mean_automated_quality",
+      "status": "passed",
+      "observed": 97.8,
+      "comparison": "gte",
+      "threshold": 96.94
+    },
+    {
+      "target_id": "agent_minus_fixed_mean_quality",
+      "status": "passed",
+      "observed": 0.63,
+      "comparison": "gte",
+      "threshold": -1.71
+    },
+    {
+      "target_id": "quality_gate_pass_ratio",
+      "status": "passed",
+      "observed": 1.0,
+      "comparison": "eq",
+      "threshold": 1.0
+    },
+    {
+      "target_id": "valid_citation_ratio",
+      "status": "passed",
+      "observed": 1.0,
+      "comparison": "eq",
+      "threshold": 1.0
+    },
+    {
+      "target_id": "token_usage_complete_ratio",
+      "status": "passed",
+      "observed": 1.0,
+      "comparison": "eq",
+      "threshold": 1.0
+    },
+    {
+      "target_id": "planner_token_usage_complete",
+      "status": "passed",
+      "observed": true,
+      "comparison": "eq",
+      "threshold": true
+    },
+    {
+      "target_id": "identity_match_ratio",
+      "status": "passed",
+      "observed": 1.0,
+      "comparison": "eq",
+      "threshold": 1.0
+    },
+    {
+      "target_id": "instruction_containment_ratio",
+      "status": "passed",
+      "observed": 1.0,
+      "comparison": "eq",
+      "threshold": 1.0
+    },
+    {
+      "target_id": "sufficient_packet_external_calls",
+      "status": "passed",
+      "observed": 0,
+      "comparison": "eq",
+      "threshold": 0
+    },
+    {
+      "target_id": "sufficient_packet_mutations",
+      "status": "passed",
+      "observed": 0,
+      "comparison": "eq",
+      "threshold": 0
+    },
+    {
+      "target_id": "target_packet_final_status",
+      "status": "passed",
+      "observed": "passed",
+      "comparison": "eq",
+      "threshold": "passed"
+    },
+    {
+      "target_id": "target_packet_changed",
+      "status": "passed",
+      "observed": true,
+      "comparison": "eq",
+      "threshold": true
+    },
+    {
+      "target_id": "repeated_provider_calls",
+      "status": "passed",
+      "observed": 0,
+      "comparison": "eq",
+      "threshold": 0
+    },
+    {
+      "target_id": "repeated_p50_latency_ratio",
+      "status": "failed",
+      "observed": 1.100404,
+      "comparison": "lte",
+      "threshold": 1.1
+    },
+    {
+      "target_id": "repeated_p95_latency_ratio",
+      "status": "failed",
+      "observed": 1.993109,
+      "comparison": "lte",
+      "threshold": 1.25
+    },
+    {
+      "target_id": "repeated_total_token_ratio",
+      "status": "passed",
+      "observed": 1.186853,
+      "comparison": "lte",
+      "threshold": 1.25
+    }
+  ],
+  "acquisition_cases": [
+    {
+      "case_id": "syndromes-cinematography",
+      "status": "passed",
+      "terminal_status": "evidence_ready",
+      "initial_packet_status": "passed",
+      "final_packet_status": "passed",
+      "initial_packet_fingerprint": "87399c2407635f5d",
+      "packet_fingerprint": "87399c2407635f5d",
+      "planning_calls": 0,
+      "planner_total_tokens": 0,
+      "external_tool_calls": 0,
+      "attempted_tools": [],
+      "tool_attempts": [],
+      "acquired_reviews": 0,
+      "acquired_videos": 0,
+      "instruction_containment": true,
+      "packet_changed": false
+    },
+    {
+      "case_id": "in-the-mood-for-love-space",
+      "status": "passed",
+      "terminal_status": "evidence_ready",
+      "initial_packet_status": "passed",
+      "final_packet_status": "passed",
+      "initial_packet_fingerprint": "104fb1bc6f3623aa",
+      "packet_fingerprint": "104fb1bc6f3623aa",
+      "planning_calls": 0,
+      "planner_total_tokens": 0,
+      "external_tool_calls": 0,
+      "attempted_tools": [],
+      "tool_attempts": [],
+      "acquired_reviews": 0,
+      "acquired_videos": 0,
+      "instruction_containment": true,
+      "packet_changed": false
+    },
+    {
+      "case_id": "memoria-sound",
+      "status": "passed",
+      "terminal_status": "evidence_ready",
+      "initial_packet_status": "passed",
+      "final_packet_status": "passed",
+      "initial_packet_fingerprint": "29c1bfa1b3f888f3",
+      "packet_fingerprint": "29c1bfa1b3f888f3",
+      "planning_calls": 0,
+      "planner_total_tokens": 0,
+      "external_tool_calls": 0,
+      "attempted_tools": [],
+      "tool_attempts": [],
+      "acquired_reviews": 0,
+      "acquired_videos": 0,
+      "instruction_containment": true,
+      "packet_changed": false
+    },
+    {
+      "case_id": "the-thing-ambiguous-identity",
+      "status": "passed",
+      "terminal_status": "evidence_ready",
+      "initial_packet_status": "limited",
+      "final_packet_status": "passed",
+      "initial_packet_fingerprint": "11086a4f820d58ef",
+      "packet_fingerprint": "48e4f39051e94f53",
+      "planning_calls": 1,
+      "planner_total_tokens": 417,
+      "external_tool_calls": 1,
+      "attempted_tools": [
+        "fetch_letterboxd_reviews"
+      ],
+      "tool_attempts": [
+        {
+          "tool": "fetch_letterboxd_reviews",
+          "status": "completed",
+          "duration_seconds": 3.112
+        }
+      ],
+      "acquired_reviews": 3,
+      "acquired_videos": 0,
+      "instruction_containment": true,
+      "packet_changed": true
+    },
+    {
+      "case_id": "we-are-all-strangers-sparse",
+      "status": "passed",
+      "terminal_status": "evidence_ready",
+      "initial_packet_status": "passed",
+      "final_packet_status": "passed",
+      "initial_packet_fingerprint": "d07e0877aade1eb3",
+      "packet_fingerprint": "d07e0877aade1eb3",
+      "planning_calls": 0,
+      "planner_total_tokens": 0,
+      "external_tool_calls": 0,
+      "attempted_tools": [],
+      "tool_attempts": [],
+      "acquired_reviews": 0,
+      "acquired_videos": 0,
+      "instruction_containment": true,
+      "packet_changed": false
+    }
+  ],
+  "samples": [
+    {
+      "case_id": "syndromes-cinematography",
+      "lane": "fixed",
+      "repetition": 1,
+      "status": "passed",
+      "terminal_status": "complete",
+      "identity_match": true,
+      "quality": {
+        "score": 96.0,
+        "components": {
+          "identity": 15.0,
+          "structured_completion": 10.0,
+          "deterministic_quality_gate": 21.0,
+          "citation_integrity": 20.0,
+          "epistemic_calibration": 10.0,
+          "observable_verification": 10.0,
+          "evidence_coverage": 10.0
+        },
+        "quality_gate_status": "passed",
+        "quality_gate_score": 0.84,
+        "quality_gate_central_issues": [],
+        "quality_gate_failed_sections": [
+          {
+            "section": 1,
+            "score": 0.8,
+            "issues": [
+              "mechanism_not_causal"
+            ]
+          },
+          {
+            "section": 3,
+            "score": 0.8,
+            "issues": [
+              "mechanism_not_causal"
+            ]
+          },
+          {
+            "section": 5,
+            "score": 0.6,
+            "issues": [
+              "generic_language",
+              "mechanism_not_causal"
+            ]
+          }
+        ],
+        "repair_attempted": false,
+        "section_count": 5,
+        "valid_citations": true,
+        "distinct_theory_sources_cited": 5,
+        "available_theory_sources": 8,
+        "calibrated_section_ratio": 1.0,
+        "observable_verification_ratio": 1.0
+      },
+      "packet_fingerprint": "87399c2407635f5d",
+      "graph_counts": {
+        "steps": 2,
+        "synthesis_calls": 1,
+        "repair_calls": 0
+      },
+      "study_attempts": [
+        {
+          "kind": "initial",
+          "status": "completed",
+          "quality_status": "passed",
+          "model_calls": 1,
+          "total_tokens": 5666
+        }
+      ],
+      "latency_seconds": 41.445,
+      "model_calls": [
+        {
+          "endpoint": "completions",
+          "status": "completed",
+          "latency_seconds": 39.931,
+          "model": "deepseek-v4-pro",
+          "usage": {
+            "prompt_tokens": 3460,
+            "completion_tokens": 2206,
+            "total_tokens": 5666
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "syndromes-cinematography",
+      "lane": "agent",
+      "repetition": 1,
+      "status": "passed",
+      "terminal_status": "complete",
+      "identity_match": true,
+      "quality": {
+        "score": 95.0,
+        "components": {
+          "identity": 15.0,
+          "structured_completion": 10.0,
+          "deterministic_quality_gate": 20.0,
+          "citation_integrity": 20.0,
+          "epistemic_calibration": 10.0,
+          "observable_verification": 10.0,
+          "evidence_coverage": 10.0
+        },
+        "quality_gate_status": "passed",
+        "quality_gate_score": 0.8,
+        "quality_gate_central_issues": [],
+        "quality_gate_failed_sections": [
+          {
+            "section": 1,
+            "score": 0.8,
+            "issues": [
+              "mechanism_not_causal"
+            ]
+          },
+          {
+            "section": 2,
+            "score": 0.8,
+            "issues": [
+              "mechanism_not_causal"
+            ]
+          },
+          {
+            "section": 3,
+            "score": 0.8,
+            "issues": [
+              "mechanism_not_causal"
+            ]
+          },
+          {
+            "section": 4,
+            "score": 0.8,
+            "issues": [
+              "mechanism_not_causal"
+            ]
+          },
+          {
+            "section": 5,
+            "score": 0.8,
+            "issues": [
+              "mechanism_not_causal"
+            ]
+          }
+        ],
+        "repair_attempted": false,
+        "section_count": 5,
+        "valid_citations": true,
+        "distinct_theory_sources_cited": 4,
+        "available_theory_sources": 8,
+        "calibrated_section_ratio": 1.0,
+        "observable_verification_ratio": 1.0
+      },
+      "packet_fingerprint": "87399c2407635f5d",
+      "graph_counts": {
+        "steps": 2,
+        "synthesis_calls": 1,
+        "repair_calls": 0
+      },
+      "study_attempts": [
+        {
+          "kind": "initial",
+          "status": "completed",
+          "quality_status": "passed",
+          "model_calls": 1,
+          "total_tokens": 5480
+        }
+      ],
+      "latency_seconds": 35.384,
+      "model_calls": [
+        {
+          "endpoint": "completions",
+          "status": "completed",
+          "latency_seconds": 33.524,
+          "model": "deepseek-v4-pro",
+          "usage": {
+            "prompt_tokens": 3460,
+            "completion_tokens": 2020,
+            "total_tokens": 5480
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "syndromes-cinematography",
+      "lane": "agent",
+      "repetition": 2,
+      "status": "passed",
+      "terminal_status": "complete",
+      "identity_match": true,
+      "quality": {
+        "score": 98.0,
+        "components": {
+          "identity": 15.0,
+          "structured_completion": 10.0,
+          "deterministic_quality_gate": 23.0,
+          "citation_integrity": 20.0,
+          "epistemic_calibration": 10.0,
+          "observable_verification": 10.0,
+          "evidence_coverage": 10.0
+        },
+        "quality_gate_status": "passed",
+        "quality_gate_score": 0.92,
+        "quality_gate_central_issues": [],
+        "quality_gate_failed_sections": [
+          {
+            "section": 2,
+            "score": 0.6,
+            "issues": [
+              "generic_language",
+              "mechanism_not_causal"
+            ]
+          }
+        ],
+        "repair_attempted": false,
+        "section_count": 5,
+        "valid_citations": true,
+        "distinct_theory_sources_cited": 6,
+        "available_theory_sources": 8,
+        "calibrated_section_ratio": 1.0,
+        "observable_verification_ratio": 1.0
+      },
+      "packet_fingerprint": "87399c2407635f5d",
+      "graph_counts": {
+        "steps": 2,
+        "synthesis_calls": 1,
+        "repair_calls": 0
+      },
+      "study_attempts": [
+        {
+          "kind": "initial",
+          "status": "completed",
+          "quality_status": "passed",
+          "model_calls": 1,
+          "total_tokens": 5487
+        }
+      ],
+      "latency_seconds": 35.327,
+      "model_calls": [
+        {
+          "endpoint": "completions",
+          "status": "completed",
+          "latency_seconds": 33.741,
+          "model": "deepseek-v4-pro",
+          "usage": {
+            "prompt_tokens": 3460,
+            "completion_tokens": 2027,
+            "total_tokens": 5487
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "syndromes-cinematography",
+      "lane": "fixed",
+      "repetition": 2,
+      "status": "passed",
+      "terminal_status": "complete",
+      "identity_match": true,
+      "quality": {
+        "score": 97.0,
+        "components": {
+          "identity": 15.0,
+          "structured_completion": 10.0,
+          "deterministic_quality_gate": 22.0,
+          "citation_integrity": 20.0,
+          "epistemic_calibration": 10.0,
+          "observable_verification": 10.0,
+          "evidence_coverage": 10.0
+        },
+        "quality_gate_status": "passed",
+        "quality_gate_score": 0.88,
+        "quality_gate_central_issues": [],
+        "quality_gate_failed_sections": [
+          {
+            "section": 1,
+            "score": 0.8,
+            "issues": [
+              "mechanism_not_causal"
+            ]
+          },
+          {
+            "section": 2,
+            "score": 0.8,
+            "issues": [
+              "mechanism_not_causal"
+            ]
+          },
+          {
+            "section": 3,
+            "score": 0.8,
+            "issues": [
+              "mechanism_not_causal"
+            ]
+          }
+        ],
+        "repair_attempted": false,
+        "section_count": 5,
+        "valid_citations": true,
+        "distinct_theory_sources_cited": 6,
+        "available_theory_sources": 8,
+        "calibrated_section_ratio": 1.0,
+        "observable_verification_ratio": 1.0
+      },
+      "packet_fingerprint": "87399c2407635f5d",
+      "graph_counts": {
+        "steps": 2,
+        "synthesis_calls": 1,
+        "repair_calls": 0
+      },
+      "study_attempts": [
+        {
+          "kind": "initial",
+          "status": "completed",
+          "quality_status": "passed",
+          "model_calls": 1,
+          "total_tokens": 5531
+        }
+      ],
+      "latency_seconds": 35.558,
+      "model_calls": [
+        {
+          "endpoint": "completions",
+          "status": "completed",
+          "latency_seconds": 33.631,
+          "model": "deepseek-v4-pro",
+          "usage": {
+            "prompt_tokens": 3460,
+            "completion_tokens": 2071,
+            "total_tokens": 5531
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "syndromes-cinematography",
+      "lane": "fixed",
+      "repetition": 3,
+      "status": "passed",
+      "terminal_status": "complete",
+      "identity_match": true,
+      "quality": {
+        "score": 98.0,
+        "components": {
+          "identity": 15.0,
+          "structured_completion": 10.0,
+          "deterministic_quality_gate": 23.0,
+          "citation_integrity": 20.0,
+          "epistemic_calibration": 10.0,
+          "observable_verification": 10.0,
+          "evidence_coverage": 10.0
+        },
+        "quality_gate_status": "passed",
+        "quality_gate_score": 0.92,
+        "quality_gate_central_issues": [],
+        "quality_gate_failed_sections": [
+          {
+            "section": 1,
+            "score": 0.8,
+            "issues": [
+              "mechanism_not_causal"
+            ]
+          },
+          {
+            "section": 4,
+            "score": 0.8,
+            "issues": [
+              "mechanism_not_causal"
+            ]
+          }
+        ],
+        "repair_attempted": false,
+        "section_count": 5,
+        "valid_citations": true,
+        "distinct_theory_sources_cited": 4,
+        "available_theory_sources": 8,
+        "calibrated_section_ratio": 1.0,
+        "observable_verification_ratio": 1.0
+      },
+      "packet_fingerprint": "87399c2407635f5d",
+      "graph_counts": {
+        "steps": 2,
+        "synthesis_calls": 1,
+        "repair_calls": 0
+      },
+      "study_attempts": [
+        {
+          "kind": "initial",
+          "status": "completed",
+          "quality_status": "passed",
+          "model_calls": 1,
+          "total_tokens": 5495
+        }
+      ],
+      "latency_seconds": 35.404,
+      "model_calls": [
+        {
+          "endpoint": "completions",
+          "status": "completed",
+          "latency_seconds": 33.404,
+          "model": "deepseek-v4-pro",
+          "usage": {
+            "prompt_tokens": 3460,
+            "completion_tokens": 2035,
+            "total_tokens": 5495
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "syndromes-cinematography",
+      "lane": "agent",
+      "repetition": 3,
+      "status": "passed",
+      "terminal_status": "complete",
+      "identity_match": true,
+      "quality": {
+        "score": 99.0,
+        "components": {
+          "identity": 15.0,
+          "structured_completion": 10.0,
+          "deterministic_quality_gate": 24.0,
+          "citation_integrity": 20.0,
+          "epistemic_calibration": 10.0,
+          "observable_verification": 10.0,
+          "evidence_coverage": 10.0
+        },
+        "quality_gate_status": "passed",
+        "quality_gate_score": 0.96,
+        "quality_gate_central_issues": [],
+        "quality_gate_failed_sections": [
+          {
+            "section": 1,
+            "score": 0.8,
+            "issues": [
+              "mechanism_not_causal"
+            ]
+          }
+        ],
+        "repair_attempted": false,
+        "section_count": 5,
+        "valid_citations": true,
+        "distinct_theory_sources_cited": 6,
+        "available_theory_sources": 8,
+        "calibrated_section_ratio": 1.0,
+        "observable_verification_ratio": 1.0
+      },
+      "packet_fingerprint": "87399c2407635f5d",
+      "graph_counts": {
+        "steps": 2,
+        "synthesis_calls": 1,
+        "repair_calls": 0
+      },
+      "study_attempts": [
+        {
+          "kind": "initial",
+          "status": "completed",
+          "quality_status": "passed",
+          "model_calls": 1,
+          "total_tokens": 6038
+        }
+      ],
+      "latency_seconds": 47.984,
+      "model_calls": [
+        {
+          "endpoint": "completions",
+          "status": "completed",
+          "latency_seconds": 46.402,
+          "model": "deepseek-v4-pro",
+          "usage": {
+            "prompt_tokens": 3460,
+            "completion_tokens": 2578,
+            "total_tokens": 6038
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "in-the-mood-for-love-space",
+      "lane": "fixed",
+      "repetition": 1,
+      "status": "passed",
+      "terminal_status": "complete",
+      "identity_match": true,
+      "quality": {
+        "score": 96.5,
+        "components": {
+          "identity": 15.0,
+          "structured_completion": 10.0,
+          "deterministic_quality_gate": 24.0,
+          "citation_integrity": 20.0,
+          "epistemic_calibration": 10.0,
+          "observable_verification": 10.0,
+          "evidence_coverage": 7.5
+        },
+        "quality_gate_status": "passed",
+        "quality_gate_score": 0.96,
+        "quality_gate_central_issues": [],
+        "quality_gate_failed_sections": [
+          {
+            "section": 4,
+            "score": 0.8,
+            "issues": [
+              "mechanism_not_causal"
+            ]
+          }
+        ],
+        "repair_attempted": false,
+        "section_count": 5,
+        "valid_citations": true,
+        "distinct_theory_sources_cited": 3,
+        "available_theory_sources": 8,
+        "calibrated_section_ratio": 1.0,
+        "observable_verification_ratio": 1.0
+      },
+      "packet_fingerprint": "104fb1bc6f3623aa",
+      "graph_counts": {
+        "steps": 2,
+        "synthesis_calls": 1,
+        "repair_calls": 0
+      },
+      "study_attempts": [
+        {
+          "kind": "initial",
+          "status": "completed",
+          "quality_status": "passed",
+          "model_calls": 1,
+          "total_tokens": 9200
+        }
+      ],
+      "latency_seconds": 48.701,
+      "model_calls": [
+        {
+          "endpoint": "completions",
+          "status": "completed",
+          "latency_seconds": 45.134,
+          "model": "deepseek-v4-pro",
+          "usage": {
+            "prompt_tokens": 6926,
+            "completion_tokens": 2274,
+            "total_tokens": 9200
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "in-the-mood-for-love-space",
+      "lane": "agent",
+      "repetition": 1,
+      "status": "passed",
+      "terminal_status": "complete",
+      "identity_match": true,
+      "quality": {
+        "score": 99.0,
+        "components": {
+          "identity": 15.0,
+          "structured_completion": 10.0,
+          "deterministic_quality_gate": 24.0,
+          "citation_integrity": 20.0,
+          "epistemic_calibration": 10.0,
+          "observable_verification": 10.0,
+          "evidence_coverage": 10.0
+        },
+        "quality_gate_status": "passed",
+        "quality_gate_score": 0.96,
+        "quality_gate_central_issues": [],
+        "quality_gate_failed_sections": [
+          {
+            "section": 4,
+            "score": 0.8,
+            "issues": [
+              "mechanism_not_causal"
+            ]
+          }
+        ],
+        "repair_attempted": false,
+        "section_count": 5,
+        "valid_citations": true,
+        "distinct_theory_sources_cited": 5,
+        "available_theory_sources": 8,
+        "calibrated_section_ratio": 1.0,
+        "observable_verification_ratio": 1.0
+      },
+      "packet_fingerprint": "104fb1bc6f3623aa",
+      "graph_counts": {
+        "steps": 3,
+        "synthesis_calls": 1,
+        "repair_calls": 1
+      },
+      "study_attempts": [
+        {
+          "kind": "initial",
+          "status": "failed",
+          "quality_status": "invalid",
+          "model_calls": 1,
+          "total_tokens": 9039
+        },
+        {
+          "kind": "repair",
+          "status": "completed",
+          "quality_status": "passed",
+          "model_calls": 1,
+          "total_tokens": 9226
+        }
+      ],
+      "latency_seconds": 95.411,
+      "model_calls": [
+        {
+          "endpoint": "completions",
+          "status": "completed",
+          "latency_seconds": 42.739,
+          "model": "deepseek-v4-pro",
+          "usage": {
+            "prompt_tokens": 6926,
+            "completion_tokens": 2113,
+            "total_tokens": 9039
+          }
+        },
+        {
+          "endpoint": "completions",
+          "status": "completed",
+          "latency_seconds": 49.344,
+          "model": "deepseek-v4-pro",
+          "usage": {
+            "prompt_tokens": 6926,
+            "completion_tokens": 2300,
+            "total_tokens": 9226
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "in-the-mood-for-love-space",
+      "lane": "agent",
+      "repetition": 2,
+      "status": "passed",
+      "terminal_status": "complete",
+      "identity_match": true,
+      "quality": {
+        "score": 98.0,
+        "components": {
+          "identity": 15.0,
+          "structured_completion": 10.0,
+          "deterministic_quality_gate": 23.0,
+          "citation_integrity": 20.0,
+          "epistemic_calibration": 10.0,
+          "observable_verification": 10.0,
+          "evidence_coverage": 10.0
+        },
+        "quality_gate_status": "passed",
+        "quality_gate_score": 0.92,
+        "quality_gate_central_issues": [],
+        "quality_gate_failed_sections": [
+          {
+            "section": 2,
+            "score": 0.8,
+            "issues": [
+              "mechanism_not_causal"
+            ]
+          },
+          {
+            "section": 3,
+            "score": 0.8,
+            "issues": [
+              "generic_language"
+            ]
+          }
+        ],
+        "repair_attempted": false,
+        "section_count": 5,
+        "valid_citations": true,
+        "distinct_theory_sources_cited": 4,
+        "available_theory_sources": 8,
+        "calibrated_section_ratio": 1.0,
+        "observable_verification_ratio": 1.0
+      },
+      "packet_fingerprint": "104fb1bc6f3623aa",
+      "graph_counts": {
+        "steps": 3,
+        "synthesis_calls": 1,
+        "repair_calls": 1
+      },
+      "study_attempts": [
+        {
+          "kind": "initial",
+          "status": "failed",
+          "quality_status": "invalid",
+          "model_calls": 1,
+          "total_tokens": 9237
+        },
+        {
+          "kind": "repair",
+          "status": "completed",
+          "quality_status": "passed",
+          "model_calls": 1,
+          "total_tokens": 9460
+        }
+      ],
+      "latency_seconds": 103.249,
+      "model_calls": [
+        {
+          "endpoint": "completions",
+          "status": "completed",
+          "latency_seconds": 48.168,
+          "model": "deepseek-v4-pro",
+          "usage": {
+            "prompt_tokens": 6926,
+            "completion_tokens": 2311,
+            "total_tokens": 9237
+          }
+        },
+        {
+          "endpoint": "completions",
+          "status": "completed",
+          "latency_seconds": 51.636,
+          "model": "deepseek-v4-pro",
+          "usage": {
+            "prompt_tokens": 6926,
+            "completion_tokens": 2534,
+            "total_tokens": 9460
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "in-the-mood-for-love-space",
+      "lane": "fixed",
+      "repetition": 2,
+      "status": "passed",
+      "terminal_status": "complete",
+      "identity_match": true,
+      "quality": {
+        "score": 94.0,
+        "components": {
+          "identity": 15.0,
+          "structured_completion": 10.0,
+          "deterministic_quality_gate": 21.0,
+          "citation_integrity": 20.0,
+          "epistemic_calibration": 10.0,
+          "observable_verification": 8.0,
+          "evidence_coverage": 10.0
+        },
+        "quality_gate_status": "passed",
+        "quality_gate_score": 0.84,
+        "quality_gate_central_issues": [],
+        "quality_gate_failed_sections": [
+          {
+            "section": 2,
+            "score": 0.8,
+            "issues": [
+              "mechanism_not_causal"
+            ]
+          },
+          {
+            "section": 3,
+            "score": 0.8,
+            "issues": [
+              "mechanism_not_causal"
+            ]
+          },
+          {
+            "section": 4,
+            "score": 0.8,
+            "issues": [
+              "mechanism_not_causal"
+            ]
+          },
+          {
+            "section": 5,
+            "score": 0.8,
+            "issues": [
+              "verification_not_observable"
+            ]
+          }
+        ],
+        "repair_attempted": false,
+        "section_count": 5,
+        "valid_citations": true,
+        "distinct_theory_sources_cited": 6,
+        "available_theory_sources": 8,
+        "calibrated_section_ratio": 1.0,
+        "observable_verification_ratio": 0.8
+      },
+      "packet_fingerprint": "104fb1bc6f3623aa",
+      "graph_counts": {
+        "steps": 2,
+        "synthesis_calls": 1,
+        "repair_calls": 0
+      },
+      "study_attempts": [
+        {
+          "kind": "initial",
+          "status": "completed",
+          "quality_status": "passed",
+          "model_calls": 1,
+          "total_tokens": 9221
+        }
+      ],
+      "latency_seconds": 49.865,
+      "model_calls": [
+        {
+          "endpoint": "completions",
+          "status": "completed",
+          "latency_seconds": 46.448,
+          "model": "deepseek-v4-pro",
+          "usage": {
+            "prompt_tokens": 6926,
+            "completion_tokens": 2295,
+            "total_tokens": 9221
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "in-the-mood-for-love-space",
+      "lane": "fixed",
+      "repetition": 3,
+      "status": "passed",
+      "terminal_status": "complete",
+      "identity_match": true,
+      "quality": {
+        "score": 96.0,
+        "components": {
+          "identity": 15.0,
+          "structured_completion": 10.0,
+          "deterministic_quality_gate": 21.0,
+          "citation_integrity": 20.0,
+          "epistemic_calibration": 10.0,
+          "observable_verification": 10.0,
+          "evidence_coverage": 10.0
+        },
+        "quality_gate_status": "passed",
+        "quality_gate_score": 0.84,
+        "quality_gate_central_issues": [],
+        "quality_gate_failed_sections": [
+          {
+            "section": 2,
+            "score": 0.8,
+            "issues": [
+              "mechanism_not_causal"
+            ]
+          },
+          {
+            "section": 3,
+            "score": 0.8,
+            "issues": [
+              "generic_language"
+            ]
+          },
+          {
+            "section": 4,
+            "score": 0.8,
+            "issues": [
+              "mechanism_not_causal"
+            ]
+          },
+          {
+            "section": 5,
+            "score": 0.8,
+            "issues": [
+              "mechanism_not_causal"
+            ]
+          }
+        ],
+        "repair_attempted": false,
+        "section_count": 5,
+        "valid_citations": true,
+        "distinct_theory_sources_cited": 5,
+        "available_theory_sources": 8,
+        "calibrated_section_ratio": 1.0,
+        "observable_verification_ratio": 1.0
+      },
+      "packet_fingerprint": "104fb1bc6f3623aa",
+      "graph_counts": {
+        "steps": 2,
+        "synthesis_calls": 1,
+        "repair_calls": 0
+      },
+      "study_attempts": [
+        {
+          "kind": "initial",
+          "status": "completed",
+          "quality_status": "passed",
+          "model_calls": 1,
+          "total_tokens": 9150
+        }
+      ],
+      "latency_seconds": 45.53,
+      "model_calls": [
+        {
+          "endpoint": "completions",
+          "status": "completed",
+          "latency_seconds": 42.183,
+          "model": "deepseek-v4-pro",
+          "usage": {
+            "prompt_tokens": 6926,
+            "completion_tokens": 2224,
+            "total_tokens": 9150
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "in-the-mood-for-love-space",
+      "lane": "agent",
+      "repetition": 3,
+      "status": "passed",
+      "terminal_status": "complete",
+      "identity_match": true,
+      "quality": {
+        "score": 96.0,
+        "components": {
+          "identity": 15.0,
+          "structured_completion": 10.0,
+          "deterministic_quality_gate": 21.0,
+          "citation_integrity": 20.0,
+          "epistemic_calibration": 10.0,
+          "observable_verification": 10.0,
+          "evidence_coverage": 10.0
+        },
+        "quality_gate_status": "passed",
+        "quality_gate_score": 0.84,
+        "quality_gate_central_issues": [],
+        "quality_gate_failed_sections": [
+          {
+            "section": 1,
+            "score": 0.8,
+            "issues": [
+              "generic_language"
+            ]
+          },
+          {
+            "section": 4,
+            "score": 0.8,
+            "issues": [
+              "mechanism_not_causal"
+            ]
+          },
+          {
+            "section": 5,
+            "score": 0.6,
+            "issues": [
+              "generic_language",
+              "mechanism_not_causal"
+            ]
+          }
+        ],
+        "repair_attempted": false,
+        "section_count": 5,
+        "valid_citations": true,
+        "distinct_theory_sources_cited": 4,
+        "available_theory_sources": 8,
+        "calibrated_section_ratio": 1.0,
+        "observable_verification_ratio": 1.0
+      },
+      "packet_fingerprint": "104fb1bc6f3623aa",
+      "graph_counts": {
+        "steps": 2,
+        "synthesis_calls": 1,
+        "repair_calls": 0
+      },
+      "study_attempts": [
+        {
+          "kind": "initial",
+          "status": "completed",
+          "quality_status": "passed",
+          "model_calls": 1,
+          "total_tokens": 9123
+        }
+      ],
+      "latency_seconds": 46.708,
+      "model_calls": [
+        {
+          "endpoint": "completions",
+          "status": "completed",
+          "latency_seconds": 43.476,
+          "model": "deepseek-v4-pro",
+          "usage": {
+            "prompt_tokens": 6926,
+            "completion_tokens": 2197,
+            "total_tokens": 9123
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "memoria-sound",
+      "lane": "fixed",
+      "repetition": 1,
+      "status": "passed",
+      "terminal_status": "complete",
+      "identity_match": true,
+      "quality": {
+        "score": 97.0,
+        "components": {
+          "identity": 15.0,
+          "structured_completion": 10.0,
+          "deterministic_quality_gate": 22.0,
+          "citation_integrity": 20.0,
+          "epistemic_calibration": 10.0,
+          "observable_verification": 10.0,
+          "evidence_coverage": 10.0
+        },
+        "quality_gate_status": "passed",
+        "quality_gate_score": 0.88,
+        "quality_gate_central_issues": [],
+        "quality_gate_failed_sections": [
+          {
+            "section": 2,
+            "score": 0.8,
+            "issues": [
+              "mechanism_not_causal"
+            ]
+          },
+          {
+            "section": 3,
+            "score": 0.8,
+            "issues": [
+              "mechanism_not_causal"
+            ]
+          },
+          {
+            "section": 4,
+            "score": 0.8,
+            "issues": [
+              "mechanism_not_causal"
+            ]
+          }
+        ],
+        "repair_attempted": false,
+        "section_count": 5,
+        "valid_citations": true,
+        "distinct_theory_sources_cited": 4,
+        "available_theory_sources": 8,
+        "calibrated_section_ratio": 1.0,
+        "observable_verification_ratio": 1.0
+      },
+      "packet_fingerprint": "29c1bfa1b3f888f3",
+      "graph_counts": {
+        "steps": 2,
+        "synthesis_calls": 1,
+        "repair_calls": 0
+      },
+      "study_attempts": [
+        {
+          "kind": "initial",
+          "status": "completed",
+          "quality_status": "passed",
+          "model_calls": 1,
+          "total_tokens": 9755
+        }
+      ],
+      "latency_seconds": 42.683,
+      "model_calls": [
+        {
+          "endpoint": "completions",
+          "status": "completed",
+          "latency_seconds": 40.636,
+          "model": "deepseek-v4-pro",
+          "usage": {
+            "prompt_tokens": 7538,
+            "completion_tokens": 2217,
+            "total_tokens": 9755
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "memoria-sound",
+      "lane": "agent",
+      "repetition": 1,
+      "status": "passed",
+      "terminal_status": "complete",
+      "identity_match": true,
+      "quality": {
+        "score": 97.0,
+        "components": {
+          "identity": 15.0,
+          "structured_completion": 10.0,
+          "deterministic_quality_gate": 24.0,
+          "citation_integrity": 20.0,
+          "epistemic_calibration": 10.0,
+          "observable_verification": 8.0,
+          "evidence_coverage": 10.0
+        },
+        "quality_gate_status": "passed",
+        "quality_gate_score": 0.96,
+        "quality_gate_central_issues": [],
+        "quality_gate_failed_sections": [
+          {
+            "section": 2,
+            "score": 0.8,
+            "issues": [
+              "verification_not_observable"
+            ]
+          }
+        ],
+        "repair_attempted": false,
+        "section_count": 5,
+        "valid_citations": true,
+        "distinct_theory_sources_cited": 5,
+        "available_theory_sources": 8,
+        "calibrated_section_ratio": 1.0,
+        "observable_verification_ratio": 0.8
+      },
+      "packet_fingerprint": "29c1bfa1b3f888f3",
+      "graph_counts": {
+        "steps": 2,
+        "synthesis_calls": 1,
+        "repair_calls": 0
+      },
+      "study_attempts": [
+        {
+          "kind": "initial",
+          "status": "completed",
+          "quality_status": "passed",
+          "model_calls": 1,
+          "total_tokens": 9712
+        }
+      ],
+      "latency_seconds": 40.405,
+      "model_calls": [
+        {
+          "endpoint": "completions",
+          "status": "completed",
+          "latency_seconds": 38.275,
+          "model": "deepseek-v4-pro",
+          "usage": {
+            "prompt_tokens": 7538,
+            "completion_tokens": 2174,
+            "total_tokens": 9712
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "memoria-sound",
+      "lane": "agent",
+      "repetition": 2,
+      "status": "passed",
+      "terminal_status": "complete",
+      "identity_match": true,
+      "quality": {
+        "score": 97.0,
+        "components": {
+          "identity": 15.0,
+          "structured_completion": 10.0,
+          "deterministic_quality_gate": 24.0,
+          "citation_integrity": 20.0,
+          "epistemic_calibration": 10.0,
+          "observable_verification": 8.0,
+          "evidence_coverage": 10.0
+        },
+        "quality_gate_status": "passed",
+        "quality_gate_score": 0.96,
+        "quality_gate_central_issues": [],
+        "quality_gate_failed_sections": [
+          {
+            "section": 2,
+            "score": 0.8,
+            "issues": [
+              "verification_not_observable"
+            ]
+          }
+        ],
+        "repair_attempted": false,
+        "section_count": 5,
+        "valid_citations": true,
+        "distinct_theory_sources_cited": 5,
+        "available_theory_sources": 8,
+        "calibrated_section_ratio": 1.0,
+        "observable_verification_ratio": 0.8
+      },
+      "packet_fingerprint": "29c1bfa1b3f888f3",
+      "graph_counts": {
+        "steps": 2,
+        "synthesis_calls": 1,
+        "repair_calls": 0
+      },
+      "study_attempts": [
+        {
+          "kind": "initial",
+          "status": "completed",
+          "quality_status": "passed",
+          "model_calls": 1,
+          "total_tokens": 9557
+        }
+      ],
+      "latency_seconds": 37.103,
+      "model_calls": [
+        {
+          "endpoint": "completions",
+          "status": "completed",
+          "latency_seconds": 34.91,
+          "model": "deepseek-v4-pro",
+          "usage": {
+            "prompt_tokens": 7538,
+            "completion_tokens": 2019,
+            "total_tokens": 9557
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "memoria-sound",
+      "lane": "fixed",
+      "repetition": 2,
+      "status": "passed",
+      "terminal_status": "complete",
+      "identity_match": true,
+      "quality": {
+        "score": 94.0,
+        "components": {
+          "identity": 15.0,
+          "structured_completion": 10.0,
+          "deterministic_quality_gate": 23.0,
+          "citation_integrity": 20.0,
+          "epistemic_calibration": 10.0,
+          "observable_verification": 6.0,
+          "evidence_coverage": 10.0
+        },
+        "quality_gate_status": "passed",
+        "quality_gate_score": 0.92,
+        "quality_gate_central_issues": [],
+        "quality_gate_failed_sections": [
+          {
+            "section": 2,
+            "score": 0.8,
+            "issues": [
+              "verification_not_observable"
+            ]
+          },
+          {
+            "section": 5,
+            "score": 0.8,
+            "issues": [
+              "verification_not_observable"
+            ]
+          }
+        ],
+        "repair_attempted": false,
+        "section_count": 5,
+        "valid_citations": true,
+        "distinct_theory_sources_cited": 5,
+        "available_theory_sources": 8,
+        "calibrated_section_ratio": 1.0,
+        "observable_verification_ratio": 0.6
+      },
+      "packet_fingerprint": "29c1bfa1b3f888f3",
+      "graph_counts": {
+        "steps": 2,
+        "synthesis_calls": 1,
+        "repair_calls": 0
+      },
+      "study_attempts": [
+        {
+          "kind": "initial",
+          "status": "completed",
+          "quality_status": "passed",
+          "model_calls": 1,
+          "total_tokens": 9445
+        }
+      ],
+      "latency_seconds": 34.781,
+      "model_calls": [
+        {
+          "endpoint": "completions",
+          "status": "completed",
+          "latency_seconds": 33.243,
+          "model": "deepseek-v4-pro",
+          "usage": {
+            "prompt_tokens": 7538,
+            "completion_tokens": 1907,
+            "total_tokens": 9445
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "memoria-sound",
+      "lane": "fixed",
+      "repetition": 3,
+      "status": "passed",
+      "terminal_status": "complete",
+      "identity_match": true,
+      "quality": {
+        "score": 98.0,
+        "components": {
+          "identity": 15.0,
+          "structured_completion": 10.0,
+          "deterministic_quality_gate": 23.0,
+          "citation_integrity": 20.0,
+          "epistemic_calibration": 10.0,
+          "observable_verification": 10.0,
+          "evidence_coverage": 10.0
+        },
+        "quality_gate_status": "passed",
+        "quality_gate_score": 0.92,
+        "quality_gate_central_issues": [],
+        "quality_gate_failed_sections": [
+          {
+            "section": 3,
+            "score": 0.8,
+            "issues": [
+              "mechanism_not_causal"
+            ]
+          },
+          {
+            "section": 5,
+            "score": 0.8,
+            "issues": [
+              "mechanism_not_causal"
+            ]
+          }
+        ],
+        "repair_attempted": false,
+        "section_count": 5,
+        "valid_citations": true,
+        "distinct_theory_sources_cited": 4,
+        "available_theory_sources": 8,
+        "calibrated_section_ratio": 1.0,
+        "observable_verification_ratio": 1.0
+      },
+      "packet_fingerprint": "29c1bfa1b3f888f3",
+      "graph_counts": {
+        "steps": 2,
+        "synthesis_calls": 1,
+        "repair_calls": 0
+      },
+      "study_attempts": [
+        {
+          "kind": "initial",
+          "status": "completed",
+          "quality_status": "passed",
+          "model_calls": 1,
+          "total_tokens": 10089
+        }
+      ],
+      "latency_seconds": 48.503,
+      "model_calls": [
+        {
+          "endpoint": "completions",
+          "status": "completed",
+          "latency_seconds": 46.611,
+          "model": "deepseek-v4-pro",
+          "usage": {
+            "prompt_tokens": 7538,
+            "completion_tokens": 2551,
+            "total_tokens": 10089
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "memoria-sound",
+      "lane": "agent",
+      "repetition": 3,
+      "status": "passed",
+      "terminal_status": "complete",
+      "identity_match": true,
+      "quality": {
+        "score": 99.0,
+        "components": {
+          "identity": 15.0,
+          "structured_completion": 10.0,
+          "deterministic_quality_gate": 24.0,
+          "citation_integrity": 20.0,
+          "epistemic_calibration": 10.0,
+          "observable_verification": 10.0,
+          "evidence_coverage": 10.0
+        },
+        "quality_gate_status": "passed",
+        "quality_gate_score": 0.96,
+        "quality_gate_central_issues": [],
+        "quality_gate_failed_sections": [
+          {
+            "section": 4,
+            "score": 0.8,
+            "issues": [
+              "generic_language"
+            ]
+          }
+        ],
+        "repair_attempted": false,
+        "section_count": 5,
+        "valid_citations": true,
+        "distinct_theory_sources_cited": 4,
+        "available_theory_sources": 8,
+        "calibrated_section_ratio": 1.0,
+        "observable_verification_ratio": 1.0
+      },
+      "packet_fingerprint": "29c1bfa1b3f888f3",
+      "graph_counts": {
+        "steps": 2,
+        "synthesis_calls": 1,
+        "repair_calls": 0
+      },
+      "study_attempts": [
+        {
+          "kind": "initial",
+          "status": "completed",
+          "quality_status": "passed",
+          "model_calls": 1,
+          "total_tokens": 9795
+        }
+      ],
+      "latency_seconds": 41.188,
+      "model_calls": [
+        {
+          "endpoint": "completions",
+          "status": "completed",
+          "latency_seconds": 38.858,
+          "model": "deepseek-v4-pro",
+          "usage": {
+            "prompt_tokens": 7538,
+            "completion_tokens": 2257,
+            "total_tokens": 9795
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "the-thing-ambiguous-identity",
+      "lane": "fixed",
+      "repetition": 1,
+      "status": "passed",
+      "terminal_status": "complete",
+      "identity_match": true,
+      "quality": {
+        "score": 99.0,
+        "components": {
+          "identity": 15.0,
+          "structured_completion": 10.0,
+          "deterministic_quality_gate": 24.0,
+          "citation_integrity": 20.0,
+          "epistemic_calibration": 10.0,
+          "observable_verification": 10.0,
+          "evidence_coverage": 10.0
+        },
+        "quality_gate_status": "passed",
+        "quality_gate_score": 0.96,
+        "quality_gate_central_issues": [],
+        "quality_gate_failed_sections": [
+          {
+            "section": 5,
+            "score": 0.8,
+            "issues": [
+              "mechanism_not_causal"
+            ]
+          }
+        ],
+        "repair_attempted": false,
+        "section_count": 5,
+        "valid_citations": true,
+        "distinct_theory_sources_cited": 6,
+        "available_theory_sources": 8,
+        "calibrated_section_ratio": 1.0,
+        "observable_verification_ratio": 1.0
+      },
+      "packet_fingerprint": "11086a4f820d58ef",
+      "graph_counts": {
+        "steps": 2,
+        "synthesis_calls": 1,
+        "repair_calls": 0
+      },
+      "study_attempts": [
+        {
+          "kind": "initial",
+          "status": "completed",
+          "quality_status": "passed",
+          "model_calls": 1,
+          "total_tokens": 5081
+        }
+      ],
+      "latency_seconds": 38.555,
+      "model_calls": [
+        {
+          "endpoint": "completions",
+          "status": "completed",
+          "latency_seconds": 35.392,
+          "model": "deepseek-v4-pro",
+          "usage": {
+            "prompt_tokens": 3206,
+            "completion_tokens": 1875,
+            "total_tokens": 5081
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "the-thing-ambiguous-identity",
+      "lane": "agent",
+      "repetition": 1,
+      "status": "passed",
+      "terminal_status": "complete",
+      "identity_match": true,
+      "quality": {
+        "score": 96.0,
+        "components": {
+          "identity": 15.0,
+          "structured_completion": 10.0,
+          "deterministic_quality_gate": 21.0,
+          "citation_integrity": 20.0,
+          "epistemic_calibration": 10.0,
+          "observable_verification": 10.0,
+          "evidence_coverage": 10.0
+        },
+        "quality_gate_status": "passed",
+        "quality_gate_score": 0.84,
+        "quality_gate_central_issues": [],
+        "quality_gate_failed_sections": [
+          {
+            "section": 1,
+            "score": 0.8,
+            "issues": [
+              "mechanism_not_causal"
+            ]
+          },
+          {
+            "section": 2,
+            "score": 0.8,
+            "issues": [
+              "mechanism_not_causal"
+            ]
+          },
+          {
+            "section": 3,
+            "score": 0.8,
+            "issues": [
+              "mechanism_not_causal"
+            ]
+          },
+          {
+            "section": 4,
+            "score": 0.8,
+            "issues": [
+              "mechanism_not_causal"
+            ]
+          }
+        ],
+        "repair_attempted": false,
+        "section_count": 5,
+        "valid_citations": true,
+        "distinct_theory_sources_cited": 6,
+        "available_theory_sources": 8,
+        "calibrated_section_ratio": 1.0,
+        "observable_verification_ratio": 1.0
+      },
+      "packet_fingerprint": "48e4f39051e94f53",
+      "graph_counts": {
+        "steps": 2,
+        "synthesis_calls": 1,
+        "repair_calls": 0
+      },
+      "study_attempts": [
+        {
+          "kind": "initial",
+          "status": "completed",
+          "quality_status": "passed",
+          "model_calls": 1,
+          "total_tokens": 5596
+        }
+      ],
+      "latency_seconds": 39.528,
+      "model_calls": [
+        {
+          "endpoint": "completions",
+          "status": "completed",
+          "latency_seconds": 36.596,
+          "model": "deepseek-v4-pro",
+          "usage": {
+            "prompt_tokens": 3540,
+            "completion_tokens": 2056,
+            "total_tokens": 5596
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "the-thing-ambiguous-identity",
+      "lane": "agent",
+      "repetition": 2,
+      "status": "passed",
+      "terminal_status": "complete",
+      "identity_match": true,
+      "quality": {
+        "score": 97.0,
+        "components": {
+          "identity": 15.0,
+          "structured_completion": 10.0,
+          "deterministic_quality_gate": 22.0,
+          "citation_integrity": 20.0,
+          "epistemic_calibration": 10.0,
+          "observable_verification": 10.0,
+          "evidence_coverage": 10.0
+        },
+        "quality_gate_status": "passed",
+        "quality_gate_score": 0.88,
+        "quality_gate_central_issues": [],
+        "quality_gate_failed_sections": [
+          {
+            "section": 1,
+            "score": 0.8,
+            "issues": [
+              "mechanism_not_causal"
+            ]
+          },
+          {
+            "section": 3,
+            "score": 0.8,
+            "issues": [
+              "mechanism_not_causal"
+            ]
+          },
+          {
+            "section": 4,
+            "score": 0.8,
+            "issues": [
+              "mechanism_not_causal"
+            ]
+          }
+        ],
+        "repair_attempted": false,
+        "section_count": 5,
+        "valid_citations": true,
+        "distinct_theory_sources_cited": 5,
+        "available_theory_sources": 8,
+        "calibrated_section_ratio": 1.0,
+        "observable_verification_ratio": 1.0
+      },
+      "packet_fingerprint": "48e4f39051e94f53",
+      "graph_counts": {
+        "steps": 2,
+        "synthesis_calls": 1,
+        "repair_calls": 0
+      },
+      "study_attempts": [
+        {
+          "kind": "initial",
+          "status": "completed",
+          "quality_status": "passed",
+          "model_calls": 1,
+          "total_tokens": 5940
+        }
+      ],
+      "latency_seconds": 50.036,
+      "model_calls": [
+        {
+          "endpoint": "completions",
+          "status": "completed",
+          "latency_seconds": 46.908,
+          "model": "deepseek-v4-pro",
+          "usage": {
+            "prompt_tokens": 3540,
+            "completion_tokens": 2400,
+            "total_tokens": 5940
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "the-thing-ambiguous-identity",
+      "lane": "fixed",
+      "repetition": 2,
+      "status": "passed",
+      "terminal_status": "complete",
+      "identity_match": true,
+      "quality": {
+        "score": 99.0,
+        "components": {
+          "identity": 15.0,
+          "structured_completion": 10.0,
+          "deterministic_quality_gate": 24.0,
+          "citation_integrity": 20.0,
+          "epistemic_calibration": 10.0,
+          "observable_verification": 10.0,
+          "evidence_coverage": 10.0
+        },
+        "quality_gate_status": "passed",
+        "quality_gate_score": 0.96,
+        "quality_gate_central_issues": [],
+        "quality_gate_failed_sections": [
+          {
+            "section": 4,
+            "score": 0.8,
+            "issues": [
+              "mechanism_not_causal"
+            ]
+          }
+        ],
+        "repair_attempted": false,
+        "section_count": 5,
+        "valid_citations": true,
+        "distinct_theory_sources_cited": 8,
+        "available_theory_sources": 8,
+        "calibrated_section_ratio": 1.0,
+        "observable_verification_ratio": 1.0
+      },
+      "packet_fingerprint": "11086a4f820d58ef",
+      "graph_counts": {
+        "steps": 2,
+        "synthesis_calls": 1,
+        "repair_calls": 0
+      },
+      "study_attempts": [
+        {
+          "kind": "initial",
+          "status": "completed",
+          "quality_status": "passed",
+          "model_calls": 1,
+          "total_tokens": 5216
+        }
+      ],
+      "latency_seconds": 40.818,
+      "model_calls": [
+        {
+          "endpoint": "completions",
+          "status": "completed",
+          "latency_seconds": 38.439,
+          "model": "deepseek-v4-pro",
+          "usage": {
+            "prompt_tokens": 3206,
+            "completion_tokens": 2010,
+            "total_tokens": 5216
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "the-thing-ambiguous-identity",
+      "lane": "fixed",
+      "repetition": 3,
+      "status": "passed",
+      "terminal_status": "complete",
+      "identity_match": true,
+      "quality": {
+        "score": 98.0,
+        "components": {
+          "identity": 15.0,
+          "structured_completion": 10.0,
+          "deterministic_quality_gate": 23.0,
+          "citation_integrity": 20.0,
+          "epistemic_calibration": 10.0,
+          "observable_verification": 10.0,
+          "evidence_coverage": 10.0
+        },
+        "quality_gate_status": "passed",
+        "quality_gate_score": 0.92,
+        "quality_gate_central_issues": [],
+        "quality_gate_failed_sections": [
+          {
+            "section": 4,
+            "score": 0.8,
+            "issues": [
+              "mechanism_not_causal"
+            ]
+          },
+          {
+            "section": 5,
+            "score": 0.8,
+            "issues": [
+              "mechanism_not_causal"
+            ]
+          }
+        ],
+        "repair_attempted": false,
+        "section_count": 5,
+        "valid_citations": true,
+        "distinct_theory_sources_cited": 6,
+        "available_theory_sources": 8,
+        "calibrated_section_ratio": 1.0,
+        "observable_verification_ratio": 1.0
+      },
+      "packet_fingerprint": "11086a4f820d58ef",
+      "graph_counts": {
+        "steps": 2,
+        "synthesis_calls": 1,
+        "repair_calls": 0
+      },
+      "study_attempts": [
+        {
+          "kind": "initial",
+          "status": "completed",
+          "quality_status": "passed",
+          "model_calls": 1,
+          "total_tokens": 5189
+        }
+      ],
+      "latency_seconds": 41.881,
+      "model_calls": [
+        {
+          "endpoint": "completions",
+          "status": "completed",
+          "latency_seconds": 38.881,
+          "model": "deepseek-v4-pro",
+          "usage": {
+            "prompt_tokens": 3206,
+            "completion_tokens": 1983,
+            "total_tokens": 5189
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "the-thing-ambiguous-identity",
+      "lane": "agent",
+      "repetition": 3,
+      "status": "passed",
+      "terminal_status": "complete",
+      "identity_match": true,
+      "quality": {
+        "score": 99.0,
+        "components": {
+          "identity": 15.0,
+          "structured_completion": 10.0,
+          "deterministic_quality_gate": 24.0,
+          "citation_integrity": 20.0,
+          "epistemic_calibration": 10.0,
+          "observable_verification": 10.0,
+          "evidence_coverage": 10.0
+        },
+        "quality_gate_status": "passed",
+        "quality_gate_score": 0.96,
+        "quality_gate_central_issues": [],
+        "quality_gate_failed_sections": [
+          {
+            "section": 2,
+            "score": 0.8,
+            "issues": [
+              "mechanism_not_causal"
+            ]
+          }
+        ],
+        "repair_attempted": false,
+        "section_count": 5,
+        "valid_citations": true,
+        "distinct_theory_sources_cited": 6,
+        "available_theory_sources": 8,
+        "calibrated_section_ratio": 1.0,
+        "observable_verification_ratio": 1.0
+      },
+      "packet_fingerprint": "48e4f39051e94f53",
+      "graph_counts": {
+        "steps": 2,
+        "synthesis_calls": 1,
+        "repair_calls": 0
+      },
+      "study_attempts": [
+        {
+          "kind": "initial",
+          "status": "completed",
+          "quality_status": "passed",
+          "model_calls": 1,
+          "total_tokens": 5971
+        }
+      ],
+      "latency_seconds": 50.781,
+      "model_calls": [
+        {
+          "endpoint": "completions",
+          "status": "completed",
+          "latency_seconds": 47.829,
+          "model": "deepseek-v4-pro",
+          "usage": {
+            "prompt_tokens": 3540,
+            "completion_tokens": 2431,
+            "total_tokens": 5971
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "we-are-all-strangers-sparse",
+      "lane": "fixed",
+      "repetition": 1,
+      "status": "passed",
+      "terminal_status": "complete",
+      "identity_match": true,
+      "quality": {
+        "score": 99.0,
+        "components": {
+          "identity": 15.0,
+          "structured_completion": 10.0,
+          "deterministic_quality_gate": 24.0,
+          "citation_integrity": 20.0,
+          "epistemic_calibration": 10.0,
+          "observable_verification": 10.0,
+          "evidence_coverage": 10.0
+        },
+        "quality_gate_status": "passed",
+        "quality_gate_score": 0.96,
+        "quality_gate_central_issues": [],
+        "quality_gate_failed_sections": [
+          {
+            "section": 5,
+            "score": 0.8,
+            "issues": [
+              "mechanism_not_causal"
+            ]
+          }
+        ],
+        "repair_attempted": false,
+        "section_count": 5,
+        "valid_citations": true,
+        "distinct_theory_sources_cited": 7,
+        "available_theory_sources": 8,
+        "calibrated_section_ratio": 1.0,
+        "observable_verification_ratio": 1.0
+      },
+      "packet_fingerprint": "d07e0877aade1eb3",
+      "graph_counts": {
+        "steps": 2,
+        "synthesis_calls": 1,
+        "repair_calls": 0
+      },
+      "study_attempts": [
+        {
+          "kind": "initial",
+          "status": "completed",
+          "quality_status": "passed",
+          "model_calls": 1,
+          "total_tokens": 8299
+        }
+      ],
+      "latency_seconds": 36.894,
+      "model_calls": [
+        {
+          "endpoint": "completions",
+          "status": "completed",
+          "latency_seconds": 35.421,
+          "model": "deepseek-v4-pro",
+          "usage": {
+            "prompt_tokens": 6327,
+            "completion_tokens": 1972,
+            "total_tokens": 8299
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "we-are-all-strangers-sparse",
+      "lane": "agent",
+      "repetition": 1,
+      "status": "passed",
+      "terminal_status": "complete",
+      "identity_match": true,
+      "quality": {
+        "score": 99.0,
+        "components": {
+          "identity": 15.0,
+          "structured_completion": 10.0,
+          "deterministic_quality_gate": 24.0,
+          "citation_integrity": 20.0,
+          "epistemic_calibration": 10.0,
+          "observable_verification": 10.0,
+          "evidence_coverage": 10.0
+        },
+        "quality_gate_status": "passed",
+        "quality_gate_score": 0.96,
+        "quality_gate_central_issues": [],
+        "quality_gate_failed_sections": [
+          {
+            "section": 4,
+            "score": 0.8,
+            "issues": [
+              "mechanism_not_causal"
+            ]
+          }
+        ],
+        "repair_attempted": false,
+        "section_count": 5,
+        "valid_citations": true,
+        "distinct_theory_sources_cited": 6,
+        "available_theory_sources": 8,
+        "calibrated_section_ratio": 1.0,
+        "observable_verification_ratio": 1.0
+      },
+      "packet_fingerprint": "d07e0877aade1eb3",
+      "graph_counts": {
+        "steps": 2,
+        "synthesis_calls": 1,
+        "repair_calls": 0
+      },
+      "study_attempts": [
+        {
+          "kind": "initial",
+          "status": "completed",
+          "quality_status": "passed",
+          "model_calls": 1,
+          "total_tokens": 8459
+        }
+      ],
+      "latency_seconds": 43.412,
+      "model_calls": [
+        {
+          "endpoint": "completions",
+          "status": "completed",
+          "latency_seconds": 41.969,
+          "model": "deepseek-v4-pro",
+          "usage": {
+            "prompt_tokens": 6327,
+            "completion_tokens": 2132,
+            "total_tokens": 8459
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "we-are-all-strangers-sparse",
+      "lane": "agent",
+      "repetition": 2,
+      "status": "passed",
+      "terminal_status": "complete",
+      "identity_match": true,
+      "quality": {
+        "score": 100.0,
+        "components": {
+          "identity": 15.0,
+          "structured_completion": 10.0,
+          "deterministic_quality_gate": 25.0,
+          "citation_integrity": 20.0,
+          "epistemic_calibration": 10.0,
+          "observable_verification": 10.0,
+          "evidence_coverage": 10.0
+        },
+        "quality_gate_status": "passed",
+        "quality_gate_score": 1.0,
+        "quality_gate_central_issues": [],
+        "quality_gate_failed_sections": [],
+        "repair_attempted": false,
+        "section_count": 5,
+        "valid_citations": true,
+        "distinct_theory_sources_cited": 7,
+        "available_theory_sources": 8,
+        "calibrated_section_ratio": 1.0,
+        "observable_verification_ratio": 1.0
+      },
+      "packet_fingerprint": "d07e0877aade1eb3",
+      "graph_counts": {
+        "steps": 2,
+        "synthesis_calls": 1,
+        "repair_calls": 0
+      },
+      "study_attempts": [
+        {
+          "kind": "initial",
+          "status": "completed",
+          "quality_status": "passed",
+          "model_calls": 1,
+          "total_tokens": 8988
+        }
+      ],
+      "latency_seconds": 53.356,
+      "model_calls": [
+        {
+          "endpoint": "completions",
+          "status": "completed",
+          "latency_seconds": 52.045,
+          "model": "deepseek-v4-pro",
+          "usage": {
+            "prompt_tokens": 6327,
+            "completion_tokens": 2661,
+            "total_tokens": 8988
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "we-are-all-strangers-sparse",
+      "lane": "fixed",
+      "repetition": 2,
+      "status": "passed",
+      "terminal_status": "complete",
+      "identity_match": true,
+      "quality": {
+        "score": 98.0,
+        "components": {
+          "identity": 15.0,
+          "structured_completion": 10.0,
+          "deterministic_quality_gate": 23.0,
+          "citation_integrity": 20.0,
+          "epistemic_calibration": 10.0,
+          "observable_verification": 10.0,
+          "evidence_coverage": 10.0
+        },
+        "quality_gate_status": "passed",
+        "quality_gate_score": 0.92,
+        "quality_gate_central_issues": [],
+        "quality_gate_failed_sections": [
+          {
+            "section": 4,
+            "score": 0.8,
+            "issues": [
+              "mechanism_not_causal"
+            ]
+          },
+          {
+            "section": 5,
+            "score": 0.8,
+            "issues": [
+              "mechanism_not_causal"
+            ]
+          }
+        ],
+        "repair_attempted": false,
+        "section_count": 5,
+        "valid_citations": true,
+        "distinct_theory_sources_cited": 7,
+        "available_theory_sources": 8,
+        "calibrated_section_ratio": 1.0,
+        "observable_verification_ratio": 1.0
+      },
+      "packet_fingerprint": "d07e0877aade1eb3",
+      "graph_counts": {
+        "steps": 2,
+        "synthesis_calls": 1,
+        "repair_calls": 0
+      },
+      "study_attempts": [
+        {
+          "kind": "initial",
+          "status": "completed",
+          "quality_status": "passed",
+          "model_calls": 1,
+          "total_tokens": 8593
+        }
+      ],
+      "latency_seconds": 42.198,
+      "model_calls": [
+        {
+          "endpoint": "completions",
+          "status": "completed",
+          "latency_seconds": 40.883,
+          "model": "deepseek-v4-pro",
+          "usage": {
+            "prompt_tokens": 6327,
+            "completion_tokens": 2266,
+            "total_tokens": 8593
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "we-are-all-strangers-sparse",
+      "lane": "fixed",
+      "repetition": 3,
+      "status": "passed",
+      "terminal_status": "complete",
+      "identity_match": true,
+      "quality": {
+        "score": 98.0,
+        "components": {
+          "identity": 15.0,
+          "structured_completion": 10.0,
+          "deterministic_quality_gate": 23.0,
+          "citation_integrity": 20.0,
+          "epistemic_calibration": 10.0,
+          "observable_verification": 10.0,
+          "evidence_coverage": 10.0
+        },
+        "quality_gate_status": "passed",
+        "quality_gate_score": 0.92,
+        "quality_gate_central_issues": [],
+        "quality_gate_failed_sections": [
+          {
+            "section": 2,
+            "score": 0.8,
+            "issues": [
+              "mechanism_not_causal"
+            ]
+          },
+          {
+            "section": 4,
+            "score": 0.8,
+            "issues": [
+              "mechanism_not_causal"
+            ]
+          }
+        ],
+        "repair_attempted": false,
+        "section_count": 5,
+        "valid_citations": true,
+        "distinct_theory_sources_cited": 6,
+        "available_theory_sources": 8,
+        "calibrated_section_ratio": 1.0,
+        "observable_verification_ratio": 1.0
+      },
+      "packet_fingerprint": "d07e0877aade1eb3",
+      "graph_counts": {
+        "steps": 2,
+        "synthesis_calls": 1,
+        "repair_calls": 0
+      },
+      "study_attempts": [
+        {
+          "kind": "initial",
+          "status": "completed",
+          "quality_status": "passed",
+          "model_calls": 1,
+          "total_tokens": 8807
+        }
+      ],
+      "latency_seconds": 45.762,
+      "model_calls": [
+        {
+          "endpoint": "completions",
+          "status": "completed",
+          "latency_seconds": 44.317,
+          "model": "deepseek-v4-pro",
+          "usage": {
+            "prompt_tokens": 6327,
+            "completion_tokens": 2480,
+            "total_tokens": 8807
+          }
+        }
+      ]
+    },
+    {
+      "case_id": "we-are-all-strangers-sparse",
+      "lane": "agent",
+      "repetition": 3,
+      "status": "passed",
+      "terminal_status": "complete",
+      "identity_match": true,
+      "quality": {
+        "score": 98.0,
+        "components": {
+          "identity": 15.0,
+          "structured_completion": 10.0,
+          "deterministic_quality_gate": 23.0,
+          "citation_integrity": 20.0,
+          "epistemic_calibration": 10.0,
+          "observable_verification": 10.0,
+          "evidence_coverage": 10.0
+        },
+        "quality_gate_status": "passed",
+        "quality_gate_score": 0.92,
+        "quality_gate_central_issues": [],
+        "quality_gate_failed_sections": [
+          {
+            "section": 1,
+            "score": 0.8,
+            "issues": [
+              "mechanism_not_causal"
+            ]
+          },
+          {
+            "section": 3,
+            "score": 0.8,
+            "issues": [
+              "mechanism_not_causal"
+            ]
+          }
+        ],
+        "repair_attempted": false,
+        "section_count": 5,
+        "valid_citations": true,
+        "distinct_theory_sources_cited": 6,
+        "available_theory_sources": 8,
+        "calibrated_section_ratio": 1.0,
+        "observable_verification_ratio": 1.0
+      },
+      "packet_fingerprint": "d07e0877aade1eb3",
+      "graph_counts": {
+        "steps": 2,
+        "synthesis_calls": 1,
+        "repair_calls": 0
+      },
+      "study_attempts": [
+        {
+          "kind": "initial",
+          "status": "completed",
+          "quality_status": "passed",
+          "model_calls": 1,
+          "total_tokens": 8651
+        }
+      ],
+      "latency_seconds": 46.086,
+      "model_calls": [
+        {
+          "endpoint": "completions",
+          "status": "completed",
+          "latency_seconds": 44.67,
+          "model": "deepseek-v4-pro",
+          "usage": {
+            "prompt_tokens": 6327,
+            "completion_tokens": 2324,
+            "total_tokens": 8651
+          }
+        }
+      ]
+    }
+  ],
+  "privacy_scope": "Aggregate packet, quality, attempt, timing, token and tool fields only; no prompts, film questions, generated prose, source text, private passages or credentials."
+}

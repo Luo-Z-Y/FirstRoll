@@ -18,8 +18,8 @@ keeps those layers visible instead of presenting one fluent but unsupported answ
 > daily quotas and redacted SSE research progress are implemented. The fixed-workflow entry gate now
 > passes all 17 targets and 11 required steps. The owner has authorised a default-off local Agent
 > adapter and paired comparison. The original comparison failed completion and mean-quality targets,
-> so production remains NO-GO. A revised text-only implementation now gives the graph two repairs and
-> isolates three repeated samples per packet lane; its paid run and all hosted routing remain off.
+> so production remains NO-GO. The revised three-sample text run restored 15/15 completion and passed
+> quality/cost, but failed both latency-ratio targets; later text stages and hosted routing stay off.
 
 See [Project Progress](docs/PROGRESS.md) for completed milestones, verification results,
 known limitations and the next priorities.
@@ -1056,7 +1056,7 @@ fallback behaviour; these are tracked separately from the new FirstRoll modules.
 | Private RAG foundation | Complete | Token chunking, FTS5, local vectors, hybrid retrieval and citations |
 | Attributed criticism | Complete | Crossref, Douban, Letterboxd and Guardian retrieval with structured critic claims |
 | Evidence-grounded Deep Study | Complete | Typed theory, criticism, review and video-text evidence; Pydantic output, citation validation and quality gate |
-| Bounded research Agent core | Revised text implementation in progress | Original run remains NO-GO; graph now owns two repairs and a fail-closed three-sample protocol isolates packet effects before any new paid run |
+| Bounded research Agent core | Repeated local result — latency NO-GO | Graph-owned retries restored 15/15 completion and Agent quality reached 97.80, but P50/P95 ratios `1.100404/1.993109` failed |
 | Authenticated research progress | Implemented | Allow-listed SSE lifecycle events, separate owner-scoped result retrieval and secret/evidence redaction tests; final interactive browser observation remains pending |
 | Pre-Agent product hardening | Complete — fixed workflow retained | Entry gate passed, but the authorised local Agent comparison failed 4/5 completion and quality non-inferiority; outcome NO-GO |
 | Clip analysis web migration | Complete | Scene, shot, colour, object and export workflow |
@@ -1106,18 +1106,18 @@ FIRSTROLL_LOCAL_AGENT_ENABLED=1 uv run python tools/evaluate_local_agent.py \
 The revised [Text-Agent Programme](docs/TEXT_AGENT_PROGRAMME.md) makes the graph own one initial
 attempt plus two repairs. It acquires each candidate packet once, then alternates three fixed-packet
 and three Agent-packet generations through the same synthesis controller, retaining failures as zero
-in the mean. The command below remains fail-closed until the owner separately confirms its declared
-30–90 synthesis-call budget:
+in the mean. The one authorised run consumed 32 synthesis calls, one planner call and one provider
+call. Its authorisation is consumed, so the command below now refuses a rerun:
 
 ```bash
 FIRSTROLL_LOCAL_AGENT_ENABLED=1 uv run python tools/evaluate_text_agent.py \
   --output evals/results/text-agent-repeated-YYYY-MM-DD.json
 ```
 
-A complete machine pass writes only changed packets to private mode-`0600` storage for personal
-review with `uv run python tools/review_text_agent_packets.py`; notes and evidence never enter Git.
-Claim/citation review, genuine diversity review, targeted section editing and filmmaker coaching
-follow as separate text stages. Clip-Agent work is deferred.
+The fixed and Agent lanes both completed 15/15 at mean quality `97.17/97.80`, and the target packet
+again gained three reviews, but P50/P95 ratios `1.100404/1.993109` failed their `1.10/1.25` limits.
+No private packet or human review was produced. Claim/citation review, genuine diversity review,
+targeted section editing, filmmaker coaching and clip-Agent work remain blocked pending REVISE.
 
 The latest reviewed complete-workflow and packet-only results are
 [`baseline-2026-08-21.json`](evals/results/baseline-2026-08-21.json) and
@@ -1142,8 +1142,9 @@ The attested score-only human result and combined entry gate are
 decision, predeclared targets and no-go outcome are in
 [`agent_go_no_go.json`](evals/agent_go_no_go.json), with the redacted paired result in
 [`local-agent-paired-2026-08-24.json`](evals/results/local-agent-paired-2026-08-24.json). The successor
-implementation and still-unconfirmed run budget are in
-[`text_agent_programme.json`](evals/text_agent_programme.json).
+protocol, consumed budget authorisation and failed latency outcome are in
+[`text_agent_programme.json`](evals/text_agent_programme.json), with the redacted repeated result in
+[`text-agent-repeated-2026-08-25.json`](evals/results/text-agent-repeated-2026-08-25.json).
 The source of truth for each result family is its reviewed JSON artefact, not a screenshot or copied
 Markdown table. Any
 fixed-workflow or Agent comparison must use the same identities, questions

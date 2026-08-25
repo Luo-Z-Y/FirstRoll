@@ -74,17 +74,19 @@ def test_text_programme_freezes_retry_comparison_and_no_clip_boundaries() -> Non
     )
 
 
-def test_paid_repeated_run_requires_the_recorded_owner_budget_confirmation() -> None:
-    approved = programme()
-    revoked = json.loads(json.dumps(approved))
-    revoked["run_budget"]["paid_run_requires_separate_budget_confirmation"] = True
+def test_consumed_budget_confirmation_cannot_authorise_a_rerun() -> None:
+    completed = programme()
+    approved = json.loads(json.dumps(completed))
+    approved["status"] = "approved_revised_local_comparison"
+    approved["run_budget"]["paid_run_requires_separate_budget_confirmation"] = False
+    approved["owner_budget_confirmation"]["authorisation_consumed"] = False
     mismatched = json.loads(json.dumps(approved))
     mismatched["owner_budget_confirmation"]["approved_maximum_synthesis_calls"] = 91
 
+    assert evaluator.comparison_authorised(completed) is False
     assert evaluator.comparison_authorised(approved) is True
-    assert evaluator.comparison_authorised(revoked) is False
     assert evaluator.comparison_authorised(mismatched) is False
-    assert approved["owner_budget_confirmation"] == {
+    assert completed["owner_budget_confirmation"] == {
         "confirmed": True,
         "recorded_at": "2026-08-25T05:07:00Z",
         "decided_by": "repository_owner",
@@ -92,7 +94,37 @@ def test_paid_repeated_run_requires_the_recorded_owner_budget_confirmation() -> 
         "approved_maximum_synthesis_calls": 90,
         "approved_maximum_planner_calls": 10,
         "approved_maximum_external_provider_calls": 10,
+        "authorisation_consumed": True,
     }
+
+
+def test_versioned_repeated_result_matches_the_frozen_contract() -> None:
+    contract = programme()
+    result = json.loads(
+        (ROOT / "evals" / "results" / "text-agent-repeated-2026-08-25.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    failed = {target["target_id"] for target in result["targets"] if target["status"] == "failed"}
+    target_case = next(
+        case
+        for case in result["acquisition_cases"]
+        if case["case_id"] == "the-thing-ambiguous-identity"
+    )
+
+    assert result["source_revision"] == contract["comparison_result"]["source_revision"]
+    assert result["summary"]["fixed"]["completed_samples"] == 15
+    assert result["summary"]["agent"]["completed_samples"] == 15
+    assert result["summary"]["fixed"]["mean_quality_all_scheduled"] == 97.17
+    assert result["summary"]["agent"]["mean_quality_all_scheduled"] == 97.8
+    assert result["summary"]["comparison"]["agent_minus_fixed_mean_quality"] == 0.63
+    assert failed == {"repeated_p50_latency_ratio", "repeated_p95_latency_ratio"}
+    assert target_case["initial_packet_status"] == "limited"
+    assert target_case["final_packet_status"] == "passed"
+    assert target_case["acquired_reviews"] == 3
+    assert result["summary"]["human_packet_review_ready"] is False
+    assert contract["comparison_result"]["private_packet_snapshot_written"] is False
+    evaluator.assert_safe_report(result)
 
 
 def test_repeated_lane_order_alternates_to_limit_time_order_bias() -> None:

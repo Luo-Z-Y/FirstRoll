@@ -61,6 +61,7 @@ def comparison_authorised(programme: dict[str, Any]) -> bool:
         and owner.get("decision") == "revise_text_agent"
         and budget.get("paid_run_requires_separate_budget_confirmation") is False
         and confirmation.get("confirmed") is True
+        and confirmation.get("authorisation_consumed") is False
         and confirmation.get("approved_minimum_synthesis_calls")
         == budget.get("expected_minimum_synthesis_calls")
         and confirmation.get("approved_maximum_synthesis_calls")
@@ -554,7 +555,9 @@ def main_cli() -> int:
     }:
         raise SystemExit("Set FIRSTROLL_LOCAL_AGENT_ENABLED=1 explicitly.")
     if not comparison_authorised(programme):
-        raise SystemExit("The revised paid comparison still requires explicit budget confirmation.")
+        raise SystemExit(
+            "The machine-readable decision does not authorise another repeated comparison."
+        )
     suite_id, specs = case_specs(args.cases, args.reference)
     expected_count = int(programme["comparison_protocol"]["case_count"])
     if len(specs) != expected_count:

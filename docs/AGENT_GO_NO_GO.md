@@ -1,11 +1,12 @@
 # Production Agent Go/No-Go Brief
 
-**Status:** original bounded comparison completed — **NO-GO**; revised text-only implementation complete
+**Status:** original and revised local comparisons complete — production remains **NO-GO**
 
 The original result remains immutable. The owner has since selected **REVISE** for the separately
 versioned [Text-Agent Programme](TEXT_AGENT_PROGRAMME.md): the graph owns two repairs and a future
-comparison averages three isolated synthesis samples per lane. Implementation is complete, but the
-declared 30–90-call paid run still requires separate budget confirmation. Production remains fixed.
+comparison averages three isolated synthesis samples per lane. Its separately approved run restored
+15/15 completion and passed quality/cost, but failed both latency ratios. The run authorisation is
+consumed, later text stages are blocked and production remains fixed.
 
 ## Recorded Decision
 
@@ -173,5 +174,6 @@ is mandatory before any multi-instance hosted Agent route could be considered.
 The owner selected **GO — bounded comparison only**, and that comparison is now complete. It failed
 the frozen completion and mean-quality targets, so the resulting decision remains **NO-GO**. The
 owner subsequently selected **REVISE** for a text-only programme with Agent-owned retries and an
-isolated repeated protocol. Its implementation does not reopen this result, authorise its paid run or
-permit production routing.
+isolated repeated protocol. That run completed 15/15 in both lanes at `97.17/97.80` mean quality, but
+P50/P95 ratios `1.100404/1.993109` failed. It therefore does not reopen the original result or permit
+production routing.

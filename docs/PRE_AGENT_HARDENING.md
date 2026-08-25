@@ -242,8 +242,9 @@ only 4/5 Agent cases and scored 94.77 mean quality over completed cases, failing
 and 96.94 quality targets. The comparison outcome is therefore **NO-GO**: the stable fixed workflow
 remains live and no human Agent packet review or route cut-over is permitted. On 25 August the owner
 selected **REVISE** for a separate [Text-Agent Programme](TEXT_AGENT_PROGRAMME.md) that isolates
-packet effects across repeated generations and gives the graph two repairs. This does not change the
-completed Pre-Agent gate or authorise another paid run by itself.
+packet effects across repeated generations and gives the graph two repairs. Its separately approved
+run completed 15/15 in both lanes and passed quality/cost, but failed frozen P50/P95 latency ratios
+`1.100404/1.993109`. This does not change the completed Pre-Agent gate or permit production routing.
 
 ## Human Packet Rubric
 

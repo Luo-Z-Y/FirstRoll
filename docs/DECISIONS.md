@@ -391,6 +391,11 @@ isolates packet content from synthesis orchestration. Because the full run costs
 calls, paid execution remains separately budget-gated. Claim review, genuine diversity review,
 targeted section editing and filmmaker coaching follow in that order; clip work is deferred.
 
+**25 August 2026 revised outcome:** after separate budget approval, both lanes completed 15/15 and
+Agent mean quality exceeded fixed by 0.63 points. Two Agent-owned retries recovered invalid initial
+generations, but raised P50/P95 ratios to `1.100404/1.993109`, failing both frozen latency limits. The
+authorisation is consumed, no human packet review occurred and later text stages remain blocked.
+
 ### Alternatives considered
 
 | Option | Assessment |

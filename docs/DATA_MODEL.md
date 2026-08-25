@@ -40,8 +40,8 @@ graph state is not persisted. `evidence_only` and `synthesis_only` are local eva
 stored product states: one freezes acquisition before prose generation and the other gives both
 packet lanes the same graph-owned two-repair policy. Optional packet snapshots are separate
 mode-`0600`, Git-ignored human-review artefacts; versioned reports contain hashes and aggregate
-metrics only. Durable owner-scoped checkpoint design remains mandatory before any hosted Agent
-proposal.
+metrics only. The repeated run failed latency gates, so neither revised snapshot/review file was
+created. Durable owner-scoped checkpoint design remains mandatory before any hosted Agent proposal.
 
 ## Per-tab Discover continuity
 

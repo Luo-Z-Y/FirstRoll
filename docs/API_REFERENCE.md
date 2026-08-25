@@ -13,8 +13,8 @@ machine-readable schema at `/openapi.json`. Public mode does not register any of
 all three return HTTP 404 on `api.firstroll.app`; `/api/health` remains public for Azure health
 checks. Hiding generated documentation reduces the production discovery surface but is not an
 authentication control: every protected operation still enforces its own bearer boundary. The
-local Agent evaluation work is a Python factory only. The revised graph-owned retry and repeated
-comparison code remains fail-closed pending budget confirmation:
+local Agent evaluation work is a Python factory only. The revised run is complete and its consumed
+authorisation now keeps the graph-owned retry evaluator fail-closed:
 `FIRSTROLL_LOCAL_AGENT_ENABLED` registers no HTTP endpoint and does not alter any route in this
 reference.
 
