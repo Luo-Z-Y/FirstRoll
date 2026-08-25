@@ -351,13 +351,15 @@ FIRSTROLL_LOCAL_AGENT_ENABLED=1 uv run python tools/evaluate_text_agent.py \
   --output evals/results/text-agent-repeated-YYYY-MM-DD.json
 ```
 
-This command currently refuses to run. The full protocol requires at least 30 and at most 90 paid
-synthesis calls, plus bounded acquisition calls, so implementation approval is not budget approval.
-The machine-readable state in
-[`text_agent_programme.json`](../evals/text_agent_programme.json) must record separate confirmation
-before the frozen run. A complete machine pass writes only changed packets to ignored mode-`0600`
-storage for `tools/review_text_agent_packets.py`; human ratings and attestation cannot be supplied by
-an Agent. No hosted route or production cut-over is implied.
+The owner separately approved the 30–90-call budget and the complete run is recorded in
+[`text-agent-repeated-2026-08-25.json`](../evals/results/text-agent-repeated-2026-08-25.json). Both
+lanes completed 15/15; fixed/Agent mean quality was `97.17/97.80` and total-token ratio `1.186853`
+passed. P50 ratio `1.100404` failed the `1.10` limit, while two successful Agent-owned recovery calls
+raised P95 ratio to `1.993109` against `1.25`. Every failure and recovery remains in the denominator.
+
+The consumed authorisation now makes this command refuse a rerun. Because machine targets did not all
+pass, no changed-packet snapshot or human review was created. Human ratings cannot be supplied by an
+Agent, and no hosted route or production cut-over is implied.
 
 ## Deep Study Transparency Checkpoint
 

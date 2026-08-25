@@ -1,5 +1,62 @@
 # FirstRoll Project Progress
 
+### 25 August 2026 — Repeated text-Agent run recovers quality but fails latency gates
+
+Measured result:
+
+| Measure | Fixed packet lane | Agent packet lane | Gate |
+|---|---:|---:|---|
+| Completion | 15 / 15 | 15 / 15 | Passed |
+| Mean automated quality | 97.17 | 97.80 · `+0.63` | Passed |
+| Quality standard deviation | 1.57 | 1.38 | Descriptive |
+| P50 latency | 41.881 s | 46.086 s · `1.100404×` | **Failed** (`≤1.10×`) |
+| P95 latency | 49.050 s | 97.762 s · `1.993109×` | **Failed** (`≤1.25×`) |
+| Model calls | 15 | 17 synthesis + 1 planner | Within budget |
+| Total tokens | 114,737 | 136,176 including planner · `1.186853×` | Passed |
+
+Findings:
+
+1. The isolated acquisition result repeated: four sufficient packets made no planner/provider call or
+   mutation; the target used one 417-token Letterboxd plan and one 3.112-second acquisition, added
+   three reviews and moved `limited → passed`.
+2. The same graph-owned retry controller produced 15/15 terminal studies in both lanes. Automated
+   quality, citations, identity, instruction containment and provider/token telemetry all passed.
+3. Two Agent samples for an unchanged sufficient packet returned invalid initial generations. The
+   Agent owned and successfully executed one retry for each, restoring completion and contributing to
+   the higher 97.80 mean, but the samples took 95.411 and 103.249 seconds.
+4. Those recovery attempts make Agent P95 `1.993109×` fixed. P50 also misses its frozen limit by
+   `0.000404` ratio points. The failed attempts remain in the denominator and the limits were not
+   rounded or changed after observation.
+5. The owner-approved budget was consumed by 32 synthesis calls, one planner call and one provider
+   call, below the declared 90/10/10 maxima. No rerun occurred.
+6. Machine targets did not all pass, so no private packet snapshot or human review was produced.
+   Stages T02–T05 and all clip-Agent work remain blocked.
+
+Acceptance evidence:
+
+- `evals/results/text-agent-repeated-2026-08-25.json` retains all 30 scheduled samples, both retries,
+  exact target outcomes, packet fingerprints, safe attempt records, timing and provider token usage;
+- `evals/text_agent_programme.json` binds the result to source `f442f5c`, marks the one-off budget
+  authorisation consumed and makes the evaluator refuse a rerun;
+- all 265 automated tests, scoped Ruff, compilation, JSON parsing, documentation links, report
+  privacy scans and whitespace checks pass;
+- production remains the fixed workflow and no Agent HTTP or hosted route exists.
+
+Known constraints:
+
+- three repetitions demonstrate the cost of recovery but do not establish a broad reliability rate;
+- a latency contract that compares final recovered P95 directly with single-call control P95 will
+  normally reject any slow retry, but changing that measurement now would be a new decision;
+- the mechanically improved packet still lacks the required human diversity/actionability rating.
+
+Next actionable work:
+
+1. Keep the fixed workflow in production and do not rerun this paid comparison.
+2. If the owner wants to continue, record REVISE before choosing one causal path: reduce invalid
+   initial generations, or separate no-retry latency non-inferiority from a predeclared recovery SLO.
+3. Begin claim/citation review only after the revised T01 entry condition passes; keep clip analysis
+   out of the Agent programme until all text stages settle.
+
 ### 25 August 2026 — Agent-owned retries and isolated text protocol implemented
 
 Delivered:

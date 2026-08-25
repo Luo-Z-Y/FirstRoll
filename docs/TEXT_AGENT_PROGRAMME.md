@@ -1,6 +1,6 @@
 # Text-Agent Programme
 
-**Status:** revised implementation complete; repeated paid run awaits explicit budget confirmation
+**Status:** repeated local comparison complete — frozen latency targets failed; later text stages blocked
 
 ## Purpose
 
@@ -42,7 +42,7 @@ fixed packet ──────────────────────�
 fixed packet → bounded acquisition → packet┘
 ```
 
-For each of the five frozen cases it will:
+For each of the five frozen cases it:
 
 1. prepare and fingerprint the fixed packet once;
 2. run the bounded acquisition graph once in `evidence_only` mode;
@@ -63,11 +63,35 @@ required before making one.
 
 The full five-case comparison schedules 15 samples per lane. It therefore requires at least 30 paid
 synthesis calls. If every sample uses both repairs, the hard maximum is 90 synthesis calls, plus at
-most ten planner and ten external-provider calls across the suite. The evaluator remains fail-closed
-until the owner separately confirms this declared budget in
-[`text_agent_programme.json`](../evals/text_agent_programme.json).
+most ten planner and ten external-provider calls across the suite. The owner separately confirmed
+that budget, and the single authorised run consumed 32 synthesis calls, one planner call and one
+external-provider call. Its authorisation is now consumed; the evaluator refuses a rerun.
 
-No paid run is authorised merely by merging this implementation checkpoint.
+### Recorded result
+
+The complete redacted result is
+[`text-agent-repeated-2026-08-25.json`](../evals/results/text-agent-repeated-2026-08-25.json).
+
+| Measure | Fixed packet lane | Agent packet lane | Gate |
+|---|---:|---:|---|
+| Completed samples | 15 / 15 | 15 / 15 | Passed |
+| Mean automated quality | 97.17 | 97.80 (`+0.63`) | Passed |
+| Quality standard deviation | 1.57 | 1.38 | Descriptive |
+| P50 latency | 41.881 s | 46.086 s (`1.100404×`) | **Failed** (`≤1.10×`) |
+| P95 latency | 49.050 s | 97.762 s (`1.993109×`) | **Failed** (`≤1.25×`) |
+| Total tokens | 114,737 | 136,176 including planning (`1.186853×`) | Passed |
+
+All completion, automated quality, citation, identity, instruction, selectivity, packet-change,
+provider-repeat, telemetry and cost targets passed. The target packet again moved from `limited` to
+`passed` after one 417-token planner choice and one Letterboxd call added three reviews.
+
+Two Agent samples over an unchanged sufficient packet returned invalid initial generations. The
+Agent-owned retry recovered both, preserving 15/15 completion, but those calls took 95.411 and
+103.249 seconds. Their cost is correctly retained in P95 rather than hidden. P50 also exceeded its
+frozen boundary by `0.000404` ratio points. Neither threshold may be rounded away after observation.
+
+The result is therefore **NO-GO under the frozen latency contract**. No private packet snapshot or
+human review was produced, and the paid candidate was not rerun.
 
 ### Machine targets
 
@@ -81,8 +105,8 @@ No paid run is authorised merely by merging this implementation checkpoint.
 - repeated P50/P95 ratios are at most `1.10/1.25`;
 - total Agent tokens, including acquisition planning, are at most `1.25×` fixed tokens.
 
-Passing machine targets writes only changed packets to mode-`0600` private storage. The owner then
-runs the resumable local review without pasting its evidence elsewhere:
+Passing every machine target would have written only changed packets to mode-`0600` private storage.
+That condition was not met, so the following review command remains unavailable for this run:
 
 ```bash
 uv run python tools/review_text_agent_packets.py
@@ -99,7 +123,8 @@ Add a reviewer that labels important statements as directly supported, reasonabl
 unsupported or stronger than the cited source permits. It may suggest a correction but cannot invent
 or approve citation identifiers. Deterministic code remains the final citation authority.
 
-**Entry condition:** T01 has a recorded result and retry behaviour is stable.
+**Entry condition:** T01 must pass its frozen targets. It did not, so T02 is blocked pending a new
+owner REVISE decision rather than beginning automatically.
 
 ## Stage T03 — Genuine Evidence-Gap and Source-Diversity Reviewer
 

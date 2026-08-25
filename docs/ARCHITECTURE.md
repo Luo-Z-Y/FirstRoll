@@ -264,7 +264,8 @@ keeps its existing single internal repair. Evaluator-only context modes stop cle
 packet lanes to use the same retry controller during three alternating repetitions, so packet content
 is the only synthesis difference. Reports contain safe aggregate quality/tool/timing/token fields.
 Private packets may be written under ignored mode-`0600` `.firstroll` storage only after every machine
-gate passes. Hosted execution remains prohibited.
+gate passes. The completed repeated run failed P50/P95 ratios `1.100404/1.993109`, so it wrote no
+packet and its consumed authorisation now prevents rerun. Hosted execution remains prohibited.
 
 ### Hosted Deep Study
 

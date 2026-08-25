@@ -174,9 +174,13 @@
     "decision": "revise_text_agent",
     "implementation_authorised": true,
     "implementation_complete": true,
-    "paid_repeated_run_authorised": false,
+    "paid_repeated_run_authorised": true,
+    "paid_repeated_run_authorisation_consumed": true,
+    "result_path": "evals/results/text-agent-repeated-2026-08-25.json",
+    "result_status": "failed_frozen_latency_targets",
+    "human_review_performed": false,
     "production_cutover_authorised": false,
-    "reason": "The original comparison confounded evidence acquisition with variable synthesis and exposed conflicting repair ownership."
+    "reason": "The isolated repeated run passed completion, quality, safety and cost but failed both frozen latency-ratio targets."
   },
   "cutover_preconditions": [
     "all candidate targets pass",

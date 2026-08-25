@@ -1,9 +1,9 @@
 # Human Evidence-Packet Review
 
 This procedure records the completed fixed-workflow human gate. An Agent cannot supply these ratings
-or attest that a filmmaker personally inspected the evidence. If the revised repeated text comparison
-passes every machine target, `tools/review_text_agent_packets.py` applies the same rubric only to its
-mode-`0600` changed-packet snapshot; that later review remains private and separately attested.
+or attest that a filmmaker personally inspected the evidence. The revised repeated text comparison
+failed its latency gates, so it produced no mode-`0600` changed-packet snapshot and
+`tools/review_text_agent_packets.py` must not be used for that run.
 
 ## Privacy Boundary
 
