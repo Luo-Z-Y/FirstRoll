@@ -74,14 +74,25 @@ def test_text_programme_freezes_retry_comparison_and_no_clip_boundaries() -> Non
     )
 
 
-def test_paid_repeated_run_remains_fail_closed_until_budget_confirmation() -> None:
-    current = programme()
-    approved = json.loads(json.dumps(current))
-    approved["status"] = "approved_revised_local_comparison"
-    approved["run_budget"]["paid_run_requires_separate_budget_confirmation"] = False
+def test_paid_repeated_run_requires_the_recorded_owner_budget_confirmation() -> None:
+    approved = programme()
+    revoked = json.loads(json.dumps(approved))
+    revoked["run_budget"]["paid_run_requires_separate_budget_confirmation"] = True
+    mismatched = json.loads(json.dumps(approved))
+    mismatched["owner_budget_confirmation"]["approved_maximum_synthesis_calls"] = 91
 
-    assert evaluator.comparison_authorised(current) is False
     assert evaluator.comparison_authorised(approved) is True
+    assert evaluator.comparison_authorised(revoked) is False
+    assert evaluator.comparison_authorised(mismatched) is False
+    assert approved["owner_budget_confirmation"] == {
+        "confirmed": True,
+        "recorded_at": "2026-08-25T05:07:00Z",
+        "decided_by": "repository_owner",
+        "approved_minimum_synthesis_calls": 30,
+        "approved_maximum_synthesis_calls": 90,
+        "approved_maximum_planner_calls": 10,
+        "approved_maximum_external_provider_calls": 10,
+    }
 
 
 def test_repeated_lane_order_alternates_to_limit_time_order_bias() -> None:

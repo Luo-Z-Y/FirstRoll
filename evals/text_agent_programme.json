@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "programme_id": "firstroll-text-agent-v1",
-  "status": "implementation_complete_run_requires_budget_confirmation",
+  "status": "approved_revised_local_comparison",
   "recorded_at": "2026-08-25T04:28:00Z",
   "owner_revision": {
     "decision": "revise_text_agent",
@@ -44,7 +44,16 @@
     "maximum_synthesis_calls": 90,
     "maximum_acquisition_planner_calls": 10,
     "maximum_external_provider_calls": 10,
-    "paid_run_requires_separate_budget_confirmation": true
+    "paid_run_requires_separate_budget_confirmation": false
+  },
+  "owner_budget_confirmation": {
+    "confirmed": true,
+    "recorded_at": "2026-08-25T05:07:00Z",
+    "decided_by": "repository_owner",
+    "approved_minimum_synthesis_calls": 30,
+    "approved_maximum_synthesis_calls": 90,
+    "approved_maximum_planner_calls": 10,
+    "approved_maximum_external_provider_calls": 10
   },
   "comparison_targets": {
     "fixed_sample_completion_ratio": {
@@ -146,7 +155,7 @@
     {
       "id": "T01",
       "name": "Agent-owned retries and isolated repeated comparison",
-      "status": "implementation_complete_awaiting_run"
+      "status": "run_authorised_pending_execution"
     },
     {
       "id": "T02",

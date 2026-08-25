@@ -55,10 +55,20 @@ def load_json(path: Path) -> dict[str, Any]:
 def comparison_authorised(programme: dict[str, Any]) -> bool:
     owner = programme.get("owner_revision") or {}
     budget = programme.get("run_budget") or {}
+    confirmation = programme.get("owner_budget_confirmation") or {}
     return bool(
         programme.get("status") == "approved_revised_local_comparison"
         and owner.get("decision") == "revise_text_agent"
         and budget.get("paid_run_requires_separate_budget_confirmation") is False
+        and confirmation.get("confirmed") is True
+        and confirmation.get("approved_minimum_synthesis_calls")
+        == budget.get("expected_minimum_synthesis_calls")
+        and confirmation.get("approved_maximum_synthesis_calls")
+        == budget.get("maximum_synthesis_calls")
+        and confirmation.get("approved_maximum_planner_calls")
+        == budget.get("maximum_acquisition_planner_calls")
+        and confirmation.get("approved_maximum_external_provider_calls")
+        == budget.get("maximum_external_provider_calls")
     )
 
 
