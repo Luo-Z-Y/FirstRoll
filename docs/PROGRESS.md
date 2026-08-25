@@ -15,19 +15,21 @@ Acceptance evidence:
 
 - the public application shell has no `/docs`, `/redoc` or `/openapi.json` route;
 - the local application shell retains all three development aids;
-- existing public-mode acceptance still requires `/api/health` to return HTTP 200;
-- the production smoke check requires all three documentation URLs to return HTTP 404 after the new
-  Container App image is approved and deployed.
+- all 243 automated tests and Ruff checks passed before release;
+- immutable image `firstroll46ikj8.azurecr.io/firstroll-api:9d0554a` was smoke-tested locally, pushed
+  to Azure Container Registry and deployed as healthy revision `firstroll-api--0000002`;
+- live `api.firstroll.app` checks returned HTTP 404 for `/docs`, `/redoc` and `/openapi.json`, and
+  HTTP 200 for `/api/health`.
 
 Boundary:
 
 - removing generated documentation reduces endpoint enumeration and accidental public discovery;
   it does not replace authentication or authorisation on protected API operations.
 
-Next action:
+Rollback:
 
-- merge the green protected-branch change, approve its exact production deployment, then verify the
-  live 404/404/404/200 documentation-and-health contract.
+- restore image `firstroll46ikj8.azurecr.io/firstroll-api:9762a08` if the new revision develops a
+  production fault; the previous image remains available in Azure Container Registry.
 
 ### 24 August 2026 — Local Agent comparison fails gates; NO-GO retained
 
