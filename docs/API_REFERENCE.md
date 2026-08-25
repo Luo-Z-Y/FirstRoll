@@ -14,9 +14,9 @@ all three return HTTP 404 on `api.firstroll.app`; `/api/health` remains public f
 checks. Hiding generated documentation reduces the production discovery surface but is not an
 authentication control: every protected operation still enforces its own bearer boundary. The
 local Agent evaluation work is a Python factory only. The completed run's authorisation remains
-consumed, while an unvalidated local revision adds safe failure categories and process-only
-field-patch repair. The evaluator stays fail-closed: `FIRSTROLL_LOCAL_AGENT_ENABLED` registers no
-HTTP endpoint and does not alter any route in this reference.
+consumed, while a local revision adds safe failure categories and process-only field-patch repair.
+One complete local validation budget is now approved, but `FIRSTROLL_LOCAL_AGENT_ENABLED` still
+registers no HTTP endpoint and does not alter any route in this reference.
 
 ## Access Classes
 

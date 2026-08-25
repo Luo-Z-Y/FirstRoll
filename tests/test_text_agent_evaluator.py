@@ -62,15 +62,24 @@ def test_text_programme_freezes_retry_comparison_and_no_clip_boundaries() -> Non
     assert contract["boundaries"]["clip_analysis"] == ("blocked_until_text_programme_complete")
     assert contract["boundaries"]["hosted_route"] is False
     assert contract["boundaries"]["production_cutover"] is False
-    assert contract["owner_continuation"]["paid_model_or_provider_calls_authorised"] is False
+    assert contract["owner_continuation"]["paid_model_or_provider_calls_authorised"] is True
     assert contract["latency_revision_run_budget"] == {
         "expected_minimum_synthesis_calls": 30,
         "maximum_synthesis_calls": 90,
         "maximum_acquisition_planner_calls": 10,
         "maximum_external_provider_calls": 10,
-        "paid_run_requires_separate_budget_confirmation": True,
+        "paid_run_requires_separate_budget_confirmation": False,
     }
-    assert contract["latency_revision_budget_confirmation"]["confirmed"] is False
+    assert contract["latency_revision_budget_confirmation"] == {
+        "confirmed": True,
+        "recorded_at": "2026-08-25T15:32:19Z",
+        "decided_by": "repository_owner",
+        "approved_minimum_synthesis_calls": 30,
+        "approved_maximum_synthesis_calls": 90,
+        "approved_maximum_planner_calls": 10,
+        "approved_maximum_external_provider_calls": 10,
+        "authorisation_consumed": False,
+    }
     assert contract["latency_revision"] == {
         "status": "implementation_complete_without_provider_calls",
         "diagnosis": (
@@ -92,13 +101,13 @@ def test_text_programme_freezes_retry_comparison_and_no_clip_boundaries() -> Non
         "fresh_output_paths_required": True,
         "previous_result_immutable": True,
         "previous_latency_targets_unchanged": True,
-        "paid_validation_authorised": False,
+        "paid_validation_authorised": True,
         "meaningful_agent_claim": (
             "not_yet_supported_without_provider_latency_and_quality_evidence"
         ),
     }
     assert contract["stages"][0]["status"] == (
-        "structural_repair_revision_implemented_awaiting_paid_validation"
+        "structural_repair_revision_approved_for_one_paid_validation"
     )
     assert all(
         stage["status"] == "blocked_by_revised_t01_validation" for stage in contract["stages"][1:]
@@ -115,36 +124,25 @@ def test_text_programme_freezes_retry_comparison_and_no_clip_boundaries() -> Non
     )
 
 
-def test_latency_revision_needs_a_new_exact_budget_confirmation() -> None:
-    completed = programme()
-    approved = json.loads(json.dumps(completed))
-    approved["status"] = "approved_t01_structural_repair_comparison"
-    approved["latency_revision"]["paid_validation_authorised"] = True
-    approved["latency_revision_run_budget"]["paid_run_requires_separate_budget_confirmation"] = (
-        False
-    )
-    approved["latency_revision_budget_confirmation"] = {
-        "confirmed": True,
-        "recorded_at": "2026-08-25T12:00:00Z",
-        "decided_by": "repository_owner",
-        "approved_minimum_synthesis_calls": 30,
-        "approved_maximum_synthesis_calls": 90,
-        "approved_maximum_planner_calls": 10,
-        "approved_maximum_external_provider_calls": 10,
-        "authorisation_consumed": False,
-    }
+def test_latency_revision_requires_the_new_exact_budget_confirmation() -> None:
+    approved = programme()
+    pending = json.loads(json.dumps(approved))
+    pending["status"] = "t01_structural_repair_revision_implemented_awaiting_paid_validation"
+    pending["latency_revision"]["paid_validation_authorised"] = False
+    pending["latency_revision_run_budget"]["paid_run_requires_separate_budget_confirmation"] = True
+    pending["latency_revision_budget_confirmation"]["confirmed"] = False
     mismatched = json.loads(json.dumps(approved))
     mismatched["latency_revision_budget_confirmation"]["approved_maximum_synthesis_calls"] = 91
-    reused_historical = json.loads(json.dumps(completed))
+    reused_historical = json.loads(json.dumps(approved))
     reused_historical["status"] = "approved_revised_local_comparison"
     reused_historical["owner_budget_confirmation"]["authorisation_consumed"] = False
 
-    assert evaluator.comparison_authorised(completed) is False
     assert evaluator.comparison_authorised(approved) is True
+    assert evaluator.comparison_authorised(pending) is False
     assert evaluator.comparison_authorised(mismatched) is False
     assert evaluator.comparison_authorised(reused_historical) is False
-    assert completed["owner_budget_confirmation"]["authorisation_consumed"] is True
-    assert completed["latency_revision_budget_confirmation"]["confirmed"] is False
+    assert approved["owner_budget_confirmation"]["authorisation_consumed"] is True
+    assert approved["latency_revision_budget_confirmation"]["authorisation_consumed"] is False
 
 
 def test_repeated_comparison_requires_a_committed_source(monkeypatch: pytest.MonkeyPatch) -> None:

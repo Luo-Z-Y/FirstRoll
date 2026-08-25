@@ -6,8 +6,8 @@ The original result remains immutable. The owner has since selected **REVISE** f
 versioned [Text-Agent Programme](TEXT_AGENT_PROGRAMME.md): the graph owns two repairs and a future
 comparison averages three isolated synthesis samples per lane. Its separately approved run restored
 15/15 completion and passed quality/cost, but failed both latency ratios. The run authorisation is
-consumed. A no-call structural field-patch revision is implemented but unvalidated; later text
-stages are blocked and production remains fixed.
+consumed. A structural field-patch revision is implemented and one local validation budget is
+approved, but no new result exists; later text stages are blocked and production remains fixed.
 
 ## Recorded Decision
 

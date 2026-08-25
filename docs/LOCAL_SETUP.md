@@ -295,20 +295,21 @@ The owner subsequently selected REVISE for the text-only protocol below:
 
 ```bash
 FIRSTROLL_LOCAL_AGENT_ENABLED=1 uv run python tools/evaluate_text_agent.py \
-  --output evals/results/text-agent-repeated-YYYY-MM-DD.json
+  --output evals/results/text-agent-structural-repair-YYYY-MM-DD.json
 ```
 
 It prepares/acquires each packet once, then alternates three fixed-packet and three Agent-packet
 synthesis samples using the same graph-owned limit of two repairs. The separately authorised run is
 complete: both lanes reached 15/15 and Agent mean quality was 97.80, but P50/P95 latency ratios failed
-at `1.100404/1.993109`. Its one-off budget authorisation is consumed, so the command now refuses a
-rerun. No mode-`0600` changed-packet snapshot exists because machine targets failed; do not invoke the
-human-review tool or bypass the run guard.
+at `1.100404/1.993109`. Its historical authorisation is consumed. No mode-`0600` changed-packet
+snapshot exists because machine targets failed; do not invoke the human-review tool for that result.
 
-A later local-only revision uses deterministic Agent generation and bounded field patches for
-parseable schema/citation failures. Its synthetic tests make no provider call and do not authorise the
-command above. Malformed or unpatchable output remains within the same graph-owned fallback budget.
-This switch is not an interactive product capability or hosted configuration.
+The local-only structural revision uses deterministic Agent generation and bounded field patches for
+parseable schema/citation failures. The owner has separately authorised one complete run at 30–90
+synthesis calls and at most ten planner/provider calls. The evaluator still requires committed source
+and fresh paths; do not bypass those guards or rerun after the confirmation is consumed. Malformed or
+unpatchable output remains within the same graph-owned fallback budget. This switch is not an
+interactive product capability or hosted configuration.
 
 ## Troubleshooting
 

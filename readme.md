@@ -20,7 +20,8 @@ keeps those layers visible instead of presenting one fluent but unsupported answ
 > adapter and paired comparison. The original comparison failed completion and mean-quality targets,
 > so production remains NO-GO. The revised three-sample text run restored 15/15 completion and passed
 > quality/cost, but failed both latency-ratio targets. A no-call revision now patches only invalid
-> fields of parseable responses; provider validation, later text stages and hosted routing stay off.
+> fields of parseable responses. One complete paid validation is approved; later text stages and
+> hosted routing stay off until its evidence passes.
 
 See [Project Progress](docs/PROGRESS.md) for completed milestones, verification results,
 known limitations and the next priorities.
@@ -1057,7 +1058,7 @@ fallback behaviour; these are tracked separately from the new FirstRoll modules.
 | Private RAG foundation | Complete | Token chunking, FTS5, local vectors, hybrid retrieval and citations |
 | Attributed criticism | Complete | Crossref, Douban, Letterboxd and Guardian retrieval with structured critic claims |
 | Evidence-grounded Deep Study | Complete | Typed theory, criticism, review and video-text evidence; Pydantic output, citation validation and quality gate |
-| Bounded research Agent core | Structural-repair revision awaiting paid validation | Parseable schema/citation failures now receive ≤4 field patches capped at 800 tokens; the prior P50/P95 result remains NO-GO |
+| Bounded research Agent core | One structural-repair validation approved | Parseable schema/citation failures now receive ≤4 field patches capped at 800 tokens; the prior P50/P95 result remains NO-GO until new evidence passes |
 | Authenticated research progress | Implemented | Allow-listed SSE lifecycle events, separate owner-scoped result retrieval and secret/evidence redaction tests; final interactive browser observation remains pending |
 | Pre-Agent product hardening | Complete — fixed workflow retained | Entry gate passed, but the authorised local Agent comparison failed 4/5 completion and quality non-inferiority; outcome NO-GO |
 | Clip analysis web migration | Complete | Scene, shot, colour, object and export workflow |
@@ -1108,11 +1109,12 @@ The revised [Text-Agent Programme](docs/TEXT_AGENT_PROGRAMME.md) makes the graph
 attempt plus two repairs. It acquires each candidate packet once, then alternates three fixed-packet
 and three Agent-packet generations through the same synthesis controller, retaining failures as zero
 in the mean. The one authorised run consumed 32 synthesis calls, one planner call and one provider
-call. Its authorisation is consumed, so the command below now refuses a rerun:
+call. Its historical authorisation is consumed. A distinct one-run structural-repair budget is now
+confirmed for 30–90 synthesis calls and at most ten planner/provider calls:
 
 ```bash
 FIRSTROLL_LOCAL_AGENT_ENABLED=1 uv run python tools/evaluate_text_agent.py \
-  --output evals/results/text-agent-repeated-YYYY-MM-DD.json
+  --output evals/results/text-agent-structural-repair-YYYY-MM-DD.json
 ```
 
 The fixed and Agent lanes both completed 15/15 at mean quality `97.17/97.80`, and the target packet
@@ -1123,9 +1125,9 @@ The diagnosed recovery path discarded parseable invalid candidates and repeated 
 6,926-token generation. The local revision now uses temperature `0`, safe failure categories and
 process-only candidate retention, then requests exactly the invalid fields as an at-most-800-token
 patch and revalidates the complete study. Malformed or unpatchable output remains fail-closed. This
-has synthetic coverage only: no new provider call or budget is authorised, and claim/citation review,
-genuine diversity review, targeted section editing, filmmaker coaching and clip-Agent work remain
-blocked until revised T01 passes.
+has synthetic coverage only so far. One complete paid run is authorised but not yet consumed;
+claim/citation review, genuine diversity review, targeted section editing, filmmaker coaching and
+clip-Agent work remain blocked until revised T01 passes.
 
 The latest reviewed complete-workflow and packet-only results are
 [`baseline-2026-08-21.json`](evals/results/baseline-2026-08-21.json) and

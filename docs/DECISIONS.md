@@ -401,7 +401,11 @@ and thresholds. A parseable invalid response may remain in process memory long e
 to request at most four exact field updates with an 800-token cap. Deterministic code merges the
 patch and revalidates the whole study; safe telemetry records category and strategy only. Agent
 initial temperature becomes `0`, while fixed production remains `0.2`. This is not evidence of a
-latency improvement; a fresh paid validation needs separate approval before T02 can begin.
+latency improvement.
+
+**25 August 2026 validation budget:** the owner approved one complete structural-repair comparison:
+30–90 synthesis calls, at most ten planner calls and at most ten provider calls. The confirmation is
+distinct from the consumed historical budget and does not authorise T02 or production routing.
 
 ### Alternatives considered
 

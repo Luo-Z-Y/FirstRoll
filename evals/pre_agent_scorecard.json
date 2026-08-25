@@ -563,9 +563,9 @@
     "production_route_cutover": "no_go",
     "successor_text_programme": {
       "contract_path": "evals/text_agent_programme.json",
-      "status": "structural_repair_revision_implemented_awaiting_paid_validation",
+      "status": "structural_repair_revision_approved_for_one_paid_validation",
       "result_path": "evals/results/text-agent-repeated-2026-08-25.json",
-      "revision_paid_validation_authorised": false
+      "revision_paid_validation_authorised": true
     }
   },
   "agent_entry_gate": {

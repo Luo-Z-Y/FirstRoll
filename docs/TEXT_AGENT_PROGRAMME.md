@@ -1,6 +1,6 @@
 # Text-Agent Programme
 
-**Status:** latency revision implemented without provider calls; paid validation and later text stages blocked
+**Status:** one latency-revision comparison budget approved; run not yet consumed; later text stages blocked
 
 ## Purpose
 
@@ -65,7 +65,8 @@ The full five-case comparison schedules 15 samples per lane. It therefore requir
 synthesis calls. If every sample uses both repairs, the hard maximum is 90 synthesis calls, plus at
 most ten planner and ten external-provider calls across the suite. The owner separately confirmed
 that budget, and the single authorised run consumed 32 synthesis calls, one planner call and one
-external-provider call. Its authorisation is now consumed; the evaluator refuses a rerun.
+external-provider call. Its authorisation is consumed and cannot authorise the separately approved
+structural-repair revision.
 
 ### Recorded result
 
@@ -131,9 +132,10 @@ candidate.
 This is an implementation candidate, **not measured latency evidence**. Provider latency does not
 scale reliably from a token cap, and the exact invalid category from the completed run was not stored.
 The old result and `1.10/1.25` thresholds remain immutable. A separate fail-closed revision budget
-slot declares the same 30–90 synthesis, ten planner and ten provider-call maxima, but its confirmation
-is false. The old consumed confirmation cannot authorise it; a run also requires committed tracked
-code and fresh report/snapshot paths, so prior evidence cannot be overwritten.
+slot declares the same 30–90 synthesis, ten planner and ten provider-call maxima. On 25 August the
+owner confirmed those exact limits for one complete run. The old consumed confirmation cannot
+authorise it; this new confirmation is unconsumed and bound to committed tracked code plus fresh
+report/snapshot paths, so prior evidence cannot be overwritten.
 
 ### Machine targets
 
@@ -165,8 +167,8 @@ Add a reviewer that labels important statements as directly supported, reasonabl
 unsupported or stronger than the cited source permits. It may suggest a correction but cannot invent
 or approve citation identifiers. Deterministic code remains the final citation authority.
 
-**Entry condition:** the revised T01 implementation must pass a separately authorised comparison.
-The implementation exists, but no new paid validation is authorised, so T02 remains blocked.
+**Entry condition:** the revised T01 implementation must pass its separately authorised comparison.
+The budget is now approved, but no result exists yet, so T02 remains blocked.
 
 ## Stage T03 — Genuine Evidence-Gap and Source-Diversity Reviewer
 

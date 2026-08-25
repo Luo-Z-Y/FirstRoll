@@ -1,5 +1,34 @@
 # FirstRoll Project Progress
 
+### 25 August 2026 — Structural-repair deployment and one paid validation approved
+
+Recorded decisions:
+
+1. The owner approved exact production run `32844112600` for commit `221c0fa3`. The sealed frontend
+   deployment succeeded as live build `v171`; `firstroll.app` reports the expected commit and the API
+   health endpoint returns `{"status":"ok"}`.
+2. The owner separately approved one complete structural-repair comparison with 30–90 synthesis
+   calls, up to ten planner calls and up to ten external-provider calls.
+3. The historical comparison authorisation remains consumed. The new confirmation is a distinct,
+   currently unconsumed record; it cannot overwrite the historical report or private paths.
+4. The run must use committed tracked code, the complete five-case/three-repetition schedule, frozen
+   thresholds, alternating lane order and zero-scored failures. It does not authorise T02, hosted
+   routing or production Agent cut-over.
+
+Acceptance evidence:
+
+- `evals/text_agent_programme.json` binds all four approved maxima and requires the exact new status,
+  implementation contract, unconsumed confirmation and consumed historical confirmation;
+- the evaluator refuses dirty tracked source and existing output paths before any paid call;
+- no synthesis, planner or provider call was made while recording this decision.
+
+Next actionable work:
+
+1. Commit and run this exact authorised checkpoint once; retain all attempts and do not tune or rerun.
+2. Publish only the redacted aggregate and immediately consume the authorisation.
+3. If every machine target passes, open only the private changed-packet review for owner attestation;
+   otherwise preserve the failure and continue T01 without beginning later stages.
+
 ### 25 August 2026 — Parseable Agent failures now receive bounded structural patches
 
 Diagnosis:

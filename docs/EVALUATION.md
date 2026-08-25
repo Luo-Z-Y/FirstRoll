@@ -367,8 +367,8 @@ repair capped at four paths and 800 completion tokens. Accepted fields are merge
 complete study is revalidated. Future report schema 3 counts initial failures, structural repairs,
 quality repairs, full regenerations, per-strategy P50/P95 and allow-listed failure categories; it
 model call and terminal latency. Synthetic transport tests establish control flow and privacy, not
-provider latency. Another complete comparison requires the staged revision contract to receive an
-explicit budget confirmation.
+provider latency. The owner has now confirmed the staged 30–90 synthesis-call budget for one complete
+comparison; no result exists yet and every retry remains in terminal latency.
 
 ## Deep Study Transparency Checkpoint
 
