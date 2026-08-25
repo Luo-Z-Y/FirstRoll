@@ -1,7 +1,7 @@
 # FirstRoll Data Model
 
 **Status:** Current implementation and staged identity-neutral migration
-**Last reconciled:** 24 August 2026
+**Last reconciled:** 25 August 2026
 
 FirstRoll deliberately uses different stores for different privacy and durability requirements. The
 hosted edition persists account identity, profile, preferences, saved films and quota counters in Supabase. The replacement
@@ -28,7 +28,7 @@ bounded Discover workspace in per-tab session storage solely to survive view cha
 | Discovery/reception dictionaries | Local and hosted | No | TMDb or Wikidata/Wikipedia details, related-film and reception cache | In memory only |
 | Browser `sessionStorage` | Local and hosted browser | Per tab, ≤24 hours | Public Discover query/candidates/shelf, active product view, scroll offsets and optional dossier film ID | Not applicable; browser-managed |
 | `StudyRunStore` | Hosted | No | Owner UUID, status and final study for a maximum of ten minutes | In memory only |
-| Local Agent workspace | Local comparison only | No | Current film/focus, fixed or frozen packet, ephemeral acquired reviews/videos, planner usage, up to three redacted study attempts and final study | In memory only; no checkpointer |
+| Local Agent workspace | Local comparison only | No | Current film/focus, fixed or frozen packet, ephemeral acquisitions, planner usage, safe attempt categories and an optional parseable repair candidate/field paths | In memory only; no checkpointer; candidate excluded from safe metrics |
 | `.firstroll/evaluations/local-agent-packets.json` | Historical local comparison | Conditional | Full candidate packets for human review; the failed original run wrote none | Yes |
 | `.firstroll/evaluations/text-agent-packets.json` | Revised local comparison | Conditional | Changed candidate packets, written only after all repeated machine targets pass | Yes |
 | `.firstroll/evaluations/text-agent-human-review*.json` | Revised local comparison | Conditional | Private scores/notes and a separate score-only local aggregate | Yes |
@@ -41,7 +41,9 @@ stored product states: one freezes acquisition before prose generation and the o
 packet lanes the same graph-owned two-repair policy. Optional packet snapshots are separate
 mode-`0600`, Git-ignored human-review artefacts; versioned reports contain hashes and aggregate
 metrics only. The repeated run failed latency gates, so neither revised snapshot/review file was
-created. Durable owner-scoped checkpoint design remains mandatory before any hosted Agent proposal.
+created. Its structural-repair revision retains a parseable invalid candidate only until completion
+or safe stop; only allow-listed failure categories and repair strategies can reach report schema 3.
+Durable owner-scoped checkpoint design remains mandatory before any hosted Agent proposal.
 
 ## Per-tab Discover continuity
 

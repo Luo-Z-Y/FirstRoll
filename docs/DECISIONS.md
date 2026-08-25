@@ -396,6 +396,13 @@ Agent mean quality exceeded fixed by 0.63 points. Two Agent-owned retries recove
 generations, but raised P50/P95 ratios to `1.100404/1.993109`, failing both frozen latency limits. The
 authorisation is consumed, no human packet review occurred and later text stages remain blocked.
 
+**25 August 2026 latency revision:** continue T01 without paid calls, but preserve the failed result
+and thresholds. A parseable invalid response may remain in process memory long enough for the graph
+to request at most four exact field updates with an 800-token cap. Deterministic code merges the
+patch and revalidates the whole study; safe telemetry records category and strategy only. Agent
+initial temperature becomes `0`, while fixed production remains `0.2`. This is not evidence of a
+latency improvement; a fresh paid validation needs separate approval before T02 can begin.
+
 ### Alternatives considered
 
 | Option | Assessment |

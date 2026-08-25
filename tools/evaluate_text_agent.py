@@ -5,6 +5,7 @@ import json
 import os
 import platform
 import statistics
+import subprocess
 import sys
 import time
 from datetime import datetime, timezone
@@ -27,6 +28,11 @@ from app.backend.research_graph import (
     initial_research_state,
 )
 from app.backend.study_observability import StudyTrace
+from app.backend.study_service import (
+    AGENT_INITIAL_GENERATION_TEMPERATURE,
+    MAX_STRUCTURAL_REPAIR_COMPLETION_TOKENS,
+    MAX_STRUCTURAL_REPAIR_PATHS,
+)
 from tools.evaluate_local_agent import (
     SafeRecordingTransport,
     assert_safe_report,
@@ -53,12 +59,20 @@ def load_json(path: Path) -> dict[str, Any]:
 
 
 def comparison_authorised(programme: dict[str, Any]) -> bool:
-    owner = programme.get("owner_revision") or {}
-    budget = programme.get("run_budget") or {}
-    confirmation = programme.get("owner_budget_confirmation") or {}
+    owner = programme.get("owner_continuation") or {}
+    revision = programme.get("latency_revision") or {}
+    budget = programme.get("latency_revision_run_budget") or {}
+    confirmation = programme.get("latency_revision_budget_confirmation") or {}
+    historical_confirmation = programme.get("owner_budget_confirmation") or {}
     return bool(
-        programme.get("status") == "approved_revised_local_comparison"
-        and owner.get("decision") == "revise_text_agent"
+        programme.get("status") == "approved_t01_structural_repair_comparison"
+        and owner.get("decision") == "continue_revising_until_meaningful"
+        and revision.get("status") == "implementation_complete_without_provider_calls"
+        and revision.get("previous_result_immutable") is True
+        and revision.get("committed_source_required") is True
+        and revision.get("fresh_output_paths_required") is True
+        and revision.get("paid_validation_authorised") is True
+        and historical_confirmation.get("authorisation_consumed") is True
         and budget.get("paid_run_requires_separate_budget_confirmation") is False
         and confirmation.get("confirmed") is True
         and confirmation.get("authorisation_consumed") is False
@@ -132,6 +146,49 @@ def summarise_lane(samples: list[dict[str, Any]], *, scheduled: int) -> dict[str
     valid_citations = sum(
         sample.get("quality", {}).get("valid_citations") is True for sample in completed
     )
+    study_attempts = [
+        attempt
+        for sample in samples
+        for attempt in sample.get("study_attempts", [])
+        if isinstance(attempt, dict)
+    ]
+    failure_categories: dict[str, int] = {}
+    for attempt in study_attempts:
+        category = attempt.get("failure_category")
+        if isinstance(category, str):
+            failure_categories[category] = failure_categories.get(category, 0) + 1
+
+    def samples_using(strategy: str) -> int:
+        return sum(
+            any(
+                isinstance(attempt, dict) and attempt.get("strategy") == strategy
+                for attempt in sample.get("study_attempts", [])
+            )
+            for sample in samples
+        )
+
+    strategy_latency_seconds: dict[str, dict[str, Any]] = {}
+    for strategy in (
+        "initial_generation",
+        "targeted_structural_repair",
+        "targeted_quality_repair",
+        "full_regeneration",
+    ):
+        durations = [
+            float(attempt["duration_seconds"])
+            for attempt in study_attempts
+            if attempt.get("strategy") == strategy
+            and isinstance(attempt.get("duration_seconds"), (int, float))
+            and not isinstance(attempt.get("duration_seconds"), bool)
+            and float(attempt["duration_seconds"]) >= 0
+        ]
+        if durations:
+            strategy_latency_seconds[strategy] = {
+                "attempts": len(durations),
+                "p50": percentile(durations, 0.5),
+                "p95": percentile(durations, 0.95),
+            }
+
     return {
         "scheduled_samples": scheduled,
         "completed_samples": len(completed),
@@ -146,6 +203,20 @@ def summarise_lane(samples: list[dict[str, Any]], *, scheduled: int) -> dict[str
         "p50_latency_seconds": percentile(latencies, 0.5),
         "p95_latency_seconds": percentile(latencies, 0.95),
         "model_calls": len(model_calls),
+        "initial_generation_failure_samples": sum(
+            any(
+                isinstance(attempt, dict)
+                and attempt.get("kind") == "initial"
+                and attempt.get("status") == "failed"
+                for attempt in sample.get("study_attempts", [])
+            )
+            for sample in samples
+        ),
+        "targeted_structural_repair_samples": samples_using("targeted_structural_repair"),
+        "targeted_quality_repair_samples": samples_using("targeted_quality_repair"),
+        "full_regeneration_samples": samples_using("full_regeneration"),
+        "failure_categories": dict(sorted(failure_categories.items())),
+        "strategy_latency_seconds": strategy_latency_seconds,
         "token_usage_complete_ratio": round(calls_with_token_usage / len(model_calls), 6)
         if model_calls
         else 0.0,
@@ -491,7 +562,7 @@ def build_report(
     )
     machine_passed = all(target["status"] == "passed" for target in targets)
     report = {
-        "schema_version": 2,
+        "schema_version": 3,
         "programme_id": programme["programme_id"],
         "suite_id": suite_id,
         "suite_fingerprint": suite_fingerprint,
@@ -511,6 +582,12 @@ def build_report(
             "alternating_lane_order": True,
             "packet_acquired_once_before_generation": True,
             "same_generation_controller_for_both_lanes": True,
+            "agent_initial_generation_temperature": AGENT_INITIAL_GENERATION_TEMPERATURE,
+            "maximum_structural_repair_paths": MAX_STRUCTURAL_REPAIR_PATHS,
+            "maximum_structural_repair_completion_tokens": (
+                MAX_STRUCTURAL_REPAIR_COMPLETION_TOKENS
+            ),
+            "safe_failure_categories_only": True,
         },
         "summary": {
             "fixed": fixed_summary,
@@ -530,6 +607,23 @@ def build_report(
     }
     assert_safe_report(report)
     return report
+
+
+def require_committed_source() -> None:
+    completed = subprocess.run(
+        ["git", "diff", "--quiet", "HEAD", "--"],
+        cwd=ROOT,
+        check=False,
+    )
+    if completed.returncode != 0:
+        raise SystemExit("Commit all tracked evaluator changes before a paid comparison.")
+
+
+def require_fresh_output_paths(output: Path, private_packets: Path) -> None:
+    if output.exists():
+        raise SystemExit("Refusing to overwrite an existing repeated-comparison report.")
+    if private_packets.exists():
+        raise SystemExit("Refusing to overwrite an existing private packet snapshot.")
 
 
 def parse_args() -> argparse.Namespace:
@@ -558,6 +652,8 @@ def main_cli() -> int:
         raise SystemExit(
             "The machine-readable decision does not authorise another repeated comparison."
         )
+    require_committed_source()
+    require_fresh_output_paths(args.output, args.private_packets)
     suite_id, specs = case_specs(args.cases, args.reference)
     expected_count = int(programme["comparison_protocol"]["case_count"])
     if len(specs) != expected_count:

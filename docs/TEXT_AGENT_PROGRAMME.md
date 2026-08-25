@@ -1,6 +1,6 @@
 # Text-Agent Programme
 
-**Status:** repeated local comparison complete — frozen latency targets failed; later text stages blocked
+**Status:** latency revision implemented without provider calls; paid validation and later text stages blocked
 
 ## Purpose
 
@@ -93,6 +93,48 @@ frozen boundary by `0.000404` ratio points. Neither threshold may be rounded awa
 The result is therefore **NO-GO under the frozen latency contract**. No private packet snapshot or
 human review was produced, and the paid candidate was not rerun.
 
+### T01 latency revision
+
+The owner subsequently asked FirstRoll to continue revising until it finds meaningful Agent value.
+That instruction authorises non-paid implementation work, not another model/provider budget or any
+hosted route.
+
+The two slow recoveries exposed a concrete defect: when an initial response was parseable but failed
+schema or citation validation, the service discarded it. With no valid draft available, the graph's
+nominal repair node called `generate_once()` again with the complete 6,926-token prompt and requested
+a complete study. The two pairs of model transports consumed `42.739 + 49.344` and
+`48.168 + 51.636` seconds.
+
+The revision now:
+
+1. gives Agent initial generation deterministic temperature `0`, while the fixed production method
+   retains `0.2`;
+2. classifies failures into bounded categories such as empty content, malformed JSON, schema,
+   citation, evidence-status and transport failure without retaining response text in telemetry;
+3. retains a parseable invalid candidate only in process memory;
+4. derives at most four allow-listed invalid field paths from deterministic validation;
+5. sends only the candidate sections and evidence classes needed by those paths, then asks for an
+   `updates` patch at temperature `0` and at most 800 completion tokens;
+6. merges the patch deterministically without regenerating accepted fields and revalidates the
+   complete schema, every citation, evidence status and quality gate;
+7. permits the final graph repair to patch a second invalid field if validation exposes one; and
+8. falls back to one graph-budgeted full regeneration only for malformed, unpatchable or failed
+   patches.
+
+Candidates, patches and generated prose never enter safe metrics or versioned reports. Report schema
+3 adds only repair strategy, per-strategy P50/P95 and safe failure-category aggregates. Synthetic
+transport tests prove
+that accepted sections cannot be changed, one or two invalid citations use 800-token field patches,
+malformed JSON remains fail-closed and the graph never invokes full regeneration for a patchable
+candidate.
+
+This is an implementation candidate, **not measured latency evidence**. Provider latency does not
+scale reliably from a token cap, and the exact invalid category from the completed run was not stored.
+The old result and `1.10/1.25` thresholds remain immutable. A separate fail-closed revision budget
+slot declares the same 30–90 synthesis, ten planner and ten provider-call maxima, but its confirmation
+is false. The old consumed confirmation cannot authorise it; a run also requires committed tracked
+code and fresh report/snapshot paths, so prior evidence cannot be overwritten.
+
 ### Machine targets
 
 - all 15 fixed and all 15 Agent samples complete;
@@ -123,8 +165,8 @@ Add a reviewer that labels important statements as directly supported, reasonabl
 unsupported or stronger than the cited source permits. It may suggest a correction but cannot invent
 or approve citation identifiers. Deterministic code remains the final citation authority.
 
-**Entry condition:** T01 must pass its frozen targets. It did not, so T02 is blocked pending a new
-owner REVISE decision rather than beginning automatically.
+**Entry condition:** the revised T01 implementation must pass a separately authorised comparison.
+The implementation exists, but no new paid validation is authorised, so T02 remains blocked.
 
 ## Stage T03 — Genuine Evidence-Gap and Source-Diversity Reviewer
 

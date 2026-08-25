@@ -19,7 +19,8 @@ keeps those layers visible instead of presenting one fluent but unsupported answ
 > passes all 17 targets and 11 required steps. The owner has authorised a default-off local Agent
 > adapter and paired comparison. The original comparison failed completion and mean-quality targets,
 > so production remains NO-GO. The revised three-sample text run restored 15/15 completion and passed
-> quality/cost, but failed both latency-ratio targets; later text stages and hosted routing stay off.
+> quality/cost, but failed both latency-ratio targets. A no-call revision now patches only invalid
+> fields of parseable responses; provider validation, later text stages and hosted routing stay off.
 
 See [Project Progress](docs/PROGRESS.md) for completed milestones, verification results,
 known limitations and the next priorities.
@@ -1056,7 +1057,7 @@ fallback behaviour; these are tracked separately from the new FirstRoll modules.
 | Private RAG foundation | Complete | Token chunking, FTS5, local vectors, hybrid retrieval and citations |
 | Attributed criticism | Complete | Crossref, Douban, Letterboxd and Guardian retrieval with structured critic claims |
 | Evidence-grounded Deep Study | Complete | Typed theory, criticism, review and video-text evidence; Pydantic output, citation validation and quality gate |
-| Bounded research Agent core | Repeated local result — latency NO-GO | Graph-owned retries restored 15/15 completion and Agent quality reached 97.80, but P50/P95 ratios `1.100404/1.993109` failed |
+| Bounded research Agent core | Structural-repair revision awaiting paid validation | Parseable schema/citation failures now receive ≤4 field patches capped at 800 tokens; the prior P50/P95 result remains NO-GO |
 | Authenticated research progress | Implemented | Allow-listed SSE lifecycle events, separate owner-scoped result retrieval and secret/evidence redaction tests; final interactive browser observation remains pending |
 | Pre-Agent product hardening | Complete — fixed workflow retained | Entry gate passed, but the authorised local Agent comparison failed 4/5 completion and quality non-inferiority; outcome NO-GO |
 | Clip analysis web migration | Complete | Scene, shot, colour, object and export workflow |
@@ -1116,8 +1117,15 @@ FIRSTROLL_LOCAL_AGENT_ENABLED=1 uv run python tools/evaluate_text_agent.py \
 
 The fixed and Agent lanes both completed 15/15 at mean quality `97.17/97.80`, and the target packet
 again gained three reviews, but P50/P95 ratios `1.100404/1.993109` failed their `1.10/1.25` limits.
-No private packet or human review was produced. Claim/citation review, genuine diversity review,
-targeted section editing, filmmaker coaching and clip-Agent work remain blocked pending REVISE.
+No private packet or human review was produced.
+
+The diagnosed recovery path discarded parseable invalid candidates and repeated a complete
+6,926-token generation. The local revision now uses temperature `0`, safe failure categories and
+process-only candidate retention, then requests exactly the invalid fields as an at-most-800-token
+patch and revalidates the complete study. Malformed or unpatchable output remains fail-closed. This
+has synthetic coverage only: no new provider call or budget is authorised, and claim/citation review,
+genuine diversity review, targeted section editing, filmmaker coaching and clip-Agent work remain
+blocked until revised T01 passes.
 
 The latest reviewed complete-workflow and packet-only results are
 [`baseline-2026-08-21.json`](evals/results/baseline-2026-08-21.json) and

@@ -361,6 +361,15 @@ The consumed authorisation now makes this command refuse a rerun. Because machin
 pass, no changed-packet snapshot or human review was created. Human ratings cannot be supplied by an
 Agent, and no hosted route or production cut-over is implied.
 
+The subsequent no-call latency revision does not rewrite that result. It classifies failures safely,
+uses deterministic Agent generation and gives parseable schema/citation failures an exact field-patch
+repair capped at four paths and 800 completion tokens. Accepted fields are merged unchanged and the
+complete study is revalidated. Future report schema 3 counts initial failures, structural repairs,
+quality repairs, full regenerations, per-strategy P50/P95 and allow-listed failure categories; it
+model call and terminal latency. Synthetic transport tests establish control flow and privacy, not
+provider latency. Another complete comparison requires the staged revision contract to receive an
+explicit budget confirmation.
+
 ## Deep Study Transparency Checkpoint
 
 [`deep-study-transparency-2026-08-21.json`](../evals/results/deep-study-transparency-2026-08-21.json)
