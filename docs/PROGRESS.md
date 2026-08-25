@@ -1,5 +1,56 @@
 # FirstRoll Project Progress
 
+### 25 August 2026 — Agent-owned retries and isolated text protocol implemented
+
+Delivered:
+
+1. Recorded the owner's REVISE decision as a five-stage text programme: Agent-owned retries, bounded
+   claim/citation review, genuine diversity review, targeted section editing and filmmaker coaching.
+   Clip-Agent work is blocked until those text stages establish an accepted baseline.
+2. Split synthesis into `generate_once()` and `repair_once()`. Agent calls have no hidden service
+   retry; the graph owns one initial attempt and at most two repairs. The fixed production workflow
+   retains its existing single internal repair and no Agent route was added.
+3. Increased the graph repair limit to two, enforced total model-call budget checks and allowed a
+   quality-passing draft to complete on the final permitted step.
+4. Added local `evidence_only` and `synthesis_only` graph modes. The former freezes one bounded
+   acquisition before writing; the latter gives fixed and enriched packets the exact same generation
+   and retry policy without extra provider calls.
+5. Added a fail-closed repeated evaluator. It prepares/acquires once, schedules three samples per lane
+   and case, alternates lane order, scores failures as zero, includes acquisition planning in Agent
+   token cost and writes only changed private packets after every machine target passes.
+6. Added a resumable local human-review tool that requires mode-`0600` machine-gated packets, keeps
+   notes private and emits only score aggregates after personal attestation.
+7. Declared the complete cost before execution: 30 minimum and 90 maximum synthesis calls, plus at
+   most ten planner/provider calls. Implementation approval does not authorise that paid run.
+
+Acceptance evidence:
+
+- graph tests prove two successful repairs, two-repair exhaustion, evidence-only termination,
+  synthesis-only isolation and total call/step boundaries;
+- service tests prove `generate_once()` never repairs and `repair_once()` makes exactly one call;
+- evaluator tests prove alternating order, complete denominators, zero-scored failures, acquisition
+  cost accounting, report redaction and fail-closed budget authorisation;
+- all 264 automated tests, scoped Ruff, compilation, JSON parsing, documentation links and whitespace
+  checks pass without a provider or synthesis call;
+- the hosted/public fixed route, model behaviour and API surface are unchanged.
+
+Known constraints:
+
+- three repetitions reduce one-draw noise but cannot support a reliability claim;
+- the full frozen run can consume up to 90 synthesis calls if every sample uses both repairs;
+- packet-level human diversity/actionability remains unknown until machine targets pass and the owner
+  reviews changed packets;
+- the experimental graph remains process-local with no durable hosted checkpoint.
+
+Next actionable work:
+
+1. Obtain explicit owner confirmation of the declared paid-run budget before changing the
+   machine-readable programme to `approved_revised_local_comparison`.
+2. Run the complete frozen repeated comparison once, retain every sample and publish only its
+   redacted aggregate result.
+3. If T01 passes, begin T02 claim/citation review as a separate measurable change. Otherwise diagnose
+   retry or packet effects without silently tuning against individual generated outputs.
+
 ### 25 August 2026 — Production-generated API documentation disabled
 
 Delivered:

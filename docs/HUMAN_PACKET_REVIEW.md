@@ -1,8 +1,9 @@
 # Human Evidence-Packet Review
 
-This is the only remaining human gate before FirstRoll can freeze the fixed workflow and consider an
-Agent go/no-go decision. An agent cannot supply these ratings or attest that a filmmaker personally
-inspected the evidence.
+This procedure records the completed fixed-workflow human gate. An Agent cannot supply these ratings
+or attest that a filmmaker personally inspected the evidence. If the revised repeated text comparison
+passes every machine target, `tools/review_text_agent_packets.py` applies the same rubric only to its
+mode-`0600` changed-packet snapshot; that later review remains private and separately attested.
 
 ## Privacy Boundary
 

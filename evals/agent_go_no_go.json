@@ -168,6 +168,16 @@
     "human_review_performed": false,
     "outcome": "no_go"
   },
+  "successor_programme": {
+    "programme_id": "firstroll-text-agent-v1",
+    "contract_path": "evals/text_agent_programme.json",
+    "decision": "revise_text_agent",
+    "implementation_authorised": true,
+    "implementation_complete": true,
+    "paid_repeated_run_authorised": false,
+    "production_cutover_authorised": false,
+    "reason": "The original comparison confounded evidence acquisition with variable synthesis and exposed conflicting repair ownership."
+  },
   "cutover_preconditions": [
     "all candidate targets pass",
     "default-off feature flag and fixed fallback remain",

@@ -383,6 +383,14 @@ below the 96.94 mean-quality floor. Although one bounded Letterboxd acquisition 
 packet's automated sufficiency, the predeclared candidate failed. Production Agent integration is
 therefore NO-GO and the fixed workflow remains authoritative.
 
+**25 August 2026 revision:** the owner approved a successor text-only implementation, not a cut-over.
+The graph now owns one initial generation and at most two repairs; the model service makes no hidden
+repair for Agent runs. A future evaluator acquires once, freezes both packets and runs three samples
+per lane through the same retry controller, alternating order and retaining failures as zero. This
+isolates packet content from synthesis orchestration. Because the full run costs 30–90 synthesis
+calls, paid execution remains separately budget-gated. Claim review, genuine diversity review,
+targeted section editing and filmmaker coaching follow in that order; clip work is deferred.
+
 ### Alternatives considered
 
 | Option | Assessment |

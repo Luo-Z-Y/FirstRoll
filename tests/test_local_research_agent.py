@@ -100,6 +100,7 @@ class RecordingStudyService:
     plans: list[ToolName] = field(default_factory=list)
     planner_calls: list[dict[str, Any]] = field(default_factory=list)
     generation_calls: int = 0
+    repair_calls: int = 0
 
     def plan_research_tool(self, **values: Any) -> ToolPlan:
         self.planner_calls.append(values)
@@ -112,7 +113,7 @@ class RecordingStudyService:
             total_tokens=22,
         )
 
-    def generate(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
+    def generate_once(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
         self.generation_calls += 1
         trace = kwargs["trace"]
         trace.increment_count("model_calls")
@@ -120,9 +121,14 @@ class RecordingStudyService:
         trace.finish("completed")
         return {
             "title": "A bounded study",
+            "sections": [{"section": 1}],
             "quality": {"status": "passed", "score": 1.0},
             "observability": trace.snapshot(),
         }
+
+    def repair_once(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
+        self.repair_calls += 1
+        return self.generate_once(*args, **kwargs)
 
 
 def services(
@@ -232,6 +238,114 @@ def test_sufficient_existing_packet_skips_planner_and_external_tools() -> None:
     assert acquirer.calls == []
     assert study.planner_calls == []
     assert study.generation_calls == 1
+
+
+def test_frozen_packet_synthesis_does_not_repeat_packet_preparation() -> None:
+    prepare_calls = 0
+    frozen = packet([review()])
+
+    def prepare(*args: Any, **kwargs: Any) -> dict[str, Any]:
+        nonlocal prepare_calls
+        prepare_calls += 1
+        raise AssertionError("Frozen synthesis must not repeat packet preparation.")
+
+    adapter = LocalResearchGraphServices(
+        detail=lambda film_id: {"film": FILM},
+        prepare=prepare,
+        acquirer=cast(Any, RecordingAcquirer()),
+        study_service=cast(Any, RecordingStudyService()),
+        packet_override=frozen,
+    )
+
+    result = run_agent(adapter)
+
+    assert result["status"] is TerminalStatus.COMPLETE
+    assert prepare_calls == 0
+    assert adapter.safe_metrics("local-agent-test")["initial_packet_fingerprint"] == (
+        adapter.safe_metrics("local-agent-test")["packet_fingerprint"]
+    )
+
+
+def test_agent_owns_two_repairs_and_can_pass_on_the_final_attempt() -> None:
+    class RetryStudyService(RecordingStudyService):
+        def __init__(self) -> None:
+            super().__init__()
+            self.outcomes = ["insufficient_evidence", "insufficient_evidence", "passed"]
+
+        def _attempt(self, trace: StudyTrace) -> dict[str, Any]:
+            status = self.outcomes.pop(0)
+            trace.increment_count("model_calls")
+            trace.increment_count("total_tokens", 100)
+            trace.finish("completed")
+            return {
+                "title": "A bounded study",
+                "sections": [{"section": 1}],
+                "quality": {"status": status, "score": 1.0 if status == "passed" else 0.6},
+                "observability": trace.snapshot(),
+            }
+
+        def generate_once(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
+            self.generation_calls += 1
+            return self._attempt(kwargs["trace"])
+
+        def repair_once(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
+            self.repair_calls += 1
+            return self._attempt(kwargs["trace"])
+
+    acquirer = RecordingAcquirer()
+    study = RetryStudyService()
+    adapter = services(existing_reviews=[review()], acquirer=acquirer, study=study)
+
+    result = run_agent(adapter)
+    metrics = adapter.safe_metrics("local-agent-test")
+
+    assert result["status"] is TerminalStatus.COMPLETE
+    assert result["repair_calls"] == 2
+    assert study.generation_calls == 1
+    assert study.repair_calls == 2
+    assert [item["kind"] for item in metrics["study_attempts"]] == [
+        "initial",
+        "repair",
+        "repair",
+    ]
+    assert metrics["repair_attempts"] == 2
+    assert metrics["study_observability"]["counts"]["model_calls"] == 3
+    assert metrics["study_observability"]["counts"]["repair_attempts"] == 2
+
+
+def test_agent_stops_insufficient_after_two_failed_repairs() -> None:
+    class FailingStudyService(RecordingStudyService):
+        def _attempt(self, trace: StudyTrace) -> dict[str, Any]:
+            trace.increment_count("model_calls")
+            trace.finish("completed")
+            return {
+                "title": "Still weak",
+                "sections": [{"section": 1}],
+                "quality": {"status": "insufficient_evidence", "score": 0.6},
+                "observability": trace.snapshot(),
+            }
+
+        def generate_once(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
+            self.generation_calls += 1
+            return self._attempt(kwargs["trace"])
+
+        def repair_once(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
+            self.repair_calls += 1
+            return self._attempt(kwargs["trace"])
+
+    study = FailingStudyService()
+    adapter = services(
+        existing_reviews=[review()],
+        acquirer=RecordingAcquirer(),
+        study=study,
+    )
+
+    result = run_agent(adapter)
+
+    assert result["status"] is TerminalStatus.INSUFFICIENT_EVIDENCE
+    assert result["repair_calls"] == 2
+    assert study.generation_calls == 1
+    assert study.repair_calls == 2
 
 
 def test_sparse_packet_acquires_one_source_then_uses_unchanged_synthesis() -> None:

@@ -560,7 +560,11 @@
     "status": "bounded_local_comparison_failed_no_go",
     "recommendation": "retain_fixed_workflow_after_failed_local_comparison",
     "result_path": "evals/results/local-agent-paired-2026-08-24.json",
-    "production_route_cutover": "no_go"
+    "production_route_cutover": "no_go",
+    "successor_text_programme": {
+      "contract_path": "evals/text_agent_programme.json",
+      "status": "implementation_complete_run_requires_budget_confirmation"
+    }
   },
   "agent_entry_gate": {
     "required_completed_steps": [

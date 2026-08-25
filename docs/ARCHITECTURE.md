@@ -252,13 +252,19 @@ explicit selected film + frozen focus
 ```
 
 `FIRSTROLL_LOCAL_AGENT_ENABLED=0` is the default. Enabling it makes a Python service factory
-available to the paired evaluator but registers no HTTP route. The planner sees no evidence text,
+available to local evaluators but registers no HTTP route. The planner sees no evidence text,
 credentials or private locators. Provider objects and credentials remain in runtime context; graph
-state receives bounded evidence only for the non-checkpointed local run. The paired evaluator warms
-and fingerprints the initial packets, runs each fixed control immediately before its Agent candidate,
-and serialises only safe aggregate quality/tool/timing/token fields. If all local machine gates pass,
-it writes candidate packets separately under ignored `.firstroll` with mode `0600` for human review.
-The production fixed route and fallback are unchanged, and hosted execution remains prohibited.
+state receives bounded evidence only for the non-checkpointed local run.
+
+The revised text graph owns synthesis retries. `generate_once()` makes one call with no hidden repair;
+a failed deterministic validation may route through `repair_once()` at most twice. The graph enforces
+one initial generation, two repairs and the total model-call budget, while the production fixed route
+keeps its existing single internal repair. Evaluator-only context modes stop cleanly at
+`evidence_ready` or force synthesis over a frozen packet. They allow acquisition to run once and both
+packet lanes to use the same retry controller during three alternating repetitions, so packet content
+is the only synthesis difference. Reports contain safe aggregate quality/tool/timing/token fields.
+Private packets may be written under ignored mode-`0600` `.firstroll` storage only after every machine
+gate passes. Hosted execution remains prohibited.
 
 ### Hosted Deep Study
 

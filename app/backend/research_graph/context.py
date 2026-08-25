@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Protocol
+from typing import Any, Literal, Protocol
 
 from app.backend.research_agent_contract import (
     DEFAULT_BUDGETS,
@@ -65,5 +65,8 @@ class ResearchGraphServices(Protocol):
 
 @dataclass(frozen=True)
 class ResearchGraphContext:
+    """Runtime capabilities plus local-only evaluation isolation mode."""
+
     services: ResearchGraphServices
     budgets: ResearchBudgets = field(default_factory=lambda: DEFAULT_BUDGETS)
+    mode: Literal["full", "evidence_only", "synthesis_only"] = "full"

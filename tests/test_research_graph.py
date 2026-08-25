@@ -292,7 +292,7 @@ def test_quality_failure_repairs_once_then_passes() -> None:
     assert result["draft"] and result["draft"]["repaired"] is True
 
 
-def test_second_quality_failure_stops_without_an_agent_loop() -> None:
+def test_quality_failure_uses_two_agent_owned_repairs_then_stops() -> None:
     services = FakeResearchServices(
         validation_results=[
             ValidationResult(False, {"status": "insufficient_evidence"}),
@@ -309,8 +309,45 @@ def test_second_quality_failure_stops_without_an_agent_loop() -> None:
     )
 
     assert result["status"] is TerminalStatus.INSUFFICIENT_EVIDENCE
-    assert result["repair_calls"] == 1
-    assert services.calls.count("repair") == 1
+    assert result["repair_calls"] == 2
+    assert services.calls.count("repair") == 2
+
+
+def test_evidence_only_mode_stops_before_synthesis() -> None:
+    services = FakeResearchServices(existing_evidence=(evidence("S1"),))
+    graph = build_research_graph()
+
+    result = cast(
+        ResearchGraphState,
+        graph.invoke(
+            base_state(),
+            context=ResearchGraphContext(services=services, mode="evidence_only"),
+            config={"recursion_limit": 64},
+        ),
+    )
+
+    assert result["status"] is TerminalStatus.EVIDENCE_READY
+    assert "synthesise" not in services.calls
+    assert result["events"][-1].kind == "evidence_ready"
+
+
+def test_synthesis_only_mode_does_not_acquire_for_sparse_packet() -> None:
+    services = FakeResearchServices(existing_evidence=())
+    graph = build_research_graph()
+
+    result = cast(
+        ResearchGraphState,
+        graph.invoke(
+            base_state(),
+            context=ResearchGraphContext(services=services, mode="synthesis_only"),
+            config={"recursion_limit": 64},
+        ),
+    )
+
+    assert result["status"] is TerminalStatus.COMPLETE
+    assert result["external_tool_calls"] == 0
+    assert "choose_tool" not in services.calls
+    assert "synthesise" in services.calls
 
 
 def test_invalid_planner_output_fails_safe() -> None:

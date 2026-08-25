@@ -17,8 +17,9 @@ keeps those layers visible instead of presenting one fluent but unsupported answ
 > tools, clip analysis and unauthenticated model use disabled. Supabase email authentication, atomic
 > daily quotas and redacted SSE research progress are implemented. The fixed-workflow entry gate now
 > passes all 17 targets and 11 required steps. The owner has authorised a default-off local Agent
-> adapter and paired comparison. The full comparison failed completion and mean-quality targets, so
-> the decision is NO-GO and the fixed workflow remains production; hosted Agent routing stays off.
+> adapter and paired comparison. The original comparison failed completion and mean-quality targets,
+> so production remains NO-GO. A revised text-only implementation now gives the graph two repairs and
+> isolates three repeated samples per packet lane; its paid run and all hosted routing remain off.
 
 See [Project Progress](docs/PROGRESS.md) for completed milestones, verification results,
 known limitations and the next priorities.
@@ -37,6 +38,7 @@ environment configuration, acceptance checks and operational limits.
 | Read the current versioned benchmark and update protocol | [Evaluation](docs/EVALUATION.md) |
 | Follow the flexible fixed-workflow steps before Agent work | [Pre-Agent Product Hardening](docs/PRE_AGENT_HARDENING.md) |
 | Review the scoped production Agent decision | [Agent Go/No-Go Brief](docs/AGENT_GO_NO_GO.md) |
+| Review the revised text-only Agent stages and repeated protocol | [Text-Agent Programme](docs/TEXT_AGENT_PROGRAMME.md) |
 | Complete the private filmmaker packet-rating gate | [Human Evidence-Packet Review](docs/HUMAN_PACKET_REVIEW.md) |
 | Install and run the private local edition | [Local Setup](docs/LOCAL_SETUP.md) |
 | Operate the public Azure deployment | [Public Beta Hosting](docs/HOSTING.md) |
@@ -1054,11 +1056,11 @@ fallback behaviour; these are tracked separately from the new FirstRoll modules.
 | Private RAG foundation | Complete | Token chunking, FTS5, local vectors, hybrid retrieval and citations |
 | Attributed criticism | Complete | Crossref, Douban, Letterboxd and Guardian retrieval with structured critic claims |
 | Evidence-grounded Deep Study | Complete | Typed theory, criticism, review and video-text evidence; Pydantic output, citation validation and quality gate |
-| Bounded research Agent core | Local comparison complete — NO-GO | Target packet gained three attributed sources, but Agent completed 4/5 below the quality floor; no HTTP route or production cut-over |
+| Bounded research Agent core | Revised text implementation in progress | Original run remains NO-GO; graph now owns two repairs and a fail-closed three-sample protocol isolates packet effects before any new paid run |
 | Authenticated research progress | Implemented | Allow-listed SSE lifecycle events, separate owner-scoped result retrieval and secret/evidence redaction tests; final interactive browser observation remains pending |
 | Pre-Agent product hardening | Complete — fixed workflow retained | Entry gate passed, but the authorised local Agent comparison failed 4/5 completion and quality non-inferiority; outcome NO-GO |
 | Clip analysis web migration | Complete | Scene, shot, colour, object and export workflow |
-| Clip-to-study evidence bridge | Queued | Feed measured scenes, shots and timecodes into synthesis after the active hardening sequence |
+| Clip-to-study evidence bridge | Deferred | Do not begin multimodal Agent work until the five-stage text programme is accepted |
 | Creator primary-source layer | Partial | Discovered interview descriptions and public YouTube captions are stored and cited; verified speaker attribution and dedicated interview search remain planned |
 | Persistent film projects | Planned | Retain film records, clips, analyses, notes and studies |
 | Evaluation suite | Baseline recorded | Five frozen Agent-comparison cases now record accepted quality, operational and quality failure rates, latency, repair use and token consumption |
@@ -1092,14 +1094,30 @@ uv run python tools/check_pre_agent_gate.py \
   --output evals/results/pre-agent-machine-gate-YYYY-MM-DD.json
 ```
 
-The owner-approved local Agent comparison was a separate, paid paired run. It remains default-off,
-registers no route and writes private candidate packets only after local machine targets pass. The
-recorded run failed those targets; do not rerun it without an explicit revised decision:
+The original owner-approved local Agent comparison was a separate, paid paired run. It remains
+default-off, registers no route and wrote no private candidate packet because machine targets failed.
+That historical protocol cannot be rerun:
 
 ```bash
 FIRSTROLL_LOCAL_AGENT_ENABLED=1 uv run python tools/evaluate_local_agent.py \
   --output evals/results/local-agent-paired-YYYY-MM-DD.json
 ```
+
+The revised [Text-Agent Programme](docs/TEXT_AGENT_PROGRAMME.md) makes the graph own one initial
+attempt plus two repairs. It acquires each candidate packet once, then alternates three fixed-packet
+and three Agent-packet generations through the same synthesis controller, retaining failures as zero
+in the mean. The command below remains fail-closed until the owner separately confirms its declared
+30–90 synthesis-call budget:
+
+```bash
+FIRSTROLL_LOCAL_AGENT_ENABLED=1 uv run python tools/evaluate_text_agent.py \
+  --output evals/results/text-agent-repeated-YYYY-MM-DD.json
+```
+
+A complete machine pass writes only changed packets to private mode-`0600` storage for personal
+review with `uv run python tools/review_text_agent_packets.py`; notes and evidence never enter Git.
+Claim/citation review, genuine diversity review, targeted section editing and filmmaker coaching
+follow as separate text stages. Clip-Agent work is deferred.
 
 The latest reviewed complete-workflow and packet-only results are
 [`baseline-2026-08-21.json`](evals/results/baseline-2026-08-21.json) and
@@ -1123,7 +1141,9 @@ The attested score-only human result and combined entry gate are
 [`pre-agent-final-gate-2026-08-21.json`](evals/results/pre-agent-final-gate-2026-08-21.json). The
 decision, predeclared targets and no-go outcome are in
 [`agent_go_no_go.json`](evals/agent_go_no_go.json), with the redacted paired result in
-[`local-agent-paired-2026-08-24.json`](evals/results/local-agent-paired-2026-08-24.json).
+[`local-agent-paired-2026-08-24.json`](evals/results/local-agent-paired-2026-08-24.json). The successor
+implementation and still-unconfirmed run budget are in
+[`text_agent_programme.json`](evals/text_agent_programme.json).
 The source of truth for each result family is its reviewed JSON artefact, not a screenshot or copied
 Markdown table. Any
 fixed-workflow or Agent comparison must use the same identities, questions

@@ -1,6 +1,11 @@
 # Production Agent Go/No-Go Brief
 
-**Status:** bounded local comparison completed — **NO-GO**; keep the fixed workflow
+**Status:** original bounded comparison completed — **NO-GO**; revised text-only implementation complete
+
+The original result remains immutable. The owner has since selected **REVISE** for the separately
+versioned [Text-Agent Programme](TEXT_AGENT_PROGRAMME.md): the graph owns two repairs and a future
+comparison averages three isolated synthesis samples per lane. Implementation is complete, but the
+declared 30–90-call paid run still requires separate budget confirmation. Production remains fixed.
 
 ## Recorded Decision
 
@@ -166,6 +171,7 @@ is mandatory before any multi-instance hosted Agent route could be considered.
   seeing Agent results.
 
 The owner selected **GO — bounded comparison only**, and that comparison is now complete. It failed
-the frozen completion and mean-quality targets, so the resulting decision is **NO-GO**. The fixed
-workflow remains production. Any further Agent experiment requires an explicit **REVISE** decision
-with a new hypothesis and thresholds frozen before another paid run.
+the frozen completion and mean-quality targets, so the resulting decision remains **NO-GO**. The
+owner subsequently selected **REVISE** for a text-only programme with Agent-owned retries and an
+isolated repeated protocol. Its implementation does not reopen this result, authorise its paid run or
+permit production routing.
