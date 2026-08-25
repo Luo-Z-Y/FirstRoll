@@ -131,6 +131,8 @@ celerybeat.pid
 .env
 .venv
 .firstroll/
+# Local conversion/agent workspaces may contain extracted private book text.
+.agents/
 env/
 venv/
 ENV/

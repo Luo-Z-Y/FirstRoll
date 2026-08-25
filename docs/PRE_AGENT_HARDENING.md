@@ -1,6 +1,6 @@
 # Pre-Agent Product Hardening
 
-**Status:** complete; the owner authorised the bounded local Agent comparison
+**Status:** complete; the bounded local Agent comparison returned NO-GO
 
 **Machine-readable scorecard:** [`evals/pre_agent_scorecard.json`](../evals/pre_agent_scorecard.json)
 
@@ -237,9 +237,10 @@ paired evaluation. It records a NO-GO for route cut-over until the predeclared t
 machine-readable decision is [`agent_go_no_go.json`](../evals/agent_go_no_go.json).
 
 **Acceptance:** production Agent integration starts only after an explicit reviewed go decision. The
-owner selected **GO — bounded comparison only** on 24 August 2026. This authorises the default-off
-local adapter and paired evaluation specified in the brief; the stable fixed workflow remains live,
-and hosted or production route cut-over remains a separate no-go.
+owner selected **GO — bounded comparison only** on 24 August 2026. The resulting full run completed
+only 4/5 Agent cases and scored 94.77 mean quality over completed cases, failing the 100% completion
+and 96.94 quality targets. The comparison outcome is therefore **NO-GO**: the stable fixed workflow
+remains live and no human Agent packet review or route cut-over is permitted.
 
 ## Human Packet Rubric
 

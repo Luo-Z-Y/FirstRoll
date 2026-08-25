@@ -378,6 +378,11 @@ sources for a diagnostically limited packet and must skip planning for a passing
 route, hosted execution or production cut-over is authorised; the original decision boundary remains
 in force until the frozen comparison passes and receives separate review.
 
+**24 August 2026 outcome:** the fixed control completed 5/5, while the Agent completed 4/5 and fell
+below the 96.94 mean-quality floor. Although one bounded Letterboxd acquisition improved the target
+packet's automated sufficiency, the predeclared candidate failed. Production Agent integration is
+therefore NO-GO and the fixed workflow remains authoritative.
+
 ### Alternatives considered
 
 | Option | Assessment |

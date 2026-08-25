@@ -52,6 +52,7 @@ FORBIDDEN_REPORT_KEYS = frozenset(
         "evidence_packet",
         "excerpt",
         "film_record",
+        "lens",
         "messages",
         "private_note",
         "prompt",
@@ -125,6 +126,14 @@ def json_fingerprint(path: Path) -> str:
     return hashlib.sha256(serialised.encode("utf-8")).hexdigest()[:16]
 
 
+def comparison_authorised(decision: dict[str, Any]) -> bool:
+    owner_decision = decision.get("owner_decision") or {}
+    return bool(
+        decision.get("status") == "approved_bounded_local_comparison"
+        and owner_decision.get("decision") == "go_bounded_local_comparison"
+    )
+
+
 def case_specs(cases_path: Path, reference_path: Path) -> tuple[str, list[dict[str, Any]]]:
     suite = load_json(cases_path)
     reference = load_json(reference_path)
@@ -156,6 +165,20 @@ def full_suite_selected(
         and suite_fingerprint == json_fingerprint(DEFAULT_CASES)
         and case_count == expected_case_count
     )
+
+
+def safe_study_score(study: dict[str, Any], *, identity_ok: bool) -> dict[str, Any]:
+    score = score_study(study, identity_ok=identity_ok)
+    score["quality_gate_failed_sections"] = [
+        {
+            key: item[key]
+            for key in ("section", "score", "issues")
+            if key in item
+        }
+        for item in score.get("quality_gate_failed_sections", [])
+        if isinstance(item, dict)
+    ]
+    return score
 
 
 def packet_fingerprint(packet: Any) -> str:
@@ -231,7 +254,7 @@ def run_fixed_case(
         result.update(
             status="passed",
             failure_stage=None,
-            quality=score_study(study, identity_ok=True),
+            quality=safe_study_score(study, identity_ok=True),
             packet_quality=study.get("packet_quality", assess_evidence_packet(packet)),
             study_observability=study.get("observability", {}),
         )
@@ -301,7 +324,7 @@ def run_agent_case(
             status="passed" if completed else "failed",
             failure_stage=None if completed else "graph",
             terminal_status=terminal.value,
-            quality=score_study(study, identity_ok=identity_ok),
+            quality=safe_study_score(study, identity_ok=identity_ok),
             packet_quality=metrics["packet_quality"],
             initial_packet_quality=metrics["initial_packet_quality"],
             initial_packet_fingerprint=metrics["initial_packet_fingerprint"],
@@ -575,9 +598,10 @@ def main_cli() -> int:
             "Set FIRSTROLL_LOCAL_AGENT_ENABLED=1 explicitly for the approved local comparison."
         )
     decision = load_json(args.decision)
-    owner_decision = decision.get("owner_decision") or {}
-    if owner_decision.get("decision") != "go_bounded_local_comparison":
-        raise SystemExit("The machine-readable owner decision does not authorise this comparison.")
+    if not comparison_authorised(decision):
+        raise SystemExit(
+            "The machine-readable decision does not authorise another local comparison run."
+        )
     suite_id, specs = case_specs(args.cases, args.reference)
     if args.case_ids:
         requested = set(args.case_ids)
@@ -690,6 +714,11 @@ def main_cli() -> int:
             {"case_id": spec["id"], "fixed": fixed, "agent": agent}
             for spec, fixed, agent in zip(specs, fixed_results, agent_results, strict=True)
         ],
+        "redaction": {
+            "generated_section_lens_removed": True,
+            "failed_exception_details_removed": True,
+            "source_and_prompt_fields_rejected": True,
+        },
         "privacy_scope": (
             "Versioned output contains aggregate identity, quality, timing, token, tool and packet "
             "diagnostics only. Full candidate packets are written separately under ignored "
