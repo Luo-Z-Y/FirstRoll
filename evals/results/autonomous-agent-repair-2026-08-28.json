@@ -1,0 +1,329 @@
+{
+  "schema_version": 1,
+  "programme_id": "firstroll-autonomous-research-agent-v1",
+  "experiment_id": "A02",
+  "recorded_at": "2026-08-28T16:14:15.355600+00:00",
+  "source_revision": "9be19e7bd9fd565bd362eb479d9c0666465e03c3",
+  "fixture": {
+    "kind": "synthetic_public_fault_injection",
+    "scenario_count": 3,
+    "repetitions_per_lane_per_scenario": 3
+  },
+  "samples": [
+    {
+      "scenario": "one_invalid_citation",
+      "repetition": 1,
+      "lane": "targeted_field_patch",
+      "status": "passed",
+      "duration_seconds": 1.498,
+      "model_calls": 1,
+      "total_tokens": 893,
+      "quality_score": 100.0,
+      "citation_and_schema_valid": true,
+      "accepted_fields_preserved": true,
+      "repair_attempts": 1
+    },
+    {
+      "scenario": "one_invalid_citation",
+      "repetition": 1,
+      "lane": "complete_regeneration",
+      "status": "failed",
+      "duration_seconds": 31.063,
+      "model_calls": 1,
+      "total_tokens": 3180,
+      "quality_score": 0.0,
+      "citation_and_schema_valid": false,
+      "accepted_fields_preserved": null,
+      "repair_attempts": 0,
+      "failure_category": "citation_validation"
+    },
+    {
+      "scenario": "one_schema_invalid_field",
+      "repetition": 1,
+      "lane": "targeted_field_patch",
+      "status": "passed",
+      "duration_seconds": 1.259,
+      "model_calls": 1,
+      "total_tokens": 999,
+      "quality_score": 100.0,
+      "citation_and_schema_valid": true,
+      "accepted_fields_preserved": true,
+      "repair_attempts": 1
+    },
+    {
+      "scenario": "one_schema_invalid_field",
+      "repetition": 1,
+      "lane": "complete_regeneration",
+      "status": "failed",
+      "duration_seconds": 29.761,
+      "model_calls": 1,
+      "total_tokens": 3022,
+      "quality_score": 0.0,
+      "citation_and_schema_valid": false,
+      "accepted_fields_preserved": null,
+      "repair_attempts": 0,
+      "failure_category": "citation_validation"
+    },
+    {
+      "scenario": "two_invalid_fields",
+      "repetition": 1,
+      "lane": "targeted_field_patch",
+      "status": "passed",
+      "duration_seconds": 1.837,
+      "model_calls": 1,
+      "total_tokens": 1298,
+      "quality_score": 100.0,
+      "citation_and_schema_valid": true,
+      "accepted_fields_preserved": true,
+      "repair_attempts": 1
+    },
+    {
+      "scenario": "two_invalid_fields",
+      "repetition": 1,
+      "lane": "complete_regeneration",
+      "status": "passed",
+      "duration_seconds": 31.707,
+      "model_calls": 1,
+      "total_tokens": 3314,
+      "quality_score": 88.0,
+      "citation_and_schema_valid": true,
+      "accepted_fields_preserved": null,
+      "repair_attempts": 0
+    },
+    {
+      "scenario": "one_invalid_citation",
+      "repetition": 2,
+      "lane": "complete_regeneration",
+      "status": "failed",
+      "duration_seconds": 30.471,
+      "model_calls": 1,
+      "total_tokens": 3199,
+      "quality_score": 0.0,
+      "citation_and_schema_valid": false,
+      "accepted_fields_preserved": null,
+      "repair_attempts": 0,
+      "failure_category": "citation_validation"
+    },
+    {
+      "scenario": "one_invalid_citation",
+      "repetition": 2,
+      "lane": "targeted_field_patch",
+      "status": "passed",
+      "duration_seconds": 1.477,
+      "model_calls": 1,
+      "total_tokens": 893,
+      "quality_score": 100.0,
+      "citation_and_schema_valid": true,
+      "accepted_fields_preserved": true,
+      "repair_attempts": 1
+    },
+    {
+      "scenario": "one_schema_invalid_field",
+      "repetition": 2,
+      "lane": "complete_regeneration",
+      "status": "passed",
+      "duration_seconds": 40.224,
+      "model_calls": 1,
+      "total_tokens": 3676,
+      "quality_score": 88.0,
+      "citation_and_schema_valid": true,
+      "accepted_fields_preserved": null,
+      "repair_attempts": 0
+    },
+    {
+      "scenario": "one_schema_invalid_field",
+      "repetition": 2,
+      "lane": "targeted_field_patch",
+      "status": "passed",
+      "duration_seconds": 1.763,
+      "model_calls": 1,
+      "total_tokens": 1028,
+      "quality_score": 100.0,
+      "citation_and_schema_valid": true,
+      "accepted_fields_preserved": true,
+      "repair_attempts": 1
+    },
+    {
+      "scenario": "two_invalid_fields",
+      "repetition": 2,
+      "lane": "complete_regeneration",
+      "status": "passed",
+      "duration_seconds": 29.075,
+      "model_calls": 1,
+      "total_tokens": 3094,
+      "quality_score": 96.0,
+      "citation_and_schema_valid": true,
+      "accepted_fields_preserved": null,
+      "repair_attempts": 0
+    },
+    {
+      "scenario": "two_invalid_fields",
+      "repetition": 2,
+      "lane": "targeted_field_patch",
+      "status": "passed",
+      "duration_seconds": 1.939,
+      "model_calls": 1,
+      "total_tokens": 1298,
+      "quality_score": 100.0,
+      "citation_and_schema_valid": true,
+      "accepted_fields_preserved": true,
+      "repair_attempts": 1
+    },
+    {
+      "scenario": "one_invalid_citation",
+      "repetition": 3,
+      "lane": "targeted_field_patch",
+      "status": "passed",
+      "duration_seconds": 1.474,
+      "model_calls": 1,
+      "total_tokens": 893,
+      "quality_score": 100.0,
+      "citation_and_schema_valid": true,
+      "accepted_fields_preserved": true,
+      "repair_attempts": 1
+    },
+    {
+      "scenario": "one_invalid_citation",
+      "repetition": 3,
+      "lane": "complete_regeneration",
+      "status": "failed",
+      "duration_seconds": 39.491,
+      "model_calls": 1,
+      "total_tokens": 3632,
+      "quality_score": 0.0,
+      "citation_and_schema_valid": false,
+      "accepted_fields_preserved": null,
+      "repair_attempts": 0,
+      "failure_category": "citation_validation"
+    },
+    {
+      "scenario": "one_schema_invalid_field",
+      "repetition": 3,
+      "lane": "targeted_field_patch",
+      "status": "passed",
+      "duration_seconds": 2.172,
+      "model_calls": 1,
+      "total_tokens": 1028,
+      "quality_score": 100.0,
+      "citation_and_schema_valid": true,
+      "accepted_fields_preserved": true,
+      "repair_attempts": 1
+    },
+    {
+      "scenario": "one_schema_invalid_field",
+      "repetition": 3,
+      "lane": "complete_regeneration",
+      "status": "failed",
+      "duration_seconds": 32.768,
+      "model_calls": 1,
+      "total_tokens": 3238,
+      "quality_score": 0.0,
+      "citation_and_schema_valid": false,
+      "accepted_fields_preserved": null,
+      "repair_attempts": 0,
+      "failure_category": "citation_validation"
+    },
+    {
+      "scenario": "two_invalid_fields",
+      "repetition": 3,
+      "lane": "targeted_field_patch",
+      "status": "passed",
+      "duration_seconds": 1.754,
+      "model_calls": 1,
+      "total_tokens": 1298,
+      "quality_score": 100.0,
+      "citation_and_schema_valid": true,
+      "accepted_fields_preserved": true,
+      "repair_attempts": 1
+    },
+    {
+      "scenario": "two_invalid_fields",
+      "repetition": 3,
+      "lane": "complete_regeneration",
+      "status": "passed",
+      "duration_seconds": 38.9,
+      "model_calls": 1,
+      "total_tokens": 3504,
+      "quality_score": 96.0,
+      "citation_and_schema_valid": true,
+      "accepted_fields_preserved": null,
+      "repair_attempts": 0
+    }
+  ],
+  "summary": {
+    "targeted_field_patch": {
+      "scheduled_samples": 9,
+      "completed_samples": 9,
+      "mean_quality_all_scheduled": 100.0,
+      "p50_latency_seconds": 1.754,
+      "p95_latency_seconds": 2.079,
+      "total_model_calls": 9,
+      "total_tokens": 9628,
+      "valid_output_ratio": 1.0
+    },
+    "complete_regeneration": {
+      "scheduled_samples": 9,
+      "completed_samples": 4,
+      "mean_quality_all_scheduled": 40.89,
+      "p50_latency_seconds": 31.707,
+      "p95_latency_seconds": 39.931,
+      "total_model_calls": 9,
+      "total_tokens": 29859,
+      "valid_output_ratio": 0.4444
+    },
+    "comparison": {
+      "p50_latency_ratio": 0.055319,
+      "p95_latency_ratio": 0.052065,
+      "total_token_ratio": 0.322449,
+      "patch_minus_regeneration_quality": 59.11
+    },
+    "total_model_calls": 18,
+    "machine_targets_passed": false
+  },
+  "targets": [
+    {
+      "target_id": "complete_scheduled_sample_set",
+      "status": "passed"
+    },
+    {
+      "target_id": "patch_completion_ratio",
+      "status": "passed"
+    },
+    {
+      "target_id": "regeneration_completion_ratio",
+      "status": "failed"
+    },
+    {
+      "target_id": "patch_schema_and_citation_validity",
+      "status": "passed"
+    },
+    {
+      "target_id": "accepted_field_preservation",
+      "status": "passed"
+    },
+    {
+      "target_id": "patch_p50_latency_ratio",
+      "status": "passed"
+    },
+    {
+      "target_id": "patch_p95_latency_ratio",
+      "status": "passed"
+    },
+    {
+      "target_id": "patch_token_ratio",
+      "status": "passed"
+    },
+    {
+      "target_id": "patch_quality_non_inferiority",
+      "status": "passed"
+    },
+    {
+      "target_id": "total_model_call_budget",
+      "status": "passed"
+    },
+    {
+      "target_id": "transport_call_telemetry_complete",
+      "status": "passed"
+    }
+  ]
+}

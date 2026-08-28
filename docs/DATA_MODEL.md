@@ -61,7 +61,9 @@ targets, so only its redacted hashes/counts/timings report and private mode-`060
 exist; no packet or mapping was written. A03 reuses the exact A01 packet fingerprint
 and stores only predeclared repetitions 1, 5 and 10 for blinded owner review. Mappings, study prose,
 packets and notes remain private; only attested score/preference aggregates may be versioned later.
-One-run locks are retained so a consumed local authorisation cannot appear fresh.
+One-run locks are retained so a consumed local authorisation cannot appear fresh. A02 likewise
+retains only its mode-`0600` consumption lock and versioned per-sample timings, token counts, safe
+failure categories and validity booleans; all patch and regeneration prose stayed in process memory.
 
 The local autonomous finisher returns private study/audit/coach objects directly to its caller. Audit
 items and exercises are not graph telemetry: only strategy, terminal status, timing, model/token

@@ -1,6 +1,6 @@
 # Autonomous Research Agent Programme
 
-**Status:** A01 machine-failed and consumed; A02 one-run validation authorised; no Agent production route authorised
+**Status:** A01 and A02 machine-failed and consumed; no paid validation or Agent production route authorised
 
 ## Goal
 
@@ -127,8 +127,12 @@ Inject controlled citation and schema faults into otherwise valid synthetic cand
 800-token field patch with one complete regeneration. Requested fields must be repaired, accepted
 fields must remain exactly equal, all citations must validate, and latency/token savings must be
 material under frozen thresholds. The owner separately approved 18 expected and 36 maximum model
-calls with zero planner/provider acquisition calls. A01 is now consumed, so A02 is the active
-one-run machine authorisation on a separately committed checkpoint.
+calls with zero planner/provider acquisition calls. The one run used exactly 18 calls. Targeted
+patching passed 9/9 with exact accepted-field preservation, 1.754/2.079-second P50/P95 and 9,628
+tokens. Complete regeneration passed only 4/9 because five outputs failed citation validation, using
+31.707/39.931-second P50/P95 and 29,859 tokens. Patching therefore used `0.055319/0.052065` of
+regeneration latency and `0.322449` of its tokens, but the frozen regeneration-completion target
+failed. A02 remains a formal machine failure and its authorisation is consumed.
 
 ### A03 — Changed-packet synthesis
 
@@ -215,6 +219,7 @@ responses are validated in memory and never written to the report.
 No model, planner or provider call was made while implementing the foundation or its harnesses. On
 28 August 2026, the owner approved the exact A01 and A02 limits above. A01 consumed three planner and
 four physical provider calls, failed its active-lane completion targets and produced no private packet.
-A02 is now the only active one-run machine authorisation and requires the committed programme plus its
-exact fresh paths. A03 still proposes 20 expected and 60 maximum synthesis calls only after an A01
-machine and owner-review pass; it is blocked and not authorised.
+A02 then consumed exactly 18 calls; targeted repair passed 9/9, while complete regeneration passed
+4/9, so the mandatory regeneration-completion target failed. No paid authorisation remains. A03 still
+proposes 20 expected and 60 maximum synthesis calls only after an A01 machine and owner-review pass;
+it is blocked and not authorised.

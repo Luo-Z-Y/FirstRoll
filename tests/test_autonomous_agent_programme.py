@@ -15,13 +15,13 @@ def programme() -> dict:
     return json.loads(CONTRACT.read_text(encoding="utf-8"))
 
 
-def test_autonomous_programme_opens_only_the_exact_local_paid_gate() -> None:
+def test_autonomous_programme_closes_paid_and_production_gates_after_A02() -> None:
     value = programme()
 
-    assert value["status"] == "a02_structural_repair_ablation_approved"
+    assert value["status"] == "a01_a02_completed_machine_failed_no_paid_authorisation"
     assert value["owner_mandate"]["implementation_authorised"] is True
     assert value["owner_mandate"]["provider_adapter_changes_authorised"] is True
-    assert value["owner_mandate"]["paid_model_or_provider_calls_authorised"] is True
+    assert value["owner_mandate"]["paid_model_or_provider_calls_authorised"] is False
     assert value["owner_mandate"]["hosted_route_authorised"] is False
     assert value["owner_mandate"]["production_cutover_authorised"] is False
     assert value["boundaries"]["fixed_production_workflow_unchanged"] is True
@@ -43,6 +43,26 @@ def test_A01_machine_failure_is_complete_and_human_review_stays_closed() -> None
     assert result["summary"]["machine_targets_passed"] is False
     assert result["summary"]["private_packet_snapshot_written"] is False
     assert result["summary"]["human_review_ready"] is False
+
+
+def test_A02_machine_failure_retains_patch_and_regeneration_outcomes() -> None:
+    result = json.loads(
+        (ROOT / "evals" / "results" / "autonomous-agent-repair-2026-08-28.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    failed = [item["target_id"] for item in result["targets"] if item["status"] == "failed"]
+
+    assert result["source_revision"] == "9be19e7bd9fd565bd362eb479d9c0666465e03c3"
+    assert result["summary"]["total_model_calls"] == 18
+    assert result["summary"]["targeted_field_patch"]["completed_samples"] == 9
+    assert result["summary"]["complete_regeneration"]["completed_samples"] == 4
+    assert (
+        sum(item.get("failure_category") == "citation_validation" for item in result["samples"])
+        == 5
+    )
+    assert failed == ["regeneration_completion_ratio"]
+    assert result["summary"]["machine_targets_passed"] is False
 
 
 def test_autonomous_programme_matches_the_independent_origin_and_provider_contract() -> None:
@@ -103,7 +123,7 @@ def test_autonomous_experiments_have_exact_sequential_authorisations() -> None:
         "deterministic_gap_router",
         "model_gap_planner",
     ]
-    assert experiments["A02"]["status"] == "approved_one_run"
+    assert experiments["A02"]["status"] == "completed_machine_failed"
     assert experiments["A03"]["status"] == "blocked_by_A01_machine_failure"
     assert experiments["A03"]["proposed_budget"] == {
         "generation_repetitions_per_lane": 10,
@@ -168,7 +188,24 @@ def test_autonomous_experiments_have_exact_sequential_authorisations() -> None:
         "approved_maximum_model_calls": 36,
         "approved_report_path": "evals/results/autonomous-agent-repair-2026-08-28.json",
         "approved_run_lock_path": ".firstroll/evaluations/autonomous-agent-repair-2026-08-28.lock",
-        "authorisation_consumed": False,
+        "authorisation_consumed": True,
+    }
+    assert experiments["A02"]["machine_result"] == {
+        "result_path": "evals/results/autonomous-agent-repair-2026-08-28.json",
+        "source_revision": "9be19e7bd9fd565bd362eb479d9c0666465e03c3",
+        "outcome": "machine_failed_regeneration_completion",
+        "targeted_patch_completed_samples": 9,
+        "regeneration_completed_samples": 4,
+        "scheduled_samples_per_lane": 9,
+        "targeted_patch_total_tokens": 9628,
+        "regeneration_total_tokens": 29859,
+        "total_model_calls": 18,
+        "regeneration_citation_validation_failures": 5,
+        "accepted_field_preservation_ratio": 1.0,
+        "p50_latency_ratio": 0.055319,
+        "p95_latency_ratio": 0.052065,
+        "total_token_ratio": 0.322449,
+        "failed_targets": ["regeneration_completion_ratio"],
     }
     assert experiments["A03"]["paid_budget_confirmation"] is None
     assert (ROOT / "docs" / "AUTONOMOUS_AGENT_PROGRAMME.md").is_file()

@@ -338,8 +338,9 @@ FIRSTROLL_LOCAL_AGENT_ENABLED=1 uv run python tools/evaluate_agent_repair.py \
 ```
 
 It uses public synthetic evidence and records no generated prose, but still makes real DeepSeek calls.
-The owner has confirmed its 18-expected/36-maximum budget and exact paths. A01 is consumed and the
-committed machine contract now activates this command for exactly one run.
+This historical one-run command used exactly 18 calls. Patching passed 9/9, but regeneration passed
+4/9, so the complete machine gate failed. Its private lock must remain in place and the command must
+not be run again.
 
 A03 changed-packet synthesis is installed but blocked: A01 produced no machine-passing,
 owner-approved private packet, and A03 has no 20-expected/60-maximum synthesis budget. It
