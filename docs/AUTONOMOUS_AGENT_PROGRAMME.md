@@ -109,8 +109,10 @@ Provider responses are acquired once and shared privately so network sampling ca
 The Agent lane must beat the deterministic lane on blinded diversity/actionability or achieve an
 equivalent packet with fewer calls. A tie means that deterministic routing wins. On 28 August 2026,
 the owner approved exactly one run with at most three planner calls, five physical provider calls and
-three external turns per active lane. The confirmation is bound to committed source and fresh dated
-report, private-packet and lock paths.
+three external turns per active lane. The confirmation is bound to committed source, the frozen
+canonical identity reference and fresh dated report, private-packet and lock paths. Its first command
+attempt stopped before the lock or any paid call because the harness had not loaded the canonical
+`film_id`; that preflight failure is retained and the identity binding is now explicit.
 
 ### A02 — Structural-repair ablation
 

@@ -857,8 +857,8 @@ but this does not justify parallel execution or flexible output paths.
 ### Decision
 
 Activate A01 first for one run capped at three planner calls, five physical provider calls and three
-external turns per active lane. Bind it to the committed programme, case suite, dated redacted report,
-private packet snapshot and private consumption lock. Record A02's separate approval—18 expected and
+external turns per active lane. Bind it to the committed programme, case suite, frozen canonical
+identity reference, dated redacted report, private packet snapshot and private consumption lock. Record A02's separate approval—18 expected and
 36 maximum model calls with no acquisition calls—but keep its machine status inactive until A01 has
 run and its approval is consumed. A later committed checkpoint may then activate A02 without changing
 its frozen thresholds or limits.

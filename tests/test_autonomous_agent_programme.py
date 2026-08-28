@@ -104,6 +104,7 @@ def test_autonomous_experiments_have_exact_sequential_authorisations() -> None:
         "approved_maximum_physical_provider_calls": 5,
         "approved_maximum_external_tool_turns_per_active_lane": 3,
         "approved_case_suite_path": "evals/agent_cases.json",
+        "approved_identity_reference_path": ("evals/results/baseline-reliability-2026-08-21.json"),
         "approved_report_path": "evals/results/autonomous-agent-acquisition-2026-08-28.json",
         "approved_private_packet_path": (
             ".firstroll/evaluations/autonomous-agent-acquisition-packets-2026-08-28.json"
@@ -113,6 +114,17 @@ def test_autonomous_experiments_have_exact_sequential_authorisations() -> None:
         ),
         "authorisation_consumed": False,
     }
+    assert experiments["A01"]["preflight_history"] == [
+        {
+            "recorded_at": "2026-08-28T15:47:53Z",
+            "source_revision": "c32e2e58e1ca10143dfe2de689aec26f254f2cbe",
+            "status": "failed_before_lock",
+            "failure_category": "canonical_film_identity_not_bound",
+            "model_planner_calls": 0,
+            "physical_provider_calls": 0,
+            "authorisation_consumed": False,
+        }
+    ]
     assert experiments["A02"]["paid_budget_confirmation"] == {
         "confirmed": True,
         "recorded_at": "2026-08-28T15:36:51Z",

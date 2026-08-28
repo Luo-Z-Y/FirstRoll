@@ -319,6 +319,7 @@ planner mode supplies a no-model ablation baseline. The A01 harness command is:
 ```bash
 FIRSTROLL_LOCAL_AGENT_ENABLED=1 uv run python tools/evaluate_agent_acquisition.py \
   --cases evals/agent_cases.json \
+  --reference evals/results/baseline-reliability-2026-08-21.json \
   --output evals/results/autonomous-agent-acquisition-2026-08-28.json \
   --private-packets .firstroll/evaluations/autonomous-agent-acquisition-packets-2026-08-28.json \
   --run-lock .firstroll/evaluations/autonomous-agent-acquisition-2026-08-28.lock
