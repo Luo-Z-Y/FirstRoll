@@ -327,7 +327,9 @@ FIRSTROLL_LOCAL_AGENT_ENABLED=1 uv run python tools/evaluate_agent_acquisition.p
 
 This historical one-run command consumed three planner and four physical provider calls, then failed
 both active-lane completion targets. Its lock must remain in place and the command must not be run
-again. No private snapshot exists, so do not invoke the A01 owner-review command.
+again. No private snapshot exists, so do not invoke the A01 owner-review command. Current source has
+a no-call semantic correction for scholarship/video classes and final-turn evidence-only completion,
+but that correction has no provider authorisation and cannot reuse this command or lock.
 
 The separate controlled repair command is:
 

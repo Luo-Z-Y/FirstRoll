@@ -573,7 +573,9 @@ class LocalResearchGraphServices:
         records: list[tuple[EvidenceKind, str, str, str]] = []
         for item in packet.attributed_sources:
             kind = {
+                "scholarly_abstract": EvidenceKind.SCHOLARLY_ABSTRACT,
                 "creator_stated": EvidenceKind.CREATOR_STATED,
+                "video_context": EvidenceKind.VIDEO_CONTEXT,
                 "film_observed": EvidenceKind.VIDEO_CONTEXT,
             }.get(item.evidence_type, EvidenceKind.CRITIC_REPORTED)
             records.append(

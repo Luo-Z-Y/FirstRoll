@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import replace
 from typing import Any, cast
 
 from langgraph.runtime import Runtime
@@ -48,7 +49,19 @@ def policy(
     state: ResearchGraphState,
     runtime: Runtime[ResearchGraphContext],
 ) -> dict[str, Any]:
-    decision = decide_next_action(_contract_state(state), runtime.context.budgets)
+    budgets = runtime.context.budgets
+    if runtime.context.mode == "evidence_only" and state["evidence_sufficient"]:
+        # Evidence-only evaluation makes no synthesis call. Reserve one virtual slot so
+        # the policy can reach SYNTHESISE/COMPLETE_EVIDENCE after the final permitted
+        # planner turn without relaxing planner, tool, step, deadline or evidence limits.
+        used_model_slots = (
+            state["planning_calls"] + state["synthesis_calls"] + state["repair_calls"]
+        )
+        budgets = replace(
+            budgets,
+            max_total_model_calls=max(budgets.max_total_model_calls, used_model_slots + 1),
+        )
+    decision = decide_next_action(_contract_state(state), budgets)
     if runtime.context.mode == "evidence_only" and decision.action is NextAction.SYNTHESISE:
         return {
             "next_action": NextAction.COMPLETE_EVIDENCE,

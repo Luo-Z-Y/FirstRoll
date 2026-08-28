@@ -29,8 +29,12 @@ PACKET_ISSUES = frozenset(
     }
 )
 INSTRUCTION_PATTERNS = (
-    re.compile(r"\b(?:ignore|disregard|override)\b.{0,80}\b(?:instruction|policy|prompt|system)\b", re.I),
-    re.compile(r"\b(?:reveal|return|print|expose)\b.{0,60}\b(?:api key|credential|prompt|secret)\b", re.I),
+    re.compile(
+        r"\b(?:ignore|disregard|override)\b.{0,80}\b(?:instruction|policy|prompt|system)\b", re.I
+    ),
+    re.compile(
+        r"\b(?:reveal|return|print|expose)\b.{0,60}\b(?:api key|credential|prompt|secret)\b", re.I
+    ),
     re.compile(r"\b(?:call|invoke|authorise|authorize)\b.{0,40}\b(?:api|tool|function)\b", re.I),
     re.compile(r"<\s*script\b", re.I),
 )
@@ -100,7 +104,13 @@ def item_has_complete_provenance(item: EvidenceItem) -> bool:
     )
     if not common:
         return False
-    if item.evidence_type in {"critic_reported", "creator_stated", "film_observed"}:
+    if item.evidence_type in {
+        "critic_reported",
+        "scholarly_abstract",
+        "creator_stated",
+        "video_context",
+        "film_observed",
+    }:
         return safe_http_url(item.source_url)
     return True
 
@@ -128,8 +138,7 @@ def duplicate_item_count(items: list[EvidenceItem]) -> int:
 
 def instruction_item_count(items: Iterable[EvidenceItem]) -> int:
     return sum(
-        any(pattern.search(item.content) for pattern in INSTRUCTION_PATTERNS)
-        for item in items
+        any(pattern.search(item.content) for pattern in INSTRUCTION_PATTERNS) for item in items
     )
 
 
@@ -200,8 +209,7 @@ def assess_evidence_packet(
     duplicate_items = duplicate_item_count(items)
     focus_tokens = content_tokens(packet.focus)
     relevant_items = sum(
-        bool(focus_tokens & content_tokens(f"{item.title} {item.content}"))
-        for item in items
+        bool(focus_tokens & content_tokens(f"{item.title} {item.content}")) for item in items
     )
     flagged_instructions = instruction_item_count(items)
     instruction_contained = has_instruction_boundary(packet)
@@ -238,9 +246,11 @@ def assess_evidence_packet(
     if flagged_instructions and not instruction_contained:
         issues.add("instruction_containment_missing")
     omission_reasons = attributed_selection.get("omission_reasons", {})
-    explained_omissions = sum(
-        int(value or 0) for value in omission_reasons.values()
-    ) if isinstance(omission_reasons, dict) else 0
+    explained_omissions = (
+        sum(int(value or 0) for value in omission_reasons.values())
+        if isinstance(omission_reasons, dict)
+        else 0
+    )
     if omitted_items != explained_omissions:
         issues.add("attributed_omission_unexplained")
 
@@ -269,9 +279,7 @@ def assess_evidence_packet(
         "duplication": {
             "duplicate_items": duplicate_items,
             "selected_items": total_items,
-            "duplicate_ratio": round(duplicate_items / total_items, 4)
-            if total_items
-            else 0.0,
+            "duplicate_ratio": round(duplicate_items / total_items, 4) if total_items else 0.0,
         },
         "focus_relevance": {
             "focus_token_count": len(focus_tokens),
@@ -319,14 +327,10 @@ def assess_evidence_packet(
             "critical_candidates": int(critical_selection.get("candidate_items", 0) or 0),
             "critical_claims": len(packet.critical_claims),
             "critical_omitted": int(critical_selection.get("omitted_items", 0) or 0),
-            "attributed_candidates": int(
-                attributed_selection.get("candidate_items", 0) or 0
-            ),
+            "attributed_candidates": int(attributed_selection.get("candidate_items", 0) or 0),
             "attributed_selected": len(packet.attributed_sources),
             "attributed_omitted": omitted_items,
-            "attributed_truncated": int(
-                attributed_selection.get("truncated_items", 0) or 0
-            ),
+            "attributed_truncated": int(attributed_selection.get("truncated_items", 0) or 0),
         },
         "size": {
             "packet_characters": len(packet.model_dump_json()),

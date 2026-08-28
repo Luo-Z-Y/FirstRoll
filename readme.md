@@ -280,7 +280,9 @@ without rewriting them.
 The successor [Autonomous Agent Programme](docs/AUTONOMOUS_AGENT_PROGRAMME.md) requires more than a
 provider choice. A planner proposes one typed evidence gap plus one allow-listed action; deterministic
 code rechecks both, reassesses the packet after every observation and requires two independent origins
-when recovering a limited packet. Crossref scholarship is now available alongside Guardian, Douban,
+plus two required epistemic classes when recovering a limited packet. Crossref abstracts remain
+`scholarly_abstract`, video descriptions/unverified captions remain `video_context`, and public
+criticism remains `critic_reported`. Crossref is available alongside Guardian, Douban,
 Letterboxd and video-text acquisition. A no-model gap router provides the ablation baseline: if the
 model planner cannot beat or more efficiently match it, FirstRoll will remove the model planner. New
 provider evidence remains ephemeral, and no Agent HTTP route or cut-over is enabled. A01 shared each
@@ -1081,8 +1083,8 @@ fallback behaviour; these are tracked separately from the new FirstRoll modules.
 | Azure public beta | Deployed | Azure Static Web Apps frontend and Azure Container Apps FastAPI service with Supabase authentication and bounded Deep Study |
 | Private RAG foundation | Complete | Token chunking, FTS5, local vectors, hybrid retrieval and citations |
 | Attributed criticism | Complete | Crossref, Douban, Letterboxd and Guardian retrieval with structured critic claims |
-| Evidence-grounded Deep Study | Complete | Typed theory, criticism, review and video-text evidence; Pydantic output, citation validation and quality gate |
-| Bounded research Agent core | Autonomous foundation in development | Historical machine gates passed without human evidence; typed gaps, independent-origin recovery, deterministic ablation routing and Crossref Agent acquisition are now implemented locally |
+| Evidence-grounded Deep Study | Complete | Typed theory, criticism, scholarly-abstract and video-context evidence; Pydantic output, citation validation and quality gate |
+| Bounded research Agent core | Autonomous foundation in development | A01/A02 are consumed formal machine failures; class-aware evidence gaps, final-turn evidence-only completion, deterministic routing and bounded structural patching are implemented locally but need fresh validation |
 | Authenticated research progress | Implemented | Allow-listed SSE lifecycle events, separate owner-scoped result retrieval and secret/evidence redaction tests; final interactive browser observation remains pending |
 | Pre-Agent product hardening | Complete — fixed workflow retained | Entry gate passed, but the authorised local Agent comparison failed 4/5 completion and quality non-inferiority; outcome NO-GO |
 | Clip analysis web migration | Complete | Scene, shot, colour, object and export workflow |
@@ -1166,7 +1168,9 @@ run capped at three planner calls, five physical provider calls and three extern
 lane, plus a sequential A02 run of 18 expected and 36 maximum model calls. A01 used three planner and
 four physical provider calls but failed both active-lane completion targets, so A03 remains blocked.
 A02 then used 18 calls: targeted patching passed 9/9 with exact preservation, while regeneration
-passed 4/9, making A02 a formal machine failure. No paid authorisation remains; claim audit, editing,
+passed 4/9, making A02 a formal machine failure. A no-call revision now preserves scholarship/video
+classes, requires every mandatory gap to close and fixes evidence-only completion after the final
+planner turn; it does not upgrade either result. No paid authorisation remains; claim audit, editing,
 coaching, reliability, durable execution and clip-Agent work remain gated.
 
 The latest reviewed complete-workflow and packet-only results are

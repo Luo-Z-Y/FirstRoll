@@ -66,6 +66,7 @@ def test_existing_passed_packet_remains_sufficient_without_diversity_spend() -> 
     assessment = assess_agent_evidence(value, initial_packet_status="passed")
 
     assert assessment.sufficient is True
+    assert assessment.gaps == ()
     assert assessment.recovery_diversity_required is False
     assert assessment.independent_origins == 1
 
@@ -86,6 +87,25 @@ def test_recovered_packet_requires_two_independent_origins() -> None:
     assert two.sufficient is True
     assert two.independent_origins == MIN_RECOVERED_INDEPENDENT_ORIGINS
     assert EvidenceGap.INDEPENDENT_ORIGINS not in two.gaps
+
+
+def test_two_criticism_origins_do_not_fake_evidence_class_diversity() -> None:
+    guardian = source("Guardian", "theguardian.com", 2).model_copy(
+        update={
+            "summary": (
+                "A second critic describes editing intervals, eyeline discontinuity and changing "
+                "group positions as separate patterns for close comparison."
+            )
+        }
+    )
+    value = packet(source("Letterboxd", "letterboxd.com", 1), guardian)
+
+    assessment = assess_agent_evidence(value, initial_packet_status="limited")
+
+    assert assessment.independent_origins == 2
+    assert assessment.film_specific_evidence_classes == 1
+    assert assessment.sufficient is False
+    assert assessment.gaps == (EvidenceGap.EVIDENCE_CLASS_DIVERSITY,)
 
 
 def test_www_alias_does_not_count_as_an_independent_origin() -> None:
@@ -134,6 +154,32 @@ def test_deterministic_baseline_targets_independent_origin_with_crossref() -> No
 
     assert tool is ToolName.FETCH_CROSSREF_RESEARCH
     assert gap is EvidenceGap.INDEPENDENT_ORIGINS
+
+
+def test_crossref_can_address_an_evidence_class_gap() -> None:
+    guardian = source("Guardian", "theguardian.com", 2).model_copy(
+        update={
+            "summary": (
+                "A second critic describes editing intervals, eyeline discontinuity and changing "
+                "group positions as separate patterns for close comparison."
+            )
+        }
+    )
+    assessment = assess_agent_evidence(
+        packet(source("Letterboxd", "letterboxd.com", 1), guardian),
+        initial_packet_status="limited",
+    )
+    tool, gap = choose_deterministic_research_tool(
+        assessment,
+        (ToolName.FETCH_CROSSREF_RESEARCH, ToolName.SEARCH_YOUTUBE_RESOURCES),
+        {
+            ToolName.FETCH_CROSSREF_RESEARCH.value: {"state": "ready"},
+            ToolName.SEARCH_YOUTUBE_RESOURCES.value: {"state": "ready"},
+        },
+    )
+
+    assert tool is ToolName.FETCH_CROSSREF_RESEARCH
+    assert gap is EvidenceGap.EVIDENCE_CLASS_DIVERSITY
 
 
 def test_deterministic_baseline_fails_closed_without_ready_provider() -> None:

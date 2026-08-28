@@ -252,7 +252,7 @@ explicit selected film + frozen focus
 → deterministic allow-list and budget authorisation
 → ephemeral Guardian, Crossref, Douban, Letterboxd or video-text acquisition
 → rebuild through unchanged EvidencePacket selection
-→ reassess and adapt; recovered packets need at least two independent origins
+→ reassess and adapt; recovered packets need two origins and two required epistemic classes
 → deterministic Agent synthesis, bounded field-patch recovery and complete quality/citation validation
 → exact claim-support audit
 → patch at most four weak claim fields and re-audit once
@@ -275,7 +275,9 @@ output may use one graph-budgeted full regeneration. Safe metrics expose strateg
 never the candidate or patch. The graph still enforces one initial generation, two repairs and the
 total model-call budget, while the production fixed route keeps temperature `0.2` and its existing
 single internal repair. Evaluator-only context modes stop cleanly at
-`evidence_ready` or force synthesis over a frozen packet. They allow acquisition to run once and both
+`evidence_ready` or force synthesis over a frozen packet. Evidence-only completion reserves a virtual
+non-call slot after the last planner turn so a synthesis-oriented total-call check cannot block
+`evidence_ready`; planner, provider, step, deadline, item and character limits remain unchanged. They allow acquisition to run once and both
 packet lanes to use the same retry controller during three alternating repetitions, so packet content
 is the only synthesis difference. Reports contain safe aggregate quality/tool/timing/token fields.
 

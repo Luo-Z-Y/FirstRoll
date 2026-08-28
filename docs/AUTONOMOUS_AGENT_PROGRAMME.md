@@ -1,6 +1,6 @@
 # Autonomous Research Agent Programme
 
-**Status:** A01 and A02 machine-failed and consumed; no paid validation or Agent production route authorised
+**Status:** A01/A02 consumed; post-result semantic correction implemented without paid validation; no Agent production route authorised
 
 ## Goal
 
@@ -64,8 +64,10 @@ The first foundation replaces a source-count-only stop rule with typed gaps:
 
 A packet that was already `passed` remains sufficient without extra spend. A packet recovered from
 `limited` or `failed` must pass the base quality checks and include at least two independent
-film-specific origins. This prevents three Letterboxd excerpts from being described as genuine source
-diversity.
+film-specific origins and at least two required epistemic classes. This prevents three Letterboxd
+excerpts from being described as genuine source diversity. Crossref abstracts are now typed
+`scholarly_abstract`; uploader descriptions and unverified captions are `video_context`; criticism
+remains `critic_reported`, and only verified speaker text may be `creator_stated`.
 
 The model planner now returns a bounded objective and action, for example:
 
@@ -120,6 +122,12 @@ Crossref and Letterboxd. Each lane reached three independent origins and base pa
 but still reported only one film-specific evidence class and exhausted all three turns. The run used
 three planner calls and four physical provider calls. No private packet was written, no owner review
 is available and A03 remains blocked.
+
+No-call diagnosis found that the run flattened Crossref and video evidence into `critic_reported`,
+allowed `agent_status: sufficient` to coexist with a required gap and reserved a synthesis model-call
+slot even in evidence-only mode. The implementation now keeps scholarship/video classes distinct,
+requires all mandatory gaps to close and uses a virtual no-call completion slot after the final
+planner turn. These fixes do not alter or upgrade A01; any validation is a new experiment.
 
 ### A02 — Structural-repair ablation
 
@@ -220,6 +228,8 @@ No model, planner or provider call was made while implementing the foundation or
 28 August 2026, the owner approved the exact A01 and A02 limits above. A01 consumed three planner and
 four physical provider calls, failed its active-lane completion targets and produced no private packet.
 A02 then consumed exactly 18 calls; targeted repair passed 9/9, while complete regeneration passed
-4/9, so the mandatory regeneration-completion target failed. No paid authorisation remains. A03 still
+4/9, so the mandatory regeneration-completion target failed. The post-result evidence semantics and
+evidence-only terminal path now have synthetic coverage but no provider-backed rerun. No paid
+authorisation remains. A03 still
 proposes 20 expected and 60 maximum synthesis calls only after an A01 machine and owner-review pass;
 it is blocked and not authorised.
