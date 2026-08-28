@@ -56,7 +56,9 @@ The successor autonomous contract is versioned at
 statuses only. Typed gaps and deterministic/model planning decisions contain allow-listed identifiers,
 counts and timings—not source bodies, URLs or free-form reasoning. Crossref acquisition remains
 process-local exactly like other Agent provider results. A01 packet and A03 study snapshots are
-written only after their respective machine gates pass. A03 reuses the exact A01 packet fingerprint
+written only after their respective machine gates pass. A01 failed both active-lane completion
+targets, so only its redacted hashes/counts/timings report and private mode-`0600` consumption lock
+exist; no packet or mapping was written. A03 reuses the exact A01 packet fingerprint
 and stores only predeclared repetitions 1, 5 and 10 for blinded owner review. Mappings, study prose,
 packets and notes remain private; only attested score/preference aggregates may be versioned later.
 One-run locks are retained so a consumed local authorisation cannot appear fresh.

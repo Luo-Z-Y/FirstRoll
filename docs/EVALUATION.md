@@ -409,6 +409,10 @@ physical provider calls and three external turns per active lane. The committed 
 exact dated report, private-packet, lock, case-suite and frozen canonical-identity paths. The first
 attempt exposed a missing `film_id` before writing the lock or making a paid call; that preflight
 failure is retained, and the corrected harness now loads the identity from the historical reference.
+The corrected run used three planner calls and four physical provider calls. Both active lanes reached
+base packet status `passed` and at least two origins, but retained an evidence-class-diversity gap and
+ended `budget_exhausted` after three turns. The two completion targets failed, so no private packet or
+human review exists and A01 is consumed.
 
 A02 also has a fail-closed harness. It injects one invalid citation, one schema-invalid field and two
 invalid citation fields into a public synthetic candidate, then alternates three repetitions per
@@ -417,8 +421,8 @@ remains in the denominator. Machine acceptance requires valid schemas/citations,
 of all unrequested fields, patch P50/P95 ratios no greater than `0.80/0.90`, token ratio no greater
 than `0.60`, quality no more than one point below regeneration and no more than 36 total calls. The
 owner separately approved 18 expected and 36 maximum calls with no acquisition-planner or external
-provider calls. That confirmation remains pending sequential activation until A01 is consumed, so
-A02 still refuses while A01 is active.
+provider calls. A01 is now consumed, and A02 is the active exact one-run experiment on the next
+committed checkpoint.
 
 A03 now has a fail-closed harness but cannot run until A01 machine and owner-attested evidence selects
 an exact private packet and planning policy. It schedules ten alternating generations per packet,
@@ -428,9 +432,9 @@ candidate-only attributed source. Lifecycle latency adds A01 acquisition to cand
 Only repetitions 1, 5 and 10 become private blinded study pairs after a machine pass; owner preference
 and severe-grounding checks then decide human value.
 
-Every ablation requires fresh paths, frozen thresholds and its own numeric owner budget. A01 is the
-active one-run experiment and A02 has a separate exact confirmation awaiting activation; A03's
-proposed 20–60 synthesis calls remain blocked by A01 and are not authorised. No successor result may
+Every ablation requires fresh paths, frozen thresholds and its own numeric owner budget. A01 is a
+machine failure, A02 is the active one-run experiment, and A03's proposed 20–60 synthesis calls remain
+blocked by A01 and are not authorised. No successor result may
 fill the missing private artifact in a historical report retrospectively.
 
 ## Deep Study Transparency Checkpoint

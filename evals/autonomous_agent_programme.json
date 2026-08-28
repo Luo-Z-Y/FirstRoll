@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "programme_id": "firstroll-autonomous-research-agent-v1",
-  "status": "a01_acquisition_ablation_approved",
-  "recorded_at": "2026-08-28T15:47:53Z",
+  "status": "a02_structural_repair_ablation_approved",
+  "recorded_at": "2026-08-28T15:58:53Z",
   "owner_mandate": {
     "decision": "build_solid_autonomous_agent",
     "instruction": "Proceed until a solid autonomous Agent is built; choose capabilities beyond tool selection and change or add bounded providers where useful.",
@@ -128,7 +128,7 @@
     {
       "id": "A01",
       "name": "gap_planner_ablation",
-      "status": "approved_one_run",
+      "status": "completed_machine_failed",
       "lanes": [
         "fixed_no_acquisition",
         "deterministic_gap_router",
@@ -153,7 +153,7 @@
         "approved_report_path": "evals/results/autonomous-agent-acquisition-2026-08-28.json",
         "approved_private_packet_path": ".firstroll/evaluations/autonomous-agent-acquisition-packets-2026-08-28.json",
         "approved_run_lock_path": ".firstroll/evaluations/autonomous-agent-acquisition-2026-08-28.lock",
-        "authorisation_consumed": false
+        "authorisation_consumed": true
       },
       "preflight_history": [
         {
@@ -166,6 +166,22 @@
           "authorisation_consumed": false
         }
       ],
+      "machine_result": {
+        "result_path": "evals/results/autonomous-agent-acquisition-2026-08-28.json",
+        "source_revision": "497be3c1c9225bbe77b3a5792b45188ae3879861",
+        "outcome": "machine_failed_no_human_review",
+        "model_planner_calls": 3,
+        "physical_provider_calls": 4,
+        "logical_provider_calls": 6,
+        "deterministic_external_tool_turns": 3,
+        "model_external_tool_turns": 3,
+        "failed_targets": [
+          "deterministic_lane_completed",
+          "model_lane_completed"
+        ],
+        "private_packet_snapshot_written": false,
+        "human_review_performed": false
+      },
       "human_gate": {
         "model_packet_must_pass_existing_packet_rubric": true,
         "model_source_diversity_not_below_deterministic": true,
@@ -177,7 +193,7 @@
     {
       "id": "A02",
       "name": "structural_repair_ablation",
-      "status": "owner_approved_pending_sequential_activation",
+      "status": "approved_one_run",
       "lanes": [
         "targeted_field_patch",
         "complete_regeneration"
@@ -210,7 +226,7 @@
     {
       "id": "A03",
       "name": "changed_packet_synthesis",
-      "status": "harness_implemented_blocked_by_A01",
+      "status": "blocked_by_A01_machine_failure",
       "packet_policy": "reuse_exact_private_A01_packet_without_reacquisition",
       "proposed_budget": {
         "generation_repetitions_per_lane": 10,
@@ -253,7 +269,7 @@
     {
       "id": "S01",
       "name": "evidence_gap_research",
-      "status": "A01_approved_one_run"
+      "status": "A01_machine_failed"
     },
     {
       "id": "S02",

@@ -1,6 +1,6 @@
 # Autonomous Research Agent Programme
 
-**Status:** A01 one-run validation authorised; A02 confirmed for sequential activation; no Agent production route authorised
+**Status:** A01 machine-failed and consumed; A02 one-run validation authorised; no Agent production route authorised
 
 ## Goal
 
@@ -114,14 +114,21 @@ canonical identity reference and fresh dated report, private-packet and lock pat
 attempt stopped before the lock or any paid call because the harness had not loaded the canonical
 `film_id`; that preflight failure is retained and the identity binding is now explicit.
 
+The corrected one-run A01 then stayed within every cost limit but failed both active-lane completion
+targets. Guardian failed; deterministic routing used Crossref and video text, while model routing used
+Crossref and Letterboxd. Each lane reached three independent origins and base packet status `passed`,
+but still reported only one film-specific evidence class and exhausted all three turns. The run used
+three planner calls and four physical provider calls. No private packet was written, no owner review
+is available and A03 remains blocked.
+
 ### A02 — Structural-repair ablation
 
 Inject controlled citation and schema faults into otherwise valid synthetic candidates. Compare the
 800-token field patch with one complete regeneration. Requested fields must be repaired, accepted
 fields must remain exactly equal, all citations must validate, and latency/token savings must be
 material under frozen thresholds. The owner separately approved 18 expected and 36 maximum model
-calls with zero planner/provider acquisition calls. That confirmation is recorded but cannot become
-the active machine status until A01 has run and its authorisation is consumed.
+calls with zero planner/provider acquisition calls. A01 is now consumed, so A02 is the active
+one-run machine authorisation on a separately committed checkpoint.
 
 ### A03 — Changed-packet synthesis
 
@@ -206,7 +213,8 @@ schema/citation validity, exact equality of every unrequested field, quality non
 responses are validated in memory and never written to the report.
 
 No model, planner or provider call was made while implementing the foundation or its harnesses. On
-28 August 2026, the owner approved the exact A01 and A02 limits above. A01 is the only active one-run
-machine authorisation; A02 is recorded for sequential activation after A01 is consumed. Both require
-the committed programme and their exact fresh paths. A03 still proposes 20 expected and 60 maximum
-synthesis calls only after A01 passes machine and owner review; it is not authorised.
+28 August 2026, the owner approved the exact A01 and A02 limits above. A01 consumed three planner and
+four physical provider calls, failed its active-lane completion targets and produced no private packet.
+A02 is now the only active one-run machine authorisation and requires the committed programme plus its
+exact fresh paths. A03 still proposes 20 expected and 60 maximum synthesis calls only after an A01
+machine and owner-review pass; it is blocked and not authorised.
