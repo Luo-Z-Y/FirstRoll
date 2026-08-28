@@ -35,9 +35,11 @@ from tools.evaluate_local_agent import (
     write_private_packets,
 )
 from tools.evaluate_text_agent import require_committed_source, require_fresh_output_paths
+from tools.evaluate_workflow import identity_matches
 
 
 DEFAULT_CASES = ROOT / "evals" / "agent_cases.json"
+DEFAULT_REFERENCE = ROOT / "evals" / "results" / "baseline-reliability-2026-08-21.json"
 DEFAULT_PROGRAMME = ROOT / "evals" / "autonomous_agent_programme.json"
 DEFAULT_OUTPUT = ROOT / "evals" / "results" / "autonomous-agent-acquisition-current.json"
 DEFAULT_PRIVATE_PACKETS = (
@@ -181,12 +183,14 @@ def require_authorised_run_inputs(
         raise SystemExit("The acquisition ablation requires the committed programme path.")
     expected = {
         "cases": confirmation.get("approved_case_suite_path"),
+        "reference": confirmation.get("approved_identity_reference_path"),
         "output": confirmation.get("approved_report_path"),
         "private_packets": confirmation.get("approved_private_packet_path"),
         "run_lock": confirmation.get("approved_run_lock_path"),
     }
     actual = {
         "cases": args.cases,
+        "reference": args.reference,
         "output": args.output,
         "private_packets": args.private_packets,
         "run_lock": args.run_lock,
@@ -198,7 +202,7 @@ def require_authorised_run_inputs(
             raise SystemExit(f"The acquisition ablation {name} path is not authorised.")
 
 
-def load_case(path: Path, case_id: str) -> dict[str, Any]:
+def load_case(path: Path, reference_path: Path, case_id: str) -> dict[str, Any]:
     payload = json.loads(path.read_text(encoding="utf-8"))
     cases = payload.get("cases") if isinstance(payload, dict) else None
     if not isinstance(cases, list):
@@ -206,11 +210,25 @@ def load_case(path: Path, case_id: str) -> dict[str, Any]:
     matches = [item for item in cases if isinstance(item, dict) and item.get("id") == case_id]
     if len(matches) != 1:
         raise ValueError("The acquisition-ablation case is missing or duplicated.")
-    return matches[0]
+
+    reference = json.loads(reference_path.read_text(encoding="utf-8"))
+    reference_cases = reference.get("cases") if isinstance(reference, dict) else None
+    if not isinstance(reference_cases, list):
+        raise ValueError("The canonical film-identity reference is invalid.")
+    identities = [
+        str(item.get("resolved_film", {}).get("id") or "").strip()
+        for item in reference_cases
+        if isinstance(item, dict) and item.get("case_id") == case_id
+    ]
+    if len(identities) != 1 or not identities[0]:
+        raise ValueError("The acquisition-ablation case lacks one canonical film identity.")
+    return {**matches[0], "film_id": identities[0]}
 
 
 def prepare_initial_packet(spec: dict[str, Any]) -> EvidencePacket:
     film = main.discovery_service.detail(spec["film_id"])["film"]
+    if not identity_matches(film, spec["expected"]):
+        raise RuntimeError("The acquisition ablation resolved the wrong canonical film identity.")
     trace = StudyTrace()
     trace.skip("film_context")
     prepared = main.prepare_film_study(
@@ -251,7 +269,7 @@ def run_acquisition_lane(
         run_id=f"autonomous-acquisition-{lane}",
         user_id="local-owner",
         question=spec["question"],
-        film_query=str(spec["id"]),
+        film_query=str(spec["query"]),
         film_id=spec["film_id"],
     )
     final = cast(
@@ -421,6 +439,7 @@ def parse_args() -> argparse.Namespace:
         description="Run the frozen autonomous Agent acquisition-planner ablation once."
     )
     parser.add_argument("--cases", type=Path, default=DEFAULT_CASES)
+    parser.add_argument("--reference", type=Path, default=DEFAULT_REFERENCE)
     parser.add_argument("--programme", type=Path, default=DEFAULT_PROGRAMME)
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
     parser.add_argument("--private-packets", type=Path, default=DEFAULT_PRIVATE_PACKETS)
@@ -444,12 +463,8 @@ def main_cli() -> int:
     validate_private_packet_output_path(args.private_packets)
     validate_private_packet_output_path(args.run_lock)
 
-    spec = load_case(args.cases, str(experiment["case_id"]))
+    spec = load_case(args.cases, args.reference, str(experiment["case_id"]))
     revision = source_revision()
-    initial_packet = prepare_initial_packet(spec)
-    initial_fingerprint = packet_fingerprint(initial_packet)
-    base = main.build_local_agent_services()
-    pool = FrozenSourcePool(base.acquirer)
     write_private_packets(
         args.run_lock,
         {
@@ -460,6 +475,10 @@ def main_cli() -> int:
             "status": "consumed_on_start",
         },
     )
+    initial_packet = prepare_initial_packet(spec)
+    initial_fingerprint = packet_fingerprint(initial_packet)
+    base = main.build_local_agent_services()
+    pool = FrozenSourcePool(base.acquirer)
     maximum_turns = int(
         experiment["proposed_budget"]["maximum_external_tool_turns_per_active_lane"]
     )

@@ -123,6 +123,7 @@ def test_acquisition_run_inputs_must_match_approved_paths(tmp_path: Path) -> Non
     args = evaluator.argparse.Namespace(
         programme=evaluator.DEFAULT_PROGRAMME,
         cases=evaluator.ROOT / confirmation["approved_case_suite_path"],
+        reference=evaluator.ROOT / confirmation["approved_identity_reference_path"],
         output=evaluator.ROOT / confirmation["approved_report_path"],
         private_packets=evaluator.ROOT / confirmation["approved_private_packet_path"],
         run_lock=evaluator.ROOT / confirmation["approved_run_lock_path"],
@@ -132,6 +133,43 @@ def test_acquisition_run_inputs_must_match_approved_paths(tmp_path: Path) -> Non
     args.output = tmp_path / "unapproved.json"
     with pytest.raises(SystemExit, match="output path is not authorised"):
         evaluator.require_authorised_run_inputs(args, experiment)
+
+
+def test_acquisition_case_loads_the_frozen_canonical_identity() -> None:
+    spec = evaluator.load_case(
+        evaluator.DEFAULT_CASES,
+        evaluator.DEFAULT_REFERENCE,
+        "the-thing-ambiguous-identity",
+    )
+
+    assert spec["film_id"] == "wikidata:Q210756"
+    assert spec["expected"] == {
+        "title": "The Thing",
+        "year": 1982,
+        "director": "John Carpenter",
+    }
+
+
+def test_initial_packet_rejects_identity_drift_before_preparation(monkeypatch) -> None:
+    spec = evaluator.load_case(
+        evaluator.DEFAULT_CASES,
+        evaluator.DEFAULT_REFERENCE,
+        "the-thing-ambiguous-identity",
+    )
+    monkeypatch.setattr(
+        evaluator.main.discovery_service,
+        "detail",
+        lambda _film_id: {
+            "film": {
+                "title": "The Thing",
+                "year": 2011,
+                "credits": {"directors": ["Matthijs van Heijningen Jr."]},
+            }
+        },
+    )
+
+    with pytest.raises(RuntimeError, match="wrong canonical film identity"):
+        evaluator.prepare_initial_packet(spec)
 
 
 def test_frozen_source_pool_replays_one_physical_observation() -> None:

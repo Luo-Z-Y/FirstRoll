@@ -406,7 +406,9 @@ cache hits from physical costs and writes three mode-`0600` packets under stable
 reviewer hides lane identity until owner attestation; equal score and equal calls prefer the
 no-model router. On 28 August 2026, the owner approved one run with at most three planner calls, five
 physical provider calls and three external turns per active lane. The committed contract binds the
-exact dated report, private-packet, lock and case-suite paths.
+exact dated report, private-packet, lock, case-suite and frozen canonical-identity paths. The first
+attempt exposed a missing `film_id` before writing the lock or making a paid call; that preflight
+failure is retained, and the corrected harness now loads the identity from the historical reference.
 
 A02 also has a fail-closed harness. It injects one invalid citation, one schema-invalid field and two
 invalid citation fields into a public synthetic candidate, then alternates three repetitions per

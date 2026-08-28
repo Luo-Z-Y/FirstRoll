@@ -15,8 +15,9 @@ Owner decisions:
 
 Pre-spend controls:
 
-- A01 is bound to committed source, `evals/agent_cases.json`, a fresh dated redacted report, a fresh
-  mode-`0600` private packet snapshot and a fresh private one-run lock;
+- A01 is bound to committed source, `evals/agent_cases.json`, the frozen canonical identity report, a
+  fresh dated redacted report, a fresh mode-`0600` private packet snapshot and a fresh private one-run
+  lock;
 - A02 is bound to its own fresh dated report and private lock;
 - both evaluators reject alternate programme, report, packet, case-suite or lock paths before a paid
   call;
@@ -25,6 +26,16 @@ Pre-spend controls:
 - DeepSeek and all five allow-listed Agent acquisition actions report ready without exposing secret
   values;
 - no paid call was made while recording these authorisations.
+
+Pre-spend failure retained:
+
+- the first A01 command stopped with `canonical_film_identity_not_bound` because the case suite stores
+  queries/expectations while the harness incorrectly expected an inline `film_id`;
+- the failure occurred before the one-run lock, planner construction or provider acquisition: model
+  planner calls `0`, physical provider calls `0`, and the authorisation remains unconsumed;
+- the corrected harness binds the target to `wikidata:Q210756` from the immutable baseline reference,
+  rejects any alternate reference path and writes the consumption lock before film detail or packet
+  preparation; it also rechecks title, year and director against the frozen expectation.
 
 Next actionable work:
 
@@ -117,7 +128,7 @@ Acceptance evidence:
   wins, no fixed evidence-responsibility win and no severe candidate grounding concern;
 - text, acquisition and changed-study review readers reject a `.firstroll` symlink that resolves
   outside the repository before reading any private artifact;
-- all 352 automated tests pass with the retained Starlette/httpx deprecation warning;
+- all 354 automated tests pass with the retained Starlette/httpx deprecation warning;
 - scoped Ruff, new-module MyPy, compilation, JSON and documentation-link checks pass; no paid call
   was made.
 
