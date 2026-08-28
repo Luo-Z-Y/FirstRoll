@@ -874,7 +874,9 @@ its frozen thresholds or limits.
 
 **Recorded outcome:** A01 consumed three planner and four physical provider calls but both active
 lanes ended budget-exhausted with the evidence-class-diversity gap still present. No private packet
-or human gate was opened. The sequential policy therefore activates A02 while A03 remains blocked.
+or human gate was opened. A02 then showed 9/9 valid, exact-preserving field patches versus 4/9 valid
+complete regenerations; its mandatory regeneration-completion target therefore failed. Both
+sequential approvals are consumed and A03 remains blocked.
 
 ## How to Add or Change a Decision
 

@@ -1,15 +1,15 @@
 {
   "schema_version": 1,
   "programme_id": "firstroll-autonomous-research-agent-v1",
-  "status": "a02_structural_repair_ablation_approved",
-  "recorded_at": "2026-08-28T15:58:53Z",
+  "status": "a01_a02_completed_machine_failed_no_paid_authorisation",
+  "recorded_at": "2026-08-28T16:14:42Z",
   "owner_mandate": {
     "decision": "build_solid_autonomous_agent",
     "instruction": "Proceed until a solid autonomous Agent is built; choose capabilities beyond tool selection and change or add bounded providers where useful.",
     "decided_by": "repository_owner",
     "implementation_authorised": true,
     "provider_adapter_changes_authorised": true,
-    "paid_model_or_provider_calls_authorised": true,
+    "paid_model_or_provider_calls_authorised": false,
     "hosted_route_authorised": false,
     "production_cutover_authorised": false
   },
@@ -193,7 +193,7 @@
     {
       "id": "A02",
       "name": "structural_repair_ablation",
-      "status": "approved_one_run",
+      "status": "completed_machine_failed",
       "lanes": [
         "targeted_field_patch",
         "complete_regeneration"
@@ -219,7 +219,26 @@
         "approved_maximum_model_calls": 36,
         "approved_report_path": "evals/results/autonomous-agent-repair-2026-08-28.json",
         "approved_run_lock_path": ".firstroll/evaluations/autonomous-agent-repair-2026-08-28.lock",
-        "authorisation_consumed": false
+        "authorisation_consumed": true
+      },
+      "machine_result": {
+        "result_path": "evals/results/autonomous-agent-repair-2026-08-28.json",
+        "source_revision": "9be19e7bd9fd565bd362eb479d9c0666465e03c3",
+        "outcome": "machine_failed_regeneration_completion",
+        "targeted_patch_completed_samples": 9,
+        "regeneration_completed_samples": 4,
+        "scheduled_samples_per_lane": 9,
+        "targeted_patch_total_tokens": 9628,
+        "regeneration_total_tokens": 29859,
+        "total_model_calls": 18,
+        "regeneration_citation_validation_failures": 5,
+        "accepted_field_preservation_ratio": 1.0,
+        "p50_latency_ratio": 0.055319,
+        "p95_latency_ratio": 0.052065,
+        "total_token_ratio": 0.322449,
+        "failed_targets": [
+          "regeneration_completion_ratio"
+        ]
       },
       "advancement_rule": "valid_output_and_exact_accepted_field_preservation_with_material_latency_and_token_saving"
     },

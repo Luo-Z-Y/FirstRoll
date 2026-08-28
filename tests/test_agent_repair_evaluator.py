@@ -36,8 +36,8 @@ def approved_programme() -> dict[str, Any]:
     return value
 
 
-def test_current_programme_authorises_one_exact_repair_ablation() -> None:
-    assert evaluator.comparison_authorised(programme()) is True
+def test_current_programme_refuses_consumed_repair_ablation() -> None:
+    assert evaluator.comparison_authorised(programme()) is False
 
 
 def test_repair_authorisation_requires_every_exact_budget() -> None:

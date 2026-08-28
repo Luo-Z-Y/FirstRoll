@@ -291,8 +291,9 @@ traceable `log`/`compare`/`count`/`track`/`mark`/`inspect` exercises under a sep
 Those finishing capabilities have synthetic coverage only. A private single-device phase store adds
 owner-checked mode-`0600` checkpoints, cancellation and safe resume without replaying an interrupted
 paid action; it is not hosted or multi-instance persistence. Three causal harnesses now isolate
-planning, structural repair and exact changed-packet synthesis. A01 is consumed, A02 has one exact
-18-expected/36-maximum call authorisation, and A03 lacks both an accepted A01 packet and a budget.
+planning, structural repair and exact changed-packet synthesis. A01 is consumed. A02 patching passed
+9/9 but regeneration passed only 4/9, so its aggregate machine gate also failed and is consumed. A03
+lacks both an accepted A01 packet and a budget.
 
 The public beta is intentionally narrower than the local edition. Azure Static Web Apps and Azure
 Container Apps use separate origins and custom domains. Public mode does not publish local settings,
@@ -1164,8 +1165,9 @@ against regeneration before changed-packet synthesis. On 28 August 2026, the own
 run capped at three planner calls, five physical provider calls and three external turns per active
 lane, plus a sequential A02 run of 18 expected and 36 maximum model calls. A01 used three planner and
 four physical provider calls but failed both active-lane completion targets, so A03 remains blocked.
-A02 is active next; claim audit, editing, coaching, reliability, durable execution and clip-Agent work
-remain gated.
+A02 then used 18 calls: targeted patching passed 9/9 with exact preservation, while regeneration
+passed 4/9, making A02 a formal machine failure. No paid authorisation remains; claim audit, editing,
+coaching, reliability, durable execution and clip-Agent work remain gated.
 
 The latest reviewed complete-workflow and packet-only results are
 [`baseline-2026-08-21.json`](evals/results/baseline-2026-08-21.json) and

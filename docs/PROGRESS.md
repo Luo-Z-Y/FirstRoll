@@ -1,5 +1,45 @@
 # FirstRoll Project Progress
 
+### 28 August 2026 — A02 patching succeeds, but the frozen aggregate gate fails
+
+Measured A02 result from source `9be19e7b`:
+
+| Measure | Targeted field patch | Complete regeneration | Gate |
+|---|---:|---:|---|
+| Completion | 9 / 9 | 4 / 9 | Failed on regeneration |
+| Mean quality, failures as zero | 100.00 | 40.89 | Patch non-inferiority passed |
+| Citation/schema validity | 1.0000 | 0.4444 | Patch passed |
+| Accepted fields preserved | 9 / 9 | not applicable | Passed |
+| P50 latency | 1.754 s | 31.707 s | `0.055319×`, passed |
+| P95 latency | 2.079 s | 39.931 s | `0.052065×`, passed |
+| Tokens | 9,628 | 29,859 | `0.322449×`, passed |
+| Model calls | 9 | 9 | 18 total, passed |
+
+Outcome:
+
+1. Every controlled one-citation, one-schema-field and two-field fault was repaired in one targeted
+   call. Every complete candidate revalidated, and every unrequested field remained exactly equal.
+2. Five of nine complete regenerations failed citation validation. They remain zero-scored with their
+   complete 29.761–39.491-second latency and token cost; no output was discarded from the denominator.
+3. Ten of eleven frozen targets passed, including all patch correctness, preservation, latency, token,
+   quality, budget and transport-telemetry requirements.
+4. `regeneration_completion_ratio` failed. Because the contract required both lanes to complete 9/9,
+   the aggregate experiment is a machine failure despite the strong targeted-patch evidence.
+5. The run made exactly 18 DeepSeek calls, with zero acquisition-planner/provider calls. No prompt or
+   generated response was written to the redacted report.
+6. A02 supplies provider-backed evidence that exact field patching can be dramatically cheaper and
+   more reliable for these three fixtures, but three repetitions do not establish reliability and the
+   failed frozen gate is not upgraded retrospectively.
+7. A01 and A02 authorisations are consumed. A03 remains blocked by A01; no paid validation, hosted
+   Agent route, production cut-over or clip-Agent work is authorised.
+
+Next actionable work:
+
+1. Preserve and version the immutable A02 report; do not rerun either consumed experiment.
+2. Diagnose A01 evidence-class/status semantics and A02 regeneration citation failures without paid
+   calls, then freeze any revision contract before requesting new spend.
+3. Keep production on the fixed workflow and continue to describe the Agent as not yet solid.
+
 ### 28 August 2026 — A01 fails its machine gate; A02 becomes active
 
 Measured A01 result from source `497be3c1`:
@@ -167,7 +207,7 @@ Acceptance evidence:
   wins, no fixed evidence-responsibility win and no severe candidate grounding concern;
 - text, acquisition and changed-study review readers reject a `.firstroll` symlink that resolves
   outside the repository before reading any private artifact;
-- all 355 automated tests pass with the retained Starlette/httpx deprecation warning;
+- all 356 automated tests pass with the retained Starlette/httpx deprecation warning;
 - scoped Ruff, new-module MyPy, compilation, JSON and documentation-link checks pass; no paid call
   was made.
 
