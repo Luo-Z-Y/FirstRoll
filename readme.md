@@ -1160,8 +1160,10 @@ The successor autonomous programme does not reinterpret that result. It introduc
 objectives, requires two independent origins for a recovered packet, exposes a deterministic
 no-model planner baseline and adds the existing bounded Crossref adapter to Agent acquisition. The
 next evidence must separately ablate model planning against deterministic routing and targeted repair
-against regeneration before changed-packet synthesis. No new paid budget is currently confirmed;
-claim audit, editing, coaching, reliability, durable execution and clip-Agent work remain gated.
+against regeneration before changed-packet synthesis. On 28 August 2026, the owner approved one A01
+run capped at three planner calls, five physical provider calls and three external turns per active
+lane, plus a sequential A02 run of 18 expected and 36 maximum model calls. A01 is active first; claim
+audit, editing, coaching, reliability, durable execution and clip-Agent work remain gated.
 
 The latest reviewed complete-workflow and packet-only results are
 [`baseline-2026-08-21.json`](evals/results/baseline-2026-08-21.json) and

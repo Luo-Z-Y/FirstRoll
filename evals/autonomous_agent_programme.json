@@ -1,15 +1,15 @@
 {
   "schema_version": 1,
   "programme_id": "firstroll-autonomous-research-agent-v1",
-  "status": "all_causal_harnesses_implemented_awaiting_gated_budgets",
-  "recorded_at": "2026-08-28T12:23:08Z",
+  "status": "a01_acquisition_ablation_approved",
+  "recorded_at": "2026-08-28T15:36:51Z",
   "owner_mandate": {
     "decision": "build_solid_autonomous_agent",
     "instruction": "Proceed until a solid autonomous Agent is built; choose capabilities beyond tool selection and change or add bounded providers where useful.",
     "decided_by": "repository_owner",
     "implementation_authorised": true,
     "provider_adapter_changes_authorised": true,
-    "paid_model_or_provider_calls_authorised": false,
+    "paid_model_or_provider_calls_authorised": true,
     "hosted_route_authorised": false,
     "production_cutover_authorised": false
   },
@@ -128,7 +128,7 @@
     {
       "id": "A01",
       "name": "gap_planner_ablation",
-      "status": "harness_implemented_awaiting_budget",
+      "status": "approved_one_run",
       "lanes": [
         "fixed_no_acquisition",
         "deterministic_gap_router",
@@ -141,7 +141,19 @@
         "maximum_physical_provider_calls": 5,
         "maximum_external_tool_turns_per_active_lane": 3
       },
-      "paid_budget_confirmation": null,
+      "paid_budget_confirmation": {
+        "confirmed": true,
+        "recorded_at": "2026-08-28T15:36:51Z",
+        "decided_by": "repository_owner",
+        "approved_maximum_model_planner_calls": 3,
+        "approved_maximum_physical_provider_calls": 5,
+        "approved_maximum_external_tool_turns_per_active_lane": 3,
+        "approved_case_suite_path": "evals/agent_cases.json",
+        "approved_report_path": "evals/results/autonomous-agent-acquisition-2026-08-28.json",
+        "approved_private_packet_path": ".firstroll/evaluations/autonomous-agent-acquisition-packets-2026-08-28.json",
+        "approved_run_lock_path": ".firstroll/evaluations/autonomous-agent-acquisition-2026-08-28.lock",
+        "authorisation_consumed": false
+      },
       "human_gate": {
         "model_packet_must_pass_existing_packet_rubric": true,
         "model_source_diversity_not_below_deterministic": true,
@@ -153,7 +165,7 @@
     {
       "id": "A02",
       "name": "structural_repair_ablation",
-      "status": "harness_implemented_awaiting_budget",
+      "status": "owner_approved_pending_sequential_activation",
       "lanes": [
         "targeted_field_patch",
         "complete_regeneration"
@@ -169,7 +181,18 @@
         "expected_model_calls": 18,
         "maximum_model_calls": 36
       },
-      "paid_budget_confirmation": null,
+      "paid_budget_confirmation": {
+        "confirmed": true,
+        "recorded_at": "2026-08-28T15:36:51Z",
+        "decided_by": "repository_owner",
+        "approved_fault_scenarios": 3,
+        "approved_repetitions_per_lane_per_scenario": 3,
+        "approved_expected_model_calls": 18,
+        "approved_maximum_model_calls": 36,
+        "approved_report_path": "evals/results/autonomous-agent-repair-2026-08-28.json",
+        "approved_run_lock_path": ".firstroll/evaluations/autonomous-agent-repair-2026-08-28.lock",
+        "authorisation_consumed": false
+      },
       "advancement_rule": "valid_output_and_exact_accepted_field_preservation_with_material_latency_and_token_saving"
     },
     {
@@ -218,7 +241,7 @@
     {
       "id": "S01",
       "name": "evidence_gap_research",
-      "status": "A01_harness_implemented_awaiting_budget"
+      "status": "A01_approved_one_run"
     },
     {
       "id": "S02",

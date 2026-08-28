@@ -15,13 +15,13 @@ def programme() -> dict:
     return json.loads(CONTRACT.read_text(encoding="utf-8"))
 
 
-def test_autonomous_programme_keeps_paid_and_production_boundaries_closed() -> None:
+def test_autonomous_programme_opens_only_the_exact_local_paid_gate() -> None:
     value = programme()
 
-    assert value["status"] == "all_causal_harnesses_implemented_awaiting_gated_budgets"
+    assert value["status"] == "a01_acquisition_ablation_approved"
     assert value["owner_mandate"]["implementation_authorised"] is True
     assert value["owner_mandate"]["provider_adapter_changes_authorised"] is True
-    assert value["owner_mandate"]["paid_model_or_provider_calls_authorised"] is False
+    assert value["owner_mandate"]["paid_model_or_provider_calls_authorised"] is True
     assert value["owner_mandate"]["hosted_route_authorised"] is False
     assert value["owner_mandate"]["production_cutover_authorised"] is False
     assert value["boundaries"]["fixed_production_workflow_unchanged"] is True
@@ -76,17 +76,17 @@ def test_autonomous_programme_matches_the_independent_origin_and_provider_contra
     }
 
 
-def test_autonomous_experiments_are_sequential_and_unfunded() -> None:
+def test_autonomous_experiments_have_exact_sequential_authorisations() -> None:
     value = programme()
     experiments = {item["id"]: item for item in value["experiments"]}
 
-    assert experiments["A01"]["status"] == "harness_implemented_awaiting_budget"
+    assert experiments["A01"]["status"] == "approved_one_run"
     assert experiments["A01"]["lanes"] == [
         "fixed_no_acquisition",
         "deterministic_gap_router",
         "model_gap_planner",
     ]
-    assert experiments["A02"]["status"] == "harness_implemented_awaiting_budget"
+    assert experiments["A02"]["status"] == "owner_approved_pending_sequential_activation"
     assert experiments["A03"]["status"] == "harness_implemented_blocked_by_A01"
     assert experiments["A03"]["proposed_budget"] == {
         "generation_repetitions_per_lane": 10,
@@ -96,5 +96,34 @@ def test_autonomous_experiments_are_sequential_and_unfunded() -> None:
         "provider_calls": 0,
     }
     assert experiments["A03"]["private_human_review_repetitions"] == [1, 5, 10]
-    assert all(item["paid_budget_confirmation"] is None for item in experiments.values())
+    assert experiments["A01"]["paid_budget_confirmation"] == {
+        "confirmed": True,
+        "recorded_at": "2026-08-28T15:36:51Z",
+        "decided_by": "repository_owner",
+        "approved_maximum_model_planner_calls": 3,
+        "approved_maximum_physical_provider_calls": 5,
+        "approved_maximum_external_tool_turns_per_active_lane": 3,
+        "approved_case_suite_path": "evals/agent_cases.json",
+        "approved_report_path": "evals/results/autonomous-agent-acquisition-2026-08-28.json",
+        "approved_private_packet_path": (
+            ".firstroll/evaluations/autonomous-agent-acquisition-packets-2026-08-28.json"
+        ),
+        "approved_run_lock_path": (
+            ".firstroll/evaluations/autonomous-agent-acquisition-2026-08-28.lock"
+        ),
+        "authorisation_consumed": False,
+    }
+    assert experiments["A02"]["paid_budget_confirmation"] == {
+        "confirmed": True,
+        "recorded_at": "2026-08-28T15:36:51Z",
+        "decided_by": "repository_owner",
+        "approved_fault_scenarios": 3,
+        "approved_repetitions_per_lane_per_scenario": 3,
+        "approved_expected_model_calls": 18,
+        "approved_maximum_model_calls": 36,
+        "approved_report_path": "evals/results/autonomous-agent-repair-2026-08-28.json",
+        "approved_run_lock_path": ".firstroll/evaluations/autonomous-agent-repair-2026-08-28.lock",
+        "authorisation_consumed": False,
+    }
+    assert experiments["A03"]["paid_budget_confirmation"] is None
     assert (ROOT / "docs" / "AUTONOMOUS_AGENT_PROGRAMME.md").is_file()

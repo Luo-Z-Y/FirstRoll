@@ -192,7 +192,7 @@
   },
   "autonomous_successor": {
     "contract_path": "evals/autonomous_agent_programme.json",
-    "status": "all_causal_harnesses_implemented_awaiting_gated_budgets",
+    "status": "a01_acquisition_ablation_approved",
     "implementation_authorised": true,
     "paid_validation_authorised": false,
     "hosted_route_authorised": false,

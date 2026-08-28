@@ -96,8 +96,8 @@ def approved_programme() -> dict[str, Any]:
     return value
 
 
-def test_current_programme_refuses_paid_acquisition_ablation() -> None:
-    assert evaluator.comparison_authorised(programme()) is False
+def test_current_programme_authorises_one_exact_acquisition_ablation() -> None:
+    assert evaluator.comparison_authorised(programme()) is True
 
 
 def test_acquisition_authorisation_requires_every_exact_budget() -> None:
@@ -114,6 +114,24 @@ def test_acquisition_authorisation_requires_every_exact_budget() -> None:
     assert evaluator.comparison_authorised(approved) is True
     assert evaluator.comparison_authorised(mismatched) is False
     assert evaluator.comparison_authorised(consumed) is False
+
+
+def test_acquisition_run_inputs_must_match_approved_paths(tmp_path: Path) -> None:
+    value = programme()
+    experiment = evaluator.acquisition_experiment(value)
+    confirmation = experiment["paid_budget_confirmation"]
+    args = evaluator.argparse.Namespace(
+        programme=evaluator.DEFAULT_PROGRAMME,
+        cases=evaluator.ROOT / confirmation["approved_case_suite_path"],
+        output=evaluator.ROOT / confirmation["approved_report_path"],
+        private_packets=evaluator.ROOT / confirmation["approved_private_packet_path"],
+        run_lock=evaluator.ROOT / confirmation["approved_run_lock_path"],
+    )
+
+    evaluator.require_authorised_run_inputs(args, experiment)
+    args.output = tmp_path / "unapproved.json"
+    with pytest.raises(SystemExit, match="output path is not authorised"):
+        evaluator.require_authorised_run_inputs(args, experiment)
 
 
 def test_frozen_source_pool_replays_one_physical_observation() -> None:

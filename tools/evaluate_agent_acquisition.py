@@ -57,7 +57,7 @@ class FrozenLaneSourcePool:
     lane: str
 
     def status(self) -> dict[str, dict[str, Any]]:
-        return self.pool.status()
+        return cast(dict[str, dict[str, Any]], self.pool.status())
 
     def acquire(self, tool: ToolName, film: dict[str, Any]) -> AcquiredSources:
         return self.pool.acquire(tool, film, lane=self.lane)
@@ -75,7 +75,7 @@ class FrozenSourcePool:
     logical_calls: list[dict[str, Any]] = field(default_factory=list)
 
     def status(self) -> dict[str, dict[str, Any]]:
-        return self.acquirer.status()
+        return cast(dict[str, dict[str, Any]], self.acquirer.status())
 
     def for_lane(self, lane: str) -> FrozenLaneSourcePool:
         return FrozenLaneSourcePool(self, lane)
@@ -170,6 +170,32 @@ def comparison_authorised(programme: dict[str, Any]) -> bool:
         and confirmation.get("approved_maximum_external_tool_turns_per_active_lane")
         == proposed.get("maximum_external_tool_turns_per_active_lane")
     )
+
+
+def require_authorised_run_inputs(
+    args: argparse.Namespace,
+    experiment: dict[str, Any],
+) -> None:
+    confirmation = experiment.get("paid_budget_confirmation", {})
+    if args.programme.resolve() != DEFAULT_PROGRAMME.resolve():
+        raise SystemExit("The acquisition ablation requires the committed programme path.")
+    expected = {
+        "cases": confirmation.get("approved_case_suite_path"),
+        "output": confirmation.get("approved_report_path"),
+        "private_packets": confirmation.get("approved_private_packet_path"),
+        "run_lock": confirmation.get("approved_run_lock_path"),
+    }
+    actual = {
+        "cases": args.cases,
+        "output": args.output,
+        "private_packets": args.private_packets,
+        "run_lock": args.run_lock,
+    }
+    for name, approved in expected.items():
+        if not isinstance(approved, str) or not approved.strip():
+            raise SystemExit(f"The acquisition ablation lacks an approved {name} path.")
+        if actual[name].resolve() != (ROOT / approved).resolve():
+            raise SystemExit(f"The acquisition ablation {name} path is not authorised.")
 
 
 def load_case(path: Path, case_id: str) -> dict[str, Any]:
@@ -409,6 +435,8 @@ def main_cli() -> int:
         raise SystemExit("The autonomous programme does not authorise the acquisition ablation.")
     if not main.local_agent_enabled():
         raise SystemExit("Set FIRSTROLL_LOCAL_AGENT_ENABLED=1 for the local ablation.")
+    experiment = acquisition_experiment(programme)
+    require_authorised_run_inputs(args, experiment)
     require_committed_source()
     require_fresh_output_paths(args.output, args.private_packets)
     if args.run_lock.exists():
@@ -416,7 +444,6 @@ def main_cli() -> int:
     validate_private_packet_output_path(args.private_packets)
     validate_private_packet_output_path(args.run_lock)
 
-    experiment = acquisition_experiment(programme)
     spec = load_case(args.cases, str(experiment["case_id"]))
     revision = source_revision()
     initial_packet = prepare_initial_packet(spec)

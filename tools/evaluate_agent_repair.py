@@ -161,25 +161,28 @@ def valid_candidate() -> dict[str, Any]:
                 "confidence": "medium",
             }
         )
-    return GroundedStudy.model_validate(
-        {
-            "title": "A synthetic close-viewing study of uncertainty",
-            "central_argument": (
-                "The film might organise uncertainty through relations among framing, editing and "
-                "sound; the following hypotheses specify observable comparisons rather than facts."
-            ),
-            "sections": sections,
-            "creator_intent_boundary": (
-                "No supplied evidence establishes creator intention, so every formal proposition "
-                "remains a viewing hypothesis unless an attributed statement is later added."
-            ),
-            "next_viewing": [
-                "Log recurring frame boundaries and eyeline changes.",
-                "Compare transition duration with shifts in available information.",
-                "Track off-screen sound against visible reaction and counterexamples.",
-            ],
-        }
-    ).model_dump()
+    return cast(
+        dict[str, Any],
+        GroundedStudy.model_validate(
+            {
+                "title": "A synthetic close-viewing study of uncertainty",
+                "central_argument": (
+                    "The film might organise uncertainty through relations among framing, editing and "
+                    "sound; the following hypotheses specify observable comparisons rather than facts."
+                ),
+                "sections": sections,
+                "creator_intent_boundary": (
+                    "No supplied evidence establishes creator intention, so every formal proposition "
+                    "remains a viewing hypothesis unless an attributed statement is later added."
+                ),
+                "next_viewing": [
+                    "Log recurring frame boundaries and eyeline changes.",
+                    "Compare transition duration with shifts in available information.",
+                    "Track off-screen sound against visible reaction and counterexamples.",
+                ],
+            }
+        ).model_dump(),
+    )
 
 
 def fault_candidate(scenario: str) -> tuple[dict[str, Any], tuple[str, ...]]:
@@ -223,6 +226,25 @@ def comparison_authorised(programme: dict[str, Any]) -> bool:
         == proposed.get("expected_model_calls")
         and confirmation.get("approved_maximum_model_calls") == proposed.get("maximum_model_calls")
     )
+
+
+def require_authorised_run_inputs(
+    args: argparse.Namespace,
+    experiment: dict[str, Any],
+) -> None:
+    confirmation = experiment.get("paid_budget_confirmation", {})
+    if args.programme.resolve() != DEFAULT_PROGRAMME.resolve():
+        raise SystemExit("The repair ablation requires the committed programme path.")
+    expected = {
+        "output": confirmation.get("approved_report_path"),
+        "run_lock": confirmation.get("approved_run_lock_path"),
+    }
+    actual = {"output": args.output, "run_lock": args.run_lock}
+    for name, approved in expected.items():
+        if not isinstance(approved, str) or not approved.strip():
+            raise SystemExit(f"The repair ablation lacks an approved {name} path.")
+        if actual[name].resolve() != (ROOT / approved).resolve():
+            raise SystemExit(f"The repair ablation {name} path is not authorised.")
 
 
 def _set_path(value: dict[str, Any], path: str, replacement: Any) -> None:
@@ -500,6 +522,8 @@ def main_cli() -> int:
         raise SystemExit("The autonomous programme does not authorise the repair ablation.")
     if not main.local_agent_enabled():
         raise SystemExit("Set FIRSTROLL_LOCAL_AGENT_ENABLED=1 for the local ablation.")
+    experiment = repair_experiment(programme)
+    require_authorised_run_inputs(args, experiment)
     require_committed_source()
     if args.output.exists():
         raise SystemExit("The repair-ablation output path already exists.")
@@ -538,7 +562,6 @@ def main_cli() -> int:
 
     patch = lane_summary(samples, "targeted_field_patch")
     regeneration = lane_summary(samples, "complete_regeneration")
-    experiment = repair_experiment(programme)
     targets = evaluate_targets(
         samples,
         patch,

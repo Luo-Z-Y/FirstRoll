@@ -1,5 +1,38 @@
 # FirstRoll Project Progress
 
+### 28 August 2026 — A01/A02 value experiments receive exact sequential approval
+
+Owner decisions:
+
+1. Approved production deployment run `33176634496` for exact commit `4529e2fe`; the sealed
+   deployment completed as live build `v178`, API health remained `{"status":"ok"}` and no Agent
+   route was exposed.
+2. Approved one A01 acquisition ablation with at most three planner calls, five physical provider
+   calls and three external turns per active lane. Synthesis remains zero.
+3. Separately approved A02 with 18 expected and 36 maximum DeepSeek calls and zero acquisition
+   planner/provider calls. A02 is recorded but must remain inactive until A01 is consumed.
+4. Did not approve A03, hosted Agent routing, production Agent cut-over or clip-Agent work.
+
+Pre-spend controls:
+
+- A01 is bound to committed source, `evals/agent_cases.json`, a fresh dated redacted report, a fresh
+  mode-`0600` private packet snapshot and a fresh private one-run lock;
+- A02 is bound to its own fresh dated report and private lock;
+- both evaluators reject alternate programme, report, packet, case-suite or lock paths before a paid
+  call;
+- the main `.firstroll` directory resolves inside the repository with mode `0700`; all approved paths
+  were confirmed absent before authorisation;
+- DeepSeek and all five allow-listed Agent acquisition actions report ready without exposing secret
+  values;
+- no paid call was made while recording these authorisations.
+
+Next actionable work:
+
+1. Commit and merge this exact authorisation checkpoint after CI.
+2. Run A01 once, retain every failure and consume its authorisation.
+3. Preserve the redacted report and private packet only if machine gates permit owner review.
+4. Activate and run A02 once from a later committed checkpoint, then consume its separate approval.
+
 ### 28 August 2026 — Autonomous research-Agent foundation begins
 
 Owner direction:
@@ -84,7 +117,7 @@ Acceptance evidence:
   wins, no fixed evidence-responsibility win and no severe candidate grounding concern;
 - text, acquisition and changed-study review readers reject a `.firstroll` symlink that resolves
   outside the repository before reading any private artifact;
-- all 350 automated tests pass with the retained Starlette/httpx deprecation warning;
+- all 352 automated tests pass with the retained Starlette/httpx deprecation warning;
 - scoped Ruff, new-module MyPy, compilation, JSON and documentation-link checks pass; no paid call
   was made.
 

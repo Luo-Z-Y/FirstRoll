@@ -569,7 +569,7 @@
       "revision_paid_validation_authorisation_consumed": true,
       "autonomous_successor": {
         "contract_path": "evals/autonomous_agent_programme.json",
-        "status": "all_causal_harnesses_implemented_awaiting_gated_budgets",
+        "status": "a01_acquisition_ablation_approved",
         "paid_validation_authorised": false,
         "production_route_cutover": "no_go"
       }

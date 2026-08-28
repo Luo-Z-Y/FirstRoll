@@ -318,12 +318,16 @@ planner mode supplies a no-model ablation baseline. The A01 harness command is:
 
 ```bash
 FIRSTROLL_LOCAL_AGENT_ENABLED=1 uv run python tools/evaluate_agent_acquisition.py \
-  --output evals/results/autonomous-agent-acquisition-YYYY-MM-DD.json
+  --cases evals/agent_cases.json \
+  --output evals/results/autonomous-agent-acquisition-2026-08-28.json \
+  --private-packets .firstroll/evaluations/autonomous-agent-acquisition-packets-2026-08-28.json \
+  --run-lock .firstroll/evaluations/autonomous-agent-acquisition-2026-08-28.lock
 ```
 
-It currently refuses before preparation because no numeric paid budget is confirmed. Once separately
-authorised on committed source, it also requires fresh report, private snapshot and one-run lock
-paths. Do not remove the lock after a started run. Owner review uses
+The owner approved this exact one-run command and its ceilings of three planner calls, five physical
+provider calls and three external turns per active lane on 28 August 2026. It requires committed source and every listed
+path must match the confirmation and remain fresh. Do not remove the lock after a started run. Owner
+review uses
 `uv run python tools/review_agent_acquisition_packets.py` only when the machine report says the
 private snapshot exists.
 
@@ -331,12 +335,13 @@ The separate controlled repair command is:
 
 ```bash
 FIRSTROLL_LOCAL_AGENT_ENABLED=1 uv run python tools/evaluate_agent_repair.py \
-  --output evals/results/autonomous-agent-repair-YYYY-MM-DD.json
+  --output evals/results/autonomous-agent-repair-2026-08-28.json \
+  --run-lock .firstroll/evaluations/autonomous-agent-repair-2026-08-28.lock
 ```
 
 It uses public synthetic evidence and records no generated prose, but still makes real DeepSeek calls.
-It therefore refuses until its own 18-expected/36-maximum budget is explicitly confirmed and bound to
-committed source plus a fresh private lock.
+The owner has confirmed its 18-expected/36-maximum budget and exact paths. Its machine status remains
+inactive until A01 has run and been consumed; run it only after the committed sequential activation.
 
 A03 changed-packet synthesis is also installed but remains doubly blocked: A01 must select and retain
 an owner-approved private packet, then A03 needs its own 20-expected/60-maximum synthesis budget. It
