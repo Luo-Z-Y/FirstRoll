@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "programme_id": "firstroll-autonomous-research-agent-v1",
-  "status": "causal_ablation_harnesses_implemented_awaiting_budgets",
+  "status": "all_causal_harnesses_implemented_awaiting_gated_budgets",
   "recorded_at": "2026-08-28T12:23:08Z",
   "owner_mandate": {
     "decision": "build_solid_autonomous_agent",
@@ -175,8 +175,41 @@
     {
       "id": "A03",
       "name": "changed_packet_synthesis",
-      "status": "blocked_by_A01",
+      "status": "harness_implemented_blocked_by_A01",
       "packet_policy": "reuse_exact_private_A01_packet_without_reacquisition",
+      "proposed_budget": {
+        "generation_repetitions_per_lane": 10,
+        "expected_minimum_synthesis_calls": 20,
+        "maximum_synthesis_calls": 60,
+        "planner_calls": 0,
+        "provider_calls": 0
+      },
+      "machine_gate": {
+        "completion_ratio": 1.0,
+        "candidate_mean_quality_minimum": 96.94,
+        "candidate_minus_fixed_mean_quality_minimum": 0.0,
+        "candidate_only_source_usage_ratio_minimum": 0.8,
+        "synthesis_p50_latency_ratio_maximum": 1.1,
+        "synthesis_p95_latency_ratio_maximum": 1.25,
+        "lifecycle_p50_latency_ratio_maximum": 1.25,
+        "lifecycle_p95_latency_ratio_maximum": 1.35,
+        "total_token_ratio_maximum": 1.25,
+        "citation_validity_ratio": 1.0,
+        "quality_gate_validity_ratio": 1.0,
+        "identity_match_ratio": 1.0,
+        "token_usage_complete_ratio": 1.0
+      },
+      "private_human_review_repetitions": [
+        1,
+        5,
+        10
+      ],
+      "human_gate": {
+        "candidate_usefulness_preferred_pairs_minimum": 2,
+        "candidate_evidence_responsibility_losses_maximum": 0,
+        "candidate_severe_grounding_concerns_maximum": 0,
+        "owner_attestation_required": true
+      },
       "paid_budget_confirmation": null,
       "advancement_rule": "changed_packet_value_without_quality_latency_or_cost_regression"
     }

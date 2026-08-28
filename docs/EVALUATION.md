@@ -416,8 +416,17 @@ than `0.60`, quality no more than one point below regeneration and no more than 
 expected 18 and maximum 36 calls are proposed only; the command refuses because no A02 budget is
 confirmed.
 
-A03 still requires its own committed harness. Every ablation also requires fresh paths, frozen
-thresholds and a numeric owner budget. No successor result may fill the missing private artifact in a
+A03 now has a fail-closed harness but cannot run until A01 machine and owner-attested evidence selects
+an exact private packet and planning policy. It schedules ten alternating generations per packet,
+allows no reacquisition and counts failures as zero. In addition to completion, quality, latency,
+token, citation, identity and telemetry gates, at least 80% of candidate samples must actually cite a
+candidate-only attributed source. Lifecycle latency adds A01 acquisition to candidate synthesis.
+Only repetitions 1, 5 and 10 become private blinded study pairs after a machine pass; owner preference
+and severe-grounding checks then decide human value.
+
+Every ablation requires fresh paths, frozen thresholds and its own numeric owner budget. A01 and A02
+remain the only immediately actionable experiments; A03's proposed 20–60 synthesis calls remain
+blocked by A01 and are not authorised. No successor result may fill the missing private artifact in a
 historical report retrospectively.
 
 ## Deep Study Transparency Checkpoint

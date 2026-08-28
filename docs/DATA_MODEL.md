@@ -34,6 +34,8 @@ bounded Discover workspace in per-tab session storage solely to survive view cha
 | `.firstroll/evaluations/local-agent-packets.json` | Historical local comparison | Conditional | Full candidate packets for human review; the failed original run wrote none | Yes |
 | `.firstroll/evaluations/text-agent-packets.json` | Revised local comparison | Conditional | Changed candidate packets, written only after all repeated machine targets pass | Yes |
 | `.firstroll/evaluations/text-agent-human-review*.json` | Revised local comparison | Conditional | Private scores/notes and a separate score-only local aggregate | Yes |
+| `.firstroll/evaluations/autonomous-agent-acquisition-*` | A01 local ablation | Conditional | Three blinded packets, private mapping, one-run lock and owner packet scores/notes | Yes |
+| `.firstroll/evaluations/autonomous-agent-changed-packet-*` | A03 local ablation | Conditional | Three blinded fixed/candidate study pairs, packets, private mapping, lock and owner preferences/notes | Yes |
 
 The default-off local Agent adapter does not write newly acquired comparison sources to
 `.firstroll/criticism` or `.firstroll/videos`. Its runtime objects and provider credentials remain
@@ -53,8 +55,12 @@ The successor autonomous contract is versioned at
 `evals/autonomous_agent_programme.json`; it contains capability names, provider scopes, thresholds and
 statuses only. Typed gaps and deterministic/model planning decisions contain allow-listed identifiers,
 counts and timings—not source bodies, URLs or free-form reasoning. Crossref acquisition remains
-process-local exactly like other Agent provider results. No autonomous ablation packet path is
-published until its harness can preflight and create a mode-`0600` artifact before paid work. Durable
+process-local exactly like other Agent provider results. A01 packet and A03 study snapshots are
+written only after their respective machine gates pass. A03 reuses the exact A01 packet fingerprint
+and stores only predeclared repetitions 1, 5 and 10 for blinded owner review. Mappings, study prose,
+packets and notes remain private; only attested score/preference aggregates may be versioned later.
+One-run locks are retained so a consumed local authorisation cannot appear fresh.
+
 The local autonomous finisher returns private study/audit/coach objects directly to its caller. Audit
 items and exercises are not graph telemetry: only strategy, terminal status, timing, model/token
 counts and safe failure categories enter its metrics. No persistent schema is accepted for these

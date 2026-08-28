@@ -18,7 +18,7 @@ def programme() -> dict:
 def test_autonomous_programme_keeps_paid_and_production_boundaries_closed() -> None:
     value = programme()
 
-    assert value["status"] == "causal_ablation_harnesses_implemented_awaiting_budgets"
+    assert value["status"] == "all_causal_harnesses_implemented_awaiting_gated_budgets"
     assert value["owner_mandate"]["implementation_authorised"] is True
     assert value["owner_mandate"]["provider_adapter_changes_authorised"] is True
     assert value["owner_mandate"]["paid_model_or_provider_calls_authorised"] is False
@@ -87,6 +87,14 @@ def test_autonomous_experiments_are_sequential_and_unfunded() -> None:
         "model_gap_planner",
     ]
     assert experiments["A02"]["status"] == "harness_implemented_awaiting_budget"
-    assert experiments["A03"]["status"] == "blocked_by_A01"
+    assert experiments["A03"]["status"] == "harness_implemented_blocked_by_A01"
+    assert experiments["A03"]["proposed_budget"] == {
+        "generation_repetitions_per_lane": 10,
+        "expected_minimum_synthesis_calls": 20,
+        "maximum_synthesis_calls": 60,
+        "planner_calls": 0,
+        "provider_calls": 0,
+    }
+    assert experiments["A03"]["private_human_review_repetitions"] == [1, 5, 10]
     assert all(item["paid_budget_confirmation"] is None for item in experiments.values())
     assert (ROOT / "docs" / "AUTONOMOUS_AGENT_PROGRAMME.md").is_file()

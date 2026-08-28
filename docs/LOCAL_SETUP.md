@@ -338,7 +338,17 @@ It uses public synthetic evidence and records no generated prose, but still make
 It therefore refuses until its own 18-expected/36-maximum budget is explicitly confirmed and bound to
 committed source plus a fresh private lock.
 
-The Python-only durable factory stores private phase checkpoints under
+A03 changed-packet synthesis is also installed but remains doubly blocked: A01 must select and retain
+an owner-approved private packet, then A03 needs its own 20-expected/60-maximum synthesis budget. It
+makes no planner/provider call and will not reacquire the packet:
+
+```bash
+FIRSTROLL_LOCAL_AGENT_ENABLED=1 uv run python tools/evaluate_agent_changed_packet.py \
+  --output evals/results/autonomous-agent-changed-packet-YYYY-MM-DD.json
+```
+
+Run `uv run python tools/review_agent_changed_packet_studies.py` only if that report records a
+complete private study snapshot. The Python-only durable factory stores private phase checkpoints under
 `.firstroll/autonomous-runs/`. Cancellation and resume are checked between research, audit, edit,
 re-audit and coaching. Never copy this directory into Git or hosted storage. If a checkpoint records
 an interrupted in-flight phase, FirstRoll stops rather than replaying it; inspect provider usage and

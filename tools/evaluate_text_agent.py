@@ -10,7 +10,7 @@ import sys
 import time
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, cast
+from typing import Any, Callable, cast
 from uuid import uuid4
 
 
@@ -441,6 +441,7 @@ def run_synthesis_sample(
     lane: str,
     repetition: int,
     recorder: SafeRecordingTransport,
+    private_capture: Callable[[dict[str, Any]], None] | None = None,
 ) -> dict[str, Any]:
     started_at = time.perf_counter()
     call_start = len(recorder.calls)
@@ -453,7 +454,13 @@ def run_synthesis_sample(
         "identity_match": False,
         "quality": {"score": 0.0, "valid_citations": False},
         "packet_fingerprint": packet_fingerprint(packet),
-        "graph_counts": {"steps": 0, "synthesis_calls": 0, "repair_calls": 0},
+        "graph_counts": {
+            "steps": 0,
+            "planning_calls": 0,
+            "external_tool_calls": 0,
+            "synthesis_calls": 0,
+            "repair_calls": 0,
+        },
         "study_attempts": [],
     }
     try:
@@ -489,11 +496,15 @@ def run_synthesis_sample(
             quality=safe_study_score(draft, identity_ok=identity_ok),
             graph_counts={
                 "steps": final["step_count"],
+                "planning_calls": final["planning_calls"],
+                "external_tool_calls": final["external_tool_calls"],
                 "synthesis_calls": final["synthesis_calls"],
                 "repair_calls": final["repair_calls"],
             },
             study_attempts=metrics["study_attempts"],
         )
+        if completed and private_capture is not None:
+            private_capture(draft)
     except Exception as exc:
         result["failure_type"] = type(exc).__name__
     finally:
@@ -519,7 +530,13 @@ def failed_synthesis_sample(
         "identity_match": False,
         "quality": {"score": 0.0, "valid_citations": False},
         "latency_seconds": 0.0,
-        "graph_counts": {"steps": 0, "synthesis_calls": 0, "repair_calls": 0},
+        "graph_counts": {
+            "steps": 0,
+            "planning_calls": 0,
+            "external_tool_calls": 0,
+            "synthesis_calls": 0,
+            "repair_calls": 0,
+        },
         "study_attempts": [],
         "model_calls": [],
     }

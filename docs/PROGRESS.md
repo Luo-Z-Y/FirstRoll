@@ -50,7 +50,12 @@ Delivered without a model or provider call:
    hashed names, owner checks, atomic mode-`0600` writes and cancellation between phases.
 15. Persist an in-flight marker before each potentially paid phase. A process interruption stops
    failed-safe on resume instead of automatically replaying a call with unknown spend.
-16. Recorded successful owner approval and deployment of run `32871204646`: live frontend build
+16. Added A03 exact changed-packet synthesis: ten alternating generations per lane, zero
+   reacquisition, candidate-only source-use measurement, acquisition-inclusive lifecycle latency and
+   three predeclared blinded owner-review pairs.
+17. The A01 source pool now records per-lane counterfactual provider latency, so a cache hit used for
+   fair provider sampling cannot make the selected policy appear instant in A03 lifecycle results.
+18. Recorded successful owner approval and deployment of run `32871204646`: live frontend build
    `v174` reports commit `1f2c3cff`, while API health remains `{"status":"ok"}`. The deployment did
    not expose an Agent route.
 
@@ -73,13 +78,20 @@ Acceptance evidence:
   excludes provider exception details from safe metrics;
 - durable tests prove mode `0700/0600`, hashed filenames, owner isolation, cancellation, phase resume,
   edited-study re-audit and no automatic replay after an interrupted in-flight phase;
-- all 335 automated tests pass with the retained Starlette/httpx deprecation warning;
+- A03 tests bind machine, private-packet and human A01 artifacts, ignore reassigned evidence IDs when
+  finding new sources, measure actual new-source citations and preserve stable blinded repetitions;
+- changed-study review excludes private notes and requires owner attestation, two candidate usefulness
+  wins, no fixed evidence-responsibility win and no severe candidate grounding concern;
+- text, acquisition and changed-study review readers reject a `.firstroll` symlink that resolves
+  outside the repository before reading any private artifact;
+- all 350 automated tests pass with the retained Starlette/httpx deprecation warning;
 - scoped Ruff, new-module MyPy, compilation, JSON and documentation-link checks pass; no paid call
   was made.
 
 Known constraints:
 
-- A01 and A02 harnesses are implemented but neither has paid authorisation;
+- A01, A02 and A03 harnesses are implemented; A01/A02 have no paid authorisation and A03 is also
+  blocked until A01 selects an owner-approved private packet;
 - no numeric paid budget is active;
 - model planning has not shown value over the deterministic router;
 - the field-patch mechanism still lacks provider-backed evidence;
@@ -92,7 +104,7 @@ Next actionable work:
 1. Keep A01 and A02 fail-closed until each exact proposed numeric budget is explicitly confirmed.
 2. Add controlled provider ablations for audit/editor/coaching only after A01/A02 settle.
 3. Validate owner-scoped checkpointing and cancellation during a later authorised local pilot.
-4. Retain an A01-winning packet for changed-packet synthesis without reacquisition.
+4. If A01 passes, retain its winning packet and execute A03 only under a later separate budget.
 
 ### 25 August 2026 — Revised Agent passes machine gates but loses private review artifact
 

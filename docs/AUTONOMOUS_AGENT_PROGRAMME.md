@@ -119,9 +119,22 @@ material under frozen thresholds.
 ### A03 — Changed-packet synthesis
 
 Only a packet that passes A01 is retained privately and used here. Compare that exact packet with its
-fixed origin; do not reacquire it. Measure completion, quality, acquired-source utilisation,
-unsupported claims, latency, tokens and blinded filmmaker preference. Unchanged cases are controls,
-not evidence of acquisition benefit.
+fixed origin; do not reacquire it. The accepted A01 result selects either model planning or the
+deterministic router; a model tie never overrides the simpler policy.
+
+The harness schedules ten alternating generations per lane: 20 expected synthesis calls and 60 if
+every sample consumes both graph repairs. It permits zero planner/provider calls. Machine acceptance
+requires 10/10 completion in both lanes, candidate quality at least `96.94`, candidate-minus-fixed
+quality at least `0.0`, use of candidate-only attributed evidence in at least `0.80` of samples,
+complete quality/citation/identity/token telemetry, synthesis P50/P95 no greater than `1.10/1.25`,
+lifecycle P50/P95 including A01 acquisition no greater than `1.25/1.35`, and total tokens no greater
+than `1.25×` fixed.
+
+If those gates pass, only predeclared repetitions 1, 5 and 10 are written privately as blinded
+fixed/candidate pairs. The owner must prefer candidate usefulness in at least two pairs, never prefer
+fixed evidence responsibility and find no severe candidate grounding concern. Unchanged cases are
+controls, not evidence of acquisition benefit. A03 remains blocked until A01 machine/human evidence
+selects a packet; its proposed budget is not authorised.
 
 ## Capability Stages
 
@@ -185,8 +198,9 @@ schema/citation validity, exact equality of every unrequested field, quality non
 `0.80/0.90` P50/P95 latency ratios, at most `0.60` token ratio and a 36-call hard ceiling. Generated
 responses are validated in memory and never written to the report.
 
-No model, planner or provider call was made for this foundation or either harness. The previous paid
+No model, planner or provider call was made for this foundation or any harness. The previous paid
 authorisations remain consumed. A01 is fail-closed until its proposed maximum of three model-planner
 calls, five unique physical provider calls and three external turns per active lane receives a fresh
 exact confirmation on committed source. A02 separately proposes 18 expected and 36 maximum model
-calls. Neither proposed budget is an authorisation. Changed-packet synthesis requires a later budget.
+calls. A03 proposes 20 expected and 60 maximum synthesis calls only after A01 passes. None of these
+proposed budgets is an authorisation.
