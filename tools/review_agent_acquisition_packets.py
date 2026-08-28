@@ -42,9 +42,12 @@ DEFAULT_REDACTED_REVIEW = (
 
 
 def require_private_path(path: Path) -> Path:
-    root = (ROOT / ".firstroll").resolve()
     resolved = path.resolve()
-    if root not in resolved.parents:
+    try:
+        relative = resolved.relative_to(ROOT.resolve())
+    except ValueError as exc:
+        raise ValueError("Autonomous-Agent review files must stay under .firstroll.") from exc
+    if not relative.parts or relative.parts[0] != ".firstroll":
         raise ValueError("Autonomous-Agent review files must stay under .firstroll.")
     return resolved
 

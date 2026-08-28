@@ -4,6 +4,8 @@ import json
 import os
 from pathlib import Path
 
+import pytest
+
 from app.backend.criticism import ReviewSource
 from app.backend.evidence import EvidencePacket
 from tools import review_agent_acquisition_packets as reviewer
@@ -127,6 +129,20 @@ def test_private_acquisition_snapshot_requires_complete_blind_mapping(
 
     assert set(loaded["blind_mapping"].values()) == reviewer.EXPECTED_LANES
     assert all("lane" not in item for item in loaded["packets"])
+
+
+def test_acquisition_review_rejects_private_symlink_outside_project(
+    tmp_path: Path, monkeypatch
+) -> None:
+    worktree = tmp_path / "worktree"
+    outside = tmp_path / "outside"
+    worktree.mkdir()
+    outside.mkdir()
+    (worktree / ".firstroll").symlink_to(outside, target_is_directory=True)
+    monkeypatch.setattr(reviewer, "ROOT", worktree)
+
+    with pytest.raises(ValueError, match="under .firstroll"):
+        reviewer.require_private_path(worktree / ".firstroll" / "packets.json")
 
 
 def test_model_planner_advances_only_when_blinded_value_beats_baseline() -> None:

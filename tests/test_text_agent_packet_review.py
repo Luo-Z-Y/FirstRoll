@@ -77,6 +77,18 @@ def test_packet_review_requires_private_path_and_mode(tmp_path, monkeypatch) -> 
     assert loaded["cases"][0]["case_id"] == "the-thing-ambiguous-identity"
 
 
+def test_packet_review_rejects_private_symlink_outside_project(tmp_path, monkeypatch) -> None:
+    worktree = tmp_path / "worktree"
+    outside = tmp_path / "outside"
+    worktree.mkdir()
+    outside.mkdir()
+    (worktree / ".firstroll").symlink_to(outside, target_is_directory=True)
+    monkeypatch.setattr(reviewer, "ROOT", worktree)
+
+    with pytest.raises(ValueError, match="under .firstroll"):
+        reviewer.require_private_path(worktree / ".firstroll" / "packets.json")
+
+
 def test_packet_review_rejects_empty_or_duplicate_changed_cases(tmp_path, monkeypatch) -> None:
     monkeypatch.setattr(reviewer, "ROOT", tmp_path)
     private_path = tmp_path / ".firstroll" / "evaluations" / "packets.json"

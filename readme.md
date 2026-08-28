@@ -290,7 +290,9 @@ can also audit every important study path, patch up to four weak fields, re-audi
 traceable `log`/`compare`/`count`/`track`/`mark`/`inspect` exercises under a separate four-call ceiling.
 Those finishing capabilities have synthetic coverage only. A private single-device phase store adds
 owner-checked mode-`0600` checkpoints, cancellation and safe resume without replaying an interrupted
-paid action; it is not hosted or multi-instance persistence.
+paid action; it is not hosted or multi-instance persistence. Three causal harnesses now isolate
+planning, structural repair and exact changed-packet synthesis. All remain fail-closed: A01/A02 lack
+numeric budgets, while A03 additionally lacks an A01-selected private packet.
 
 The public beta is intentionally narrower than the local edition. Azure Static Web Apps and Azure
 Container Apps use separate origins and custom domains. Public mode does not publish local settings,

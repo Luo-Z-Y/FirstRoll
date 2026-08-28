@@ -51,6 +51,18 @@ class _UnavailableObservation:
     pass
 
 
+@dataclass(frozen=True)
+class FrozenLaneSourcePool:
+    pool: FrozenSourcePool
+    lane: str
+
+    def status(self) -> dict[str, dict[str, Any]]:
+        return self.pool.status()
+
+    def acquire(self, tool: ToolName, film: dict[str, Any]) -> AcquiredSources:
+        return self.pool.acquire(tool, film, lane=self.lane)
+
+
 @dataclass
 class FrozenSourcePool:
     """Acquire each provider observation once and replay it across ablation lanes."""
@@ -65,9 +77,18 @@ class FrozenSourcePool:
     def status(self) -> dict[str, dict[str, Any]]:
         return self.acquirer.status()
 
-    def acquire(self, tool: ToolName, film: dict[str, Any]) -> AcquiredSources:
+    def for_lane(self, lane: str) -> FrozenLaneSourcePool:
+        return FrozenLaneSourcePool(self, lane)
+
+    def acquire(
+        self,
+        tool: ToolName,
+        film: dict[str, Any],
+        *,
+        lane: str = "unspecified",
+    ) -> AcquiredSources:
         cached = tool in self.observations
-        self.logical_calls.append({"tool": tool.value, "cache_hit": cached})
+        self.logical_calls.append({"lane": lane, "tool": tool.value, "cache_hit": cached})
         if cached:
             observation = self.observations[tool]
             if isinstance(observation, _UnavailableObservation):
@@ -99,12 +120,30 @@ class FrozenSourcePool:
         )
         return observation
 
+    def counterfactual_latency_seconds(self, lane: str) -> float:
+        durations = {
+            item["tool"]: float(item["duration_seconds"]) for item in self.physical_attempts
+        }
+        return round(
+            sum(
+                durations.get(item["tool"], 0.0)
+                for item in self.logical_calls
+                if item["lane"] == lane
+            ),
+            3,
+        )
+
     def safe_metrics(self) -> dict[str, Any]:
         return {
             "physical_provider_calls": len(self.physical_attempts),
             "physical_attempts": list(self.physical_attempts),
             "logical_provider_calls": len(self.logical_calls),
+            "logical_calls": list(self.logical_calls),
             "cache_hits": sum(item["cache_hit"] for item in self.logical_calls),
+            "lane_counterfactual_latency_seconds": {
+                lane: self.counterfactual_latency_seconds(lane)
+                for lane in sorted({item["lane"] for item in self.logical_calls})
+            },
         }
 
 
@@ -162,12 +201,13 @@ def build_lane_services(
     base: LocalResearchGraphServices,
     pool: FrozenSourcePool,
     *,
+    lane: str,
     planner_mode: str,
 ) -> LocalResearchGraphServices:
     return LocalResearchGraphServices(
         detail=base.detail,
         prepare=base.prepare,
-        acquirer=cast(Any, pool),
+        acquirer=cast(Any, pool.for_lane(lane)),
         study_service=base.study_service,
         planner_mode=cast(Any, planner_mode),
     )
@@ -237,6 +277,9 @@ def run_acquisition_lane(
             "planning_turns": int(metrics["planning_turns"]),
             "model_planner_calls": int(metrics["planner_calls"]),
             "planner_total_tokens": int(metrics["planner_total_tokens"]),
+            "planner_latency_seconds": round(
+                sum(float(value) for value in metrics["planner_latency_seconds"]), 3
+            ),
             "external_tool_calls": int(final["external_tool_calls"]),
             "attempted_tools": [tool.value for tool in final["attempted_tools"]],
             "planning_decisions": list(metrics["planning_decisions"]),
@@ -268,6 +311,9 @@ def fixed_lane(packet: EvidencePacket) -> dict[str, Any]:
         "planning_turns": 0,
         "model_planner_calls": 0,
         "planner_total_tokens": 0,
+        "planner_latency_seconds": 0.0,
+        "counterfactual_provider_latency_seconds": 0.0,
+        "acquisition_latency_seconds": 0.0,
         "external_tool_calls": 0,
         "attempted_tools": [],
         "planning_decisions": [],
@@ -392,20 +438,39 @@ def main_cli() -> int:
     )
     deterministic, deterministic_packet = run_acquisition_lane(
         spec,
-        build_lane_services(base, pool, planner_mode="deterministic"),
+        build_lane_services(
+            base,
+            pool,
+            lane="deterministic_gap_router",
+            planner_mode="deterministic",
+        ),
         lane="deterministic_gap_router",
         expected_initial_fingerprint=initial_fingerprint,
         maximum_turns=maximum_turns,
     )
     model, model_packet = run_acquisition_lane(
         spec,
-        build_lane_services(base, pool, planner_mode="model"),
+        build_lane_services(
+            base,
+            pool,
+            lane="model_gap_planner",
+            planner_mode="model",
+        ),
         lane="model_gap_planner",
         expected_initial_fingerprint=initial_fingerprint,
         maximum_turns=maximum_turns,
     )
     lanes = [fixed_lane(initial_packet), deterministic, model]
     source_pool = pool.safe_metrics()
+    for lane in lanes:
+        counterfactual = float(
+            source_pool["lane_counterfactual_latency_seconds"].get(lane["lane"], 0.0)
+        )
+        lane["counterfactual_provider_latency_seconds"] = counterfactual
+        lane["acquisition_latency_seconds"] = round(
+            float(lane["planner_latency_seconds"]) + counterfactual,
+            3,
+        )
     targets = evaluate_targets(lanes, source_pool, experiment)
     machine_passed = all(item["status"] == "passed" for item in targets)
     suite_fingerprint = hashlib.sha256(
@@ -458,6 +523,7 @@ def main_cli() -> int:
                             "external_tool_calls": item["external_tool_calls"],
                             "model_planner_calls": item["model_planner_calls"],
                             "planner_total_tokens": item["planner_total_tokens"],
+                            "acquisition_latency_seconds": item["acquisition_latency_seconds"],
                         }
                         for item in lanes
                     },

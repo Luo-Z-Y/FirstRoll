@@ -34,9 +34,12 @@ DEFAULT_REDACTED_REVIEW = (
 
 
 def require_private_path(path: Path) -> Path:
-    root = (ROOT / ".firstroll").resolve()
     resolved = path.resolve()
-    if root not in resolved.parents:
+    try:
+        relative = resolved.relative_to(ROOT.resolve())
+    except ValueError as exc:
+        raise ValueError("Text-Agent review files must stay under .firstroll.") from exc
+    if not relative.parts or relative.parts[0] != ".firstroll":
         raise ValueError("Text-Agent review files must stay under .firstroll.")
     return resolved
 
@@ -50,9 +53,10 @@ def load_private_packets(path: Path) -> dict[str, Any]:
     payload = json.loads(resolved.read_text(encoding="utf-8"))
     if payload.get("programme_id") != "firstroll-text-agent-v1":
         raise ValueError("The packet snapshot belongs to another programme.")
-    if not str(payload.get("source_revision") or "").strip() or not str(
-        payload.get("suite_fingerprint") or ""
-    ).strip():
+    if (
+        not str(payload.get("source_revision") or "").strip()
+        or not str(payload.get("suite_fingerprint") or "").strip()
+    ):
         raise ValueError("The packet snapshot is not bound to a revision and suite.")
     cases = payload.get("cases")
     if not isinstance(cases, list) or not cases:
@@ -136,10 +140,9 @@ def main_cli() -> int:
     }
     if private_output.is_file():
         review = json.loads(private_output.read_text(encoding="utf-8"))
-        if (
-            review.get("source_revision") != revision
-            or review.get("suite_fingerprint") != packets.get("suite_fingerprint")
-        ):
+        if review.get("source_revision") != revision or review.get(
+            "suite_fingerprint"
+        ) != packets.get("suite_fingerprint"):
             raise SystemExit("The saved human review belongs to another revision or suite.")
     completed = {str(item.get("case_id") or "") for item in review.get("cases", [])}
 

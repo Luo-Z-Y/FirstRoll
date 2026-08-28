@@ -834,7 +834,7 @@ Historical comparisons and their thresholds remain immutable.
 2. [x] Add a deterministic gap-router mode and safe planning-decision telemetry.
 3. [x] Add Crossref to the local Agent provider allow-list.
 4. [x] Build the acquire-once, blinded acquisition ablation harness.
-5. [ ] Build controlled structural-repair ablation and changed-packet synthesis harnesses.
+5. [x] Build controlled structural-repair and exact changed-packet synthesis ablation harnesses.
 6. [x] Implement bounded claim audit, targeted editing and filmmaker coaching behind the local flag
    with synthetic tests.
 7. [ ] Record provider, reliability and owner-attested evidence before considering durable or hosted
