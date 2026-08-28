@@ -4,6 +4,8 @@ import json
 from pathlib import Path
 from typing import Any
 
+import pytest
+
 from app.backend.study_service import GroundedStudy
 from tools import evaluate_agent_repair as evaluator
 
@@ -52,6 +54,22 @@ def test_repair_authorisation_requires_every_exact_budget() -> None:
     assert evaluator.comparison_authorised(approved) is True
     assert evaluator.comparison_authorised(mismatched) is False
     assert evaluator.comparison_authorised(consumed) is False
+
+
+def test_repair_run_inputs_must_match_approved_paths(tmp_path: Path) -> None:
+    value = programme()
+    experiment = evaluator.repair_experiment(value)
+    confirmation = experiment["paid_budget_confirmation"]
+    args = evaluator.argparse.Namespace(
+        programme=evaluator.DEFAULT_PROGRAMME,
+        output=evaluator.ROOT / confirmation["approved_report_path"],
+        run_lock=evaluator.ROOT / confirmation["approved_run_lock_path"],
+    )
+
+    evaluator.require_authorised_run_inputs(args, experiment)
+    args.output = tmp_path / "unapproved.json"
+    with pytest.raises(SystemExit, match="output path is not authorised"):
+        evaluator.require_authorised_run_inputs(args, experiment)
 
 
 def test_synthetic_faults_are_bounded_to_the_declared_paths() -> None:

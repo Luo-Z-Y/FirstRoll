@@ -32,6 +32,7 @@ public API.
 | 018 | Use TMDb as the optional primary catalogue with an open fallback | Accepted | Rich, fast metadata versus one optional credential and attribution duty |
 | 019 | Keep transient Discover continuity in per-tab session storage | Accepted | Refresh resilience versus bounded browser-local staleness |
 | 020 | Require autonomous Agent value against a deterministic baseline | Accepted | Honest capability evidence versus slower staged development |
+| 021 | Activate autonomous value ablations sequentially | Accepted | Exact cost isolation versus parallel execution |
 
 ## ADR-001: Evolve pyCinemetrics with preserved attribution
 
@@ -839,6 +840,37 @@ Historical comparisons and their thresholds remain immutable.
    with synthetic tests.
 7. [ ] Record provider, reliability and owner-attested evidence before considering durable or hosted
    execution.
+
+## ADR-021: Activate autonomous value ablations sequentially
+
+**Status:** Accepted
+**Date:** 28 August 2026
+**Decider:** FirstRoll maintainer
+
+### Context
+
+A01 and A02 exercise different paid capabilities and use different denominators. Activating both
+through one top-level status would weaken one-run enforcement and make a partial failure harder to
+attribute. The owner approved both exact limits after their harnesses and thresholds were committed,
+but this does not justify parallel execution or flexible output paths.
+
+### Decision
+
+Activate A01 first for one run capped at three planner calls, five physical provider calls and three
+external turns per active lane. Bind it to the committed programme, case suite, dated redacted report,
+private packet snapshot and private consumption lock. Record A02's separate approval—18 expected and
+36 maximum model calls with no acquisition calls—but keep its machine status inactive until A01 has
+run and its approval is consumed. A later committed checkpoint may then activate A02 without changing
+its frozen thresholds or limits.
+
+### Consequences
+
+- A report cannot be redirected to an ad-hoc path after approval.
+- A private lock is written before the first potentially paid action and is never deleted to enable a
+  repeat.
+- An A01 outcome cannot silently spend A02's allowance, and A02 cannot start while A01 is active.
+- A03, hosted routing, Agent cut-over and clip analysis remain unauthorised.
+- Owner packet ratings are still a separate human action and cannot be supplied by the Agent.
 
 ## How to Add or Change a Decision
 

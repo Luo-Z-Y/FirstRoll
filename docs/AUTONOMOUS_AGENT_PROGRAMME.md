@@ -1,6 +1,6 @@
 # Autonomous Research Agent Programme
 
-**Status:** local foundation in development; no paid validation or production route authorised
+**Status:** A01 one-run validation authorised; A02 confirmed for sequential activation; no Agent production route authorised
 
 ## Goal
 
@@ -107,14 +107,19 @@ Compare three packet lanes from one frozen initial packet:
 
 Provider responses are acquired once and shared privately so network sampling cannot favour a lane.
 The Agent lane must beat the deterministic lane on blinded diversity/actionability or achieve an
-equivalent packet with fewer calls. A tie means that deterministic routing wins.
+equivalent packet with fewer calls. A tie means that deterministic routing wins. On 28 August 2026,
+the owner approved exactly one run with at most three planner calls, five physical provider calls and
+three external turns per active lane. The confirmation is bound to committed source and fresh dated
+report, private-packet and lock paths.
 
 ### A02 — Structural-repair ablation
 
 Inject controlled citation and schema faults into otherwise valid synthetic candidates. Compare the
 800-token field patch with one complete regeneration. Requested fields must be repaired, accepted
 fields must remain exactly equal, all citations must validate, and latency/token savings must be
-material under frozen thresholds.
+material under frozen thresholds. The owner separately approved 18 expected and 36 maximum model
+calls with zero planner/provider acquisition calls. That confirmation is recorded but cannot become
+the active machine status until A01 has run and its authorisation is consumed.
 
 ### A03 — Changed-packet synthesis
 
@@ -198,9 +203,8 @@ schema/citation validity, exact equality of every unrequested field, quality non
 `0.80/0.90` P50/P95 latency ratios, at most `0.60` token ratio and a 36-call hard ceiling. Generated
 responses are validated in memory and never written to the report.
 
-No model, planner or provider call was made for this foundation or any harness. The previous paid
-authorisations remain consumed. A01 is fail-closed until its proposed maximum of three model-planner
-calls, five unique physical provider calls and three external turns per active lane receives a fresh
-exact confirmation on committed source. A02 separately proposes 18 expected and 36 maximum model
-calls. A03 proposes 20 expected and 60 maximum synthesis calls only after A01 passes. None of these
-proposed budgets is an authorisation.
+No model, planner or provider call was made while implementing the foundation or its harnesses. On
+28 August 2026, the owner approved the exact A01 and A02 limits above. A01 is the only active one-run
+machine authorisation; A02 is recorded for sequential activation after A01 is consumed. Both require
+the committed programme and their exact fresh paths. A03 still proposes 20 expected and 60 maximum
+synthesis calls only after A01 passes machine and owner review; it is not authorised.

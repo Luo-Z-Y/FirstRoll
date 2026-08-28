@@ -400,12 +400,13 @@ states is the baseline. Model planning advances only if it improves blinded usef
 baseline with fewer calls. Unchanged cases remain selectivity controls rather than evidence of
 acquisition benefit.
 
-The foundation and synthetic tests make no paid call. A01 now has a fail-closed harness: it creates a
+The foundation and synthetic tests made no paid call. A01 has a fail-closed harness: it creates a
 private consumption lock before spend, samples each physical provider observation once, separates
 cache hits from physical costs and writes three mode-`0600` packets under stable blind labels. The
 reviewer hides lane identity until owner attestation; equal score and equal calls prefer the
-no-model router. The current machine contract has no paid confirmation, so the command refuses to
-run.
+no-model router. On 28 August 2026, the owner approved one run with at most three planner calls, five
+physical provider calls and three external turns per active lane. The committed contract binds the
+exact dated report, private-packet, lock and case-suite paths.
 
 A02 also has a fail-closed harness. It injects one invalid citation, one schema-invalid field and two
 invalid citation fields into a public synthetic candidate, then alternates three repetitions per
@@ -413,8 +414,9 @@ lane. Field patches may use at most two calls; complete regeneration uses one. E
 remains in the denominator. Machine acceptance requires valid schemas/citations, exact preservation
 of all unrequested fields, patch P50/P95 ratios no greater than `0.80/0.90`, token ratio no greater
 than `0.60`, quality no more than one point below regeneration and no more than 36 total calls. The
-expected 18 and maximum 36 calls are proposed only; the command refuses because no A02 budget is
-confirmed.
+owner separately approved 18 expected and 36 maximum calls with no acquisition-planner or external
+provider calls. That confirmation remains pending sequential activation until A01 is consumed, so
+A02 still refuses while A01 is active.
 
 A03 now has a fail-closed harness but cannot run until A01 machine and owner-attested evidence selects
 an exact private packet and planning policy. It schedules ten alternating generations per packet,
@@ -424,10 +426,10 @@ candidate-only attributed source. Lifecycle latency adds A01 acquisition to cand
 Only repetitions 1, 5 and 10 become private blinded study pairs after a machine pass; owner preference
 and severe-grounding checks then decide human value.
 
-Every ablation requires fresh paths, frozen thresholds and its own numeric owner budget. A01 and A02
-remain the only immediately actionable experiments; A03's proposed 20–60 synthesis calls remain
-blocked by A01 and are not authorised. No successor result may fill the missing private artifact in a
-historical report retrospectively.
+Every ablation requires fresh paths, frozen thresholds and its own numeric owner budget. A01 is the
+active one-run experiment and A02 has a separate exact confirmation awaiting activation; A03's
+proposed 20–60 synthesis calls remain blocked by A01 and are not authorised. No successor result may
+fill the missing private artifact in a historical report retrospectively.
 
 ## Deep Study Transparency Checkpoint
 
