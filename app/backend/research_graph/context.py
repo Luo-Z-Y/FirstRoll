@@ -13,6 +13,10 @@ from app.backend.research_agent_contract import (
 from app.backend.research_graph.state import ResearchGraphState
 
 
+class NoAddressableResearchTool(RuntimeError):
+    """Raised when no remaining allowed capability can close the measured evidence gap."""
+
+
 @dataclass(frozen=True)
 class FilmResolution:
     film_id: str | None = None

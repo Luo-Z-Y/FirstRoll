@@ -5,12 +5,15 @@ from typing import Any
 
 import pytest
 
+from app.backend.autonomous_study import audited_claim_paths
 from app.backend.settings import LocalSettingsStore
 from app.backend.criticism import ReviewSource
 from app.backend.evidence import EvidencePacket
 from app.backend.study_observability import StudyTrace
 from app.backend.study_service import (
     DeepSeekStudyService,
+    MAX_CLAIM_AUDIT_COMPLETION_TOKENS,
+    MAX_FILMMAKER_COACH_COMPLETION_TOKENS,
     StudyGenerationError,
     StudyQualityGate,
 )
@@ -600,3 +603,162 @@ def test_model_cannot_label_formal_analysis_as_record_supported() -> None:
             DeepSeekStudyService(store, transport=transport).generate(
                 film_record(), local_passages()
             )
+
+
+def autonomous_packet() -> EvidencePacket:
+    return EvidencePacket.from_retrieval(
+        film_record(),
+        {"passages": local_passages(), "method": "synthetic"},
+        "Study point of view",
+    )
+
+
+def autonomous_audit_response(study: dict[str, Any] | None = None) -> dict[str, Any]:
+    study = study or valid_response()
+    items = []
+    for path in audited_claim_paths(study):
+        field = path.rsplit(".", 1)[-1]
+        items.append(
+            {
+                "path": path,
+                "label": (
+                    "directly_supported"
+                    if field == "theory_explains"
+                    else "reasonable_interpretation"
+                ),
+                "source_ids": ["S1"],
+                "support_note": (
+                    "The cited framework supports this bounded relationship while the study keeps "
+                    "its interpretive or theoretical status visible."
+                ),
+            }
+        )
+    return {"items": items}
+
+
+def test_claim_auditor_sends_required_paths_and_validates_exact_coverage() -> None:
+    captured: dict[str, Any] = {}
+    audit = autonomous_audit_response()
+
+    def transport(url: str, payload: dict[str, Any] | None, key: str) -> dict[str, Any]:
+        captured["payload"] = payload
+        return {
+            "model": "audit-test",
+            "choices": [{"message": {"content": json.dumps(audit)}}],
+            "usage": {"prompt_tokens": 100, "completion_tokens": 40, "total_tokens": 140},
+        }
+
+    with tempfile.TemporaryDirectory() as directory:
+        store = LocalSettingsStore(Path(directory) / "settings.json")
+        store.set("deepseek_api_key", "private-test-key")
+        result = DeepSeekStudyService(store, transport=transport).audit_claims_once(
+            valid_response(),
+            evidence_packet=autonomous_packet(),
+        )
+
+    assert len(result["items"]) == len(audited_claim_paths(valid_response()))
+    assert captured["payload"]["thinking"] == {"type": "disabled"}
+    assert captured["payload"]["temperature"] == 0
+    assert captured["payload"]["max_tokens"] == MAX_CLAIM_AUDIT_COMPLETION_TOKENS
+    prompt = captured["payload"]["messages"][1]["content"]
+    assert "required_paths" in prompt
+    assert "private-test-key" not in prompt
+    assert result["observability"]["counts"]["model_calls"] == 1
+
+
+def test_claim_auditor_rejects_incomplete_model_audit() -> None:
+    audit = autonomous_audit_response()
+    audit["items"].pop()
+
+    def transport(url: str, payload: dict[str, Any] | None, key: str) -> dict[str, Any]:
+        return {"choices": [{"message": {"content": json.dumps(audit)}}]}
+
+    with tempfile.TemporaryDirectory() as directory:
+        store = LocalSettingsStore(Path(directory) / "settings.json")
+        store.set("deepseek_api_key", "private-test-key")
+        with pytest.raises(StudyGenerationError) as error:
+            DeepSeekStudyService(store, transport=transport).audit_claims_once(
+                valid_response(),
+                evidence_packet=autonomous_packet(),
+            )
+
+    assert error.value.category == "claim_audit_invalid"
+
+
+def test_filmmaker_coach_uses_only_accepted_audited_paths() -> None:
+    study = valid_response()
+    audit = autonomous_audit_response(study)
+    exercise_paths = (
+        "sections.0.hypothesis",
+        "sections.1.mechanism",
+        "sections.2.alternative_reading",
+    )
+    actions = ("log", "compare", "inspect")
+    coach = {
+        "exercises": [
+            {
+                "title": f"{action.title()} the proposed pattern",
+                "action": action,
+                "instruction": (
+                    f"{action.title()} each relevant example and its counterexample before deciding "
+                    "whether the accepted viewing hypothesis remains useful."
+                ),
+                "study_path": path,
+                "source_ids": ["S1"],
+                "success_signal": (
+                    "The record contains comparable instances and at least one searched-for "
+                    "counterexample."
+                ),
+                "uncertainty_boundary": (
+                    "This action tests an interpretation and does not prove intention or an unseen "
+                    "whole-film fact."
+                ),
+            }
+            for action, path in zip(actions, exercise_paths)
+        ]
+    }
+    captured: dict[str, Any] = {}
+
+    def transport(url: str, payload: dict[str, Any] | None, key: str) -> dict[str, Any]:
+        captured["payload"] = payload
+        return {
+            "model": "coach-test",
+            "choices": [{"message": {"content": json.dumps(coach)}}],
+        }
+
+    with tempfile.TemporaryDirectory() as directory:
+        store = LocalSettingsStore(Path(directory) / "settings.json")
+        store.set("deepseek_api_key", "private-test-key")
+        result = DeepSeekStudyService(store, transport=transport).coach_filmmaker_once(
+            study,
+            audit,
+            evidence_packet=autonomous_packet(),
+        )
+
+    assert len(result["exercises"]) == 3
+    assert captured["payload"]["max_tokens"] == MAX_FILMMAKER_COACH_COMPLETION_TOKENS
+    assert "evidence_packet" not in captured["payload"]["messages"][1]["content"]
+    assert result["observability"]["counts"]["model_calls"] == 1
+
+
+def test_audited_editor_rejects_unscoped_or_excessive_paths_without_a_call() -> None:
+    calls = 0
+
+    def transport(url: str, payload: dict[str, Any] | None, key: str) -> dict[str, Any]:
+        nonlocal calls
+        calls += 1
+        return {}
+
+    with tempfile.TemporaryDirectory() as directory:
+        store = LocalSettingsStore(Path(directory) / "settings.json")
+        store.set("deepseek_api_key", "private-test-key")
+        service = DeepSeekStudyService(store, transport=transport)
+        with pytest.raises(StudyGenerationError) as error:
+            service.repair_audited_once(
+                valid_response(),
+                ("sections.0.source_ids",),
+                evidence_packet=autonomous_packet(),
+            )
+
+    assert error.value.category == "structural_repair_invalid"
+    assert calls == 0

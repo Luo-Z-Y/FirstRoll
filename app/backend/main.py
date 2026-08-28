@@ -414,10 +414,42 @@ def build_local_agent_services():
             guardian=guardian_web_adapter,
             letterboxd=letterboxd_adapter,
             letterboxd_web=letterboxd_web_adapter,
+            crossref=crossref_research_adapter,
             youtube=youtube_video_adapter,
             bilibili=bilibili_video_adapter,
         ),
         study_service=study_service,
+    )
+
+
+def build_local_autonomous_agent():
+    """Build the default-off private research, audit, editing and coaching pipeline."""
+
+    from app.backend.autonomous_agent import (
+        AutonomousStudyFinisher,
+        LocalAutonomousResearchAgent,
+    )
+
+    services = build_local_agent_services()
+    return LocalAutonomousResearchAgent(
+        services,
+        AutonomousStudyFinisher(services.study_service),
+    )
+
+
+def build_local_autonomous_run_engine():
+    """Build private resumable autonomous phases without registering a route."""
+
+    from app.backend.autonomous_runs import (
+        DurableAutonomousRunEngine,
+        LocalAutonomousPhaseExecutor,
+        LocalAutonomousRunStore,
+    )
+
+    services = build_local_agent_services()
+    return DurableAutonomousRunEngine(
+        LocalAutonomousRunStore(),
+        LocalAutonomousPhaseExecutor(services, services.study_service),
     )
 
 

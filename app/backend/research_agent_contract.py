@@ -13,6 +13,7 @@ class ToolName(StrEnum):
     FETCH_GUARDIAN_REVIEWS = "fetch_guardian_reviews"
     FETCH_DOUBAN_REVIEWS = "fetch_douban_reviews"
     FETCH_LETTERBOXD_REVIEWS = "fetch_letterboxd_reviews"
+    FETCH_CROSSREF_RESEARCH = "fetch_crossref_research"
     SEARCH_YOUTUBE_RESOURCES = "search_youtube_resources"
 
 
@@ -22,6 +23,7 @@ EXTERNAL_TOOLS = frozenset(
         ToolName.FETCH_GUARDIAN_REVIEWS,
         ToolName.FETCH_DOUBAN_REVIEWS,
         ToolName.FETCH_LETTERBOXD_REVIEWS,
+        ToolName.FETCH_CROSSREF_RESEARCH,
         ToolName.SEARCH_YOUTUBE_RESOURCES,
     }
 )
@@ -63,6 +65,13 @@ class EvidenceKind(StrEnum):
     CRITIC_REPORTED = "critic_reported"
     CREATOR_STATED = "creator_stated"
     VIDEO_CONTEXT = "video_context"
+
+
+class EvidenceGap(StrEnum):
+    FILM_SPECIFIC_EVIDENCE = "film_specific_evidence"
+    INDEPENDENT_ORIGINS = "independent_origins"
+    EVIDENCE_CLASS_DIVERSITY = "evidence_class_diversity"
+    FOCUS_RELEVANCE = "focus_relevance"
 
 
 class FailureKind(StrEnum):
@@ -112,11 +121,14 @@ class ToolRequest:
 class ToolPlan:
     tool: ToolName
     model: str
+    target_gap: EvidenceGap | None = None
     prompt_tokens: int = 0
     completion_tokens: int = 0
     total_tokens: int = 0
 
     def __post_init__(self) -> None:
+        if self.target_gap is not None and not isinstance(self.target_gap, EvidenceGap):
+            raise ValueError("The planner target gap must be an allow-listed EvidenceGap.")
         for value in (self.prompt_tokens, self.completion_tokens, self.total_tokens):
             if isinstance(value, bool) or not isinstance(value, int) or value < 0:
                 raise ValueError("Planner token counts must be non-negative integers.")
@@ -229,9 +241,7 @@ def decide_next_action(
             "The run has already reached a terminal state.",
             state["status"],
         )
-    model_calls = (
-        state["planning_calls"] + state["synthesis_calls"] + state["repair_calls"]
-    )
+    model_calls = state["planning_calls"] + state["synthesis_calls"] + state["repair_calls"]
     if state["draft_available"] and state["quality_passed"] is True:
         return PolicyDecision(
             NextAction.COMPLETE,

@@ -143,7 +143,11 @@ future-enterprise path, but ADR-017 removes it from the production critical path
 | `library_index.py` | PDF extraction, chunking, FTS5, single-flight background query-encoder warm-up, local embeddings, rank fusion and page citations | Film-specific factual claims |
 | `evidence.py` | Typed packet; focus-aware theory/claim/attributed ranking; exact/near deduplication; source and character budgets; permitted-claim and omission boundaries | Model generation or provider access |
 | `packet_quality.py` | Pre-synthesis identity, citation, provenance, duplication, lexical relevance, diversity and retrieved-instruction diagnostics | Source-text persistence, factual correctness, human usefulness or model grading |
-| `local_research_agent.py` | Default-off local graph adapter, aggregate-only planning context and ephemeral attributed-source acquisition | HTTP routing, cache mutation, credentials in graph state or production cut-over |
+| `agent_evidence.py` | Typed autonomous evidence gaps, independent-origin recovery rule and deterministic no-model planner baseline | Source acquisition, model calls or human usefulness judgements |
+| `autonomous_study.py` | Exact claim-audit coverage, path-local citation authority and traceable filmmaker-exercise validation | Model transport, source acquisition or hidden reasoning |
+| `autonomous_agent.py` | Default-off research-to-audit/edit/reaudit/coach controller with separate four-call budget and safe strategy metrics | HTTP routing, checkpoint persistence or production authorisation |
+| `autonomous_runs.py` | Owner-scoped mode-`0600` phase checkpoints, atomic writes, cancellation and interrupted-call replay prevention | Hosted coordination, cross-device projects or provider idempotency |
+| `local_research_agent.py` | Default-off local graph adapter, aggregate-only gap planning and ephemeral multi-provider acquisition | HTTP routing, cache mutation, credentials in graph state or production cut-over |
 | `study_observability.py` | Allow-listed monotonic stage timings, terminal status and bounded aggregate counts | Prompts, evidence text, credentials, model output or exception details |
 | `study_service.py` | Concise bounded DeepSeek request, Pydantic/citation validation, generated-study gate, fixed-workflow repair and local Agent field-patch repair with complete revalidation | Authentication, quota reservation, automatic timeout retry or research-tool authorisation |
 | `research_stream.py` | Fixed public progress vocabulary and transient owner-scoped result store | Hidden reasoning, prompts, credentials or private evidence bodies |
@@ -237,24 +241,30 @@ omits redundant fields and whitespace rather than hiding evidence from inspectio
 record also appears as a redacted server log record;
 public SSE retains its smaller allow-list and receives no token counts or internal timings.
 
-### Default-Off Local Agent Comparison
+### Default-Off Autonomous Agent Foundation
 
 ```text
 explicit selected film + frozen focus
 → build the unchanged fixed evidence packet
-→ deterministic packet-quality sufficiency check
-→ if passed: zero planner or external acquisition calls
-→ if limited: aggregate gap + public identity/focus → one model tool choice
-→ deterministic allow-list/budget authorisation
-→ ephemeral review/video acquisition without cache writes
+→ deterministic packet-quality and typed evidence-gap assessment
+→ if initially passed: zero planner or acquisition calls
+→ if limited: safe aggregate gaps + public identity/focus → one objective/tool proposal
+→ deterministic allow-list and budget authorisation
+→ ephemeral Guardian, Crossref, Douban, Letterboxd or video-text acquisition
 → rebuild through unchanged EvidencePacket selection
+→ reassess and adapt; recovered packets need at least two independent origins
 → deterministic Agent synthesis, bounded field-patch recovery and complete quality/citation validation
+→ exact claim-support audit
+→ patch at most four weak claim fields and re-audit once
+→ produce three to six evidence-linked filmmaker exercises or stop safely
 ```
 
 `FIRSTROLL_LOCAL_AGENT_ENABLED=0` is the default. Enabling it makes a Python service factory
-available to local evaluators but registers no HTTP route. The planner sees no evidence text,
-credentials or private locators. Provider objects and credentials remain in runtime context; graph
-state receives bounded evidence only for the non-checkpointed local run.
+available to local evaluators but registers no HTTP route. The model planner returns one supplied gap
+and one supplied tool. It sees no evidence text, credentials, URLs or private locators. A separate
+deterministic gap router can run the same graph without a planner model call and is the required
+ablation baseline. Provider objects and credentials remain in runtime context; graph state receives
+bounded evidence only for the non-checkpointed local run.
 
 The revised text graph owns synthesis retries. `generate_once()` makes one deterministic-temperature
 call with no hidden repair. A quality-valid structure may route through `repair_once()`; a parseable
@@ -268,6 +278,25 @@ single internal repair. Evaluator-only context modes stop cleanly at
 `evidence_ready` or force synthesis over a frozen packet. They allow acquisition to run once and both
 packet lanes to use the same retry controller during three alternating repetitions, so packet content
 is the only synthesis difference. Reports contain safe aggregate quality/tool/timing/token fields.
+
+The successor local factory can connect a completed research graph to `AutonomousStudyFinisher`.
+The finisher audits every required central/section claim path exactly once, permits only path-local
+citation IDs and forbids interpretive claims from being labelled directly supported. At most four
+unsupported or stronger-than-evidence fields receive one targeted edit, followed by one mandatory
+re-audit. Only accepted paths may become three to six exercises using the explicit actions `log`,
+`compare`, `count`, `track`, `mark` or `inspect`. Audit, editor, re-audit and coaching share a separate
+four-model-call ceiling. Full private objects return to the local caller; safe metrics retain only
+strategy, status, duration, tokens and failure category. This pipeline has synthetic coverage but no
+provider validation or HTTP route.
+
+For local durability, `DurableAutonomousRunEngine` stores each completed phase beneath
+`.firstroll/autonomous-runs/` using a mode-`0700` directory and owner-checked mode-`0600` atomic JSON
+checkpoints. Research, audit, edit, re-audit and coaching can resume at phase boundaries. Cancellation
+is checked before each phase. The store writes an in-flight marker before a potentially paid action;
+if the process disappears before committing its outcome, the next invocation stops failed-safe
+instead of replaying a call whose spend is unknown. This is a single-device private pilot, not a
+multi-instance checkpointer: it has no distributed lease, hosted key management, cross-device sync or
+provider idempotency guarantee.
 Private packets may be written under ignored mode-`0600` `.firstroll` storage only after every machine
 gate passes. The completed repeated run failed P50/P95 ratios `1.100404/1.993109`, so it wrote no
 packet and its consumed authorisation now prevents rerun. The structural-repair revision has only
