@@ -158,6 +158,18 @@ def test_model_planner_advances_only_when_blinded_value_beats_baseline() -> None
     assert "private_note" not in str(result)
 
 
+def test_revised_experiment_identity_survives_blinded_aggregation() -> None:
+    packets = private_packets()
+    packets["experiment_id"] = "A01R"
+
+    result = reviewer.aggregate_review(
+        review(model_scores={**PASSING, "source_diversity": 5}, deterministic_scores=PASSING),
+        packets,
+    )
+
+    assert result["experiment_id"] == "A01R"
+
+
 def test_model_value_requires_owner_attestation() -> None:
     private_review = review(
         model_scores={**PASSING, "source_diversity": 5}, deterministic_scores=PASSING

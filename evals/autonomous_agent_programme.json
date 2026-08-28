@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "programme_id": "firstroll-autonomous-research-agent-v1",
-  "status": "post_result_semantic_revision_implemented_no_paid_authorisation",
-  "recorded_at": "2026-08-28T16:26:56Z",
+  "status": "revision_reliability_harnesses_implemented_awaiting_fresh_budgets",
+  "recorded_at": "2026-08-28T16:38:36Z",
   "owner_mandate": {
     "decision": "build_solid_autonomous_agent",
     "instruction": "Proceed until a solid autonomous Agent is built; choose capabilities beyond tool selection and change or add bounded providers where useful.",
@@ -209,6 +209,49 @@
       "advancement_rule": "model_lane_beats_deterministic_human_value_or_matches_with_fewer_calls"
     },
     {
+      "id": "A01R",
+      "name": "class_aware_gap_planner_ablation",
+      "status": "harness_implemented_awaiting_fresh_budget",
+      "predecessor_result_path": "evals/results/autonomous-agent-acquisition-2026-08-28.json",
+      "historical_result_immutable": true,
+      "lanes": [
+        "fixed_no_acquisition",
+        "deterministic_gap_router",
+        "model_gap_planner"
+      ],
+      "case_id": "the-thing-ambiguous-identity",
+      "provider_sampling": "acquire_once_and_share_private_snapshots",
+      "revision_contract": {
+        "explicit_scholarly_abstract_type": true,
+        "explicit_video_context_type": true,
+        "all_required_gaps_must_close": true,
+        "evidence_only_final_planner_slot_requires_no_synthesis_call": true,
+        "minimum_independent_origins": 2,
+        "minimum_film_specific_evidence_classes": 2
+      },
+      "proposed_budget": {
+        "maximum_model_planner_calls": 3,
+        "maximum_physical_provider_calls": 5,
+        "maximum_external_tool_turns_per_active_lane": 3
+      },
+      "paid_budget_confirmation": null,
+      "machine_gate": {
+        "both_active_lanes_complete": true,
+        "minimum_independent_origins_per_active_lane": 2,
+        "minimum_film_specific_evidence_classes_per_active_lane": 2,
+        "remaining_required_gaps_per_active_lane": 0,
+        "fixed_lane_calls": 0,
+        "all_budget_and_frozen_sampling_targets": true
+      },
+      "human_gate": {
+        "model_packet_must_pass_existing_packet_rubric": true,
+        "model_source_diversity_not_below_deterministic": true,
+        "model_filmmaker_actionability_not_below_deterministic": true,
+        "model_total_score_must_exceed_deterministic_or_use_fewer_external_calls_at_equal_score": true
+      },
+      "advancement_rule": "model_lane_beats_deterministic_human_value_or_matches_with_fewer_calls"
+    },
+    {
       "id": "A02",
       "name": "structural_repair_ablation",
       "status": "completed_machine_failed",
@@ -261,10 +304,44 @@
       "advancement_rule": "valid_output_and_exact_accepted_field_preservation_with_material_latency_and_token_saving"
     },
     {
+      "id": "A02R",
+      "name": "targeted_patch_reliability",
+      "status": "harness_implemented_awaiting_fresh_budget",
+      "historical_control_path": "evals/results/autonomous-agent-repair-2026-08-28.json",
+      "historical_result_immutable": true,
+      "lane": "targeted_field_patch",
+      "faults": [
+        "one_invalid_citation",
+        "one_schema_invalid_field",
+        "two_invalid_fields",
+        "one_schema_and_one_citation"
+      ],
+      "proposed_budget": {
+        "fault_scenarios": 4,
+        "repetitions_per_scenario": 6,
+        "expected_model_calls": 24,
+        "maximum_model_calls": 48,
+        "planner_calls": 0,
+        "provider_calls": 0
+      },
+      "paid_budget_confirmation": null,
+      "machine_gate": {
+        "scheduled_samples": 24,
+        "completion_ratio": 1.0,
+        "citation_and_schema_validity_ratio": 1.0,
+        "accepted_field_preservation_ratio": 1.0,
+        "minimum_mean_quality": 99.0,
+        "p95_latency_seconds_maximum": 5.0,
+        "total_tokens_maximum": 36000,
+        "token_telemetry_complete_ratio": 1.0
+      },
+      "advancement_rule": "at_least_twenty_complete_exact_preserving_provider_backed_patches"
+    },
+    {
       "id": "A03",
       "name": "changed_packet_synthesis",
-      "status": "blocked_by_A01_machine_failure",
-      "packet_policy": "reuse_exact_private_A01_packet_without_reacquisition",
+      "status": "blocked_by_A01R_machine_and_human_evidence",
+      "packet_policy": "reuse_exact_private_A01R_packet_without_reacquisition",
       "proposed_budget": {
         "generation_repetitions_per_lane": 10,
         "expected_minimum_synthesis_calls": 20,

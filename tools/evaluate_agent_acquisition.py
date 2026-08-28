@@ -46,6 +46,7 @@ DEFAULT_PRIVATE_PACKETS = (
     ROOT / ".firstroll" / "evaluations" / "autonomous-agent-acquisition-packets.json"
 )
 DEFAULT_RUN_LOCK = ROOT / ".firstroll" / "evaluations" / "autonomous-agent-acquisition.lock"
+CURRENT_EXPERIMENT_ID = "A01R"
 
 
 @dataclass(frozen=True)
@@ -150,7 +151,7 @@ class FrozenSourcePool:
 
 
 def acquisition_experiment(programme: dict[str, Any]) -> dict[str, Any]:
-    return next(item for item in programme["experiments"] if item["id"] == "A01")
+    return next(item for item in programme["experiments"] if item["id"] == CURRENT_EXPERIMENT_ID)
 
 
 def comparison_authorised(programme: dict[str, Any]) -> bool:
@@ -158,7 +159,7 @@ def comparison_authorised(programme: dict[str, Any]) -> bool:
     proposed = experiment.get("proposed_budget", {})
     confirmation = experiment.get("paid_budget_confirmation")
     return bool(
-        programme.get("status") == "a01_acquisition_ablation_approved"
+        programme.get("status") == "a01r_acquisition_ablation_approved"
         and programme.get("owner_mandate", {}).get("paid_model_or_provider_calls_authorised")
         is True
         and experiment.get("status") == "approved_one_run"
@@ -407,6 +408,16 @@ def evaluate_targets(
         "model_lane_independent_origins": (
             by_lane["model_gap_planner"]["independent_origins"] >= 2
         ),
+        "deterministic_lane_evidence_classes": (
+            by_lane["deterministic_gap_router"]["film_specific_evidence_classes"] >= 2
+        ),
+        "model_lane_evidence_classes": (
+            by_lane["model_gap_planner"]["film_specific_evidence_classes"] >= 2
+        ),
+        "active_lane_required_gaps_closed": all(
+            not by_lane[lane]["remaining_gaps"]
+            for lane in ("deterministic_gap_router", "model_gap_planner")
+        ),
         "model_planner_call_budget": (
             by_lane["model_gap_planner"]["model_planner_calls"]
             <= proposed["maximum_model_planner_calls"]
@@ -436,7 +447,7 @@ def evaluate_targets(
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Run the frozen autonomous Agent acquisition-planner ablation once."
+        description="Run the revised class-aware Agent acquisition-planner ablation once."
     )
     parser.add_argument("--cases", type=Path, default=DEFAULT_CASES)
     parser.add_argument("--reference", type=Path, default=DEFAULT_REFERENCE)
@@ -470,7 +481,7 @@ def main_cli() -> int:
         {
             "schema_version": 1,
             "programme_id": programme["programme_id"],
-            "experiment_id": "A01",
+            "experiment_id": CURRENT_EXPERIMENT_ID,
             "source_revision": revision,
             "status": "consumed_on_start",
         },
@@ -520,12 +531,14 @@ def main_cli() -> int:
     targets = evaluate_targets(lanes, source_pool, experiment)
     machine_passed = all(item["status"] == "passed" for item in targets)
     suite_fingerprint = hashlib.sha256(
-        f"{programme['programme_id']}\0A01\0{spec['id']}\0{initial_fingerprint}".encode("utf-8")
+        f"{programme['programme_id']}\0{CURRENT_EXPERIMENT_ID}\0{spec['id']}\0{initial_fingerprint}".encode(
+            "utf-8"
+        )
     ).hexdigest()[:16]
     report: dict[str, Any] = {
         "schema_version": 1,
         "programme_id": programme["programme_id"],
-        "experiment_id": "A01",
+        "experiment_id": CURRENT_EXPERIMENT_ID,
         "source_revision": revision,
         "case_id": spec["id"],
         "suite_fingerprint": suite_fingerprint,
@@ -558,7 +571,7 @@ def main_cli() -> int:
                 {
                     "schema_version": 1,
                     "programme_id": programme["programme_id"],
-                    "experiment_id": "A01",
+                    "experiment_id": CURRENT_EXPERIMENT_ID,
                     "source_revision": revision,
                     "suite_fingerprint": suite_fingerprint,
                     "case_id": spec["id"],

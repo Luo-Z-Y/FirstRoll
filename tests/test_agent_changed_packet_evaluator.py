@@ -75,14 +75,17 @@ SECOND = source(
 )
 
 
-def a01_artifacts(selected_lane: str = "model_gap_planner") -> tuple[dict, dict, dict]:
+def a01_artifacts(
+    selected_lane: str = "model_gap_planner",
+    experiment_id: str = "A01",
+) -> tuple[dict, dict, dict]:
     fixed = packet(FIRST)
     candidate = packet(FIRST, SECOND)
     deterministic = candidate
     packets = {
         "schema_version": 1,
         "programme_id": "firstroll-autonomous-research-agent-v1",
-        "experiment_id": "A01",
+        "experiment_id": experiment_id,
         "source_revision": "a01-source",
         "suite_fingerprint": "a01-suite",
         "case_id": "the-thing-ambiguous-identity",
@@ -112,7 +115,7 @@ def a01_artifacts(selected_lane: str = "model_gap_planner") -> tuple[dict, dict,
     }
     machine = {
         "programme_id": packets["programme_id"],
-        "experiment_id": "A01",
+        "experiment_id": experiment_id,
         "source_revision": "a01-source",
         "suite_fingerprint": "a01-suite",
         "case_id": "the-thing-ambiguous-identity",
@@ -143,7 +146,7 @@ def a01_artifacts(selected_lane: str = "model_gap_planner") -> tuple[dict, dict,
     }
     human = {
         "programme_id": packets["programme_id"],
-        "experiment_id": "A01",
+        "experiment_id": experiment_id,
         "source_revision": "a01-source",
         "suite_fingerprint": "a01-suite",
         "reviewer_attested": True,
@@ -164,9 +167,13 @@ def a01_artifacts(selected_lane: str = "model_gap_planner") -> tuple[dict, dict,
     return machine, packets, human
 
 
-def accepted_programme(selected_lane: str = "model_gap_planner") -> dict[str, Any]:
+def accepted_programme(
+    selected_lane: str = "model_gap_planner",
+    experiment_id: str = "A01",
+) -> dict[str, Any]:
     value = programme()
     value["a01_result"] = {
+        "experiment_id": experiment_id,
         "source_revision": "a01-source",
         "suite_fingerprint": "a01-suite",
         "machine_targets_passed": True,
@@ -240,6 +247,16 @@ def test_A03_selects_exact_A01_packet_and_human_winning_policy() -> None:
     human["summary"]["advancement"] = "prefer_deterministic"
     with pytest.raises(ValueError, match="contradicts"):
         evaluator.select_a01_packets(accepted_programme(), machine, private, human)
+
+
+def test_A03_accepts_exact_revised_acquisition_artifacts() -> None:
+    machine, private, human = a01_artifacts(experiment_id="A01R")
+
+    selected, _, _, _ = evaluator.select_a01_packets(
+        accepted_programme(experiment_id="A01R"), machine, private, human
+    )
+
+    assert selected == "model_gap_planner"
 
 
 def test_candidate_only_signature_ignores_reassigned_evidence_ID() -> None:

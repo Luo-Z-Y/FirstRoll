@@ -294,8 +294,9 @@ Those finishing capabilities have synthetic coverage only. A private single-devi
 owner-checked mode-`0600` checkpoints, cancellation and safe resume without replaying an interrupted
 paid action; it is not hosted or multi-instance persistence. Three causal harnesses now isolate
 planning, structural repair and exact changed-packet synthesis. A01 is consumed. A02 patching passed
-9/9 but regeneration passed only 4/9, so its aggregate machine gate also failed and is consumed. A03
-lacks both an accepted A01 packet and a budget.
+9/9 but regeneration passed only 4/9, so its aggregate machine gate also failed and is consumed. A01R
+now gates class-aware reacquisition, while A02R gates 24 patch-only reliability samples; both lack
+fresh budgets. A03 lacks an accepted A01R packet and a budget.
 
 The public beta is intentionally narrower than the local edition. Azure Static Web Apps and Azure
 Container Apps use separate origins and custom domains. Public mode does not publish local settings,
@@ -1084,7 +1085,7 @@ fallback behaviour; these are tracked separately from the new FirstRoll modules.
 | Private RAG foundation | Complete | Token chunking, FTS5, local vectors, hybrid retrieval and citations |
 | Attributed criticism | Complete | Crossref, Douban, Letterboxd and Guardian retrieval with structured critic claims |
 | Evidence-grounded Deep Study | Complete | Typed theory, criticism, scholarly-abstract and video-context evidence; Pydantic output, citation validation and quality gate |
-| Bounded research Agent core | Autonomous foundation in development | A01/A02 are consumed formal machine failures; class-aware evidence gaps, final-turn evidence-only completion, deterministic routing and bounded structural patching are implemented locally but need fresh validation |
+| Bounded research Agent core | Autonomous foundation in development | A01/A02 are consumed formal machine failures; corrected A01R class-aware acquisition and A02R 24-sample patch reliability harnesses are implemented but unfunded |
 | Authenticated research progress | Implemented | Allow-listed SSE lifecycle events, separate owner-scoped result retrieval and secret/evidence redaction tests; final interactive browser observation remains pending |
 | Pre-Agent product hardening | Complete — fixed workflow retained | Entry gate passed, but the authorised local Agent comparison failed 4/5 completion and quality non-inferiority; outcome NO-GO |
 | Clip analysis web migration | Complete | Scene, shot, colour, object and export workflow |
@@ -1170,8 +1171,9 @@ four physical provider calls but failed both active-lane completion targets, so 
 A02 then used 18 calls: targeted patching passed 9/9 with exact preservation, while regeneration
 passed 4/9, making A02 a formal machine failure. A no-call revision now preserves scholarship/video
 classes, requires every mandatory gap to close and fixes evidence-only completion after the final
-planner turn; it does not upgrade either result. No paid authorisation remains; claim audit, editing,
-coaching, reliability, durable execution and clip-Agent work remain gated.
+planner turn; it does not upgrade either result. Distinct A01R and A02R fail-closed harnesses now
+cover corrected class-aware acquisition and 24-sample patch reliability. No paid authorisation
+remains; claim audit, editing, coaching, durable execution and clip-Agent work remain gated.
 
 The latest reviewed complete-workflow and packet-only results are
 [`baseline-2026-08-21.json`](evals/results/baseline-2026-08-21.json) and

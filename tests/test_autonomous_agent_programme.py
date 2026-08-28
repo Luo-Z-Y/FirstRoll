@@ -18,7 +18,7 @@ def programme() -> dict:
 def test_autonomous_programme_closes_paid_and_production_gates_after_A02() -> None:
     value = programme()
 
-    assert value["status"] == "post_result_semantic_revision_implemented_no_paid_authorisation"
+    assert value["status"] == "revision_reliability_harnesses_implemented_awaiting_fresh_budgets"
     assert value["owner_mandate"]["implementation_authorised"] is True
     assert value["owner_mandate"]["provider_adapter_changes_authorised"] is True
     assert value["owner_mandate"]["paid_model_or_provider_calls_authorised"] is False
@@ -131,7 +131,7 @@ def test_autonomous_programme_matches_the_independent_origin_and_provider_contra
     }
 
 
-def test_autonomous_experiments_have_exact_sequential_authorisations() -> None:
+def test_autonomous_experiments_preserve_results_and_gate_revisions() -> None:
     value = programme()
     experiments = {item["id"]: item for item in value["experiments"]}
 
@@ -141,8 +141,38 @@ def test_autonomous_experiments_have_exact_sequential_authorisations() -> None:
         "deterministic_gap_router",
         "model_gap_planner",
     ]
+    assert experiments["A01R"]["status"] == "harness_implemented_awaiting_fresh_budget"
+    assert experiments["A01R"]["paid_budget_confirmation"] is None
+    assert experiments["A01R"]["revision_contract"] == {
+        "explicit_scholarly_abstract_type": True,
+        "explicit_video_context_type": True,
+        "all_required_gaps_must_close": True,
+        "evidence_only_final_planner_slot_requires_no_synthesis_call": True,
+        "minimum_independent_origins": 2,
+        "minimum_film_specific_evidence_classes": 2,
+    }
     assert experiments["A02"]["status"] == "completed_machine_failed"
-    assert experiments["A03"]["status"] == "blocked_by_A01_machine_failure"
+    assert experiments["A02R"]["status"] == "harness_implemented_awaiting_fresh_budget"
+    assert experiments["A02R"]["paid_budget_confirmation"] is None
+    assert experiments["A02R"]["proposed_budget"] == {
+        "fault_scenarios": 4,
+        "repetitions_per_scenario": 6,
+        "expected_model_calls": 24,
+        "maximum_model_calls": 48,
+        "planner_calls": 0,
+        "provider_calls": 0,
+    }
+    assert experiments["A02R"]["machine_gate"] == {
+        "scheduled_samples": 24,
+        "completion_ratio": 1.0,
+        "citation_and_schema_validity_ratio": 1.0,
+        "accepted_field_preservation_ratio": 1.0,
+        "minimum_mean_quality": 99.0,
+        "p95_latency_seconds_maximum": 5.0,
+        "total_tokens_maximum": 36000,
+        "token_telemetry_complete_ratio": 1.0,
+    }
+    assert experiments["A03"]["status"] == "blocked_by_A01R_machine_and_human_evidence"
     assert experiments["A03"]["proposed_budget"] == {
         "generation_repetitions_per_lane": 10,
         "expected_minimum_synthesis_calls": 20,
