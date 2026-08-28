@@ -1,7 +1,7 @@
 # FirstRoll Data Model
 
 **Status:** Current implementation and staged identity-neutral migration
-**Last reconciled:** 25 August 2026
+**Last reconciled:** 28 August 2026
 
 FirstRoll deliberately uses different stores for different privacy and durability requirements. The
 hosted edition persists account identity, profile, preferences, saved films and quota counters in Supabase. The replacement
@@ -28,7 +28,9 @@ bounded Discover workspace in per-tab session storage solely to survive view cha
 | Discovery/reception dictionaries | Local and hosted | No | TMDb or Wikidata/Wikipedia details, related-film and reception cache | In memory only |
 | Browser `sessionStorage` | Local and hosted browser | Per tab, ≤24 hours | Public Discover query/candidates/shelf, active product view, scroll offsets and optional dossier film ID | Not applicable; browser-managed |
 | `StudyRunStore` | Hosted | No | Owner UUID, status and final study for a maximum of ten minutes | In memory only |
-| Local Agent workspace | Local comparison only | No | Current film/focus, fixed or frozen packet, ephemeral acquisitions, planner usage, safe attempt categories and an optional parseable repair candidate/field paths | In memory only; no checkpointer; candidate excluded from safe metrics |
+| Local Agent workspace | Local evaluation only | No | Current film/focus, fixed or frozen packet, ephemeral acquisitions, typed gap aggregates, safe planning decisions, attempt categories and an optional parseable repair candidate/field paths | In memory only; no checkpointer; source/candidate text excluded from safe metrics |
+| Autonomous finisher result | Local evaluation only | No | Private study, exact-path claim audit, optional edited study and evidence-linked filmmaker exercises | In memory only; safe metrics exclude all prose and support notes |
+| `.firstroll/autonomous-runs/*.json` | Local autonomous pilot | Yes, per phase | Owner ID, private question, film identity, packet, study, audit, coach, cancellation/in-flight markers and safe action metrics | Yes; hashed filenames, directory `0700`, files `0600` |
 | `.firstroll/evaluations/local-agent-packets.json` | Historical local comparison | Conditional | Full candidate packets for human review; the failed original run wrote none | Yes |
 | `.firstroll/evaluations/text-agent-packets.json` | Revised local comparison | Conditional | Changed candidate packets, written only after all repeated machine targets pass | Yes |
 | `.firstroll/evaluations/text-agent-human-review*.json` | Revised local comparison | Conditional | Private scores/notes and a separate score-only local aggregate | Yes |
@@ -45,8 +47,25 @@ run passed machine targets, but its resolved private path escaped the worktree b
 write was rejected; its process-local changed packet was then lost, so no snapshot/review exists for
 that run either. Future execution preflights the resolved boundary. A parseable invalid candidate is
 retained only until completion or safe stop; only allow-listed failure categories and repair
-strategies can reach report schema 3. Durable owner-scoped checkpoint design remains mandatory before
-any hosted Agent proposal.
+strategies can reach report schema 3.
+
+The successor autonomous contract is versioned at
+`evals/autonomous_agent_programme.json`; it contains capability names, provider scopes, thresholds and
+statuses only. Typed gaps and deterministic/model planning decisions contain allow-listed identifiers,
+counts and timings—not source bodies, URLs or free-form reasoning. Crossref acquisition remains
+process-local exactly like other Agent provider results. No autonomous ablation packet path is
+published until its harness can preflight and create a mode-`0600` artifact before paid work. Durable
+The local autonomous finisher returns private study/audit/coach objects directly to its caller. Audit
+items and exercises are not graph telemetry: only strategy, terminal status, timing, model/token
+counts and safe failure categories enter its metrics. No persistent schema is accepted for these
+objects in hosted storage.
+
+The local durable engine persists those private objects only under hashed run filenames. It checks the
+supplied owner before every load or save, writes each completed phase atomically and records an
+in-flight phase before a potentially paid action. An interrupted in-flight action is not replayed
+automatically because provider spend cannot be proven absent. Cancellation is observed between
+phases. This single-process store is suitable for a local pilot, but a hosted proposal still requires
+distributed leases, encryption/key policy, retention/deletion rules and provider idempotency.
 
 ## Per-tab Discover continuity
 

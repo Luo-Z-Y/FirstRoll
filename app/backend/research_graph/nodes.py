@@ -16,7 +16,10 @@ from app.backend.research_agent_contract import (
     authorise_tool_request,
     decide_next_action,
 )
-from app.backend.research_graph.context import ResearchGraphContext
+from app.backend.research_graph.context import (
+    NoAddressableResearchTool,
+    ResearchGraphContext,
+)
 from app.backend.research_graph.events import event
 from app.backend.research_graph.state import ResearchGraphState
 
@@ -46,10 +49,7 @@ def policy(
     runtime: Runtime[ResearchGraphContext],
 ) -> dict[str, Any]:
     decision = decide_next_action(_contract_state(state), runtime.context.budgets)
-    if (
-        runtime.context.mode == "evidence_only"
-        and decision.action is NextAction.SYNTHESISE
-    ):
+    if runtime.context.mode == "evidence_only" and decision.action is NextAction.SYNTHESISE:
         return {
             "next_action": NextAction.COMPLETE_EVIDENCE,
             "decision_reason": "The bounded evidence packet is ready for isolated evaluation.",
@@ -166,6 +166,17 @@ def choose_tool(
             "planning_calls": state["planning_calls"] + 1,
             "step_count": state["step_count"] + 1,
             "events": event("research_planned", "A bounded research action was proposed."),
+        }
+    except NoAddressableResearchTool:
+        return {
+            "planning_calls": state["planning_calls"] + 1,
+            "step_count": state["step_count"] + 1,
+            "status": TerminalStatus.INSUFFICIENT_EVIDENCE,
+            "terminal_reason": "No remaining provider can address the measured evidence gap.",
+            "events": event(
+                "run_failed",
+                "No remaining provider can address the measured evidence gap.",
+            ),
         }
     except Exception:
         return {

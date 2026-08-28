@@ -74,6 +74,15 @@ def test_planner_usage_rejects_unbounded_or_boolean_token_counts() -> None:
         )
 
 
+def test_planner_target_gap_must_be_allow_listed_enum() -> None:
+    with pytest.raises(ValueError, match="allow-listed EvidenceGap"):
+        ToolPlan(
+            ToolName.FETCH_GUARDIAN_REVIEWS,
+            "planner",
+            target_gap="free_form_gap",  # type: ignore[arg-type]
+        )
+
+
 def test_existing_evidence_goes_directly_to_synthesis_without_external_call() -> None:
     current = state(evidence=(evidence(),), evidence_sufficient=True)
 

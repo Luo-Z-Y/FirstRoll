@@ -309,8 +309,41 @@ parseable schema/citation failures. Its one authorised run is complete and consu
 targets passed without a repair, but the private snapshot was rejected because the worktree symlink
 resolved outside its allowed `.firstroll` boundary. The evaluator now checks committed source, fresh
 paths and the resolved private boundary before any spend. Do not bypass those guards, rerun the
-comparison or invoke human review because no packet exists. This switch is not an interactive product
-capability or hosted configuration.
+comparison or invoke human review because no packet exists.
+
+The successor autonomous foundation uses the same switch and still exposes no route. It sends only
+safe aggregate gap names/counts to its planner, requires a recovered packet to have two independent
+origins and can select Crossref scholarship in addition to the existing providers. A deterministic
+planner mode supplies a no-model ablation baseline. The A01 harness command is:
+
+```bash
+FIRSTROLL_LOCAL_AGENT_ENABLED=1 uv run python tools/evaluate_agent_acquisition.py \
+  --output evals/results/autonomous-agent-acquisition-YYYY-MM-DD.json
+```
+
+It currently refuses before preparation because no numeric paid budget is confirmed. Once separately
+authorised on committed source, it also requires fresh report, private snapshot and one-run lock
+paths. Do not remove the lock after a started run. Owner review uses
+`uv run python tools/review_agent_acquisition_packets.py` only when the machine report says the
+private snapshot exists.
+
+The separate controlled repair command is:
+
+```bash
+FIRSTROLL_LOCAL_AGENT_ENABLED=1 uv run python tools/evaluate_agent_repair.py \
+  --output evals/results/autonomous-agent-repair-YYYY-MM-DD.json
+```
+
+It uses public synthetic evidence and records no generated prose, but still makes real DeepSeek calls.
+It therefore refuses until its own 18-expected/36-maximum budget is explicitly confirmed and bound to
+committed source plus a fresh private lock.
+
+The Python-only durable factory stores private phase checkpoints under
+`.firstroll/autonomous-runs/`. Cancellation and resume are checked between research, audit, edit,
+re-audit and coaching. Never copy this directory into Git or hosted storage. If a checkpoint records
+an interrupted in-flight phase, FirstRoll stops rather than replaying it; inspect provider usage and
+start a separately authorised run instead of editing the checkpoint. The feature switch is not an
+interactive product capability or hosted configuration.
 
 ## Troubleshooting
 

@@ -6,8 +6,14 @@ from dataclasses import dataclass, field
 from time import monotonic
 from typing import Any, Callable, Sequence, cast
 
+from app.backend.agent_evidence import (
+    PlannerMode,
+    assess_agent_evidence,
+    choose_deterministic_research_tool,
+)
 from app.backend.criticism import (
     CriticismError,
+    CrossrefResearchAdapter,
     DoubanMcpAdapter,
     GuardianPublicWebAdapter,
     LetterboxdApiAdapter,
@@ -27,6 +33,7 @@ from app.backend.research_agent_contract import (
 from app.backend.research_graph.context import (
     DraftResult,
     FilmResolution,
+    NoAddressableResearchTool,
     ToolObservation,
     ValidationResult,
 )
@@ -65,9 +72,11 @@ class _RunWorkspace:
     videos: list[FilmVideo]
     packet: EvidencePacket
     initial_packet_quality: dict[str, Any]
+    initial_agent_evidence: dict[str, Any]
     initial_packet_fingerprint: str
     trace: StudyTrace
     planner_calls: list[ToolPlan] = field(default_factory=list)
+    planning_decisions: list[dict[str, str]] = field(default_factory=list)
     planner_latency_seconds: list[float] = field(default_factory=list)
     tool_attempts: list[dict[str, Any]] = field(default_factory=list)
     acquired_review_count: int = 0
@@ -90,6 +99,7 @@ class LocalAttributedSourceAcquirer:
         guardian: GuardianPublicWebAdapter,
         letterboxd: LetterboxdApiAdapter,
         letterboxd_web: LetterboxdPublicWebAdapter,
+        crossref: CrossrefResearchAdapter,
         youtube: YouTubeVideoAdapter,
         bilibili: BilibiliPublicVideoAdapter,
         video_text: PublicVideoTextExtractor | None = None,
@@ -98,6 +108,7 @@ class LocalAttributedSourceAcquirer:
         self.guardian = guardian
         self.letterboxd = letterboxd
         self.letterboxd_web = letterboxd_web
+        self.crossref = crossref
         self.youtube = youtube
         self.bilibili = bilibili
         self.video_text = video_text or PublicVideoTextExtractor()
@@ -112,6 +123,7 @@ class LocalAttributedSourceAcquirer:
             ToolName.FETCH_GUARDIAN_REVIEWS.value: self.guardian.status(),
             ToolName.FETCH_DOUBAN_REVIEWS.value: self.douban.status(),
             ToolName.FETCH_LETTERBOXD_REVIEWS.value: letterboxd_status,
+            ToolName.FETCH_CROSSREF_RESEARCH.value: self.crossref.status(),
             ToolName.SEARCH_YOUTUBE_RESOURCES.value: {
                 "provider": "YouTube or Bilibili",
                 "state": (
@@ -143,6 +155,9 @@ class LocalAttributedSourceAcquirer:
                 str(adapter.status().get("provider") or "Letterboxd"),
                 tuple(reviews),
             )
+        if tool is ToolName.FETCH_CROSSREF_RESEARCH:
+            _, _, reviews = self.crossref.fetch_reviews(film)
+            return AcquiredSources("Crossref scholarship", tuple(reviews))
         if tool is ToolName.SEARCH_YOUTUBE_RESOURCES:
             return self._acquire_videos(film)
         raise CriticismError("The selected tool has no local attributed-source adapter.")
@@ -193,12 +208,16 @@ class LocalResearchGraphServices:
         acquirer: LocalAttributedSourceAcquirer,
         study_service: DeepSeekStudyService,
         packet_override: EvidencePacket | None = None,
+        planner_mode: PlannerMode = "model",
     ) -> None:
         self.detail = detail
         self.prepare = prepare
         self.acquirer = acquirer
         self.study_service = study_service
         self.packet_override = packet_override.model_copy(deep=True) if packet_override else None
+        if planner_mode not in {"model", "deterministic"}:
+            raise ValueError("The local Agent planner mode is invalid.")
+        self.planner_mode = planner_mode
         self._workspaces: dict[str, _RunWorkspace] = {}
 
     def for_frozen_packet(self, packet: EvidencePacket) -> LocalResearchGraphServices:
@@ -210,6 +229,7 @@ class LocalResearchGraphServices:
             acquirer=self.acquirer,
             study_service=self.study_service,
             packet_override=packet,
+            planner_mode=self.planner_mode,
         )
 
     def resolve_film(self, state: ResearchGraphState) -> FilmResolution:
@@ -243,6 +263,11 @@ class LocalResearchGraphServices:
                 trace=trace,
             )
             packet = prepared["packet"]
+        initial_quality = assess_evidence_packet(packet)
+        initial_agent_evidence = assess_agent_evidence(
+            packet,
+            initial_packet_status=str(initial_quality["status"]),
+        )
         workspace = _RunWorkspace(
             film_id=film_id,
             film=film,
@@ -252,7 +277,8 @@ class LocalResearchGraphServices:
             reviews=list(prepared.get("reviews", [])),
             videos=list(prepared.get("videos", [])),
             packet=packet,
-            initial_packet_quality=assess_evidence_packet(packet),
+            initial_packet_quality=initial_quality,
+            initial_agent_evidence=initial_agent_evidence.safe_summary(initial_quality),
             initial_packet_fingerprint=self._packet_fingerprint(packet),
             trace=trace,
         )
@@ -260,8 +286,12 @@ class LocalResearchGraphServices:
         return self._packet_evidence(packet)
 
     def evidence_is_sufficient(self, state: ResearchGraphState) -> bool:
-        quality = assess_evidence_packet(self._workspace(state).packet)
-        return bool(quality["status"] == "passed")
+        workspace = self._workspace(state)
+        assessment = assess_agent_evidence(
+            workspace.packet,
+            initial_packet_status=str(workspace.initial_packet_quality["status"]),
+        )
+        return assessment.sufficient
 
     def choose_tool(
         self,
@@ -270,18 +300,55 @@ class LocalResearchGraphServices:
     ) -> ToolName:
         workspace = self._workspace(state)
         quality = assess_evidence_packet(workspace.packet)
+        assessment = assess_agent_evidence(
+            workspace.packet,
+            initial_packet_status=str(workspace.initial_packet_quality["status"]),
+        )
+        provider_states = self.acquirer.status()
         started_at = monotonic()
         try:
-            plan = self.study_service.plan_research_tool(
-                film=workspace.film,
-                focus=workspace.focus,
-                packet_summary=quality,
-                allowed_tools=allowed_tools,
-                provider_states=self.acquirer.status(),
-            )
+            if self.planner_mode == "deterministic":
+                selected, target_gap = choose_deterministic_research_tool(
+                    assessment,
+                    allowed_tools,
+                    provider_states,
+                )
+                workspace.planning_decisions.append(
+                    {
+                        "strategy": "deterministic_gap_router",
+                        "tool": selected.value,
+                        "target_gap": target_gap.value,
+                    }
+                )
+                return selected
+            try:
+                plan = self.study_service.plan_research_tool(
+                    film=workspace.film,
+                    focus=workspace.focus,
+                    packet_summary=assessment.safe_summary(quality),
+                    allowed_tools=allowed_tools,
+                    provider_states=provider_states,
+                )
+            except StudyGenerationError as exc:
+                if exc.category == "no_addressable_research_tool":
+                    raise NoAddressableResearchTool(str(exc)) from exc
+                raise
+        except ValueError as exc:
+            if self.planner_mode == "deterministic":
+                raise NoAddressableResearchTool(str(exc)) from exc
+            raise
         finally:
             workspace.planner_latency_seconds.append(max(0.0, monotonic() - started_at))
         workspace.planner_calls.append(plan)
+        workspace.planning_decisions.append(
+            {
+                "strategy": "model_gap_planner",
+                "tool": plan.tool.value,
+                "target_gap": plan.target_gap.value
+                if plan.target_gap is not None
+                else "unspecified",
+            }
+        )
         workspace.trace.increment_count("model_calls")
         workspace.trace.increment_count("prompt_tokens", plan.prompt_tokens)
         workspace.trace.increment_count("completion_tokens", plan.completion_tokens)
@@ -460,8 +527,14 @@ class LocalResearchGraphServices:
     def safe_metrics(self, run_id: str) -> dict[str, Any]:
         workspace = self._workspaces[run_id]
         quality = assess_evidence_packet(workspace.packet)
+        agent_evidence = assess_agent_evidence(
+            workspace.packet,
+            initial_packet_status=str(workspace.initial_packet_quality["status"]),
+        )
         return {
             "planner_calls": len(workspace.planner_calls),
+            "planning_turns": len(workspace.planning_decisions),
+            "planning_decisions": list(workspace.planning_decisions),
             "planner_latency_seconds": [
                 round(value, 3) for value in workspace.planner_latency_seconds
             ],
@@ -476,8 +549,10 @@ class LocalResearchGraphServices:
             "study_attempts": list(workspace.study_attempts),
             "repair_attempts": workspace.repair_attempts,
             "initial_packet_quality": workspace.initial_packet_quality,
+            "initial_agent_evidence": workspace.initial_agent_evidence,
             "initial_packet_fingerprint": workspace.initial_packet_fingerprint,
             "packet_quality": quality,
+            "agent_evidence": agent_evidence.safe_summary(quality),
             "packet_fingerprint": self._packet_fingerprint(workspace.packet),
             "study_observability": workspace.trace.snapshot(),
         }

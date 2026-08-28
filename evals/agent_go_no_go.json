@@ -190,6 +190,14 @@
     "production_cutover_authorised": false,
     "reason": "The structural-repair run passed every frozen machine target without a retry, but its private snapshot was rejected by the output boundary; no human review or meaningful structural-repair claim is available."
   },
+  "autonomous_successor": {
+    "contract_path": "evals/autonomous_agent_programme.json",
+    "status": "causal_ablation_harnesses_implemented_awaiting_budgets",
+    "implementation_authorised": true,
+    "paid_validation_authorised": false,
+    "hosted_route_authorised": false,
+    "production_cutover_authorised": false
+  },
   "cutover_preconditions": [
     "all candidate targets pass",
     "default-off feature flag and fixed fallback remain",

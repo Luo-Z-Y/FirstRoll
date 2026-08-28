@@ -180,3 +180,8 @@ isolated repeated protocol. That run completed 15/15 in both lanes at `97.17/97.
 P50/P95 ratios `1.100404/1.993109` failed. A structural revision then passed every machine target at
 `1.003191/0.888329` without using repair, but its private packet write failed safe and no human review
 exists. Neither successor result reopens the original decision or permits production routing.
+
+The later [Autonomous Agent Programme](AUTONOMOUS_AGENT_PROGRAMME.md) authorises continued local
+implementation and causal ablations rather than another reinterpretation of this comparison. Its
+typed gaps, deterministic baseline and additional bounded providers remain default-off; paid calls,
+hosted execution and production cut-over still require separate exact decisions.

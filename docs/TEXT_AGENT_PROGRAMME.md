@@ -197,6 +197,18 @@ for focus relevance, `4` for traceability and `3` for epistemic calibration. Not
 score-only local aggregate is written only after personal attestation. Machine or human success does
 not permit hosted or production Agent routing.
 
+## Successor autonomous programme
+
+On 28 August the owner authorised continued implementation towards a solid autonomous research
+Agent, including capabilities and bounded providers beyond tool selection. The successor
+[Autonomous Agent Programme](AUTONOMOUS_AGENT_PROGRAMME.md) adds typed evidence gaps, independent-
+origin recovery, a deterministic planner baseline and Crossref Agent acquisition. It does not
+rewrite either T01 result, recreate the lost packet, authorise paid calls or open a production route.
+The acquisition, repair and changed-packet hypotheses must now be ablated separately before later
+capabilities can advance on evidence. Exact-path claim audit, one targeted edit, mandatory re-audit
+and evidence-linked coaching now exist as synthetic default-off implementations, but this does not
+change the blocked evidence status of T02–T05.
+
 ## Stage T02 — Bounded Claim and Citation Reviewer
 
 Add a reviewer that labels important statements as directly supported, reasonable interpretation,

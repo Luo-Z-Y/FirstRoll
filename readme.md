@@ -21,7 +21,9 @@ keeps those layers visible instead of presenting one fluent but unsupported answ
 > so production remains NO-GO. The revised three-sample text run restored 15/15 completion and passed
 > quality/cost, but failed both latency-ratio targets. A no-call revision now patches only invalid
 > fields of parseable responses. Its paid run passed all machine targets but failed to write the
-> private review artifact; later text stages and hosted routing remain blocked.
+> private review artifact. A successor autonomous-Agent programme now adds typed evidence-gap
+> objectives, honest independent-origin recovery, a deterministic planner baseline and Crossref as
+> an Agent provider. It remains local, default-off and unvalidated by paid or human evidence.
 
 See [Project Progress](docs/PROGRESS.md) for completed milestones, verification results,
 known limitations and the next priorities.
@@ -41,6 +43,7 @@ environment configuration, acceptance checks and operational limits.
 | Follow the flexible fixed-workflow steps before Agent work | [Pre-Agent Product Hardening](docs/PRE_AGENT_HARDENING.md) |
 | Review the scoped production Agent decision | [Agent Go/No-Go Brief](docs/AGENT_GO_NO_GO.md) |
 | Review the revised text-only Agent stages and repeated protocol | [Text-Agent Programme](docs/TEXT_AGENT_PROGRAMME.md) |
+| Review the successor autonomous research capability and acceptance gates | [Autonomous Agent Programme](docs/AUTONOMOUS_AGENT_PROGRAMME.md) |
 | Complete the private filmmaker packet-rating gate | [Human Evidence-Packet Review](docs/HUMAN_PACKET_REVIEW.md) |
 | Install and run the private local edition | [Local Setup](docs/LOCAL_SETUP.md) |
 | Operate the public Azure deployment | [Public Beta Hosting](docs/HOSTING.md) |
@@ -266,16 +269,28 @@ and owner-scoped. The dotted path enters the private edition, where books, vecto
 and clips stay on the user's machine. In either runtime, DeepSeek receives a typed, selected evidence
 packet rather than complete books or uploaded media. The dotted clip-to-packet edge remains planned.
 
-The repository also contains a bounded LangGraph research Agent core. It reuses the
-framework-neutral research contract, keeps application policy around model-proposed tools,
-deduplicates and caps graph state, and terminates explicitly under ambiguity, weak evidence,
-provider failure, invalid planning and quality-gate failure. It is not yet the public Deep Study
-execution path: the fixed workflow remains the production comparison and fallback. The
-[Agent Go/No-Go Brief](docs/AGENT_GO_NO_GO.md) authorises only a default-off adapter and paired local
-experiment targeting the one failed human packet. The adapter now reuses fixed packet/synthesis
-services, keeps new provider evidence ephemeral and exposes no HTTP route. Its full paired run improved
-the target packet mechanically but completed only 4/5 cases below the quality floor, so no human Agent
-review or cut-over was permitted. Any revised experiment requires a new explicit reviewed decision.
+The repository also contains a default-off LangGraph research Agent core. It reuses the
+framework-neutral research contract, keeps application policy around model-proposed objectives and
+tools, deduplicates and caps graph state, and terminates explicitly under ambiguity, weak evidence,
+provider failure, invalid planning and quality-gate failure. It is not the public Deep Study path:
+the fixed workflow remains production. The historical [Agent Go/No-Go Brief](docs/AGENT_GO_NO_GO.md)
+and [Text-Agent Programme](docs/TEXT_AGENT_PROGRAMME.md) record failed and incomplete comparisons
+without rewriting them.
+
+The successor [Autonomous Agent Programme](docs/AUTONOMOUS_AGENT_PROGRAMME.md) requires more than a
+provider choice. A planner proposes one typed evidence gap plus one allow-listed action; deterministic
+code rechecks both, reassesses the packet after every observation and requires two independent origins
+when recovering a limited packet. Crossref scholarship is now available alongside Guardian, Douban,
+Letterboxd and video-text acquisition. A no-model gap router provides the ablation baseline: if the
+model planner cannot beat or more efficiently match it, FirstRoll will remove the model planner. New
+provider evidence remains ephemeral, and no Agent HTTP route, paid validation or cut-over is enabled.
+The A01 evaluator shares each physical observation across lanes, blinds packet identity during owner
+review and currently refuses to run because no exact paid budget is confirmed. The local successor
+can also audit every important study path, patch up to four weak fields, re-audit once and create
+traceable `log`/`compare`/`count`/`track`/`mark`/`inspect` exercises under a separate four-call ceiling.
+Those finishing capabilities have synthetic coverage only. A private single-device phase store adds
+owner-checked mode-`0600` checkpoints, cancellation and safe resume without replaying an interrupted
+paid action; it is not hosted or multi-instance persistence.
 
 The public beta is intentionally narrower than the local edition. Azure Static Web Apps and Azure
 Container Apps use separate origins and custom domains. Public mode does not publish local settings,
@@ -945,6 +960,10 @@ FirstRoll/
 │   │   ├── discovery.py         # Wikidata/Wikipedia fallback discovery
 │   │   ├── tmdb_discovery.py    # TMDb primary adapter and hybrid provider router
 │   │   ├── evidence.py          # typed synthesis boundary
+│   │   ├── agent_evidence.py    # autonomous evidence gaps and deterministic baseline
+│   │   ├── autonomous_agent.py  # research-to-audit/edit/coach controller
+│   │   ├── autonomous_runs.py   # private durable phase checkpoints and cancellation
+│   │   ├── autonomous_study.py  # claim-audit and filmmaker-exercise contracts
 │   │   ├── library.py           # private document catalogue
 │   │   ├── library_index.py     # chunking, embeddings and hybrid retrieval
 │   │   ├── local_research_agent.py # default-off local graph service adapter
@@ -968,6 +987,7 @@ FirstRoll/
 │   ├── DECISIONS.md
 │   ├── EVALUATION.md
 │   ├── AGENT_GO_NO_GO.md
+│   ├── AUTONOMOUS_AGENT_PROGRAMME.md
 │   ├── HOSTING.md
 │   ├── HUMAN_PACKET_REVIEW.md
 │   ├── LOCAL_SETUP.md
@@ -977,6 +997,7 @@ FirstRoll/
 ├── evals/
 │   ├── agent_cases.json
 │   ├── agent_go_no_go.json
+│   ├── autonomous_agent_programme.json
 │   ├── pre_agent_scorecard.json
 │   └── results/
 ├── tests/
@@ -1058,13 +1079,13 @@ fallback behaviour; these are tracked separately from the new FirstRoll modules.
 | Private RAG foundation | Complete | Token chunking, FTS5, local vectors, hybrid retrieval and citations |
 | Attributed criticism | Complete | Crossref, Douban, Letterboxd and Guardian retrieval with structured critic claims |
 | Evidence-grounded Deep Study | Complete | Typed theory, criticism, review and video-text evidence; Pydantic output, citation validation and quality gate |
-| Bounded research Agent core | Machine pass · private-artifact failure | Revised P50/P95 passed at `1.003191/0.888329`, but no structural repair ran and no human packet can be reviewed |
+| Bounded research Agent core | Autonomous foundation in development | Historical machine gates passed without human evidence; typed gaps, independent-origin recovery, deterministic ablation routing and Crossref Agent acquisition are now implemented locally |
 | Authenticated research progress | Implemented | Allow-listed SSE lifecycle events, separate owner-scoped result retrieval and secret/evidence redaction tests; final interactive browser observation remains pending |
 | Pre-Agent product hardening | Complete — fixed workflow retained | Entry gate passed, but the authorised local Agent comparison failed 4/5 completion and quality non-inferiority; outcome NO-GO |
 | Clip analysis web migration | Complete | Scene, shot, colour, object and export workflow |
 | Clip-to-study evidence bridge | Deferred | Do not begin multimodal Agent work until the five-stage text programme is accepted |
 | Creator primary-source layer | Partial | Discovered interview descriptions and public YouTube captions are stored and cited; verified speaker attribution and dedicated interview search remain planned |
-| Persistent film projects | Planned | Retain film records, clips, analyses, notes and studies |
+| Persistent film projects | Planned | Retain film records, clips, analyses, notes and studies; the current autonomous phase store is a private run checkpoint, not a complete project model |
 | Evaluation suite | Baseline recorded | Five frozen Agent-comparison cases now record accepted quality, operational and quality failure rates, latency, repair use and token consumption |
 
 Progress is maintained in [docs/PROGRESS.md](docs/PROGRESS.md), including dated changes
@@ -1131,9 +1152,14 @@ machine target passed. The changed packet's studies nevertheless averaged 95.97 
 
 The private packet write then failed safely because the worktree's `.firstroll` symlink resolved
 outside its allowed boundary. The report was retained, but no packet or human review exists and the
-run was not repeated. The evaluator now checks that resolved boundary before spending. Claim/citation
-review, genuine diversity review, targeted section editing, filmmaker coaching and clip-Agent work
-remain blocked.
+run was not repeated. The evaluator now checks that resolved boundary before spending.
+
+The successor autonomous programme does not reinterpret that result. It introduces explicit gap
+objectives, requires two independent origins for a recovered packet, exposes a deterministic
+no-model planner baseline and adds the existing bounded Crossref adapter to Agent acquisition. The
+next evidence must separately ablate model planning against deterministic routing and targeted repair
+against regeneration before changed-packet synthesis. No new paid budget is currently confirmed;
+claim audit, editing, coaching, reliability, durable execution and clip-Agent work remain gated.
 
 The latest reviewed complete-workflow and packet-only results are
 [`baseline-2026-08-21.json`](evals/results/baseline-2026-08-21.json) and

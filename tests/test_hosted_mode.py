@@ -41,9 +41,7 @@ def test_public_mode_does_not_register_generated_api_documentation() -> None:
     assert local_app.docs_url == "/docs"
     assert local_app.redoc_url == "/redoc"
     assert local_app.openapi_url == "/openapi.json"
-    assert {"/docs", "/redoc", "/openapi.json"}.issubset(
-        {route.path for route in local_app.routes}
-    )
+    assert {"/docs", "/redoc", "/openapi.json"}.issubset({route.path for route in local_app.routes})
 
 
 def test_local_startup_prewarms_embeddings_without_blocking_public_mode(monkeypatch) -> None:
@@ -76,12 +74,20 @@ def test_local_agent_adapter_is_default_off_and_has_no_http_route(monkeypatch) -
     assert main.local_agent_enabled() is False
     with pytest.raises(RuntimeError, match="disabled"):
         main.build_local_agent_services()
+    with pytest.raises(RuntimeError, match="disabled"):
+        main.build_local_autonomous_agent()
+    with pytest.raises(RuntimeError, match="disabled"):
+        main.build_local_autonomous_run_engine()
 
     monkeypatch.setenv("FIRSTROLL_LOCAL_AGENT_ENABLED", "true")
     assert main.local_agent_enabled() is True
     adapter = main.build_local_agent_services()
     assert adapter.detail == main.discovery_service.detail
     assert adapter.study_service is main.study_service
+    autonomous = main.build_local_autonomous_agent()
+    assert autonomous.services.study_service is main.study_service
+    durable = main.build_local_autonomous_run_engine()
+    assert durable.executor.study_service is main.study_service
     assert not any("agent" in getattr(route, "path", "") for route in main.app.routes)
     assert not any("agent" in path for path in main.app.openapi()["paths"])
 

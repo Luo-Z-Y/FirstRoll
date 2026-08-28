@@ -1,7 +1,7 @@
 # FirstRoll API Reference
 
 **API version:** `0.1.0`  
-**Last reconciled:** 25 August 2026
+**Last reconciled:** 28 August 2026
 
 FirstRoll uses one FastAPI application in two modes. The local edition serves the web interface and
 API from `http://127.0.0.1:8000`. The hosted public beta serves the Azure frontend at
@@ -14,9 +14,11 @@ all three return HTTP 404 on `api.firstroll.app`; `/api/health` remains public f
 checks. Hiding generated documentation reduces the production discovery surface but is not an
 authentication control: every protected operation still enforces its own bearer boundary. The
 local Agent evaluation work is a Python factory only. The completed run's authorisation remains
-consumed, while a local revision adds safe failure categories and process-only field-patch repair.
-Its one local validation is complete, machine-passed and artifact-incomplete; the consumed run does
-not change that `FIRSTROLL_LOCAL_AGENT_ENABLED` registers no HTTP endpoint or alter any route here.
+consumed, while local revisions add safe field-patch repair, typed evidence-gap planning,
+independent-origin recovery, deterministic ablation routing, Crossref acquisition, exact-path claim
+audit, targeted editing and evidence-linked coaching. Their presence does not change that
+`FIRSTROLL_LOCAL_AGENT_ENABLED` registers no HTTP endpoint or alter any route here. The autonomous
+foundation has no paid or human validation and is not a public capability.
 
 ## Access Classes
 

@@ -381,6 +381,45 @@ passed, but artifact completeness and human-review readiness are false. No snaps
 was not repeated and the authorisation is consumed. A new preflight checks the resolved private path
 before any future paid call.
 
+### Autonomous successor and ablation order
+
+The [Autonomous Agent Programme](AUTONOMOUS_AGENT_PROGRAMME.md) and
+[`autonomous_agent_programme.json`](../evals/autonomous_agent_programme.json) preserve both historical
+results and replace the combined next experiment with three causal ablations:
+
+1. fixed packet versus deterministic gap router versus model gap planner, with provider observations
+   sampled once and retained only in private evaluation storage;
+2. controlled structural field patch versus full regeneration over injected schema/citation faults;
+3. changed-packet synthesis using the exact private packet that passed the acquisition ablation,
+   without reacquisition.
+
+A recovered packet must pass base quality and contain at least two independent film-specific origins.
+Raw excerpts from one domain do not satisfy that rule. The model planner returns one allow-listed gap
+and one allow-listed tool from aggregate diagnostics; a deterministic router over the same provider
+states is the baseline. Model planning advances only if it improves blinded usefulness or matches the
+baseline with fewer calls. Unchanged cases remain selectivity controls rather than evidence of
+acquisition benefit.
+
+The foundation and synthetic tests make no paid call. A01 now has a fail-closed harness: it creates a
+private consumption lock before spend, samples each physical provider observation once, separates
+cache hits from physical costs and writes three mode-`0600` packets under stable blind labels. The
+reviewer hides lane identity until owner attestation; equal score and equal calls prefer the
+no-model router. The current machine contract has no paid confirmation, so the command refuses to
+run.
+
+A02 also has a fail-closed harness. It injects one invalid citation, one schema-invalid field and two
+invalid citation fields into a public synthetic candidate, then alternates three repetitions per
+lane. Field patches may use at most two calls; complete regeneration uses one. Every scheduled sample
+remains in the denominator. Machine acceptance requires valid schemas/citations, exact preservation
+of all unrequested fields, patch P50/P95 ratios no greater than `0.80/0.90`, token ratio no greater
+than `0.60`, quality no more than one point below regeneration and no more than 36 total calls. The
+expected 18 and maximum 36 calls are proposed only; the command refuses because no A02 budget is
+confirmed.
+
+A03 still requires its own committed harness. Every ablation also requires fresh paths, frozen
+thresholds and a numeric owner budget. No successor result may fill the missing private artifact in a
+historical report retrospectively.
+
 ## Deep Study Transparency Checkpoint
 
 [`deep-study-transparency-2026-08-21.json`](../evals/results/deep-study-transparency-2026-08-21.json)

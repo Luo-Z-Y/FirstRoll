@@ -1,7 +1,7 @@
 # FirstRoll Architecture Decision Register
 
 **Decision owner:** FirstRoll maintainer  
-**Last reconciled:** 21 August 2026
+**Last reconciled:** 28 August 2026
 
 This register captures the major decisions that shape the current product. It does not attempt to
 record every CSS or parsing implementation detail. A choice belongs here when changing it would
@@ -31,6 +31,7 @@ public API.
 | 017 | Keep Supabase Auth and add RLS-owned account data | Accepted | Low-cost persistence versus an additional managed platform boundary |
 | 018 | Use TMDb as the optional primary catalogue with an open fallback | Accepted | Rich, fast metadata versus one optional credential and attribution duty |
 | 019 | Keep transient Discover continuity in per-tab session storage | Accepted | Refresh resilience versus bounded browser-local staleness |
+| 020 | Require autonomous Agent value against a deterministic baseline | Accepted | Honest capability evidence versus slower staged development |
 
 ## ADR-001: Evolve pyCinemetrics with preserved attribution
 
@@ -775,6 +776,69 @@ account data. Treat the snapshot as same-tab continuity rather than durable or c
 2. [x] Preserve active product view and per-view scroll offsets.
 3. [x] Add refresh and three-view Chromium acceptance coverage.
 4. [ ] Revisit only if users need explicit cross-device projects rather than transient continuity.
+
+## ADR-020: Require autonomous Agent value against a deterministic baseline
+
+**Status:** Accepted
+**Date:** 28 August 2026
+**Decider:** FirstRoll maintainer
+
+### Context
+
+The bounded Agent correctly avoided unnecessary calls and enriched one sparse packet, but the model
+planner selected a single Letterboxd provider that a simple rule could also have selected. Several
+excerpts from that one domain changed the packet status to `passed` without establishing genuine
+source diversity. Later repeated synthesis passed machine gates, but the only changed packet scored
+lower and could not be reviewed by the owner. More end-to-end repetitions would not identify whether
+planning, acquisition, repair or writing supplied any value.
+
+### Decision
+
+Define the successor as an autonomous research-and-coaching Agent rather than a tool selector. Give
+it typed evidence-gap objectives, iterative reassessment, independent-origin recovery, bounded claim
+audit, targeted editing and evidence-linked filmmaker actions. Keep every action inside the existing
+deterministic policy envelope.
+
+Provide a deterministic no-model gap router over the same providers. Every planning experiment must
+compare the model against this baseline and the unchanged packet. A recovered packet needs at least
+two independent film-specific origins. Add Crossref's already bounded scholarly adapter to the Agent
+allow-list. If model planning cannot improve blinded usefulness or match it with fewer actions, use
+the deterministic router instead.
+
+Separate acquisition, structural repair and changed-packet synthesis ablations. Do not rely on random
+invalid generations to test repair, and do not let unchanged cases establish acquisition benefit.
+Historical comparisons and their thresholds remain immutable.
+
+### Options considered
+
+| Option | Assessment |
+|---|---|
+| Repeat the five-case Agent/fixed comparison | Expensive and still confounds planning, evidence and synthesis |
+| Treat any packet-status improvement as Agent value | Rewards source count and can be reproduced by one deterministic `if` statement |
+| Permit unconstrained model browsing | Broader but violates provenance, cost and injection boundaries |
+| Typed gaps plus deterministic ablations | Isolates each autonomous capability and removes model steps that do not earn their cost; accepted |
+
+### Consequences
+
+- Crossref becomes an Agent action without changing its identity, abstract or HTTPS boundaries.
+- Initially sufficient packets retain their zero-call guarantee.
+- Recovered packets may stop insufficient after one successful provider if no independent second
+  origin is available within budget; this is an intentional honesty improvement.
+- Planner outputs include an allow-listed objective but no free-form reasoning.
+- Local synthetic implementation can continue, but every paid ablation needs a fresh numeric budget.
+- Production remains fixed and no hosted Agent route exists.
+
+### Action items
+
+1. [x] Add typed evidence gaps and independent-origin recovery assessment.
+2. [x] Add a deterministic gap-router mode and safe planning-decision telemetry.
+3. [x] Add Crossref to the local Agent provider allow-list.
+4. [x] Build the acquire-once, blinded acquisition ablation harness.
+5. [ ] Build controlled structural-repair ablation and changed-packet synthesis harnesses.
+6. [x] Implement bounded claim audit, targeted editing and filmmaker coaching behind the local flag
+   with synthetic tests.
+7. [ ] Record provider, reliability and owner-attested evidence before considering durable or hosted
+   execution.
 
 ## How to Add or Change a Decision
 

@@ -1,5 +1,99 @@
 # FirstRoll Project Progress
 
+### 28 August 2026 — Autonomous research-Agent foundation begins
+
+Owner direction:
+
+1. Continue until FirstRoll has a solid autonomous Agent rather than limiting the design to one tool
+   selection step.
+2. Choose useful research, review, editing and coaching capabilities and add or change bounded
+   providers where evidence justifies them.
+3. Preserve the existing privacy, cost, human-attestation and production gates. The instruction does
+   not provide a numeric paid-call budget or authorise a hosted route/cut-over.
+
+Delivered without a model or provider call:
+
+1. Defined “solid” as demonstrated value against both the fixed workflow and a transparent
+   deterministic baseline, plus independent human, reliability, recovery and durability evidence.
+2. Added typed gaps for missing film-specific evidence, independent origins, evidence-class
+   diversity and focus relevance. The planner now returns one allow-listed gap plus one allow-listed
+   tool rather than an unscoped action or free-form reasoning.
+3. Preserved the zero-call guarantee for packets that were already sufficient. A packet recovered
+   from `limited` or `failed` now needs base quality `passed` and at least two independent
+   film-specific web origins; several excerpts from one domain no longer count as recovery.
+4. Added a deterministic no-model gap router over the same allow-list. It is the mandatory acquisition
+   ablation baseline, not a fallback whose results can be omitted.
+5. Added the existing constrained Crossref scholarship adapter to Agent status, planning and
+   acquisition alongside Guardian, Douban, Letterboxd and video text.
+6. Added safe planning-decision telemetry containing only strategy, gap and tool identifiers. Source
+   text, titles, URLs, model reasoning and provider details remain excluded.
+7. Versioned the successor contract in `evals/autonomous_agent_programme.json` and documented separate
+   acquisition, repair and changed-packet synthesis ablations. Historical reports remain immutable.
+8. Added the A01 acquire-once pool: each physical provider result or failure is sampled once and
+   replayed to deterministic/model lanes, while logical actions and physical costs remain separate.
+9. Added a mode-`0600` one-run lock, committed-source/fresh-path/private-boundary preflights and a
+   three-packet blinded owner review. Equal usefulness and equal calls explicitly prefer the
+   deterministic router.
+10. Added A02 controlled fault injection for one citation, one schema field and two citation fields,
+   with three alternating repetitions of field patch versus complete regeneration. The report keeps
+   calls, failures, quality, latency and tokens but no generated response.
+11. Froze A02 requirements: complete validity, exact accepted-field equality, no more than
+   `0.80/0.90` P50/P95 latency ratios, no more than `0.60` token ratio, quality within one point and a
+   36-call ceiling. Its proposed 18–36 calls are not authorised.
+12. Implemented exact claim-support audit validation, one at-most-four-path editor, mandatory re-audit
+   and evidence-linked filmmaker exercises. Interpretations cannot be labelled directly supported,
+   and exercises cannot use weak paths or citations outside their section.
+13. Added a local research-to-finisher controller with two audit, one editor, one coach and four total
+   model-call ceilings. It stops on excessive weak claims, failed edits, failed re-audit or exhausted
+   budget and exposes no HTTP route.
+14. Added private durable phase checkpoints for research, audit, edit, re-audit and coaching. Files use
+   hashed names, owner checks, atomic mode-`0600` writes and cancellation between phases.
+15. Persist an in-flight marker before each potentially paid phase. A process interruption stops
+   failed-safe on resume instead of automatically replaying a call with unknown spend.
+16. Recorded successful owner approval and deployment of run `32871204646`: live frontend build
+   `v174` reports commit `1f2c3cff`, while API health remains `{"status":"ok"}`. The deployment did
+   not expose an Agent route.
+
+Acceptance evidence:
+
+- a recovered one-origin packet remains insufficient while two independent origins pass;
+- the deterministic baseline targets Crossref after a first criticism origin and makes zero planner
+  model calls;
+- sparse graph execution performs two distinct acquisitions before synthesis; one success after a
+  failed provider stops honestly insufficient when the two-call budget is exhausted;
+- planner prompts expose safe gaps/counts but no evidence or provider-private values;
+- the A01 evaluator refuses the current unconfirmed budget, caches provider successes/failures
+  without exposing exception details and produces a stable complete blind mapping;
+- blinded review advances model planning only when its packet passes the rubric and beats the
+  deterministic packet, or ties while using fewer external calls;
+- claim audit rejects missing paths, cross-path citations and direct-support labels on interpretations;
+- coaching rejects weak paths, duplicate exercises, untraceable citations and instructions without
+  an observable action;
+- the local autonomous controller skips unnecessary editing, requires re-audit after editing and
+  excludes provider exception details from safe metrics;
+- durable tests prove mode `0700/0600`, hashed filenames, owner isolation, cancellation, phase resume,
+  edited-study re-audit and no automatic replay after an interrupted in-flight phase;
+- all 335 automated tests pass with the retained Starlette/httpx deprecation warning;
+- scoped Ruff, new-module MyPy, compilation, JSON and documentation-link checks pass; no paid call
+  was made.
+
+Known constraints:
+
+- A01 and A02 harnesses are implemented but neither has paid authorisation;
+- no numeric paid budget is active;
+- model planning has not shown value over the deterministic router;
+- the field-patch mechanism still lacks provider-backed evidence;
+- claim audit, targeted editing and filmmaker coaching have synthetic implementation only; provider
+  value and reliability remain gated; local durability has synthetic single-process evidence only;
+- production stays on fixed Deep Study and clip-Agent work remains deferred.
+
+Next actionable work:
+
+1. Keep A01 and A02 fail-closed until each exact proposed numeric budget is explicitly confirmed.
+2. Add controlled provider ablations for audit/editor/coaching only after A01/A02 settle.
+3. Validate owner-scoped checkpointing and cancellation during a later authorised local pilot.
+4. Retain an A01-winning packet for changed-packet synthesis without reacquisition.
+
 ### 25 August 2026 — Revised Agent passes machine gates but loses private review artifact
 
 Measured result:
@@ -2882,35 +2976,35 @@ Acceptance evidence:
 
 ## Next Milestone
 
-### Clip-to-study evidence bridge — Planned
+### Autonomous Agent causal ablations — In progress
 
-Objective: allow Deep Study to make bounded, timecoded formal observations from a
-user-provided clip while preserving the current evidence taxonomy.
+Objective: prove which autonomous components add value before integrating claim review, coaching or a
+product route.
 
-Proposed acceptance criteria:
+Acceptance criteria:
 
-- [ ] Define typed `film_observed` evidence for scenes, shots and time ranges.
-- [ ] Persist scene and shot identifiers throughout the analysis response.
-- [ ] Expose deterministic tools for scene metrics and comparisons.
-- [ ] Select relevant clip evidence from the user's study focus.
-- [ ] Permit observed claims only when supported by a scene or timecode citation.
-- [ ] Keep whole-film extrapolations separate from clip-supported observations.
-- [ ] Display book, critic and clip citations as distinct evidence classes.
-- [ ] Add tests for citation validity, unsupported extrapolation and missing clip data.
-- [ ] Add a browser workflow from Analyse results back into the film dossier.
+- [x] Define typed evidence gaps and require independent origins for recovered packets.
+- [x] Add a deterministic acquisition baseline and Crossref Agent action.
+- [x] Acquire each provider observation once and share it privately across fixed, deterministic and
+  model-planned lanes.
+- [x] Blind lane identity during owner packet review.
+- [x] Provide a frozen field-patch versus regeneration harness with controlled schema/citation faults.
+- [x] Require exact preservation of accepted fields and complete citation validation.
+- [x] Freeze value, latency, token, privacy and human thresholds before any paid call.
+- [ ] Reuse an accepted private packet for synthesis without reacquisition.
+- [ ] Advance claim audit only if the preceding capability earns its cost against the baseline.
 
 ## Subsequent Priorities
 
-1. **Creator primary-source layer** — ingest attributed interviews, commentaries and
-   production records; distinguish direct quotation, paraphrase and inference.
-2. **Persistent film projects** — retain discovery records, private clips, analyses,
-   notes, criticism and generated studies under a local project ID.
-3. **Evaluation suite** — measure retrieval relevance, citation accuracy, unsupported
-   claims, appropriate abstention, repair effectiveness, latency and DeepSeek cost.
-4. **Retrieval performance** — keep the embedding model warm or load it outside the
-   request path so the first dossier opens faster.
-5. **Legacy algorithm hardening** — remove inherited lint debt, reduce fallback ambiguity
-   and add representative video fixtures.
+1. **Claim audit and targeted editor** — classify evidential strength and patch only fields or
+   sections named by deterministic validation.
+2. **Evidence-grounded filmmaker coach** — turn accepted claims into traceable viewing and production
+   exercises without adding film facts.
+3. **Durable local Agent pilot** — add owner-scoped checkpointing, cancellation, resume and private
+   project retention after reliability gates pass.
+4. **Clip-to-study evidence bridge** — remain deferred until the complete text Agent is accepted.
+5. **Creator primary-source layer** — ingest attributed interviews, commentaries and production
+   records; distinguish direct quotation, paraphrase and inference.
 
 ## Known Risks and Constraints
 

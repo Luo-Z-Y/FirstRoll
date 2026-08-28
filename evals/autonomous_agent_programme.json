@@ -1,0 +1,233 @@
+{
+  "schema_version": 1,
+  "programme_id": "firstroll-autonomous-research-agent-v1",
+  "status": "causal_ablation_harnesses_implemented_awaiting_budgets",
+  "recorded_at": "2026-08-28T12:23:08Z",
+  "owner_mandate": {
+    "decision": "build_solid_autonomous_agent",
+    "instruction": "Proceed until a solid autonomous Agent is built; choose capabilities beyond tool selection and change or add bounded providers where useful.",
+    "decided_by": "repository_owner",
+    "implementation_authorised": true,
+    "provider_adapter_changes_authorised": true,
+    "paid_model_or_provider_calls_authorised": false,
+    "hosted_route_authorised": false,
+    "production_cutover_authorised": false
+  },
+  "boundaries": {
+    "local_only": true,
+    "feature_flag_default": false,
+    "fixed_production_workflow_unchanged": true,
+    "credentials_outside_graph_state": true,
+    "retrieved_evidence_cannot_authorise_actions": true,
+    "maximum_repair_calls": 2,
+    "clip_analysis": "deferred_until_text_agent_accepted",
+    "historical_results_immutable": true
+  },
+  "capability_goal": {
+    "primary_job": "produce_an_evidence_grounded_research_dossier_and_traceable_filmmaker_actions",
+    "required_capabilities": [
+      "typed_evidence_gap_assessment",
+      "adaptive_multi_provider_research",
+      "claim_and_citation_audit",
+      "targeted_structural_and_quality_repair",
+      "evidence_grounded_filmmaker_coaching",
+      "budgeted_failure_and_recovery",
+      "durable_owner_scoped_local_execution"
+    ],
+    "not_sufficient": [
+      "selecting_one_provider",
+      "increasing_raw_source_count",
+      "wrapping_one_model_call_in_a_graph",
+      "passing_only_aggregate_unchanged_case_quality",
+      "three_favourable_repetitions"
+    ]
+  },
+  "foundation": {
+    "typed_gaps": [
+      "film_specific_evidence",
+      "independent_origins",
+      "evidence_class_diversity",
+      "focus_relevance"
+    ],
+    "minimum_recovered_independent_origins": 2,
+    "already_sufficient_packet_policy": "zero_calls_and_identical_fingerprint",
+    "planner_output": "one_allow_listed_target_gap_plus_one_allow_listed_tool",
+    "tool_gap_capability_pair_validated": true,
+    "no_addressable_tool_outcome": "insufficient_evidence_without_provider_call",
+    "deterministic_baseline_available": true,
+    "crossref_agent_provider_available": true,
+    "provider_calls_made_during_implementation": 0,
+    "model_calls_made_during_implementation": 0
+  },
+  "autonomous_finisher": {
+    "claim_paths_audited_exactly_once": true,
+    "claim_labels": [
+      "directly_supported",
+      "reasonable_interpretation",
+      "unsupported",
+      "stronger_than_evidence"
+    ],
+    "interpretive_claims_cannot_be_directly_supported": true,
+    "maximum_initial_and_reaudit_calls": 2,
+    "maximum_targeted_editor_calls": 1,
+    "maximum_editor_paths": 4,
+    "reaudit_required_after_edit": true,
+    "maximum_filmmaker_coach_calls": 1,
+    "coach_actions": [
+      "log",
+      "compare",
+      "count",
+      "track",
+      "mark",
+      "inspect"
+    ],
+    "maximum_total_model_calls": 4,
+    "http_route_registered": false,
+    "provider_validation": "not_authorised"
+  },
+  "durable_local_engine": {
+    "checkpoint_directory": ".firstroll/autonomous-runs",
+    "directory_mode": "0700",
+    "checkpoint_mode": "0600",
+    "owner_match_required": true,
+    "atomic_phase_writes": true,
+    "cancellation_checked_between_phases": true,
+    "interrupted_in_flight_paid_phase_replayed_automatically": false,
+    "resumable_phases": [
+      "research",
+      "audit",
+      "edit",
+      "reaudit",
+      "coach"
+    ],
+    "hosted_or_multi_instance_ready": false
+  },
+  "provider_allow_list": [
+    {
+      "tool": "fetch_guardian_reviews",
+      "scope": "attributed_public_reviews"
+    },
+    {
+      "tool": "fetch_crossref_research",
+      "scope": "matched_scholarly_abstracts"
+    },
+    {
+      "tool": "fetch_letterboxd_reviews",
+      "scope": "attributed_review_summaries"
+    },
+    {
+      "tool": "fetch_douban_reviews",
+      "scope": "attributed_review_summaries"
+    },
+    {
+      "tool": "search_youtube_resources",
+      "scope": "attributed_descriptions_or_captions"
+    }
+  ],
+  "experiments": [
+    {
+      "id": "A01",
+      "name": "gap_planner_ablation",
+      "status": "harness_implemented_awaiting_budget",
+      "lanes": [
+        "fixed_no_acquisition",
+        "deterministic_gap_router",
+        "model_gap_planner"
+      ],
+      "case_id": "the-thing-ambiguous-identity",
+      "provider_sampling": "acquire_once_and_share_private_snapshots",
+      "proposed_budget": {
+        "maximum_model_planner_calls": 3,
+        "maximum_physical_provider_calls": 5,
+        "maximum_external_tool_turns_per_active_lane": 3
+      },
+      "paid_budget_confirmation": null,
+      "human_gate": {
+        "model_packet_must_pass_existing_packet_rubric": true,
+        "model_source_diversity_not_below_deterministic": true,
+        "model_filmmaker_actionability_not_below_deterministic": true,
+        "model_total_score_must_exceed_deterministic_or_use_fewer_external_calls_at_equal_score": true
+      },
+      "advancement_rule": "model_lane_beats_deterministic_human_value_or_matches_with_fewer_calls"
+    },
+    {
+      "id": "A02",
+      "name": "structural_repair_ablation",
+      "status": "harness_implemented_awaiting_budget",
+      "lanes": [
+        "targeted_field_patch",
+        "complete_regeneration"
+      ],
+      "faults": [
+        "one_invalid_citation",
+        "one_schema_invalid_field",
+        "two_invalid_fields"
+      ],
+      "proposed_budget": {
+        "fault_scenarios": 3,
+        "repetitions_per_lane_per_scenario": 3,
+        "expected_model_calls": 18,
+        "maximum_model_calls": 36
+      },
+      "paid_budget_confirmation": null,
+      "advancement_rule": "valid_output_and_exact_accepted_field_preservation_with_material_latency_and_token_saving"
+    },
+    {
+      "id": "A03",
+      "name": "changed_packet_synthesis",
+      "status": "blocked_by_A01",
+      "packet_policy": "reuse_exact_private_A01_packet_without_reacquisition",
+      "paid_budget_confirmation": null,
+      "advancement_rule": "changed_packet_value_without_quality_latency_or_cost_regression"
+    }
+  ],
+  "stages": [
+    {
+      "id": "S01",
+      "name": "evidence_gap_research",
+      "status": "A01_harness_implemented_awaiting_budget"
+    },
+    {
+      "id": "S02",
+      "name": "claim_and_citation_audit",
+      "status": "synthetic_implementation_complete_blocked_by_S01_evidence"
+    },
+    {
+      "id": "S03",
+      "name": "targeted_editor",
+      "status": "synthetic_implementation_complete_blocked_by_S02_evidence"
+    },
+    {
+      "id": "S04",
+      "name": "filmmaker_coach",
+      "status": "synthetic_implementation_complete_blocked_by_S03_evidence"
+    },
+    {
+      "id": "S05",
+      "name": "reliability_and_recovery",
+      "status": "blocked_by_prior_stages"
+    },
+    {
+      "id": "S06",
+      "name": "durable_local_pilot",
+      "status": "synthetic_store_and_phase_engine_complete_blocked_by_reliability"
+    }
+  ],
+  "solid_definition": {
+    "selective_zero_call_behaviour": true,
+    "minimum_independent_origins_for_recovered_packet": 2,
+    "value_against_deterministic_baseline_required": true,
+    "schema_citation_identity_and_instruction_validity_ratio": 1.0,
+    "provider_backed_structural_repair_required": true,
+    "owner_attested_human_value_required": true,
+    "minimum_comparable_observations_per_critical_strategy": 20,
+    "durable_owner_scoped_local_execution_required": true,
+    "separate_production_decision_required": true
+  },
+  "predecessor": {
+    "programme_path": "evals/text_agent_programme.json",
+    "latest_result_path": "evals/results/text-agent-structural-repair-2026-08-25.json",
+    "outcome": "machine_pass_artifact_failure_no_human_evidence"
+  },
+  "privacy_scope": "No prompts, source bodies, generated prose, private passages, reviewer notes, credentials, vectors, caches or clips enter versioned reports."
+}

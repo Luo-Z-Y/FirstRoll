@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+import re
 from typing import Any, cast
 
 import pytest
@@ -12,7 +13,13 @@ from app.backend.local_research_agent import (
     LocalAttributedSourceAcquirer,
     LocalResearchGraphServices,
 )
-from app.backend.research_agent_contract import ResearchBudgets, TerminalStatus, ToolName, ToolPlan
+from app.backend.research_agent_contract import (
+    EvidenceGap,
+    ResearchBudgets,
+    TerminalStatus,
+    ToolName,
+    ToolPlan,
+)
 from app.backend.research_graph import (
     ResearchGraphContext,
     ResearchGraphState,
@@ -47,6 +54,7 @@ THEORY = {
 
 
 def review(source_id: str = "R1", provider: str = "Guardian") -> ReviewSource:
+    domain = re.sub(r"[^a-z0-9]+", "-", provider.casefold()).strip("-")
     return ReviewSource(
         source_id=source_id,
         provider=provider,
@@ -57,8 +65,19 @@ def review(source_id: str = "R1", provider: str = "Guardian") -> ReviewSource:
             "relations, offering details that should be checked during close viewing."
         ),
         author="A Critic",
-        url=f"https://example.com/{source_id}",
+        url=f"https://{domain}.example/{source_id}",
         language="en",
+    )
+
+
+def scholarly_review(source_id: str = "R2") -> ReviewSource:
+    return review(source_id, "Crossref scholarship").model_copy(
+        update={
+            "summary": (
+                "A scholarly abstract connects editing rhythm to spatial uncertainty and compares "
+                "how recurring cuts redistribute attention across the frame."
+            )
+        }
     )
 
 
@@ -83,6 +102,7 @@ class RecordingAcquirer:
                 ToolName.FETCH_GUARDIAN_REVIEWS,
                 ToolName.FETCH_DOUBAN_REVIEWS,
                 ToolName.FETCH_LETTERBOXD_REVIEWS,
+                ToolName.FETCH_CROSSREF_RESEARCH,
                 ToolName.SEARCH_YOUTUBE_RESOURCES,
             )
         }
@@ -136,6 +156,7 @@ def services(
     existing_reviews: list[ReviewSource],
     acquirer: RecordingAcquirer,
     study: RecordingStudyService,
+    planner_mode: str = "model",
 ) -> LocalResearchGraphServices:
     def prepare(*args: Any, **kwargs: Any) -> dict[str, Any]:
         current_packet = packet(existing_reviews)
@@ -154,6 +175,7 @@ def services(
         prepare=prepare,
         acquirer=cast(Any, acquirer),
         study_service=cast(Any, study),
+        planner_mode=cast(Any, planner_mode),
     )
 
 
@@ -213,6 +235,7 @@ def test_letterboxd_tool_uses_public_adapter_when_official_credentials_are_absen
         guardian=cast(Any, passive),
         letterboxd=cast(Any, official),
         letterboxd_web=cast(Any, public),
+        crossref=cast(Any, passive),
         youtube=cast(Any, passive),
         bilibili=cast(Any, passive),
     )
@@ -222,6 +245,43 @@ def test_letterboxd_tool_uses_public_adapter_when_official_credentials_are_absen
     assert official.calls == 0
     assert public.calls == 1
     assert acquired.provider == "Letterboxd public web"
+    assert len(acquired.reviews) == 1
+
+
+def test_crossref_tool_reuses_the_bounded_scholarship_adapter() -> None:
+    class Adapter:
+        def __init__(self, provider: str) -> None:
+            self.provider = provider
+            self.calls = 0
+
+        def status(self) -> dict[str, Any]:
+            return {
+                "provider": self.provider,
+                "state": "ready",
+                "configured": True,
+                "official": True,
+            }
+
+        def fetch_reviews(self, film: dict[str, Any]):
+            self.calls += 1
+            return "provider-id", film["title"], [scholarly_review()]
+
+    crossref = Adapter("Crossref scholarship")
+    passive = Adapter("Passive provider")
+    acquirer = LocalAttributedSourceAcquirer(
+        douban=cast(Any, passive),
+        guardian=cast(Any, passive),
+        letterboxd=cast(Any, passive),
+        letterboxd_web=cast(Any, passive),
+        crossref=cast(Any, crossref),
+        youtube=cast(Any, passive),
+        bilibili=cast(Any, passive),
+    )
+
+    acquired = acquirer.acquire(ToolName.FETCH_CROSSREF_RESEARCH, FILM)
+
+    assert crossref.calls == 1
+    assert acquired.provider == "Crossref scholarship"
     assert len(acquired.reviews) == 1
 
 
@@ -413,46 +473,138 @@ def test_agent_stops_insufficient_after_two_failed_repairs() -> None:
     assert study.repair_calls == 2
 
 
-def test_sparse_packet_acquires_one_source_then_uses_unchanged_synthesis() -> None:
+def test_sparse_packet_acquires_independent_sources_then_synthesises() -> None:
     private_review = review().model_copy(
         update={"summary": review().summary + " PRIVATE_REVIEW_TEXT"}
     )
+    research_review = scholarly_review()
     acquirer = RecordingAcquirer(
         outcomes=[
             AcquiredSources(
                 provider="Guardian",
                 reviews=(private_review,),
-            )
+            ),
+            AcquiredSources(
+                provider="Crossref scholarship",
+                reviews=(research_review,),
+            ),
         ]
     )
-    study = RecordingStudyService(plans=[ToolName.FETCH_GUARDIAN_REVIEWS])
+    study = RecordingStudyService(
+        plans=[ToolName.FETCH_GUARDIAN_REVIEWS, ToolName.FETCH_CROSSREF_RESEARCH]
+    )
     adapter = services(existing_reviews=[], acquirer=acquirer, study=study)
 
     result = run_agent(adapter)
     metrics = adapter.safe_metrics("local-agent-test")
 
     assert result["status"] is TerminalStatus.COMPLETE
-    assert result["external_tool_calls"] == 1
-    assert result["planning_calls"] == 1
-    assert acquirer.calls == [ToolName.FETCH_GUARDIAN_REVIEWS]
-    assert metrics["acquired_reviews"] == 1
+    assert result["external_tool_calls"] == 2
+    assert result["planning_calls"] == 2
+    assert acquirer.calls == [
+        ToolName.FETCH_GUARDIAN_REVIEWS,
+        ToolName.FETCH_CROSSREF_RESEARCH,
+    ]
+    assert metrics["acquired_reviews"] == 2
     assert metrics["acquired_videos"] == 0
     assert metrics["initial_packet_quality"]["status"] == "limited"
     assert metrics["packet_quality"]["status"] == "passed"
     assert metrics["packet_fingerprint"] != metrics["initial_packet_fingerprint"]
-    assert len(adapter.private_packet("local-agent-test").attributed_sources) == 1
+    assert len(adapter.private_packet("local-agent-test").attributed_sources) == 2
+    assert metrics["agent_evidence"]["agent_status"] == "sufficient"
+    assert metrics["agent_evidence"]["agent_diversity"]["independent_film_origins"] == 2
     assert [(item["tool"], item["status"]) for item in metrics["tool_attempts"]] == [
-        ("fetch_guardian_reviews", "completed")
+        ("fetch_guardian_reviews", "completed"),
+        ("fetch_crossref_research", "completed"),
     ]
     assert metrics["tool_attempts"][0]["duration_seconds"] >= 0
-    assert metrics["planner_total_tokens"] == 22
-    assert len(metrics["planner_latency_seconds"]) == 1
+    assert metrics["planner_total_tokens"] == 44
+    assert len(metrics["planner_latency_seconds"]) == 2
     assert metrics["planner_latency_seconds"][0] >= 0
-    assert metrics["study_observability"]["counts"]["total_tokens"] == 122
+    assert metrics["study_observability"]["counts"]["total_tokens"] == 144
     assert "PRIVATE_REVIEW_TEXT" not in str(metrics)
 
 
-def test_unavailable_provider_falls_back_once_within_candidate_budget() -> None:
+def test_deterministic_gap_router_is_a_no_model_planner_baseline() -> None:
+    acquirer = RecordingAcquirer(
+        outcomes=[
+            AcquiredSources(provider="Guardian", reviews=(review(),)),
+            AcquiredSources(
+                provider="Crossref scholarship",
+                reviews=(scholarly_review(),),
+            ),
+        ]
+    )
+    study = RecordingStudyService()
+    adapter = services(
+        existing_reviews=[],
+        acquirer=acquirer,
+        study=study,
+        planner_mode="deterministic",
+    )
+
+    result = run_agent(adapter)
+    metrics = adapter.safe_metrics("local-agent-test")
+
+    assert result["status"] is TerminalStatus.COMPLETE
+    assert acquirer.calls == [
+        ToolName.FETCH_GUARDIAN_REVIEWS,
+        ToolName.FETCH_CROSSREF_RESEARCH,
+    ]
+    assert study.planner_calls == []
+    assert metrics["planner_calls"] == 0
+    assert metrics["planning_turns"] == 2
+    assert metrics["planning_decisions"] == [
+        {
+            "strategy": "deterministic_gap_router",
+            "tool": "fetch_guardian_reviews",
+            "target_gap": "film_specific_evidence",
+        },
+        {
+            "strategy": "deterministic_gap_router",
+            "tool": "fetch_crossref_research",
+            "target_gap": "independent_origins",
+        },
+    ]
+    assert metrics["study_observability"]["counts"]["model_calls"] == 1
+
+
+def test_no_addressable_provider_stops_insufficient_without_external_call() -> None:
+    class UnavailableAcquirer(RecordingAcquirer):
+        def status(self) -> dict[str, dict[str, Any]]:
+            return {
+                tool.value: {"provider": tool.value, "state": "unavailable"}
+                for tool in (
+                    ToolName.FETCH_GUARDIAN_REVIEWS,
+                    ToolName.FETCH_DOUBAN_REVIEWS,
+                    ToolName.FETCH_LETTERBOXD_REVIEWS,
+                    ToolName.FETCH_CROSSREF_RESEARCH,
+                    ToolName.SEARCH_YOUTUBE_RESOURCES,
+                )
+            }
+
+    acquirer = UnavailableAcquirer()
+    study = RecordingStudyService()
+    adapter = services(
+        existing_reviews=[],
+        acquirer=acquirer,
+        study=study,
+        planner_mode="deterministic",
+    )
+
+    result = run_agent(adapter)
+
+    assert result["status"] is TerminalStatus.INSUFFICIENT_EVIDENCE
+    assert result["planning_calls"] == 1
+    assert result["external_tool_calls"] == 0
+    assert acquirer.calls == []
+    assert study.generation_calls == 0
+    assert result["terminal_reason"] == (
+        "No remaining provider can address the measured evidence gap."
+    )
+
+
+def test_one_successful_origin_after_provider_failure_stops_insufficient() -> None:
     acquirer = RecordingAcquirer(
         outcomes=[
             RuntimeError("provider unavailable"),
@@ -469,7 +621,7 @@ def test_unavailable_provider_falls_back_once_within_candidate_budget() -> None:
 
     result = run_agent(adapter)
 
-    assert result["status"] is TerminalStatus.COMPLETE
+    assert result["status"] is TerminalStatus.INSUFFICIENT_EVIDENCE
     assert result["external_tool_calls"] == 2
     assert result["planning_calls"] == 2
     assert acquirer.calls == [
@@ -483,7 +635,7 @@ def test_unavailable_provider_falls_back_once_within_candidate_budget() -> None:
         ("fetch_letterboxd_reviews", "completed"),
     ]
     assert all(item["duration_seconds"] >= 0 for item in tool_attempts)
-    assert study.generation_calls == 1
+    assert study.generation_calls == 0
 
 
 def test_deepseek_planner_sends_aggregate_gap_not_evidence_text() -> None:
@@ -497,7 +649,16 @@ def test_deepseek_planner_sends_aggregate_gap_not_evidence_text() -> None:
         captured.update({"url": url, "payload": payload, "key": key})
         return {
             "model": "planner-test",
-            "choices": [{"message": {"content": '{"tool":"fetch_guardian_reviews"}'}}],
+            "choices": [
+                {
+                    "message": {
+                        "content": (
+                            '{"target_gap":"film_specific_evidence",'
+                            '"tool":"fetch_guardian_reviews"}'
+                        )
+                    }
+                }
+            ],
             "usage": {"prompt_tokens": 30, "completion_tokens": 4, "total_tokens": 34},
         }
 
@@ -527,6 +688,7 @@ def test_deepseek_planner_sends_aggregate_gap_not_evidence_text() -> None:
 
     serialised = str(captured["payload"])
     assert plan.tool is ToolName.FETCH_GUARDIAN_REVIEWS
+    assert plan.target_gap is EvidenceGap.FILM_SPECIFIC_EVIDENCE
     assert plan.total_tokens == 34
     assert "PRIVATE_EVIDENCE_MUST_NOT_REACH_PLANNER" not in serialised
     assert "PRIVATE_PROVIDER_SECRET" not in serialised
@@ -535,13 +697,82 @@ def test_deepseek_planner_sends_aggregate_gap_not_evidence_text() -> None:
     assert "film_specific_evidence_sparse" in serialised
 
 
+def test_deepseek_planner_rejects_gap_outside_policy_set() -> None:
+    class Settings:
+        def effective_secret(self, connector_id: str) -> str:
+            return "test-deepseek-key"
+
+    def transport(url: str, payload: dict[str, Any] | None, key: str) -> dict[str, Any]:
+        return {
+            "choices": [
+                {
+                    "message": {
+                        "content": (
+                            '{"target_gap":"focus_relevance","tool":"fetch_guardian_reviews"}'
+                        )
+                    }
+                }
+            ]
+        }
+
+    service = DeepSeekStudyService(cast(Any, Settings()), transport=transport)
+    with pytest.raises(StudyGenerationError, match="gap outside the approved set"):
+        service.plan_research_tool(
+            film=FILM,
+            focus=FOCUS,
+            packet_summary={
+                "status": "passed",
+                "agent_gaps": ["independent_origins"],
+            },
+            allowed_tools=(ToolName.FETCH_GUARDIAN_REVIEWS,),
+            provider_states={},
+        )
+
+
+def test_deepseek_planner_stops_before_call_when_no_tool_can_address_gap() -> None:
+    class Settings:
+        def effective_secret(self, connector_id: str) -> str:
+            return "test-deepseek-key"
+
+    calls = 0
+
+    def transport(url: str, payload: dict[str, Any] | None, key: str) -> dict[str, Any]:
+        nonlocal calls
+        calls += 1
+        return {}
+
+    service = DeepSeekStudyService(cast(Any, Settings()), transport=transport)
+    with pytest.raises(StudyGenerationError, match="No remaining research tool"):
+        service.plan_research_tool(
+            film=FILM,
+            focus=FOCUS,
+            packet_summary={
+                "status": "passed",
+                "agent_gaps": ["evidence_class_diversity"],
+            },
+            allowed_tools=(ToolName.FETCH_GUARDIAN_REVIEWS,),
+            provider_states={},
+        )
+    assert calls == 0
+
+
 def test_deepseek_planner_rejects_tool_outside_policy_set() -> None:
     class Settings:
         def effective_secret(self, connector_id: str) -> str:
             return "test-deepseek-key"
 
     def transport(url: str, payload: dict[str, Any] | None, key: str) -> dict[str, Any]:
-        return {"choices": [{"message": {"content": '{"tool":"fetch_douban_reviews"}'}}]}
+        return {
+            "choices": [
+                {
+                    "message": {
+                        "content": (
+                            '{"target_gap":"film_specific_evidence","tool":"fetch_douban_reviews"}'
+                        )
+                    }
+                }
+            ]
+        }
 
     service = DeepSeekStudyService(cast(Any, Settings()), transport=transport)
     with pytest.raises(StudyGenerationError, match="outside the approved set"):

@@ -566,7 +566,13 @@
       "status": "machine_passed_artifact_failure_human_review_unavailable",
       "result_path": "evals/results/text-agent-structural-repair-2026-08-25.json",
       "revision_paid_validation_authorised": false,
-      "revision_paid_validation_authorisation_consumed": true
+      "revision_paid_validation_authorisation_consumed": true,
+      "autonomous_successor": {
+        "contract_path": "evals/autonomous_agent_programme.json",
+        "status": "causal_ablation_harnesses_implemented_awaiting_budgets",
+        "paid_validation_authorised": false,
+        "production_route_cutover": "no_go"
+      }
     }
   },
   "agent_entry_gate": {
