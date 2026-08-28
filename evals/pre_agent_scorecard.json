@@ -569,7 +569,7 @@
       "revision_paid_validation_authorisation_consumed": true,
       "autonomous_successor": {
         "contract_path": "evals/autonomous_agent_programme.json",
-        "status": "a01_acquisition_ablation_approved",
+        "status": "a02_structural_repair_ablation_approved",
         "paid_validation_authorised": false,
         "production_route_cutover": "no_go"
       }

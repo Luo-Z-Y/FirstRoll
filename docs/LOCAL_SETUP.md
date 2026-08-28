@@ -325,12 +325,9 @@ FIRSTROLL_LOCAL_AGENT_ENABLED=1 uv run python tools/evaluate_agent_acquisition.p
   --run-lock .firstroll/evaluations/autonomous-agent-acquisition-2026-08-28.lock
 ```
 
-The owner approved this exact one-run command and its ceilings of three planner calls, five physical
-provider calls and three external turns per active lane on 28 August 2026. It requires committed source and every listed
-path must match the confirmation and remain fresh. Do not remove the lock after a started run. Owner
-review uses
-`uv run python tools/review_agent_acquisition_packets.py` only when the machine report says the
-private snapshot exists.
+This historical one-run command consumed three planner and four physical provider calls, then failed
+both active-lane completion targets. Its lock must remain in place and the command must not be run
+again. No private snapshot exists, so do not invoke the A01 owner-review command.
 
 The separate controlled repair command is:
 
@@ -341,11 +338,11 @@ FIRSTROLL_LOCAL_AGENT_ENABLED=1 uv run python tools/evaluate_agent_repair.py \
 ```
 
 It uses public synthetic evidence and records no generated prose, but still makes real DeepSeek calls.
-The owner has confirmed its 18-expected/36-maximum budget and exact paths. Its machine status remains
-inactive until A01 has run and been consumed; run it only after the committed sequential activation.
+The owner has confirmed its 18-expected/36-maximum budget and exact paths. A01 is consumed and the
+committed machine contract now activates this command for exactly one run.
 
-A03 changed-packet synthesis is also installed but remains doubly blocked: A01 must select and retain
-an owner-approved private packet, then A03 needs its own 20-expected/60-maximum synthesis budget. It
+A03 changed-packet synthesis is installed but blocked: A01 produced no machine-passing,
+owner-approved private packet, and A03 has no 20-expected/60-maximum synthesis budget. It
 makes no planner/provider call and will not reacquire the packet:
 
 ```bash

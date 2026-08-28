@@ -1,5 +1,44 @@
 # FirstRoll Project Progress
 
+### 28 August 2026 — A01 fails its machine gate; A02 becomes active
+
+Measured A01 result from source `497be3c1`:
+
+| Measure | Fixed | Deterministic router | Model planner |
+|---|---:|---:|---:|
+| Terminal status | not run | budget exhausted | budget exhausted |
+| Base packet status | limited | passed | passed |
+| Independent origins | 0 | 3 | 2 |
+| Film-specific evidence classes | 0 | 1 | 1 |
+| External turns | 0 | 3 | 3 |
+| Planner calls/tokens | 0 / 0 | 0 / 0 | 3 / 1,643 |
+| Acquisition latency | 0 s | 18.272 s | 8.729 s |
+
+Outcome:
+
+1. Both active lanes changed the packet and obtained enough independent origins, but each retained the
+   `evidence_class_diversity` gap and exhausted its frozen three-turn allowance.
+2. Guardian failed once in the acquire-once pool. Crossref returned one review, video search returned
+   16 textual resources and Letterboxd returned three reviews; every observation or failure was
+   shared without repeating a physical request.
+3. The run used three planner calls, four physical provider calls and six logical lane requests. It
+   stayed below all cost ceilings and made no synthesis call.
+4. `deterministic_lane_completed` and `model_lane_completed` failed. The remaining eight machine
+   targets passed, but the complete machine gate failed exactly as frozen.
+5. No private packet snapshot was written, no human review is available and no planning strategy is
+   selected. A03 remains blocked and the A01 authorisation is consumed.
+6. The report's aggregate `agent_status` says `sufficient` while each active lane still lists the
+   evidence-class gap and terminates budget-exhausted. The result is retained without reinterpretation;
+   the status/gap semantic mismatch requires no-call diagnosis before any future acquisition design.
+7. The separately approved A02 structural-repair ablation is now the only active paid experiment. Its
+   18 expected/36 maximum limits and exact fresh paths are unchanged.
+
+Next actionable work:
+
+1. Commit this immutable redacted A01 result and A02 activation checkpoint after validation and CI.
+2. Run A02 once from that exact committed source, retaining every failed patch/regeneration as zero.
+3. Do not run A01 review or A03; neither has the required private packet evidence.
+
 ### 28 August 2026 — A01/A02 value experiments receive exact sequential approval
 
 Owner decisions:
@@ -128,7 +167,7 @@ Acceptance evidence:
   wins, no fixed evidence-responsibility win and no severe candidate grounding concern;
 - text, acquisition and changed-study review readers reject a `.firstroll` symlink that resolves
   outside the repository before reading any private artifact;
-- all 354 automated tests pass with the retained Starlette/httpx deprecation warning;
+- all 355 automated tests pass with the retained Starlette/httpx deprecation warning;
 - scoped Ruff, new-module MyPy, compilation, JSON and documentation-link checks pass; no paid call
   was made.
 

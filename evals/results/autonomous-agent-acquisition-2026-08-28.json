@@ -1,0 +1,277 @@
+{
+  "schema_version": 1,
+  "programme_id": "firstroll-autonomous-research-agent-v1",
+  "experiment_id": "A01",
+  "source_revision": "497be3c1c9225bbe77b3a5792b45188ae3879861",
+  "case_id": "the-thing-ambiguous-identity",
+  "suite_fingerprint": "a66f43dfc80ae624",
+  "initial_packet_fingerprint": "11086a4f820d58ef",
+  "lanes": [
+    {
+      "lane": "fixed_no_acquisition",
+      "status": "control",
+      "terminal_status": "not_run",
+      "initial_packet_fingerprint": "11086a4f820d58ef",
+      "final_packet_fingerprint": "11086a4f820d58ef",
+      "packet_changed": false,
+      "base_packet_status": "limited",
+      "agent_status": "control",
+      "remaining_gaps": [
+        "film_specific_evidence",
+        "independent_origins",
+        "evidence_class_diversity"
+      ],
+      "independent_origins": 0,
+      "film_specific_evidence_classes": 0,
+      "planning_turns": 0,
+      "model_planner_calls": 0,
+      "planner_total_tokens": 0,
+      "planner_latency_seconds": 0.0,
+      "counterfactual_provider_latency_seconds": 0.0,
+      "acquisition_latency_seconds": 0.0,
+      "external_tool_calls": 0,
+      "attempted_tools": [],
+      "planning_decisions": [],
+      "tool_attempts": []
+    },
+    {
+      "lane": "deterministic_gap_router",
+      "status": "failed",
+      "terminal_status": "budget_exhausted",
+      "initial_packet_fingerprint": "11086a4f820d58ef",
+      "final_packet_fingerprint": "759c59d2e40d326d",
+      "packet_changed": true,
+      "base_packet_status": "passed",
+      "agent_status": "sufficient",
+      "remaining_gaps": [
+        "evidence_class_diversity"
+      ],
+      "independent_origins": 3,
+      "film_specific_evidence_classes": 1,
+      "planning_turns": 3,
+      "model_planner_calls": 0,
+      "planner_total_tokens": 0,
+      "planner_latency_seconds": 0.0,
+      "external_tool_calls": 3,
+      "attempted_tools": [
+        "fetch_guardian_reviews",
+        "fetch_crossref_research",
+        "search_youtube_resources"
+      ],
+      "planning_decisions": [
+        {
+          "strategy": "deterministic_gap_router",
+          "tool": "fetch_guardian_reviews",
+          "target_gap": "film_specific_evidence"
+        },
+        {
+          "strategy": "deterministic_gap_router",
+          "tool": "fetch_crossref_research",
+          "target_gap": "film_specific_evidence"
+        },
+        {
+          "strategy": "deterministic_gap_router",
+          "tool": "search_youtube_resources",
+          "target_gap": "independent_origins"
+        }
+      ],
+      "tool_attempts": [
+        {
+          "tool": "fetch_guardian_reviews",
+          "status": "failed",
+          "duration_seconds": 0.942
+        },
+        {
+          "tool": "fetch_crossref_research",
+          "status": "completed",
+          "duration_seconds": 1.676
+        },
+        {
+          "tool": "search_youtube_resources",
+          "status": "completed",
+          "duration_seconds": 15.655
+        }
+      ],
+      "counterfactual_provider_latency_seconds": 18.272,
+      "acquisition_latency_seconds": 18.272
+    },
+    {
+      "lane": "model_gap_planner",
+      "status": "failed",
+      "terminal_status": "budget_exhausted",
+      "initial_packet_fingerprint": "11086a4f820d58ef",
+      "final_packet_fingerprint": "049b4f9cb1e5a024",
+      "packet_changed": true,
+      "base_packet_status": "passed",
+      "agent_status": "sufficient",
+      "remaining_gaps": [
+        "evidence_class_diversity"
+      ],
+      "independent_origins": 2,
+      "film_specific_evidence_classes": 1,
+      "planning_turns": 3,
+      "model_planner_calls": 3,
+      "planner_total_tokens": 1643,
+      "planner_latency_seconds": 4.401,
+      "external_tool_calls": 3,
+      "attempted_tools": [
+        "fetch_crossref_research",
+        "fetch_guardian_reviews",
+        "fetch_letterboxd_reviews"
+      ],
+      "planning_decisions": [
+        {
+          "strategy": "model_gap_planner",
+          "tool": "fetch_crossref_research",
+          "target_gap": "film_specific_evidence"
+        },
+        {
+          "strategy": "model_gap_planner",
+          "tool": "fetch_guardian_reviews",
+          "target_gap": "independent_origins"
+        },
+        {
+          "strategy": "model_gap_planner",
+          "tool": "fetch_letterboxd_reviews",
+          "target_gap": "independent_origins"
+        }
+      ],
+      "tool_attempts": [
+        {
+          "tool": "fetch_crossref_research",
+          "status": "completed",
+          "duration_seconds": 0.0
+        },
+        {
+          "tool": "fetch_guardian_reviews",
+          "status": "failed",
+          "duration_seconds": 0.0
+        },
+        {
+          "tool": "fetch_letterboxd_reviews",
+          "status": "completed",
+          "duration_seconds": 1.711
+        }
+      ],
+      "counterfactual_provider_latency_seconds": 4.328,
+      "acquisition_latency_seconds": 8.729
+    }
+  ],
+  "source_pool": {
+    "physical_provider_calls": 4,
+    "physical_attempts": [
+      {
+        "tool": "fetch_guardian_reviews",
+        "status": "failed",
+        "duration_seconds": 0.942
+      },
+      {
+        "tool": "fetch_crossref_research",
+        "status": "completed",
+        "duration_seconds": 1.675,
+        "review_count": 1,
+        "video_count": 0
+      },
+      {
+        "tool": "search_youtube_resources",
+        "status": "completed",
+        "duration_seconds": 15.655,
+        "review_count": 0,
+        "video_count": 16
+      },
+      {
+        "tool": "fetch_letterboxd_reviews",
+        "status": "completed",
+        "duration_seconds": 1.711,
+        "review_count": 3,
+        "video_count": 0
+      }
+    ],
+    "logical_provider_calls": 6,
+    "logical_calls": [
+      {
+        "lane": "deterministic_gap_router",
+        "tool": "fetch_guardian_reviews",
+        "cache_hit": false
+      },
+      {
+        "lane": "deterministic_gap_router",
+        "tool": "fetch_crossref_research",
+        "cache_hit": false
+      },
+      {
+        "lane": "deterministic_gap_router",
+        "tool": "search_youtube_resources",
+        "cache_hit": false
+      },
+      {
+        "lane": "model_gap_planner",
+        "tool": "fetch_crossref_research",
+        "cache_hit": true
+      },
+      {
+        "lane": "model_gap_planner",
+        "tool": "fetch_guardian_reviews",
+        "cache_hit": true
+      },
+      {
+        "lane": "model_gap_planner",
+        "tool": "fetch_letterboxd_reviews",
+        "cache_hit": false
+      }
+    ],
+    "cache_hits": 2,
+    "lane_counterfactual_latency_seconds": {
+      "deterministic_gap_router": 18.272,
+      "model_gap_planner": 4.328
+    }
+  },
+  "targets": [
+    {
+      "target_id": "all_lanes_share_initial_fingerprint",
+      "status": "passed"
+    },
+    {
+      "target_id": "deterministic_lane_completed",
+      "status": "failed"
+    },
+    {
+      "target_id": "model_lane_completed",
+      "status": "failed"
+    },
+    {
+      "target_id": "deterministic_lane_independent_origins",
+      "status": "passed"
+    },
+    {
+      "target_id": "model_lane_independent_origins",
+      "status": "passed"
+    },
+    {
+      "target_id": "model_planner_call_budget",
+      "status": "passed"
+    },
+    {
+      "target_id": "shared_physical_provider_budget",
+      "status": "passed"
+    },
+    {
+      "target_id": "active_lane_turn_budget",
+      "status": "passed"
+    },
+    {
+      "target_id": "physical_provider_observations_unique",
+      "status": "passed"
+    },
+    {
+      "target_id": "fixed_lane_zero_calls",
+      "status": "passed"
+    }
+  ],
+  "summary": {
+    "machine_targets_passed": false,
+    "private_packet_snapshot_written": false,
+    "human_review_ready": false,
+    "model_value_over_deterministic": "pending_blinded_human_review"
+  }
+}

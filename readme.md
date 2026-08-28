@@ -283,16 +283,16 @@ code rechecks both, reassesses the packet after every observation and requires t
 when recovering a limited packet. Crossref scholarship is now available alongside Guardian, Douban,
 Letterboxd and video-text acquisition. A no-model gap router provides the ablation baseline: if the
 model planner cannot beat or more efficiently match it, FirstRoll will remove the model planner. New
-provider evidence remains ephemeral, and no Agent HTTP route, paid validation or cut-over is enabled.
-The A01 evaluator shares each physical observation across lanes, blinds packet identity during owner
-review and currently refuses to run because no exact paid budget is confirmed. The local successor
+provider evidence remains ephemeral, and no Agent HTTP route or cut-over is enabled. A01 shared each
+physical observation across lanes but both active policies exhausted their three turns with an
+evidence-class-diversity gap, so its machine gate failed and no owner packet exists. The local successor
 can also audit every important study path, patch up to four weak fields, re-audit once and create
 traceable `log`/`compare`/`count`/`track`/`mark`/`inspect` exercises under a separate four-call ceiling.
 Those finishing capabilities have synthetic coverage only. A private single-device phase store adds
 owner-checked mode-`0600` checkpoints, cancellation and safe resume without replaying an interrupted
 paid action; it is not hosted or multi-instance persistence. Three causal harnesses now isolate
-planning, structural repair and exact changed-packet synthesis. All remain fail-closed: A01/A02 lack
-numeric budgets, while A03 additionally lacks an A01-selected private packet.
+planning, structural repair and exact changed-packet synthesis. A01 is consumed, A02 has one exact
+18-expected/36-maximum call authorisation, and A03 lacks both an accepted A01 packet and a budget.
 
 The public beta is intentionally narrower than the local edition. Azure Static Web Apps and Azure
 Container Apps use separate origins and custom domains. Public mode does not publish local settings,
@@ -1162,8 +1162,10 @@ no-model planner baseline and adds the existing bounded Crossref adapter to Agen
 next evidence must separately ablate model planning against deterministic routing and targeted repair
 against regeneration before changed-packet synthesis. On 28 August 2026, the owner approved one A01
 run capped at three planner calls, five physical provider calls and three external turns per active
-lane, plus a sequential A02 run of 18 expected and 36 maximum model calls. A01 is active first; claim
-audit, editing, coaching, reliability, durable execution and clip-Agent work remain gated.
+lane, plus a sequential A02 run of 18 expected and 36 maximum model calls. A01 used three planner and
+four physical provider calls but failed both active-lane completion targets, so A03 remains blocked.
+A02 is active next; claim audit, editing, coaching, reliability, durable execution and clip-Agent work
+remain gated.
 
 The latest reviewed complete-workflow and packet-only results are
 [`baseline-2026-08-21.json`](evals/results/baseline-2026-08-21.json) and

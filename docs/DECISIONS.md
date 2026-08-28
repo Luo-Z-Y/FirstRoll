@@ -872,6 +872,10 @@ its frozen thresholds or limits.
 - A03, hosted routing, Agent cut-over and clip analysis remain unauthorised.
 - Owner packet ratings are still a separate human action and cannot be supplied by the Agent.
 
+**Recorded outcome:** A01 consumed three planner and four physical provider calls but both active
+lanes ended budget-exhausted with the evidence-class-diversity gap still present. No private packet
+or human gate was opened. The sequential policy therefore activates A02 while A03 remains blocked.
+
 ## How to Add or Change a Decision
 
 1. Add a numbered entry to the index with `Proposed` status.
