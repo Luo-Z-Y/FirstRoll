@@ -569,7 +569,7 @@
       "revision_paid_validation_authorisation_consumed": true,
       "autonomous_successor": {
         "contract_path": "evals/autonomous_agent_programme.json",
-        "status": "a01_a02_completed_machine_failed_no_paid_authorisation",
+        "status": "post_result_semantic_revision_implemented_no_paid_authorisation",
         "paid_validation_authorised": false,
         "production_route_cutover": "no_go"
       }

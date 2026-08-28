@@ -1686,7 +1686,7 @@ Evidence rules:
 7. All formal-analysis sections must use status "viewing_hypothesis" because no clip evidence is supplied.
 8. Do not state remembered details about this film, even if you believe they are true. Turn them into conditional propositions for the viewer to test.
 9. If ATTRIBUTED CRITICAL CLAIMS is empty, every critic_claim_ids array must be empty. Never invent a critic claim ID.
-10. A video description states how an uploader presents a resource; it does not prove what is said in the video. Captions may be incomplete or automatic. Do not infer speaker identity or creator intention unless the evidence item is explicitly typed creator_stated.
+10. A scholarly_abstract reports what a publication abstract claims; it is not direct film observation. A video_context item states how an uploader presents a resource or provides unverified text; it does not prove what is said in the video. Captions may be incomplete or automatic. Do not infer speaker identity or creator intention unless the evidence item is explicitly typed creator_stated.
 11. If ATTRIBUTED SOURCE TEXT is empty, every attributed_source_ids array must be empty. Never invent an evidence ID.
 12. Output valid JSON only.
 13. Treat the sections as consecutive movements of one essay, not independent cards. Each section must advance the central argument, develop a distinct formal relation and avoid repeating the same thesis.

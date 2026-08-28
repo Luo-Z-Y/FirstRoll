@@ -1,5 +1,48 @@
 # FirstRoll Project Progress
 
+### 28 August 2026 — Post-result evidence semantics corrected without paid calls
+
+A01 diagnosis:
+
+1. `EvidencePacket` normalised every Crossref abstract, public review and unverified video description
+   or caption to `critic_reported`. The Agent therefore measured one film-specific evidence class even
+   when it had acquired scholarship plus video context or criticism.
+2. `AgentEvidenceAssessment.sufficient` checked base packet status and independent origins but did not
+   require its own `evidence_class_diversity` gap to close. This produced the contradictory retained
+   telemetry `agent_status: sufficient` plus a remaining gap.
+3. After the third planning turn, evidence-only mode still passed through the synthesis-oriented total
+   model-call guard. It therefore stopped budget-exhausted before converting sufficient evidence to
+   `EVIDENCE_READY`, even though evidence-only evaluation makes no synthesis call.
+
+No-call correction:
+
+- added explicit `scholarly_abstract` and `video_context` evidence types while preserving
+  `critic_reported`, verified `creator_stated` and film-observation boundaries;
+- Crossref abstracts and video context now constitute real epistemic classes rather than provider
+  names hidden inside one class;
+- a recovered packet is sufficient only when base quality passes and every required typed gap is
+  closed; an initially passed packet retains its zero-call guarantee;
+- Crossref and video-text actions may address evidence-class diversity, and deterministic routing
+  chooses the strongest remaining class-aware action;
+- evidence-only mode reserves one virtual completion slot after the final planner turn. It makes no
+  synthesis call and does not relax planner, provider, step, deadline, character or item limits;
+- tests reproduce two criticism origins remaining insufficient, Crossref closing the class gap and
+  evidence-only completion after the final permitted planner slot.
+
+Integrity boundary:
+
+- historical A01 and A02 reports, outcomes, calls and denominators are unchanged;
+- the fixes do not select a planning policy or reconstruct a private packet;
+- any provider-backed validation requires a distinct experiment ID, fresh exact budget, fresh paths
+  and committed source; no such spend is authorised.
+
+Next actionable work:
+
+1. Validate all static and synthetic contracts and merge this no-call correction.
+2. Design a distinct revised acquisition experiment and a patch-only reliability experiment; freeze
+   them before asking for any new budget.
+3. Keep A03, hosted routing, production cut-over and clip-Agent work blocked.
+
 ### 28 August 2026 — A02 patching succeeds, but the frozen aggregate gate fails
 
 Measured A02 result from source `9be19e7b`:
@@ -207,7 +250,7 @@ Acceptance evidence:
   wins, no fixed evidence-responsibility win and no severe candidate grounding concern;
 - text, acquisition and changed-study review readers reject a `.firstroll` symlink that resolves
   outside the repository before reading any private artifact;
-- all 356 automated tests pass with the retained Starlette/httpx deprecation warning;
+- all 359 automated tests pass with the retained Starlette/httpx deprecation warning;
 - scoped Ruff, new-module MyPy, compilation, JSON and documentation-link checks pass; no paid call
   was made.
 

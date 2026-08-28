@@ -63,6 +63,7 @@ class EvidenceKind(StrEnum):
     FILM_RECORD = "film_record"
     THEORY_FRAMEWORK = "theory_framework"
     CRITIC_REPORTED = "critic_reported"
+    SCHOLARLY_ABSTRACT = "scholarly_abstract"
     CREATOR_STATED = "creator_stated"
     VIDEO_CONTEXT = "video_context"
 

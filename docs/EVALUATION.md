@@ -427,6 +427,13 @@ five samples failed citation validation. P50/P95 ratios were `0.055319/0.052065`
 `0.322449`, and patch quality was non-inferior, but the frozen regeneration-completion target failed.
 A02 is therefore a formal machine failure and is consumed.
 
+Post-result no-call analysis found that A01 had flattened Crossref/video items into
+`critic_reported`, could label a packet sufficient while retaining a required gap, and let the
+synthesis-oriented total model-call check block evidence-only completion after the final planner
+turn. The corrected implementation distinguishes `scholarly_abstract` and `video_context`, requires
+all mandatory gaps to close and uses one virtual non-call completion slot in evidence-only mode.
+These changes have synthetic tests only and do not alter or rerun A01.
+
 A03 now has a fail-closed harness but cannot run until A01 machine and owner-attested evidence selects
 an exact private packet and planning policy. It schedules ten alternating generations per packet,
 allows no reacquisition and counts failures as zero. In addition to completion, quality, latency,

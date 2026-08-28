@@ -71,16 +71,13 @@ def assess_agent_evidence(
         gaps.append(EvidenceGap.FILM_SPECIFIC_EVIDENCE)
     if recovery_diversity_required and len(origins) < MIN_RECOVERED_INDEPENDENT_ORIGINS:
         gaps.append(EvidenceGap.INDEPENDENT_ORIGINS)
-    if len(evidence_classes) < 2:
+    if recovery_diversity_required and len(evidence_classes) < 2:
         gaps.append(EvidenceGap.EVIDENCE_CLASS_DIVERSITY)
     relevance_ratio = float(quality.get("focus_relevance", {}).get("relevance_ratio", 0.0) or 0.0)
     if quality.get("issues") and "focus_relevance_low" in quality["issues"]:
         gaps.append(EvidenceGap.FOCUS_RELEVANCE)
 
-    sufficient = bool(
-        quality["status"] == "passed"
-        and (not recovery_diversity_required or len(origins) >= MIN_RECOVERED_INDEPENDENT_ORIGINS)
-    )
+    sufficient = bool(quality["status"] == "passed" and not gaps)
     return AgentEvidenceAssessment(
         sufficient=sufficient,
         base_status=str(quality["status"]),
@@ -105,6 +102,7 @@ TOOL_GAP_CAPABILITIES: dict[ToolName, frozenset[EvidenceGap]] = {
         {
             EvidenceGap.FILM_SPECIFIC_EVIDENCE,
             EvidenceGap.INDEPENDENT_ORIGINS,
+            EvidenceGap.EVIDENCE_CLASS_DIVERSITY,
             EvidenceGap.FOCUS_RELEVANCE,
         }
     ),
@@ -145,7 +143,10 @@ TOOL_GAP_PRIORITY: dict[EvidenceGap, tuple[ToolName, ...]] = {
         ToolName.FETCH_DOUBAN_REVIEWS,
         ToolName.FETCH_LETTERBOXD_REVIEWS,
     ),
-    EvidenceGap.EVIDENCE_CLASS_DIVERSITY: (ToolName.SEARCH_YOUTUBE_RESOURCES,),
+    EvidenceGap.EVIDENCE_CLASS_DIVERSITY: (
+        ToolName.FETCH_CROSSREF_RESEARCH,
+        ToolName.SEARCH_YOUTUBE_RESOURCES,
+    ),
     EvidenceGap.FOCUS_RELEVANCE: (
         ToolName.FETCH_CROSSREF_RESEARCH,
         ToolName.FETCH_GUARDIAN_REVIEWS,

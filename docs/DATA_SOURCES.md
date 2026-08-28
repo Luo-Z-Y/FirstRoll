@@ -157,9 +157,13 @@ The planner proposes one supplied gap and one supplied tool from aggregate diagn
 deterministic router supplies the comparison baseline. Crossref's existing title/director match,
 abstract-only scope, HTTPS restriction and response cap apply unchanged when the Agent chooses it.
 
-Acquired review summaries, abstracts, descriptions and captions remain attributed source text. They
-are merged in memory, passed through the unchanged evidence selector and discarded with the Agent
-service; they are not written to `.firstroll/criticism` or `.firstroll/videos`. The acquisition stage
+Acquired review summaries, abstracts, descriptions and captions remain attributed source text.
+Professional/public reviews are typed `critic_reported`, Crossref results `scholarly_abstract`, and
+uploader descriptions or unverified captions `video_context`; only explicitly verified speaker text
+may become `creator_stated`. These classes preserve epistemic diversity without treating any class as
+direct film observation. Items are merged in memory, passed through the bounded evidence selector and
+discarded with the Agent service; they are not written to `.firstroll/criticism` or
+`.firstroll/videos`. The acquisition stage
 does not structure new reviews into model-generated critical claims, because that would introduce a
 second causal change. Provider rights, identity checks, response limits and epistemic boundaries
 remain unchanged.

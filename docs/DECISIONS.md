@@ -876,7 +876,10 @@ its frozen thresholds or limits.
 lanes ended budget-exhausted with the evidence-class-diversity gap still present. No private packet
 or human gate was opened. A02 then showed 9/9 valid, exact-preserving field patches versus 4/9 valid
 complete regenerations; its mandatory regeneration-completion target therefore failed. Both
-sequential approvals are consumed and A03 remains blocked.
+sequential approvals are consumed and A03 remains blocked. A later no-call correction keeps
+scholarly abstracts and video context as distinct epistemic types, makes every required gap part of
+sufficiency and prevents evidence-only completion from reserving a real synthesis call. It does not
+change either historical outcome; provider validation requires a new decision and budget.
 
 ## How to Add or Change a Decision
 

@@ -91,9 +91,12 @@ def test_evidence_packet_includes_review_bodies_and_typed_video_text() -> None:
 
     assert [source.evidence_id for source in packet.attributed_sources] == ["E1", "E2", "E3"]
     assert packet.attributed_sources[0].content == review.summary
-    assert packet.attributed_sources[1].locator == "YouTube · uploader description · Festival channel"
+    assert (
+        packet.attributed_sources[1].locator == "YouTube · uploader description · Festival channel"
+    )
+    assert packet.attributed_sources[1].evidence_type == "video_context"
     assert packet.attributed_sources[2].locator == "YouTube · auto_captions · Festival channel"
-    assert packet.attributed_sources[2].evidence_type == "critic_reported"
+    assert packet.attributed_sources[2].evidence_type == "video_context"
     assert any("speaker identity" in boundary for boundary in packet.boundaries)
     selection = packet.retrieval["attributed_selection"]
     assert selection["candidate_items"] == 3

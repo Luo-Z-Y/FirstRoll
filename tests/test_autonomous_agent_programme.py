@@ -18,7 +18,7 @@ def programme() -> dict:
 def test_autonomous_programme_closes_paid_and_production_gates_after_A02() -> None:
     value = programme()
 
-    assert value["status"] == "a01_a02_completed_machine_failed_no_paid_authorisation"
+    assert value["status"] == "post_result_semantic_revision_implemented_no_paid_authorisation"
     assert value["owner_mandate"]["implementation_authorised"] is True
     assert value["owner_mandate"]["provider_adapter_changes_authorised"] is True
     assert value["owner_mandate"]["paid_model_or_provider_calls_authorised"] is False
@@ -79,6 +79,24 @@ def test_autonomous_programme_matches_the_independent_origin_and_provider_contra
     )
     assert value["foundation"]["deterministic_baseline_available"] is True
     assert value["foundation"]["crossref_agent_provider_available"] is True
+    assert value["post_result_semantic_revision"] == {
+        "status": "implemented_with_synthetic_tests_not_provider_validated",
+        "historical_A01_result_unchanged": True,
+        "historical_A02_result_unchanged": True,
+        "paid_calls_made": 0,
+        "diagnoses": [
+            "scholarship_and_video_context_were_flattened_into_critic_reported",
+            "agent_status_could_be_sufficient_while_required_gaps_remained",
+            "evidence_only_completion_reserved_a_nonexistent_synthesis_model_call",
+        ],
+        "corrections": [
+            "scholarly_abstract_and_video_context_are_distinct_evidence_types",
+            "recovered_packet_sufficiency_requires_every_required_gap_to_be_closed",
+            "crossref_and_video_context_can_address_evidence_class_diversity",
+            "evidence_only_mode_uses_a_virtual_completion_slot_without_relaxing_paid_action_budgets",
+        ],
+        "future_paid_reacquisition_requires_new_experiment_id_and_budget": True,
+    }
     assert value["solid_definition"]["value_against_deterministic_baseline_required"] is True
     assert value["solid_definition"]["minimum_comparable_observations_per_critical_strategy"] == 20
     assert value["autonomous_finisher"] == {
