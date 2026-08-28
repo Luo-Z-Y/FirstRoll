@@ -192,7 +192,7 @@
   },
   "autonomous_successor": {
     "contract_path": "evals/autonomous_agent_programme.json",
-    "status": "post_result_semantic_revision_implemented_no_paid_authorisation",
+    "status": "revision_reliability_harnesses_implemented_awaiting_fresh_budgets",
     "implementation_authorised": true,
     "paid_validation_authorised": false,
     "hosted_route_authorised": false,

@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 import stat
 import sys
-from typing import Any
+from typing import Any, cast
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -27,6 +27,7 @@ from tools.review_evidence_packets import (
 
 
 PROGRAMME_ID = "firstroll-autonomous-research-agent-v1"
+SUPPORTED_EXPERIMENT_IDS = {"A01", "A01R"}
 EXPECTED_LANES = {
     "fixed_no_acquisition",
     "deterministic_gap_router",
@@ -59,7 +60,10 @@ def load_private_packets(path: Path) -> dict[str, Any]:
     if stat.S_IMODE(resolved.stat().st_mode) & 0o077:
         raise PermissionError("The private acquisition snapshot must use mode 0600.")
     payload = json.loads(resolved.read_text(encoding="utf-8"))
-    if payload.get("programme_id") != PROGRAMME_ID or payload.get("experiment_id") != "A01":
+    if (
+        payload.get("programme_id") != PROGRAMME_ID
+        or payload.get("experiment_id") not in SUPPORTED_EXPERIMENT_IDS
+    ):
         raise ValueError("The packet snapshot belongs to another experiment.")
     if (
         not str(payload.get("source_revision") or "").strip()
@@ -88,7 +92,7 @@ def load_private_packets(path: Path) -> dict[str, Any]:
         EvidencePacket.model_validate(item["packet"])
     if seen != set(mapping):
         raise ValueError("The blinded packet labels do not match their private mapping.")
-    return payload
+    return cast(dict[str, Any], payload)
 
 
 def aggregate_review(review: dict[str, Any], packets: dict[str, Any]) -> dict[str, Any]:
@@ -138,7 +142,7 @@ def aggregate_review(review: dict[str, Any], packets: dict[str, Any]) -> dict[st
     return {
         "schema_version": 1,
         "programme_id": PROGRAMME_ID,
-        "experiment_id": "A01",
+        "experiment_id": packets["experiment_id"],
         "recorded_at": review.get("recorded_at"),
         "source_revision": packets.get("source_revision"),
         "suite_fingerprint": packets.get("suite_fingerprint"),
@@ -185,7 +189,7 @@ def main_cli() -> int:
     review: dict[str, Any] = {
         "schema_version": 1,
         "programme_id": PROGRAMME_ID,
-        "experiment_id": "A01",
+        "experiment_id": packets["experiment_id"],
         "source_revision": revision,
         "suite_fingerprint": packets["suite_fingerprint"],
         "recorded_at": datetime.now(timezone.utc).isoformat(),
@@ -195,7 +199,8 @@ def main_cli() -> int:
     if private_output.is_file():
         review = json.loads(private_output.read_text(encoding="utf-8"))
         if (
-            review.get("source_revision") != revision
+            review.get("experiment_id") != packets["experiment_id"]
+            or review.get("source_revision") != revision
             or review.get("suite_fingerprint") != packets["suite_fingerprint"]
         ):
             raise SystemExit("The saved review belongs to another revision or suite.")

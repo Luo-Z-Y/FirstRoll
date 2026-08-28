@@ -81,7 +81,7 @@ def approved_programme() -> dict[str, Any]:
     value = programme()
     experiment = evaluator.acquisition_experiment(value)
     proposed = experiment["proposed_budget"]
-    value["status"] = "a01_acquisition_ablation_approved"
+    value["status"] = "a01r_acquisition_ablation_approved"
     value["owner_mandate"]["paid_model_or_provider_calls_authorised"] = True
     experiment["status"] = "approved_one_run"
     experiment["paid_budget_confirmation"] = {
@@ -92,11 +92,20 @@ def approved_programme() -> dict[str, Any]:
         "approved_maximum_external_tool_turns_per_active_lane": proposed[
             "maximum_external_tool_turns_per_active_lane"
         ],
+        "approved_case_suite_path": "evals/agent_cases.json",
+        "approved_identity_reference_path": ("evals/results/baseline-reliability-2026-08-21.json"),
+        "approved_report_path": "evals/results/autonomous-agent-acquisition-revised.json",
+        "approved_private_packet_path": (
+            ".firstroll/evaluations/autonomous-agent-acquisition-revised.json"
+        ),
+        "approved_run_lock_path": (
+            ".firstroll/evaluations/autonomous-agent-acquisition-revised.lock"
+        ),
     }
     return value
 
 
-def test_current_programme_refuses_consumed_acquisition_ablation() -> None:
+def test_current_programme_refuses_unfunded_revised_acquisition_ablation() -> None:
     assert evaluator.comparison_authorised(programme()) is False
 
 
@@ -117,7 +126,7 @@ def test_acquisition_authorisation_requires_every_exact_budget() -> None:
 
 
 def test_acquisition_run_inputs_must_match_approved_paths(tmp_path: Path) -> None:
-    value = programme()
+    value = approved_programme()
     experiment = evaluator.acquisition_experiment(value)
     confirmation = experiment["paid_budget_confirmation"]
     args = evaluator.argparse.Namespace(
@@ -246,6 +255,8 @@ def test_acquisition_targets_require_both_active_lanes_and_shared_budget() -> No
             "initial_packet_fingerprint": "same",
             "status": "passed",
             "independent_origins": 2,
+            "film_specific_evidence_classes": 2,
+            "remaining_gaps": [],
             "external_tool_calls": 2,
             "model_planner_calls": 0,
         },
@@ -254,6 +265,8 @@ def test_acquisition_targets_require_both_active_lanes_and_shared_budget() -> No
             "initial_packet_fingerprint": "same",
             "status": "passed",
             "independent_origins": 2,
+            "film_specific_evidence_classes": 2,
+            "remaining_gaps": [],
             "external_tool_calls": 2,
             "model_planner_calls": 2,
         },

@@ -1,5 +1,44 @@
 # FirstRoll Project Progress
 
+### 28 August 2026 — Distinct revision and patch-reliability gates implemented
+
+Delivered without a model or provider call:
+
+1. Added A01R as a distinct class-aware acquisition experiment. It cannot reuse A01's result, private
+   lock, output path or consumed budget.
+2. Preserved the acquire-once fixed/deterministic/model lanes and proposed maxima of three planner
+   calls, five physical provider calls and three external turns per active lane.
+3. Strengthened A01R machine acceptance: both active lanes must finish, each must retain at least two
+   independent origins and two explicit film-specific evidence classes, and no required gap may
+   remain. Fixed-lane zero calls and every prior sampling/budget target still apply.
+4. Updated blinded acquisition review to preserve either `A01` or `A01R` identity through private
+   scoring and redacted aggregation. A03 now binds all machine/private/human artifacts to the exact
+   accepted acquisition experiment rather than silently assuming the historical A01.
+5. Added A02R as a patch-only reliability gate instead of paying again for the A02 regeneration lane
+   that failed 5/9 citation checks.
+6. A02R schedules six repetitions across four controlled fixtures—one citation, one schema field,
+   two citation fields, and one mixed schema/citation pair—for 24 comparable targeted patches.
+7. Froze A02R at 24/24 valid exact-preserving outputs, mean quality at least `99`, P95 no greater than
+   five seconds, at most 36,000 tokens, complete telemetry and 24 expected/48 maximum model calls.
+   Planner/provider calls remain zero.
+8. Both harnesses bind future approval to committed source, exact fresh report/private paths and a
+   mode-`0600` one-run lock before spend. Both currently refuse because confirmations are null.
+
+Known constraints:
+
+- A01R requires new provider sampling and owner packet review; no result can be inferred from the
+  synthetic semantic fix.
+- A02R's thresholds are frozen from the demonstrated patch latency plus explicit headroom, but 24
+  samples still cover synthetic controlled faults rather than arbitrary prose defects.
+- A03 remains blocked by A01R. Finisher provider validation and durable reliability remain later
+  gates; production remains fixed.
+
+Next actionable work:
+
+1. Commit and merge the no-call harness checkpoint after full CI.
+2. Request separate exact A01R and A02R budgets only after the owner inspects these frozen contracts.
+3. Run neither harness under A01/A02's consumed authorisations.
+
 ### 28 August 2026 — Post-result evidence semantics corrected without paid calls
 
 A01 diagnosis:
@@ -250,7 +289,7 @@ Acceptance evidence:
   wins, no fixed evidence-responsibility win and no severe candidate grounding concern;
 - text, acquisition and changed-study review readers reject a `.firstroll` symlink that resolves
   outside the repository before reading any private artifact;
-- all 359 automated tests pass with the retained Starlette/httpx deprecation warning;
+- all 367 automated tests pass with the retained Starlette/httpx deprecation warning;
 - scoped Ruff, new-module MyPy, compilation, JSON and documentation-link checks pass; no paid call
   was made.
 

@@ -200,6 +200,13 @@ def fault_candidate(scenario: str) -> tuple[dict[str, Any], tuple[str, ...]]:
             "sections.0.attributed_source_ids",
             "sections.2.source_ids",
         )
+    if scenario == "one_schema_and_one_citation":
+        candidate["sections"][1]["mechanism"] = "Too short."
+        candidate["sections"][3]["source_ids"] = ["S999"]
+        return candidate, (
+            "sections.1.mechanism",
+            "sections.3.source_ids",
+        )
     raise ValueError("Unknown structural-repair fault scenario.")
 
 

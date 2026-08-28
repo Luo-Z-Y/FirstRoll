@@ -879,7 +879,9 @@ complete regenerations; its mandatory regeneration-completion target therefore f
 sequential approvals are consumed and A03 remains blocked. A later no-call correction keeps
 scholarly abstracts and video context as distinct epistemic types, makes every required gap part of
 sufficiency and prevents evidence-only completion from reserving a real synthesis call. It does not
-change either historical outcome; provider validation requires a new decision and budget.
+change either historical outcome. Distinct A01R and A02R harnesses now gate corrected class-aware
+acquisition and 24-sample targeted-patch reliability; each requires a new decision, exact paths and a
+fresh budget.
 
 ## How to Add or Change a Decision
 

@@ -118,10 +118,13 @@ def select_a01_packets(
         raise ValueError("The programme has no accepted A01 result.")
     selected_lane = str(result.get("selected_lane") or "")
     if selected_lane not in {"deterministic_gap_router", "model_gap_planner"}:
-        raise ValueError("The accepted A01 policy lane is invalid.")
+        raise ValueError("The accepted acquisition policy lane is invalid.")
+    experiment_id = str(result.get("experiment_id") or "A01")
+    if experiment_id not in {"A01", "A01R"}:
+        raise ValueError("The accepted acquisition experiment is invalid.")
     shared = {
         "programme_id": programme["programme_id"],
-        "experiment_id": "A01",
+        "experiment_id": experiment_id,
         "source_revision": result.get("source_revision"),
         "suite_fingerprint": result.get("suite_fingerprint"),
     }

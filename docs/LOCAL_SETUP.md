@@ -329,7 +329,16 @@ This historical one-run command consumed three planner and four physical provide
 both active-lane completion targets. Its lock must remain in place and the command must not be run
 again. No private snapshot exists, so do not invoke the A01 owner-review command. Current source has
 a no-call semantic correction for scholarship/video classes and final-turn evidence-only completion,
-but that correction has no provider authorisation and cannot reuse this command or lock.
+but that correction has no provider authorisation and cannot reuse this command or lock. The distinct
+A01R evaluator is installed, but this illustrative command refuses until fresh exact limits and paths
+are committed:
+
+```bash
+FIRSTROLL_LOCAL_AGENT_ENABLED=1 uv run python tools/evaluate_agent_acquisition.py \
+  --output evals/results/autonomous-agent-acquisition-revised-YYYY-MM-DD.json \
+  --private-packets .firstroll/evaluations/autonomous-agent-acquisition-revised-YYYY-MM-DD.json \
+  --run-lock .firstroll/evaluations/autonomous-agent-acquisition-revised-YYYY-MM-DD.lock
+```
 
 The separate controlled repair command is:
 
@@ -342,10 +351,17 @@ FIRSTROLL_LOCAL_AGENT_ENABLED=1 uv run python tools/evaluate_agent_repair.py \
 It uses public synthetic evidence and records no generated prose, but still makes real DeepSeek calls.
 This historical one-run command used exactly 18 calls. Patching passed 9/9, but regeneration passed
 4/9, so the complete machine gate failed. Its private lock must remain in place and the command must
-not be run again.
+not be run again. The distinct patch-only A02R reliability harness also refuses without a fresh
+24-expected, 48-maximum model budget and exact paths:
 
-A03 changed-packet synthesis is installed but blocked: A01 produced no machine-passing,
-owner-approved private packet, and A03 has no 20-expected/60-maximum synthesis budget. It
+```bash
+FIRSTROLL_LOCAL_AGENT_ENABLED=1 uv run python tools/evaluate_agent_patch_reliability.py \
+  --output evals/results/autonomous-agent-patch-reliability-YYYY-MM-DD.json \
+  --run-lock .firstroll/evaluations/autonomous-agent-patch-reliability-YYYY-MM-DD.lock
+```
+
+A03 changed-packet synthesis is installed but blocked: A01R has no machine-passing, owner-approved
+private packet, and A03 has no 20-expected/60-maximum synthesis budget. It
 makes no planner/provider call and will not reacquire the packet:
 
 ```bash

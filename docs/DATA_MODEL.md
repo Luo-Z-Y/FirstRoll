@@ -34,7 +34,8 @@ bounded Discover workspace in per-tab session storage solely to survive view cha
 | `.firstroll/evaluations/local-agent-packets.json` | Historical local comparison | Conditional | Full candidate packets for human review; the failed original run wrote none | Yes |
 | `.firstroll/evaluations/text-agent-packets.json` | Revised local comparison | Conditional | Changed candidate packets, written only after all repeated machine targets pass | Yes |
 | `.firstroll/evaluations/text-agent-human-review*.json` | Revised local comparison | Conditional | Private scores/notes and a separate score-only local aggregate | Yes |
-| `.firstroll/evaluations/autonomous-agent-acquisition-*` | A01 local ablation | Conditional | Three blinded packets, private mapping, one-run lock and owner packet scores/notes | Yes |
+| `.firstroll/evaluations/autonomous-agent-acquisition-*` | A01/A01R local ablation | Conditional | Three blinded packets, exact experiment mapping, one-run lock and owner packet scores/notes | Yes |
+| `.firstroll/evaluations/autonomous-agent-patch-reliability-*` | A02R local ablation | One-run | Consumption lock only; generated patches and studies remain process-local | Yes |
 | `.firstroll/evaluations/autonomous-agent-changed-packet-*` | A03 local ablation | Conditional | Three blinded fixed/candidate study pairs, packets, private mapping, lock and owner preferences/notes | Yes |
 
 The default-off local Agent adapter does not write newly acquired comparison sources to
@@ -63,8 +64,9 @@ targets, so only its redacted hashes/counts/timings report and private mode-`060
 exist; no packet or mapping was written. A03 reuses the exact A01 packet fingerprint
 and stores only predeclared repetitions 1, 5 and 10 for blinded owner review. Mappings, study prose,
 packets and notes remain private; only attested score/preference aggregates may be versioned later.
-One-run locks are retained so a consumed local authorisation cannot appear fresh. A02 likewise
-retains only its mode-`0600` consumption lock and versioned per-sample timings, token counts, safe
+One-run locks are retained so a consumed local authorisation cannot appear fresh. A01R uses distinct
+paths and carries its experiment ID through the machine snapshot, owner review and A03 binding. A02
+likewise retains only its mode-`0600` consumption lock and versioned per-sample timings, token counts, safe
 failure categories and validity booleans; all patch and regeneration prose stayed in process memory.
 
 The local autonomous finisher returns private study/audit/coach objects directly to its caller. Audit

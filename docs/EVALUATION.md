@@ -434,17 +434,25 @@ turn. The corrected implementation distinguishes `scholarly_abstract` and `video
 all mandatory gaps to close and uses one virtual non-call completion slot in evidence-only mode.
 These changes have synthetic tests only and do not alter or rerun A01.
 
-A03 now has a fail-closed harness but cannot run until A01 machine and owner-attested evidence selects
+A01R is a distinct fail-closed harness over the corrected semantics. It retains the acquire-once
+three-lane design and proposed three-planner/five-physical-provider/three-turn ceilings, but adds
+mandatory two-class and zero-remaining-gap targets. A02R isolates patch reliability rather than
+repeating the failed regeneration lane: six repetitions across four controlled fault classes produce
+24 scheduled patch samples. Its frozen absolute gates require 24/24 exact-preserving valid repairs,
+mean quality at least `99`, P95 at most five seconds, no more than 36,000 tokens and complete
+telemetry. It proposes 24 expected and 48 maximum calls with no planner/provider calls. Neither
+revision has a paid confirmation or approved path.
+
+A03 now has a fail-closed harness but cannot run until A01R machine and owner-attested evidence selects
 an exact private packet and planning policy. It schedules ten alternating generations per packet,
 allows no reacquisition and counts failures as zero. In addition to completion, quality, latency,
 token, citation, identity and telemetry gates, at least 80% of candidate samples must actually cite a
-candidate-only attributed source. Lifecycle latency adds A01 acquisition to candidate synthesis.
+candidate-only attributed source. Lifecycle latency adds A01R acquisition to candidate synthesis.
 Only repetitions 1, 5 and 10 become private blinded study pairs after a machine pass; owner preference
 and severe-grounding checks then decide human value.
 
-Every ablation requires fresh paths, frozen thresholds and its own numeric owner budget. A01 and A02
-are consumed machine failures; no paid budget remains. A03's proposed 20–60 synthesis calls remain
-blocked by A01 and are not authorised. No successor result may
+Every ablation requires fresh paths, frozen thresholds and its own numeric owner budget. A01 and A02 are consumed machine failures; A01R and A02R are unconfirmed proposals. No paid budget
+remains. A03's proposed 20–60 synthesis calls remain blocked by A01R and are not authorised. No successor result may
 fill the missing private artifact in a historical report retrospectively.
 
 ## Deep Study Transparency Checkpoint

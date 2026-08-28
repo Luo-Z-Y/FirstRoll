@@ -1,6 +1,6 @@
 # Autonomous Research Agent Programme
 
-**Status:** A01/A02 consumed; post-result semantic correction implemented without paid validation; no Agent production route authorised
+**Status:** A01R/A02R harnesses implemented and awaiting fresh budgets; no paid validation or Agent production route authorised
 
 ## Goal
 
@@ -129,6 +129,14 @@ slot even in evidence-only mode. The implementation now keeps scholarship/video 
 requires all mandatory gaps to close and uses a virtual no-call completion slot after the final
 planner turn. These fixes do not alter or upgrade A01; any validation is a new experiment.
 
+### A01R — Class-aware planner revision
+
+A distinct fail-closed revision reuses the three A01 lanes but cannot reuse its result, lock or budget.
+Both active lanes must now finish with at least two origins, at least two explicit film-specific
+evidence classes and zero remaining required gaps. The acquire-once pool, three-planner/five-physical
+provider/three-turn proposed maxima and blinded owner gate remain unchanged. A01R is implemented but
+has no confirmation or approved output paths.
+
 ### A02 — Structural-repair ablation
 
 Inject controlled citation and schema faults into otherwise valid synthetic candidates. Compare the
@@ -142,10 +150,19 @@ tokens. Complete regeneration passed only 4/9 because five outputs failed citati
 regeneration latency and `0.322449` of its tokens, but the frozen regeneration-completion target
 failed. A02 remains a formal machine failure and its authorisation is consumed.
 
+### A02R — Targeted-patch reliability
+
+Do not repeat the unreliable regeneration control. A distinct patch-only harness schedules six
+repetitions over four controlled fault classes—24 comparable samples—including a mixed schema and
+citation fault. It retains failures as zero and requires 24/24 completion, complete citation/schema
+validity, exact accepted-field preservation, mean quality at least `99`, P95 no more than five seconds,
+at most 36,000 tokens and complete token/call telemetry. It proposes 24 expected and 48 maximum model
+calls with zero planner/provider calls. No budget or paths are confirmed.
+
 ### A03 — Changed-packet synthesis
 
-Only a packet that passes A01 is retained privately and used here. Compare that exact packet with its
-fixed origin; do not reacquire it. The accepted A01 result selects either model planning or the
+Only a packet that passes A01R is retained privately and used here. Compare that exact packet with its
+fixed origin; do not reacquire it. The accepted A01R result selects either model planning or the
 deterministic router; a model tie never overrides the simpler policy.
 
 The harness schedules ten alternating generations per lane: 20 expected synthesis calls and 60 if
@@ -153,13 +170,13 @@ every sample consumes both graph repairs. It permits zero planner/provider calls
 requires 10/10 completion in both lanes, candidate quality at least `96.94`, candidate-minus-fixed
 quality at least `0.0`, use of candidate-only attributed evidence in at least `0.80` of samples,
 complete quality/citation/identity/token telemetry, synthesis P50/P95 no greater than `1.10/1.25`,
-lifecycle P50/P95 including A01 acquisition no greater than `1.25/1.35`, and total tokens no greater
+lifecycle P50/P95 including A01R acquisition no greater than `1.25/1.35`, and total tokens no greater
 than `1.25×` fixed.
 
 If those gates pass, only predeclared repetitions 1, 5 and 10 are written privately as blinded
 fixed/candidate pairs. The owner must prefer candidate usefulness in at least two pairs, never prefer
 fixed evidence responsibility and find no severe candidate grounding concern. Unchanged cases are
-controls, not evidence of acquisition benefit. A03 remains blocked until A01 machine/human evidence
+controls, not evidence of acquisition benefit. A03 remains blocked until A01R machine/human evidence
 selects a packet; its proposed budget is not authorised.
 
 ## Capability Stages
@@ -229,7 +246,8 @@ No model, planner or provider call was made while implementing the foundation or
 four physical provider calls, failed its active-lane completion targets and produced no private packet.
 A02 then consumed exactly 18 calls; targeted repair passed 9/9, while complete regeneration passed
 4/9, so the mandatory regeneration-completion target failed. The post-result evidence semantics and
-evidence-only terminal path now have synthetic coverage but no provider-backed rerun. No paid
+evidence-only terminal path now have synthetic coverage but no provider-backed rerun. A01R and A02R
+are implemented as distinct one-run harnesses with unconfirmed proposed budgets. No paid
 authorisation remains. A03 still
-proposes 20 expected and 60 maximum synthesis calls only after an A01 machine and owner-review pass;
+proposes 20 expected and 60 maximum synthesis calls only after an A01R machine and owner-review pass;
 it is blocked and not authorised.
