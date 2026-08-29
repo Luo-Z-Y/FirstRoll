@@ -73,6 +73,14 @@ def test_autonomous_programme_matches_the_independent_origin_and_provider_contra
         MIN_RECOVERED_INDEPENDENT_ORIGINS
     )
     assert tools == {tool.value for tool in EXTERNAL_TOOLS}
+    assert value["foundation"]["planner_output"] == (
+        "exactly_one_native_tool_call_with_one_allow_listed_target_gap"
+    )
+    assert value["foundation"]["planner_protocol"] == "native_tool_calls"
+    assert value["foundation"]["legacy_planner_content_fallback"] is False
+    assert value["foundation"]["model_supplied_execution_arguments"] is False
+    assert value["foundation"]["raw_tool_results_returned_to_planner"] is False
+    assert value["foundation"]["independent_tool_authorisation_required"] is True
     assert value["foundation"]["tool_gap_capability_pair_validated"] is True
     assert value["foundation"]["no_addressable_tool_outcome"] == (
         "insufficient_evidence_without_provider_call"
@@ -141,8 +149,21 @@ def test_autonomous_experiments_preserve_results_and_gate_revisions() -> None:
         "deterministic_gap_router",
         "model_gap_planner",
     ]
+    assert experiments["A01"]["planner_protocol"] == "legacy_json_in_assistant_content"
     assert experiments["A01R"]["status"] == "harness_implemented_awaiting_fresh_budget"
     assert experiments["A01R"]["paid_budget_confirmation"] is None
+    assert experiments["A01R"]["planner_protocol"] == {
+        "request": "native_tool_calls",
+        "tool_choice": "required",
+        "exactly_one_call_per_planning_turn": True,
+        "parallel_calls_accepted": False,
+        "model_supplied_arguments": ["target_gap"],
+        "additional_arguments_accepted": False,
+        "execution_arguments": "constructed_from_verified_application_state",
+        "legacy_content_json_fallback": False,
+        "raw_tool_result_returned_to_planner": False,
+        "independent_application_authorisation_required": True,
+    }
     assert experiments["A01R"]["revision_contract"] == {
         "explicit_scholarly_abstract_type": True,
         "explicit_video_context_type": True,

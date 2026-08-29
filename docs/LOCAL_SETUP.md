@@ -330,8 +330,11 @@ both active-lane completion targets. Its lock must remain in place and the comma
 again. No private snapshot exists, so do not invoke the A01 owner-review command. Current source has
 a no-call semantic correction for scholarship/video classes and final-turn evidence-only completion,
 but that correction has no provider authorisation and cannot reuse this command or lock. The distinct
-A01R evaluator is installed, but this illustrative command refuses until fresh exact limits and paths
-are committed:
+A01R evaluator is installed and its model lane now requires DeepSeek-native `tool_calls`; it has no
+legacy content-JSON fallback. Exactly one call with only a `target_gap` argument is accepted, and
+trusted code still constructs provider arguments after independent authorisation. See
+[Native Tool Calling](NATIVE_TOOL_CALLING.md). The following illustrative command refuses until fresh
+exact limits and paths are committed:
 
 ```bash
 FIRSTROLL_LOCAL_AGENT_ENABLED=1 uv run python tools/evaluate_agent_acquisition.py \

@@ -418,6 +418,23 @@ def evaluate_targets(
             not by_lane[lane]["remaining_gaps"]
             for lane in ("deterministic_gap_router", "model_gap_planner")
         ),
+        "planner_protocol_integrity": (
+            by_lane["deterministic_gap_router"]["model_planner_calls"] == 0
+            and len(by_lane["deterministic_gap_router"]["planning_decisions"])
+            == by_lane["deterministic_gap_router"]["planning_turns"]
+            and all(
+                decision.get("protocol") == "deterministic_router"
+                for decision in by_lane["deterministic_gap_router"]["planning_decisions"]
+            )
+            and by_lane["model_gap_planner"]["model_planner_calls"]
+            == by_lane["model_gap_planner"]["planning_turns"]
+            and len(by_lane["model_gap_planner"]["planning_decisions"])
+            == by_lane["model_gap_planner"]["planning_turns"]
+            and all(
+                decision.get("protocol") == "native_tool_calls"
+                for decision in by_lane["model_gap_planner"]["planning_decisions"]
+            )
+        ),
         "model_planner_call_budget": (
             by_lane["model_gap_planner"]["model_planner_calls"]
             <= proposed["maximum_model_planner_calls"]

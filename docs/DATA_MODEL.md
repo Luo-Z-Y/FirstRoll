@@ -55,13 +55,15 @@ strategies can reach report schema 3.
 The successor autonomous contract is versioned at
 `evals/autonomous_agent_programme.json`; it contains capability names, provider scopes, thresholds and
 statuses only. Typed gaps and deterministic/model planning decisions contain allow-listed identifiers,
-counts and timings—not source bodies, URLs or free-form reasoning. Crossref acquisition remains
+protocol labels, counts and timings—not source bodies, URLs, native call IDs, function arguments or
+free-form reasoning. The native planner exposes only `target_gap`; its transient call envelope is
+validated and discarded before trusted adapter arguments are constructed. Crossref acquisition remains
 process-local exactly like other Agent provider results. Normalised attributed items retain explicit
 `critic_reported`, `scholarly_abstract`, `video_context`, `creator_stated` or `film_observed` types;
 provider names alone are not used as an epistemic-diversity count. A01 packet and A03 study snapshots are
 written only after their respective machine gates pass. A01 failed both active-lane completion
 targets, so only its redacted hashes/counts/timings report and private mode-`0600` consumption lock
-exist; no packet or mapping was written. A03 reuses the exact A01 packet fingerprint
+exist; no packet or mapping was written. A03 reuses the exact accepted A01R packet fingerprint
 and stores only predeclared repetitions 1, 5 and 10 for blinded owner review. Mappings, study prose,
 packets and notes remain private; only attested score/preference aggregates may be versioned later.
 One-run locks are retained so a consumed local authorisation cannot appear fresh. A01R uses distinct

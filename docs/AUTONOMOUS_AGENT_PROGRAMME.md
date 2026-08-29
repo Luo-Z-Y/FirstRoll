@@ -1,6 +1,6 @@
 # Autonomous Research Agent Programme
 
-**Status:** A01R/A02R harnesses implemented and awaiting fresh budgets; no paid validation or Agent production route authorised
+**Status:** A01R now uses native tool calls and A02R is implemented; both await fresh budgets and no Agent production route is authorised
 
 ## Goal
 
@@ -69,15 +69,27 @@ excerpts from being described as genuine source diversity. Crossref abstracts ar
 `scholarly_abstract`; uploader descriptions and unverified captions are `video_context`; criticism
 remains `critic_reported`, and only verified speaker text may be `creator_stated`.
 
-The model planner now returns a bounded objective and action, for example:
+Historical A01 asked the model to return a bounded objective and action as JSON in assistant
+content. A01R replaces that protocol with one required native function call, for example:
 
 ```json
-{"target_gap":"independent_origins","tool":"fetch_crossref_research"}
+{
+  "id": "call_123",
+  "type": "function",
+  "function": {
+    "name": "fetch_crossref_research",
+    "arguments": "{\"target_gap\":\"independent_origins\"}"
+  }
+}
 ```
 
-It sees film identity, the focus, safe aggregate gaps, each tool's declared gap capabilities and
-provider readiness—not evidence text. The controller rejects a mismatched objective/tool pair; when
-no remaining tool can address a gap it stops insufficient without a provider call. A separate
+The model sees film identity, the focus, safe aggregate gaps, each function's declared gap
+capabilities and safe provider readiness—not evidence text. It may supply only `target_gap`; trusted
+Python constructs film IDs, queries, limits and credentials. The controller rejects zero, multiple,
+legacy-content, extra-argument or mismatched objective/function proposals, then independently
+authorises the accepted proposal. When no ready function can address a gap it stops insufficient
+before a model call. Raw tool output is never returned to the planner. See
+[Native Tool Calling](NATIVE_TOOL_CALLING.md) for the detailed code comparison. A separate
 deterministic gap router implements the strongest simple baseline. If the model planner
 cannot outperform or more efficiently match that baseline, it will be removed rather than preserved
 for architectural appearance.
@@ -134,8 +146,10 @@ planner turn. These fixes do not alter or upgrade A01; any validation is a new e
 A distinct fail-closed revision reuses the three A01 lanes but cannot reuse its result, lock or budget.
 Both active lanes must now finish with at least two origins, at least two explicit film-specific
 evidence classes and zero remaining required gaps. The acquire-once pool, three-planner/five-physical
-provider/three-turn proposed maxima and blinded owner gate remain unchanged. A01R is implemented but
-has no confirmation or approved output paths.
+provider/three-turn proposed maxima and blinded owner gate remain unchanged. Its machine gate now
+also requires `native_tool_calls` on every model planning turn and `deterministic_router` on every
+baseline turn. A01R is implemented but has no confirmation or approved output paths, and native
+provider compatibility has not been tested with a paid call.
 
 ### A02 — Structural-repair ablation
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+import json
 import re
 from typing import Any, cast
 
@@ -519,6 +520,7 @@ def test_sparse_packet_acquires_independent_sources_then_synthesises() -> None:
     ]
     assert metrics["tool_attempts"][0]["duration_seconds"] >= 0
     assert metrics["planner_total_tokens"] == 44
+    assert {item["protocol"] for item in metrics["planning_decisions"]} == {"native_tool_calls"}
     assert len(metrics["planner_latency_seconds"]) == 2
     assert metrics["planner_latency_seconds"][0] >= 0
     assert metrics["study_observability"]["counts"]["total_tokens"] == 144
@@ -557,11 +559,13 @@ def test_deterministic_gap_router_is_a_no_model_planner_baseline() -> None:
     assert metrics["planning_decisions"] == [
         {
             "strategy": "deterministic_gap_router",
+            "protocol": "deterministic_router",
             "tool": "fetch_guardian_reviews",
             "target_gap": "film_specific_evidence",
         },
         {
             "strategy": "deterministic_gap_router",
+            "protocol": "deterministic_router",
             "tool": "fetch_crossref_research",
             "target_gap": "independent_origins",
         },
@@ -638,7 +642,37 @@ def test_one_successful_origin_after_provider_failure_stops_insufficient() -> No
     assert study.generation_calls == 0
 
 
-def test_deepseek_planner_sends_aggregate_gap_not_evidence_text() -> None:
+def native_planner_response(
+    tool: str,
+    gap: str,
+    *,
+    call_id: str = "call-research-1",
+    extra_arguments: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    arguments = {"target_gap": gap, **(extra_arguments or {})}
+    return {
+        "model": "planner-test",
+        "choices": [
+            {
+                "message": {
+                    "content": None,
+                    "tool_calls": [
+                        {
+                            "id": call_id,
+                            "type": "function",
+                            "function": {
+                                "name": tool,
+                                "arguments": json.dumps(arguments),
+                            },
+                        }
+                    ],
+                }
+            }
+        ],
+    }
+
+
+def test_deepseek_planner_uses_native_tool_call_without_evidence_text() -> None:
     captured: dict[str, Any] = {}
 
     class Settings:
@@ -648,17 +682,10 @@ def test_deepseek_planner_sends_aggregate_gap_not_evidence_text() -> None:
     def transport(url: str, payload: dict[str, Any] | None, key: str) -> dict[str, Any]:
         captured.update({"url": url, "payload": payload, "key": key})
         return {
-            "model": "planner-test",
-            "choices": [
-                {
-                    "message": {
-                        "content": (
-                            '{"target_gap":"film_specific_evidence",'
-                            '"tool":"fetch_guardian_reviews"}'
-                        )
-                    }
-                }
-            ],
+            **native_planner_response(
+                "fetch_guardian_reviews",
+                "film_specific_evidence",
+            ),
             "usage": {"prompt_tokens": 30, "completion_tokens": 4, "total_tokens": 34},
         }
 
@@ -686,15 +713,80 @@ def test_deepseek_planner_sends_aggregate_gap_not_evidence_text() -> None:
         },
     )
 
-    serialised = str(captured["payload"])
+    payload = captured["payload"]
+    serialised = str(payload)
     assert plan.tool is ToolName.FETCH_GUARDIAN_REVIEWS
     assert plan.target_gap is EvidenceGap.FILM_SPECIFIC_EVIDENCE
     assert plan.total_tokens == 34
+    assert "call-research-1" not in repr(plan)
+    assert payload["tool_choice"] == "required"
+    assert "response_format" not in payload
+    assert [item["function"]["name"] for item in payload["tools"]] == [
+        "fetch_guardian_reviews",
+        "fetch_letterboxd_reviews",
+    ]
+    assert all(
+        item["function"]["parameters"]["additionalProperties"] is False for item in payload["tools"]
+    )
+    assert all(
+        set(item["function"]["parameters"]["properties"]) == {"target_gap"}
+        for item in payload["tools"]
+    )
+    assert all(
+        item["function"]["parameters"]["properties"]["target_gap"]["enum"]
+        == ["film_specific_evidence"]
+        for item in payload["tools"]
+    )
     assert "PRIVATE_EVIDENCE_MUST_NOT_REACH_PLANNER" not in serialised
     assert "PRIVATE_PROVIDER_SECRET" not in serialised
     assert "PRIVATE_PROVIDER_NAME" not in serialised
     assert "PRIVATE_ISSUE_CODE" not in serialised
     assert "film_specific_evidence_sparse" in serialised
+
+
+def test_deepseek_planner_exposes_only_ready_gap_capabilities() -> None:
+    captured: dict[str, Any] = {}
+
+    class Settings:
+        def effective_secret(self, connector_id: str) -> str:
+            return "test-deepseek-key"
+
+    def transport(url: str, payload: dict[str, Any] | None, key: str) -> dict[str, Any]:
+        captured["payload"] = payload
+        return native_planner_response("fetch_crossref_research", "evidence_class_diversity")
+
+    service = DeepSeekStudyService(cast(Any, Settings()), transport=transport)
+    plan = service.plan_research_tool(
+        film=FILM,
+        focus=FOCUS,
+        packet_summary={
+            "status": "passed",
+            "agent_gaps": ["evidence_class_diversity"],
+        },
+        allowed_tools=(
+            ToolName.FETCH_GUARDIAN_REVIEWS,
+            ToolName.FETCH_CROSSREF_RESEARCH,
+            ToolName.SEARCH_YOUTUBE_RESOURCES,
+        ),
+        provider_states={
+            ToolName.FETCH_GUARDIAN_REVIEWS.value: {"state": "ready"},
+            ToolName.FETCH_CROSSREF_RESEARCH.value: {"state": "ready"},
+            ToolName.SEARCH_YOUTUBE_RESOURCES.value: {"state": "unavailable"},
+        },
+    )
+
+    assert plan.tool is ToolName.FETCH_CROSSREF_RESEARCH
+    assert [item["function"]["name"] for item in captured["payload"]["tools"]] == [
+        "fetch_crossref_research"
+    ]
+    assert json.loads(captured["payload"]["messages"][1]["content"])["provider_states"] == {
+        "fetch_crossref_research": {
+            "state": "ready",
+            "configured": False,
+            "installed": False,
+            "official": False,
+        }
+    }
 
 
 def test_deepseek_planner_rejects_gap_outside_policy_set() -> None:
@@ -703,17 +795,7 @@ def test_deepseek_planner_rejects_gap_outside_policy_set() -> None:
             return "test-deepseek-key"
 
     def transport(url: str, payload: dict[str, Any] | None, key: str) -> dict[str, Any]:
-        return {
-            "choices": [
-                {
-                    "message": {
-                        "content": (
-                            '{"target_gap":"focus_relevance","tool":"fetch_guardian_reviews"}'
-                        )
-                    }
-                }
-            ]
-        }
+        return native_planner_response("fetch_guardian_reviews", "focus_relevance")
 
     service = DeepSeekStudyService(cast(Any, Settings()), transport=transport)
     with pytest.raises(StudyGenerationError, match="gap outside the approved set"):
@@ -756,26 +838,148 @@ def test_deepseek_planner_stops_before_call_when_no_tool_can_address_gap() -> No
     assert calls == 0
 
 
+def test_deepseek_planner_omits_known_unavailable_tools_before_transport() -> None:
+    class Settings:
+        def effective_secret(self, connector_id: str) -> str:
+            return "test-deepseek-key"
+
+    calls = 0
+
+    def transport(url: str, payload: dict[str, Any] | None, key: str) -> dict[str, Any]:
+        nonlocal calls
+        calls += 1
+        return {}
+
+    service = DeepSeekStudyService(cast(Any, Settings()), transport=transport)
+    with pytest.raises(StudyGenerationError, match="No ready research tool"):
+        service.plan_research_tool(
+            film=FILM,
+            focus=FOCUS,
+            packet_summary={"status": "limited"},
+            allowed_tools=(ToolName.FETCH_GUARDIAN_REVIEWS,),
+            provider_states={ToolName.FETCH_GUARDIAN_REVIEWS.value: {"state": "unavailable"}},
+        )
+    assert calls == 0
+
+
 def test_deepseek_planner_rejects_tool_outside_policy_set() -> None:
     class Settings:
         def effective_secret(self, connector_id: str) -> str:
             return "test-deepseek-key"
 
     def transport(url: str, payload: dict[str, Any] | None, key: str) -> dict[str, Any]:
-        return {
-            "choices": [
-                {
-                    "message": {
-                        "content": (
-                            '{"target_gap":"film_specific_evidence","tool":"fetch_douban_reviews"}'
-                        )
-                    }
-                }
-            ]
-        }
+        return native_planner_response("fetch_douban_reviews", "film_specific_evidence")
 
     service = DeepSeekStudyService(cast(Any, Settings()), transport=transport)
     with pytest.raises(StudyGenerationError, match="outside the approved set"):
+        service.plan_research_tool(
+            film=FILM,
+            focus=FOCUS,
+            packet_summary={"status": "limited"},
+            allowed_tools=(ToolName.FETCH_GUARDIAN_REVIEWS,),
+            provider_states={},
+        )
+
+
+@pytest.mark.parametrize(
+    "message",
+    [
+        {"content": ('{"target_gap":"film_specific_evidence","tool":"fetch_guardian_reviews"}')},
+        {"content": None, "tool_calls": []},
+        {
+            "content": None,
+            "tool_calls": [
+                native_planner_response("fetch_guardian_reviews", "film_specific_evidence")[
+                    "choices"
+                ][0]["message"]["tool_calls"][0],
+                native_planner_response(
+                    "fetch_letterboxd_reviews", "film_specific_evidence", call_id="call-2"
+                )["choices"][0]["message"]["tool_calls"][0],
+            ],
+        },
+        {
+            "content": None,
+            "tool_calls": [
+                {
+                    "type": "function",
+                    "function": {
+                        "name": "fetch_guardian_reviews",
+                        "arguments": '{"target_gap":"film_specific_evidence"}',
+                    },
+                }
+            ],
+        },
+        {
+            "content": None,
+            "tool_calls": [
+                {
+                    "id": "call-1",
+                    "type": "function",
+                    "function": {
+                        "name": "fetch_guardian_reviews",
+                        "arguments": {"target_gap": "film_specific_evidence"},
+                    },
+                }
+            ],
+        },
+        {
+            "content": None,
+            "tool_calls": [
+                {
+                    "id": "call-1",
+                    "type": "function",
+                    "function": {
+                        "name": "fetch_guardian_reviews",
+                        "arguments": "{not-json",
+                    },
+                }
+            ],
+        },
+    ],
+    ids=(
+        "legacy-content",
+        "no-call",
+        "parallel-calls",
+        "missing-id",
+        "non-string-arguments",
+        "malformed-json-arguments",
+    ),
+)
+def test_deepseek_planner_rejects_non_single_native_tool_call(
+    message: dict[str, Any],
+) -> None:
+    class Settings:
+        def effective_secret(self, connector_id: str) -> str:
+            return "test-deepseek-key"
+
+    def transport(url: str, payload: dict[str, Any] | None, key: str) -> dict[str, Any]:
+        return {"choices": [{"message": message}]}
+
+    service = DeepSeekStudyService(cast(Any, Settings()), transport=transport)
+    with pytest.raises(StudyGenerationError, match="invalid native research-tool call"):
+        service.plan_research_tool(
+            film=FILM,
+            focus=FOCUS,
+            packet_summary={"status": "limited"},
+            allowed_tools=(ToolName.FETCH_GUARDIAN_REVIEWS,),
+            provider_states={},
+        )
+
+
+def test_deepseek_planner_rejects_model_supplied_execution_arguments() -> None:
+    class Settings:
+        def effective_secret(self, connector_id: str) -> str:
+            return "test-deepseek-key"
+
+    def transport(url: str, payload: dict[str, Any] | None, key: str) -> dict[str, Any]:
+        return native_planner_response(
+            "fetch_guardian_reviews",
+            "film_specific_evidence",
+            extra_arguments={"film_id": "model-invented-id", "limit": 999},
+        )
+
+    service = DeepSeekStudyService(cast(Any, Settings()), transport=transport)
+    with pytest.raises(StudyGenerationError, match="invalid native research-tool call"):
         service.plan_research_tool(
             film=FILM,
             focus=FOCUS,

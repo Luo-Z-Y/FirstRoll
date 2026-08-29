@@ -147,9 +147,9 @@ future-enterprise path, but ADR-017 removes it from the production critical path
 | `autonomous_study.py` | Exact claim-audit coverage, path-local citation authority and traceable filmmaker-exercise validation | Model transport, source acquisition or hidden reasoning |
 | `autonomous_agent.py` | Default-off research-to-audit/edit/reaudit/coach controller with separate four-call budget and safe strategy metrics | HTTP routing, checkpoint persistence or production authorisation |
 | `autonomous_runs.py` | Owner-scoped mode-`0600` phase checkpoints, atomic writes, cancellation and interrupted-call replay prevention | Hosted coordination, cross-device projects or provider idempotency |
-| `local_research_agent.py` | Default-off local graph adapter, aggregate-only gap planning and ephemeral multi-provider acquisition | HTTP routing, cache mutation, credentials in graph state or production cut-over |
+| `local_research_agent.py` | Default-off local graph adapter, native-tool or deterministic gap planning and ephemeral multi-provider acquisition | HTTP routing, cache mutation, credentials in graph state or production cut-over |
 | `study_observability.py` | Allow-listed monotonic stage timings, terminal status and bounded aggregate counts | Prompts, evidence text, credentials, model output or exception details |
-| `study_service.py` | Concise bounded DeepSeek request, Pydantic/citation validation, generated-study gate, fixed-workflow repair and local Agent field-patch repair with complete revalidation | Authentication, quota reservation, automatic timeout retry or research-tool authorisation |
+| `study_service.py` | Bounded DeepSeek structured output, native planner schemas, strict tool-call/Pydantic/citation validation, study gating and complete field-patch revalidation | Authentication, quota reservation, automatic timeout retry or research-tool authorisation/execution |
 | `research_stream.py` | Fixed public progress vocabulary and transient owner-scoped result store | Hidden reasoning, prompts, credentials or private evidence bodies |
 | `research_graph` | Bounded LangGraph state, reducers, routes and deterministic safety boundaries | Production provider credentials or public cut-over decision |
 | `quota.py` + PostgreSQL function | Provider-neutral quota status and atomic reservation after authentication | Bearer tokens, prompts, evidence or generated studies |
@@ -260,8 +260,10 @@ explicit selected film + frozen focus
 ```
 
 `FIRSTROLL_LOCAL_AGENT_ENABLED=0` is the default. Enabling it makes a Python service factory
-available to local evaluators but registers no HTTP route. The model planner returns one supplied gap
-and one supplied tool. It sees no evidence text, credentials, URLs or private locators. A separate
+available to local evaluators but registers no HTTP route. The model planner now receives native
+function definitions and must return exactly one `tool_calls` proposal containing one supplied gap.
+It sees no evidence text, credentials, URLs or private locators, cannot supply execution arguments and
+never receives raw tool output. A separate
 deterministic gap router can run the same graph without a planner model call and is the required
 ablation baseline. Provider objects and credentials remain in runtime context; graph state receives
 bounded evidence only for the non-checkpointed local run.
@@ -280,6 +282,8 @@ non-call slot after the last planner turn so a synthesis-oriented total-call che
 `evidence_ready`; planner, provider, step, deadline, item and character limits remain unchanged. They allow acquisition to run once and both
 packet lanes to use the same retry controller during three alternating repetitions, so packet content
 is the only synthesis difference. Reports contain safe aggregate quality/tool/timing/token fields.
+The complete former-versus-native request, response, validation and execution comparison is recorded
+in [Native Tool Calling](NATIVE_TOOL_CALLING.md).
 
 The successor local factory can connect a completed research graph to `AutonomousStudyFinisher`.
 The finisher audits every required central/section claim path exactly once, permits only path-local

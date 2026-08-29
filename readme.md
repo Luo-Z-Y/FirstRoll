@@ -44,6 +44,7 @@ environment configuration, acceptance checks and operational limits.
 | Review the scoped production Agent decision | [Agent Go/No-Go Brief](docs/AGENT_GO_NO_GO.md) |
 | Review the revised text-only Agent stages and repeated protocol | [Text-Agent Programme](docs/TEXT_AGENT_PROGRAMME.md) |
 | Review the successor autonomous research capability and acceptance gates | [Autonomous Agent Programme](docs/AUTONOMOUS_AGENT_PROGRAMME.md) |
+| Compare the former planner protocol with native tool calls | [Native Tool Calling](docs/NATIVE_TOOL_CALLING.md) |
 | Complete the private filmmaker packet-rating gate | [Human Evidence-Packet Review](docs/HUMAN_PACKET_REVIEW.md) |
 | Install and run the private local edition | [Local Setup](docs/LOCAL_SETUP.md) |
 | Operate the public Azure deployment | [Public Beta Hosting](docs/HOSTING.md) |
@@ -278,9 +279,11 @@ and [Text-Agent Programme](docs/TEXT_AGENT_PROGRAMME.md) record failed and incom
 without rewriting them.
 
 The successor [Autonomous Agent Programme](docs/AUTONOMOUS_AGENT_PROGRAMME.md) requires more than a
-provider choice. A planner proposes one typed evidence gap plus one allow-listed action; deterministic
-code rechecks both, reassesses the packet after every observation and requires two independent origins
-plus two required epistemic classes when recovering a limited packet. Crossref abstracts remain
+provider choice. A01R's planner now proposes one typed evidence gap through exactly one native
+`tool_calls` function selected from a turn-specific allow-list; deterministic code rechecks and
+independently authorises it, constructs every provider argument, reassesses the packet after every
+observation and requires two independent origins plus two required epistemic classes when recovering
+a limited packet. Crossref abstracts remain
 `scholarly_abstract`, video descriptions/unverified captions remain `video_context`, and public
 criticism remains `critic_reported`. Crossref is available alongside Guardian, Douban,
 Letterboxd and video-text acquisition. A no-model gap router provides the ablation baseline: if the
@@ -296,7 +299,8 @@ paid action; it is not hosted or multi-instance persistence. Three causal harnes
 planning, structural repair and exact changed-packet synthesis. A01 is consumed. A02 patching passed
 9/9 but regeneration passed only 4/9, so its aggregate machine gate also failed and is consumed. A01R
 now gates class-aware reacquisition, while A02R gates 24 patch-only reliability samples; both lack
-fresh budgets. A03 lacks an accepted A01R packet and a budget.
+fresh budgets. Native provider compatibility has synthetic coverage only; see the detailed
+[code comparison](docs/NATIVE_TOOL_CALLING.md). A03 lacks an accepted A01R packet and a budget.
 
 The public beta is intentionally narrower than the local edition. Azure Static Web Apps and Azure
 Container Apps use separate origins and custom domains. Public mode does not publish local settings,
@@ -997,6 +1001,7 @@ FirstRoll/
 │   ├── HOSTING.md
 │   ├── HUMAN_PACKET_REVIEW.md
 │   ├── LOCAL_SETUP.md
+│   ├── NATIVE_TOOL_CALLING.md
 │   ├── PRE_AGENT_HARDENING.md
 │   ├── PROGRESS.md
 │   └── RELEASE.md
@@ -1172,7 +1177,9 @@ A02 then used 18 calls: targeted patching passed 9/9 with exact preservation, wh
 passed 4/9, making A02 a formal machine failure. A no-call revision now preserves scholarship/video
 classes, requires every mandatory gap to close and fixes evidence-only completion after the final
 planner turn; it does not upgrade either result. Distinct A01R and A02R fail-closed harnesses now
-cover corrected class-aware acquisition and 24-sample patch reliability. No paid authorisation
+cover corrected class-aware acquisition and 24-sample patch reliability. A01R uses exactly one native
+`tool_calls` proposal per model planning turn while retaining independent application authorisation
+and trusted argument construction. No paid authorisation
 remains; claim audit, editing, coaching, durable execution and clip-Agent work remain gated.
 
 The latest reviewed complete-workflow and packet-only results are
