@@ -1,5 +1,45 @@
 # FirstRoll Project Progress
 
+### 28 August 2026 — Native research-planner tool calls implemented
+
+Delivered without a model, planner or provider call:
+
+1. Replaced A01R's planner JSON-in-assistant-content protocol with DeepSeek-native `tools` and
+   `tool_calls`. Historical A01 remains explicitly labelled with its legacy protocol and is unchanged.
+2. Exposed one native function per currently addressable Guardian, Crossref, Douban, Letterboxd or
+   video-text capability. `tool_choice` is required and every function accepts only a turn-specific
+   `target_gap` enum with `additionalProperties: false`.
+3. Omitted providers known to require credentials, be uninstalled or be unavailable before model
+   transport. A gap with no ready capability stops without spending a planner call.
+4. Required exactly one function call, a non-empty call ID, a function envelope and JSON-string
+   arguments. Legacy content JSON, zero/parallel calls, missing IDs, malformed arguments and
+   model-supplied film IDs, URLs, limits or other execution arguments fail closed.
+5. Preserved the existing safety architecture: graph policy still independently authorises every
+   proposal; Python constructs provider arguments from verified state; adapters normalise results;
+   raw tool output never returns to the planner; deterministic policy owns continuation.
+6. Added safe `native_tool_calls`/`deterministic_router` protocol labels and an A01R
+   `planner_protocol_integrity` machine target.
+7. Added [Native Tool Calling](NATIVE_TOOL_CALLING.md), including former/new request and response
+   code, strict schema comparison, execution path, authority boundaries, rejection cases and testing.
+8. Expanded synthetic coverage to 376 tests and retained A01R/A02R's null paid confirmations.
+
+Known constraints:
+
+- The configured DeepSeek model has not received a real native tool-call request under this change;
+  synthetic transport tests establish application behaviour, not provider compatibility or planner
+  value.
+- FirstRoll deliberately does not send raw `role: tool` results back to the planner, so this remains a
+  policy-owned adaptive graph rather than an open-ended model-owned tool loop.
+- One logical Agent function may fan out to multiple low-level HTTP or MCP operations; physical
+  provider accounting remains a separate evaluation concern.
+
+Next actionable work:
+
+1. Merge this no-call protocol checkpoint only after complete CI and privacy checks.
+2. Validate native compatibility and acquisition value only through a freshly approved A01R run.
+3. Keep A03, hosted routing and production Agent execution blocked pending A01R machine and personal
+   owner evidence.
+
 ### 28 August 2026 — Distinct revision and patch-reliability gates implemented
 
 Delivered without a model or provider call:

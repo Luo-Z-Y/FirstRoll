@@ -394,8 +394,9 @@ results and replace the combined next experiment with three causal ablations:
    without reacquisition.
 
 A recovered packet must pass base quality and contain at least two independent film-specific origins.
-Raw excerpts from one domain do not satisfy that rule. The model planner returns one allow-listed gap
-and one allow-listed tool from aggregate diagnostics; a deterministic router over the same provider
+Raw excerpts from one domain do not satisfy that rule. Historical A01 returned one allow-listed gap
+and tool through assistant-content JSON. A01R now requires exactly one native `tool_calls` proposal
+whose only argument is a turn-specific `target_gap`; a deterministic router over the same provider
 states is the baseline. Model planning advances only if it improves blinded usefulness or matches the
 baseline with fewer calls. Unchanged cases remain selectivity controls rather than evidence of
 acquisition benefit.
@@ -436,8 +437,12 @@ These changes have synthetic tests only and do not alter or rerun A01.
 
 A01R is a distinct fail-closed harness over the corrected semantics. It retains the acquire-once
 three-lane design and proposed three-planner/five-physical-provider/three-turn ceilings, but adds
-mandatory two-class and zero-remaining-gap targets. A02R isolates patch reliability rather than
-repeating the failed regeneration lane: six repetitions across four controlled fault classes produce
+mandatory two-class, zero-remaining-gap and planner-protocol-integrity targets. Native schemas expose
+only addressable, not-known-unavailable functions; zero, parallel, malformed, legacy-content and
+extra-argument calls fail closed before independent graph authorisation. Provider execution arguments
+remain application-constructed and raw results never enter the planning channel. See
+[Native Tool Calling](NATIVE_TOOL_CALLING.md) for the code-level comparison. A02R isolates patch
+reliability rather than repeating the failed regeneration lane: six repetitions across four controlled fault classes produce
 24 scheduled patch samples. Its frozen absolute gates require 24/24 exact-preserving valid repairs,
 mean quality at least `99`, P95 at most five seconds, no more than 36,000 tokens and complete
 telemetry. It proposes 24 expected and 48 maximum calls with no planner/provider calls. Neither
@@ -451,8 +456,9 @@ candidate-only attributed source. Lifecycle latency adds A01R acquisition to can
 Only repetitions 1, 5 and 10 become private blinded study pairs after a machine pass; owner preference
 and severe-grounding checks then decide human value.
 
-Every ablation requires fresh paths, frozen thresholds and its own numeric owner budget. A01 and A02 are consumed machine failures; A01R and A02R are unconfirmed proposals. No paid budget
-remains. A03's proposed 20–60 synthesis calls remain blocked by A01R and are not authorised. No successor result may
+Every ablation requires fresh paths, frozen thresholds and its own numeric owner budget. A01 and A02
+are consumed machine failures; A01R and A02R are unconfirmed proposals. No paid budget remains. A03's
+proposed 20–60 synthesis calls remain blocked by A01R and are not authorised. No successor result may
 fill the missing private artifact in a historical report retrospectively.
 
 ## Deep Study Transparency Checkpoint

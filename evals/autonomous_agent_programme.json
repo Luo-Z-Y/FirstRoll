@@ -51,7 +51,12 @@
     ],
     "minimum_recovered_independent_origins": 2,
     "already_sufficient_packet_policy": "zero_calls_and_identical_fingerprint",
-    "planner_output": "one_allow_listed_target_gap_plus_one_allow_listed_tool",
+    "planner_output": "exactly_one_native_tool_call_with_one_allow_listed_target_gap",
+    "planner_protocol": "native_tool_calls",
+    "legacy_planner_content_fallback": false,
+    "model_supplied_execution_arguments": false,
+    "raw_tool_results_returned_to_planner": false,
+    "independent_tool_authorisation_required": true,
     "tool_gap_capability_pair_validated": true,
     "no_addressable_tool_outcome": "insufficient_evidence_without_provider_call",
     "deterministic_baseline_available": true,
@@ -154,6 +159,7 @@
       ],
       "case_id": "the-thing-ambiguous-identity",
       "provider_sampling": "acquire_once_and_share_private_snapshots",
+      "planner_protocol": "legacy_json_in_assistant_content",
       "proposed_budget": {
         "maximum_model_planner_calls": 3,
         "maximum_physical_provider_calls": 5,
@@ -221,6 +227,20 @@
       ],
       "case_id": "the-thing-ambiguous-identity",
       "provider_sampling": "acquire_once_and_share_private_snapshots",
+      "planner_protocol": {
+        "request": "native_tool_calls",
+        "tool_choice": "required",
+        "exactly_one_call_per_planning_turn": true,
+        "parallel_calls_accepted": false,
+        "model_supplied_arguments": [
+          "target_gap"
+        ],
+        "additional_arguments_accepted": false,
+        "execution_arguments": "constructed_from_verified_application_state",
+        "legacy_content_json_fallback": false,
+        "raw_tool_result_returned_to_planner": false,
+        "independent_application_authorisation_required": true
+      },
       "revision_contract": {
         "explicit_scholarly_abstract_type": true,
         "explicit_video_context_type": true,
@@ -240,6 +260,7 @@
         "minimum_independent_origins_per_active_lane": 2,
         "minimum_film_specific_evidence_classes_per_active_lane": 2,
         "remaining_required_gaps_per_active_lane": 0,
+        "planner_protocol_integrity": true,
         "fixed_lane_calls": 0,
         "all_budget_and_frozen_sampling_targets": true
       },

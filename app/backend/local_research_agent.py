@@ -316,6 +316,7 @@ class LocalResearchGraphServices:
                 workspace.planning_decisions.append(
                     {
                         "strategy": "deterministic_gap_router",
+                        "protocol": "deterministic_router",
                         "tool": selected.value,
                         "target_gap": target_gap.value,
                     }
@@ -343,6 +344,7 @@ class LocalResearchGraphServices:
         workspace.planning_decisions.append(
             {
                 "strategy": "model_gap_planner",
+                "protocol": "native_tool_calls",
                 "tool": plan.tool.value,
                 "target_gap": plan.target_gap.value
                 if plan.target_gap is not None

@@ -33,6 +33,7 @@ public API.
 | 019 | Keep transient Discover continuity in per-tab session storage | Accepted | Refresh resilience versus bounded browser-local staleness |
 | 020 | Require autonomous Agent value against a deterministic baseline | Accepted | Honest capability evidence versus slower staged development |
 | 021 | Activate autonomous value ablations sequentially | Accepted | Exact cost isolation versus parallel execution |
+| 022 | Use native planner tool calls without delegating execution authority | Accepted | Standard protocol versus a deliberately policy-owned loop |
 
 ## ADR-001: Evolve pyCinemetrics with preserved attribution
 
@@ -882,6 +883,67 @@ sufficiency and prevents evidence-only completion from reserving a real synthesi
 change either historical outcome. Distinct A01R and A02R harnesses now gate corrected class-aware
 acquisition and 24-sample targeted-patch reliability; each requires a new decision, exact paths and a
 fresh budget.
+
+## ADR-022: Use native planner tool calls without delegating execution authority
+
+**Status:** Accepted
+**Date:** 28 August 2026
+**Decider:** FirstRoll maintainer
+
+### Context
+
+The local model planner originally described available research actions inside the user prompt and
+returned a `tool` plus `target_gap` JSON object in ordinary assistant content. Deterministic code
+validated and authorised that proposal, but the protocol did not use the provider's dedicated
+function-call channel. It also left FirstRoll responsible for distinguishing a tool proposal from
+arbitrary generated content.
+
+Native function calling offers typed capability declarations, dedicated call IDs and a standard
+response envelope. Using an automatic model-owned tool loop, however, would let untrusted provider
+results re-enter planning directly, weaken exact one-turn accounting and invite model-generated film
+IDs, URLs or limits.
+
+### Decision
+
+Expose each currently addressable acquisition capability through the DeepSeek request's native
+`tools` field and require one `tool_calls` response. Give each function exactly one model-controlled
+argument: a turn-specific `target_gap` enum. Forbid additional arguments, parallel calls and the
+legacy assistant-content fallback. Omit providers known to be unavailable before transport.
+
+Treat the native call as an untrusted proposal. Preserve independent graph authorisation, construct
+all execution arguments from verified application state, execute through the hard-coded adapter map,
+normalise results into `EvidencePacket` and let deterministic policy decide whether another turn is
+permitted. Do not append raw output as a `role: tool` message. Keep synthesis, repair, audit, editing
+and coaching as controller-invoked structured-output calls without research tools.
+
+### Options considered
+
+| Option | Assessment |
+|---|---|
+| Keep JSON in assistant content | Provider-portable and already bounded, but not a native tool protocol |
+| Use an SDK automatic tool runner | Convenient, but obscures authorisation, retries, raw-result handling and spend ownership |
+| Let native calls supply film IDs, queries and limits | More flexible, but gives hallucinated arguments a path to providers |
+| Native proposal plus existing policy gate | Standard envelope while preserving identity, injection, cost and retry boundaries; accepted |
+
+### Consequences
+
+- The planner request no longer uses `response_format: json_object`.
+- Exactly one non-empty native function call ID, recognised function and strict JSON argument object
+  are required.
+- The model cannot provide provider execution arguments or start a second action itself.
+- Native protocol use is visible in safe planning-decision telemetry and becomes an A01R machine
+  target.
+- A01 remains an immutable historical content-JSON result; A01R is the first native-protocol test.
+- Synthetic tests do not establish current DeepSeek model compatibility or planner value. A paid
+  A01R run still requires separate exact approval.
+
+### Action items
+
+1. [x] Replace planner content JSON with native `tools` and `tool_calls`.
+2. [x] Reject zero, parallel, malformed, legacy-content and extra-argument calls.
+3. [x] Preserve independent authorisation and trusted argument construction.
+4. [x] Add protocol telemetry, A01R acceptance and detailed code documentation.
+5. [ ] Validate provider compatibility and acquisition value only under an approved A01R run.
 
 ## How to Add or Change a Decision
 

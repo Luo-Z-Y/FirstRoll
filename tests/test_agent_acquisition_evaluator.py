@@ -259,6 +259,11 @@ def test_acquisition_targets_require_both_active_lanes_and_shared_budget() -> No
             "remaining_gaps": [],
             "external_tool_calls": 2,
             "model_planner_calls": 0,
+            "planning_turns": 2,
+            "planning_decisions": [
+                {"protocol": "deterministic_router"},
+                {"protocol": "deterministic_router"},
+            ],
         },
         {
             "lane": "model_gap_planner",
@@ -269,6 +274,11 @@ def test_acquisition_targets_require_both_active_lanes_and_shared_budget() -> No
             "remaining_gaps": [],
             "external_tool_calls": 2,
             "model_planner_calls": 2,
+            "planning_turns": 2,
+            "planning_decisions": [
+                {"protocol": "native_tool_calls"},
+                {"protocol": "native_tool_calls"},
+            ],
         },
     ]
 
@@ -286,3 +296,23 @@ def test_acquisition_targets_require_both_active_lanes_and_shared_budget() -> No
     )
 
     assert all(item["status"] == "passed" for item in targets)
+
+    lanes[2]["planning_decisions"][0]["protocol"] = "legacy_json_content"
+    rejected = evaluator.evaluate_targets(
+        lanes,
+        {
+            "physical_provider_calls": 3,
+            "physical_attempts": [
+                {"tool": "fetch_guardian_reviews"},
+                {"tool": "fetch_crossref_research"},
+                {"tool": "search_youtube_resources"},
+            ],
+        },
+        evaluator.acquisition_experiment(programme()),
+    )
+    assert (
+        next(item for item in rejected if item["target_id"] == "planner_protocol_integrity")[
+            "status"
+        ]
+        == "failed"
+    )
