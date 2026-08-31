@@ -1,0 +1,118 @@
+{
+  "schema_version": 1,
+  "audit_id": "firstroll-third-party-benchmark-tooling-smoke-v1",
+  "recorded_at": "2026-08-31T09:30:47Z",
+  "source_revision": "f582387516e02f7d8c1167a676e0956415af0e2e",
+  "scope": "local_mock_and_configuration_validation_only",
+  "external_model_provider_calls": 0,
+  "paid_calls": 0,
+  "private_or_generated_product_content_recorded": false,
+  "tools": {
+    "guidellm": {
+      "version": "0.7.3",
+      "python": "3.12.11",
+      "qualified_capabilities": [
+        "openai_compatible_chat_transport",
+        "streaming_latency_metrics",
+        "native_tool_call_turns",
+        "bounded_request_count",
+        "json_report_output"
+      ],
+      "attempts": [
+        {
+          "attempt": 1,
+          "status": "failed_preflight",
+          "failure_category": "synthetic_standard_deviation_must_be_positive",
+          "benchmark_requests": 0
+        },
+        {
+          "attempt": 2,
+          "status": "failed_startup",
+          "failure_category": "macos_fork_worker_signal_11",
+          "benchmark_requests": 0
+        },
+        {
+          "attempt": 3,
+          "status": "passed_mock_transport_smoke",
+          "multiprocessing_context": "spawn",
+          "scheduled_requests": 3,
+          "successful_requests": 3,
+          "errored_requests": 0
+        },
+        {
+          "attempt": 4,
+          "status": "passed_mock_native_tool_call_smoke",
+          "multiprocessing_context": "spawn",
+          "scheduled_requests": 4,
+          "successful_requests": 4,
+          "errored_requests": 0,
+          "observed_native_tool_calls": 2
+        }
+      ],
+      "performance_metrics_are_firstroll_evidence": false,
+      "reason": "The endpoint and token timings came from GuideLLM's configurable mock server."
+    },
+    "lm_evaluation_harness": {
+      "version": "0.4.12",
+      "python": "3.12.11",
+      "qualified_capabilities": [
+        "local_jsonl_task_validation",
+        "generate_until_exact_match",
+        "local_chat_completions_adapter",
+        "aggregate_json_output"
+      ],
+      "attempts": [
+        {
+          "attempt": 1,
+          "status": "passed_dummy_model_smoke",
+          "scheduled_samples": 3,
+          "completed_samples": 3,
+          "external_model_requests": 0
+        },
+        {
+          "attempt": 2,
+          "status": "failed_setup",
+          "failure_category": "api_extra_not_installed",
+          "scheduled_samples": 3,
+          "completed_samples": 0,
+          "external_model_requests": 0
+        },
+        {
+          "attempt": 3,
+          "status": "passed_mock_openai_compatible_adapter_smoke",
+          "dependency_extra": "lm-eval[api]",
+          "scheduled_samples": 3,
+          "completed_samples": 3,
+          "mock_http_requests": 3
+        },
+        {
+          "attempt": 4,
+          "status": "passed_claim_support_task_load_smoke",
+          "model": "dummy",
+          "scheduled_samples": 12,
+          "completed_samples": 12,
+          "external_model_requests": 0
+        }
+      ],
+      "quality_metrics_are_firstroll_evidence": false,
+      "reason": "Dummy and mock outputs qualify the harness only; neither is the configured FirstRoll model."
+    }
+  },
+  "qualification_status": "passed_with_recorded_repairs",
+  "reproducibility_rerun": {
+    "recorded_at": "2026-08-31T09:51:13Z",
+    "script": "tools/run_benchmark_tooling_smoke.sh",
+    "guidellm_successful_requests": 4,
+    "guidellm_errored_requests": 0,
+    "guidellm_observed_native_tool_calls": 2,
+    "lm_eval_completed_samples": 3,
+    "external_model_provider_calls": 0,
+    "status": "passed"
+  },
+  "limitations": [
+    "No request reached DeepSeek or a FirstRoll study or Agent route.",
+    "GuideLLM mock latency and throughput must not be compared with historical FirstRoll latency.",
+    "lm-evaluation-harness mock and dummy exact-match scores have no product-quality meaning.",
+    "Real runs require fresh exact call budgets, committed paths and complete failure accounting."
+  ]
+}

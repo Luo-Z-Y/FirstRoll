@@ -153,7 +153,8 @@ several excerpts from one domain cannot satisfy that rule. `fetch_letterboxd_rev
 official adapter when credentials are configured and the separate public-web adapter otherwise;
 this orchestration choice does not make either adapter silently fall back during its own request.
 
-The planner proposes one supplied gap and one supplied tool from aggregate diagnostics. A no-model
+The planner proposes one supplied gap through exactly one native function call selected from
+turn-specific aggregate diagnostics. Trusted code constructs every provider argument and a no-model
 deterministic router supplies the comparison baseline. Crossref's existing title/director match,
 abstract-only scope, HTTPS restriction and response cap apply unchanged when the Agent chooses it.
 
@@ -167,6 +168,19 @@ discarded with the Agent service; they are not written to `.firstroll/criticism`
 does not structure new reviews into model-generated critical claims, because that would introduce a
 second causal change. Provider rights, identity checks, response limits and epistemic boundaries
 remain unchanged.
+
+## Benchmark Tool and Fixture Sources
+
+GuideLLM `0.7.3` and lm-evaluation-harness `0.4.12` are downloaded into the user's `uvx` cache for
+explicit development commands; they are not application dependencies or hosted services. The
+no-spend GuideLLM profile contacts only its local mock. Its synthetic token text and timing have no
+film-source or product-evidence status. GuideLLM uses the public GPT-2 tokenizer solely to construct
+bounded synthetic request sizes.
+
+The lm-eval claim-support dataset is authored for FirstRoll and contains twelve synthetic evidence and
+claim pairs about an invented `Example Film`. It includes no private passage, review, study or
+provider response. Any future configured-model output remains generated evaluation material and must
+stay under `.firstroll`; only a redacted aggregate may be considered for versioning after review.
 
 ## Planned Research Adapters
 

@@ -87,6 +87,24 @@ def test_autonomous_programme_matches_the_independent_origin_and_provider_contra
     )
     assert value["foundation"]["deterministic_baseline_available"] is True
     assert value["foundation"]["crossref_agent_provider_available"] is True
+    assert value["benchmark_tooling"] == {
+        "status": "mock_qualified_current_agent_unmeasured",
+        "guidellm": {
+            "version": "0.7.3",
+            "qualified_with_local_mock": True,
+            "current_firstroll_performance_measured": False,
+            "representative_openai_compatible_endpoint_available": False,
+        },
+        "lm_evaluation_harness": {
+            "version": "0.4.12",
+            "qualified_with_dummy_and_local_mock": True,
+            "public_claim_support_cases": 12,
+            "configured_firstroll_model_measured": False,
+        },
+        "mock_metrics_are_product_evidence": False,
+        "generic_model_metrics_can_replace_causal_or_human_gates": False,
+        "paid_benchmark_calls_authorised": False,
+    }
     assert value["post_result_semantic_revision"] == {
         "status": "implemented_with_synthetic_tests_not_provider_validated",
         "historical_A01_result_unchanged": True,

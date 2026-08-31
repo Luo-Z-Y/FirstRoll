@@ -332,4 +332,6 @@ No paid DeepSeek request was made for this migration. Synthetic transports estab
 validation behaviour, not provider compatibility or planner quality. A01R remains the required
 provider-backed test, under a fresh exact budget and one-run lock. Until that passes and receives the
 owner's blinded packet review, native tool calling does not establish acquisition value and is not
-authorised for production.
+authorised for production. GuideLLM's mock native-call qualification and the remaining provider,
+quality and serving benchmark gaps are recorded in
+[Agent Benchmark Audit](AGENT_BENCHMARK_AUDIT.md).
