@@ -311,6 +311,20 @@ symlink escaped the private-output boundary, so the safe write was rejected and 
 exists. The evaluator now preflights resolved private paths; the budget is consumed. Hosted execution
 remains prohibited.
 
+### Third-Party Benchmark Tool Boundary
+
+GuideLLM and lm-evaluation-harness run only as pinned `uvx` development tools. Their no-spend smoke
+path starts a named loopback mock, refuses an occupied port and writes mode-`0600` reports beneath
+`.firstroll/benchmarks`; it registers no FastAPI route and cannot read FirstRoll credentials, packets
+or studies. GuideLLM is suitable for TTFT, ITL, throughput and tool-call transport only after a
+representative, separately authorised OpenAI-compatible benchmark endpoint exists. The current
+product API is deliberately not reshaped into one.
+
+The commit-safe lm-eval task covers twelve synthetic claim-support boundaries. It is a model-level
+diagnostic, not a graph, citation, causal or human-usefulness gate. Mock and dummy scores are never
+reported as product evidence. See [Agent Benchmark Audit](AGENT_BENCHMARK_AUDIT.md) for current
+coverage and improvements.
+
 ### Hosted Deep Study
 
 ```mermaid

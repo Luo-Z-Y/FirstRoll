@@ -34,6 +34,7 @@ public API.
 | 020 | Require autonomous Agent value against a deterministic baseline | Accepted | Honest capability evidence versus slower staged development |
 | 021 | Activate autonomous value ablations sequentially | Accepted | Exact cost isolation versus parallel execution |
 | 022 | Use native planner tool calls without delegating execution authority | Accepted | Standard protocol versus a deliberately policy-owned loop |
+| 023 | Use third-party benchmark tools as bounded diagnostics, not product gates | Accepted | Broader standard metrics versus preserving causal and human evidence |
 
 ## ADR-001: Evolve pyCinemetrics with preserved attribution
 
@@ -944,6 +945,63 @@ and coaching as controller-invoked structured-output calls without research tool
 3. [x] Preserve independent authorisation and trusted argument construction.
 4. [x] Add protocol telemetry, A01R acceptance and detailed code documentation.
 5. [ ] Validate provider compatibility and acquisition value only under an approved A01R run.
+
+## ADR-023: Use third-party benchmark tools as bounded diagnostics, not product gates
+
+**Status:** Accepted
+**Date:** 31 August 2026
+**Decider:** FirstRoll maintainer
+
+### Context
+
+FirstRoll's bespoke evaluators measure identity, packet provenance, citations, graph retries, complete
+lifecycle latency and owner usefulness, but they do not provide standard TTFT/ITL, serving throughput
+or reusable model-task interfaces. GuideLLM supplies serving metrics and native tool-call workloads;
+lm-evaluation-harness supplies repeatable model-level tasks. Neither understands FirstRoll's graph,
+private packets, causal lane controls or human gates by default.
+
+The current product has no Agent route or representative OpenAI-compatible benchmark endpoint.
+Running standard tools directly against DeepSeek would measure a paid provider rather than the
+complete FirstRoll system. Mock scores and latency are especially easy to mislabel as product
+performance.
+
+### Decision
+
+Pin GuideLLM and lm-evaluation-harness as `uvx` development tools rather than runtime dependencies.
+Qualify them against a named loopback mock, retain setup/startup failures, and keep all raw output
+under `.firstroll`. Commit only public synthetic profiles/tasks and redacted aggregate evidence.
+
+Use GuideLLM only for transport/serving questions against a representative separately authorised
+endpoint. Use lm-evaluation-harness for commit-safe model diagnostics, beginning with claim-support
+boundaries. Do not let either tool replace A01R–A03, complete failure accounting, citation validation
+or personal owner review. Every real-model or concurrent run still needs an exact request/token
+budget and fresh output path.
+
+### Options considered
+
+| Option | Assessment |
+|---|---|
+| Report mock GuideLLM throughput as current performance | Fast but false; it measures configured sleep/token simulation |
+| Run broad academic tasks and call the Agent good | Measures general model behaviour, not retrieval, tools or filmmaker value |
+| Add an OpenAI-compatible production Agent route for GuideLLM | Expands attack and persistence boundaries solely for a benchmark |
+| Use mock-qualified tools beneath causal product gates | Adds standard diagnostics without weakening current evidence rules; accepted |
+
+### Consequences
+
+- GuideLLM's local macOS runner uses `spawn`; the failed default-fork startup remains recorded.
+- lm-eval API profiles require the `[api]` dependency extra; the failed setup attempt remains recorded.
+- The public claim-support task can later detect model regressions but is not a production threshold.
+- No current native-Agent quality, TTFT, ITL, throughput or concurrency claim exists.
+- A future benchmark adapter must remain loopback-only and cannot register a product HTTP route.
+- Mock/dummy outputs, generated samples and package caches are not committed.
+
+### Action items
+
+1. [x] Qualify GuideLLM native tool-call and lm-eval local-chat paths against a mock.
+2. [x] Add a public 12-case claim-support diagnostic and strict exact-match configuration.
+3. [x] Add a redacted, reproducible audit over immutable FirstRoll reports.
+4. [x] Document current benchmark gaps and prioritised improvements.
+5. [ ] Run no real model or load profile without a fresh exact authorisation.
 
 ## How to Add or Change a Decision
 

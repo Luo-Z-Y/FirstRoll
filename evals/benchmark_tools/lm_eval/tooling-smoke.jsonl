@@ -1,0 +1,3 @@
+{"prompt":"Return the literal token lol and nothing else.","target":"lol"}
+{"prompt":"For this harness smoke test, output lol.","target":"lol"}
+{"prompt":"Emit exactly lol.","target":"lol"}

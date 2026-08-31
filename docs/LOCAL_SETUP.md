@@ -380,6 +380,32 @@ an interrupted in-flight phase, FirstRoll stops rather than replaying it; inspec
 start a separately authorised run instead of editing the checkpoint. The feature switch is not an
 interactive product capability or hosted configuration.
 
+## Benchmark-tool smoke and audit
+
+GuideLLM and lm-evaluation-harness are intentionally isolated from the project runtime environment.
+Run their pinned, no-provider smoke through `uvx`:
+
+```bash
+tools/run_benchmark_tooling_smoke.sh
+```
+
+The script contacts only its named `127.0.0.1:18766` GuideLLM mock, refuses an occupied port, validates
+the public lm-eval tasks and writes ignored mode-`0600` output beneath
+`.firstroll/benchmarks/tooling-smoke`. Its first run may download GuideLLM `0.7.3`,
+lm-evaluation-harness `0.4.12` and the public GPT-2 tokenizer into the user's tool cache. It does not
+read FirstRoll settings or use a DeepSeek key.
+
+Rebuild a redacted inventory of the immutable existing reports with:
+
+```bash
+uv run python tools/audit_agent_benchmarks.py \
+  --output evals/results/agent-benchmark-audit-current.json
+```
+
+This makes no model/provider call. The 12-case `firstroll_claim_support` lm-eval task is installed as
+a future diagnostic, not an authorised real-model run. See
+[Agent Benchmark Audit](AGENT_BENCHMARK_AUDIT.md) before proposing any paid or concurrent profile.
+
 ## Troubleshooting
 
 ### `uv: command not found`

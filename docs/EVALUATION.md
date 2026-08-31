@@ -1,6 +1,6 @@
 # FirstRoll Evaluation
 
-**Last reconciled:** 21 August 2026
+**Last reconciled:** 31 August 2026
 
 **Canonical result directory:** `evals/results/`
 
@@ -14,6 +14,28 @@ The active fixed-workflow improvement sequence, frozen user journeys and Agent e
 [Pre-Agent Product Hardening](PRE_AGENT_HARDENING.md), backed by the machine-readable
 [`pre_agent_scorecard.json`](../evals/pre_agent_scorecard.json). That scorecard governs future work;
 it does not replace a measured result or retroactively add unobserved metrics to this baseline.
+
+## Current Agent Benchmark Audit
+
+The cross-result audit at
+[`agent-benchmark-audit-2026-08-31.json`](../evals/results/agent-benchmark-audit-2026-08-31.json)
+fingerprints and aggregates the immutable fixed, Agent, A01, A02 and packet reports without reading
+private material or making a model/provider call. The full interpretation, GuideLLM/lm-eval tool
+boundaries and prioritised improvement plan are in
+[Agent Benchmark Audit](AGENT_BENCHMARK_AUDIT.md).
+
+GuideLLM `0.7.3` and lm-evaluation-harness `0.4.12` were qualified against dummy/local mock models.
+The mock profile completed four requests and observed two native tool calls; the lm-eval API smoke
+processed three local requests and its 12-case public claim-support task validated and loaded. The
+first GuideLLM scenario failed preflight, the default macOS fork worker then died with signal 11 and
+an lm-eval API attempt lacked its optional dependency; all three failures are retained in
+[`benchmark-tooling-smoke-2026-08-31.json`](../evals/results/benchmark-tooling-smoke-2026-08-31.json).
+The corrected smoke uses positive synthetic variances, `spawn`, one worker and `lm-eval[api]`.
+
+None of those mock timings or scores measures FirstRoll. The current native Agent still has no
+provider-backed result: A01R/A02R are unapproved, A03 remains blocked, and no Agent HTTP or
+representative OpenAI-compatible benchmark endpoint exists. The defensible current conclusion is:
+fixed production retained, targeted patching promising, autonomous value/reliability unproven.
 
 ## Pre-Selection Complete-Workflow Baseline
 

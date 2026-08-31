@@ -1,0 +1,75 @@
+{
+  "spec": {
+    "backend": {
+      "kind": "openai_http",
+      "target": "http://127.0.0.1:18766",
+      "model": "firstroll-benchmark-mock",
+      "request_format": "/v1/chat/completions",
+      "stream": true
+    },
+    "profile": {
+      "kind": "synchronous"
+    },
+    "constraints": [
+      {
+        "kind": "max_requests",
+        "count": 4
+      }
+    ],
+    "tokenizer": {
+      "kind": "huggingface_auto",
+      "model": "gpt2"
+    },
+    "data": [
+      {
+        "kind": "synthetic_text",
+        "prompt_tokens": 32,
+        "prompt_tokens_stdev": 1,
+        "prompt_tokens_min": 32,
+        "prompt_tokens_max": 32,
+        "output_tokens": 16,
+        "output_tokens_stdev": 1,
+        "output_tokens_min": 16,
+        "output_tokens_max": 16,
+        "turns": 1,
+        "tool_call_turns": [
+          0
+        ],
+        "tools": [
+          {
+            "type": "function",
+            "function": {
+              "name": "fetch_crossref_research",
+              "description": "Propose one bounded scholarly research action.",
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "target_gap": {
+                    "type": "string",
+                    "enum": [
+                      "evidence_class_diversity"
+                    ]
+                  }
+                },
+                "required": [
+                  "target_gap"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        ],
+        "tool_response_tokens": 8,
+        "tool_response_tokens_stdev": 1,
+        "tool_response_tokens_min": 8,
+        "tool_response_tokens_max": 8
+      }
+    ],
+    "outputs": [
+      {
+        "kind": "json",
+        "path": ".firstroll/benchmarks/tooling-smoke/guidellm.json"
+      }
+    ]
+  }
+}

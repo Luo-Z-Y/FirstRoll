@@ -1,0 +1,33 @@
+task: firstroll_claim_support
+dataset_path: json
+dataset_kwargs:
+  data_files:
+    test: evals/benchmark_tools/lm_eval/claim-support.jsonl
+test_split: test
+description: >-
+  Classify the relationship between the supplied evidence and claim. Return exactly one lowercase
+  label and no explanation: directly_supported, reasonable_interpretation, unsupported, or
+  stronger_than_evidence. Direct support requires the evidence to state the same bounded relation;
+  a reasonable interpretation is a calibrated analytical inference; unsupported means no supplied
+  evidence supports the claim; stronger_than_evidence means the claim uses supplied evidence but
+  exceeds its scope or certainty.
+output_type: generate_until
+doc_to_text: "{{prompt}}"
+doc_to_target: "{{target}}"
+generation_kwargs:
+  until:
+    - "\n"
+  do_sample: false
+  max_gen_toks: 16
+filter_list:
+  - name: strict_normalised
+    filter:
+      - function: lowercase
+      - function: remove_whitespace
+metric_list:
+  - metric: exact_match
+    aggregation: mean
+    higher_is_better: true
+metadata:
+  version: 1.0
+  scope: public_synthetic_claim_support_diagnostic

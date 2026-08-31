@@ -37,6 +37,13 @@ bounded Discover workspace in per-tab session storage solely to survive view cha
 | `.firstroll/evaluations/autonomous-agent-acquisition-*` | A01/A01R local ablation | Conditional | Three blinded packets, exact experiment mapping, one-run lock and owner packet scores/notes | Yes |
 | `.firstroll/evaluations/autonomous-agent-patch-reliability-*` | A02R local ablation | One-run | Consumption lock only; generated patches and studies remain process-local | Yes |
 | `.firstroll/evaluations/autonomous-agent-changed-packet-*` | A03 local ablation | Conditional | Three blinded fixed/candidate study pairs, packets, private mapping, lock and owner preferences/notes | Yes |
+| `.firstroll/benchmarks/tooling-smoke/` | Local benchmark-tool qualification | Replaceable | GuideLLM mock report/log, lm-eval mock aggregate and redacted smoke summary; no FirstRoll prompt or provider response | Yes |
+| `evals/benchmark_tools/` | Commit-safe evaluation configuration | Yes | Local-only GuideLLM mock scenario and public synthetic lm-eval task prompts/targets | No private data permitted |
+
+GuideLLM/lm-eval smoke output must resolve under the repository's ignored `.firstroll`; the script
+refuses a symlink escape or occupied loopback port. Only the redacted tooling qualification and
+cross-report benchmark audit are versioned. Mock request timing, generated text and lm-eval sample
+logs remain local and are not product evidence.
 
 The default-off local Agent adapter does not write newly acquired comparison sources to
 `.firstroll/criticism` or `.firstroll/videos`. Its runtime objects and provider credentials remain

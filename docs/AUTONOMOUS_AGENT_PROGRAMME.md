@@ -109,6 +109,15 @@ film/director matching and abstract-only boundary remain deterministic. Future p
 only with explicit identity matching, attribution, response-size limits, URL restrictions, failure
 classification and tests. General arbitrary web browsing is not an acceptable provider.
 
+## Benchmark Tool Role
+
+GuideLLM `0.7.3` and lm-evaluation-harness `0.4.12` are mock-qualified development diagnostics, not
+new Agent gates. GuideLLM can later measure representative planner transport or serving TTFT/ITL only
+through a loopback benchmark adapter and separate exact request budget. The commit-safe lm-eval suite
+contains twelve synthetic claim-support cases, but no configured-model score exists. Generic model
+accuracy and mock throughput cannot replace deterministic routing comparison, exact packet/study
+causality or owner review. See [Agent Benchmark Audit](AGENT_BENCHMARK_AUDIT.md).
+
 ## Required Ablations
 
 ### A01 — Gap and planner ablation

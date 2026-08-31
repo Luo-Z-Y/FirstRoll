@@ -45,6 +45,7 @@ environment configuration, acceptance checks and operational limits.
 | Review the revised text-only Agent stages and repeated protocol | [Text-Agent Programme](docs/TEXT_AGENT_PROGRAMME.md) |
 | Review the successor autonomous research capability and acceptance gates | [Autonomous Agent Programme](docs/AUTONOMOUS_AGENT_PROGRAMME.md) |
 | Compare the former planner protocol with native tool calls | [Native Tool Calling](docs/NATIVE_TOOL_CALLING.md) |
+| Review current Agent evidence, benchmark-tool fit and improvements | [Agent Benchmark Audit](docs/AGENT_BENCHMARK_AUDIT.md) |
 | Complete the private filmmaker packet-rating gate | [Human Evidence-Packet Review](docs/HUMAN_PACKET_REVIEW.md) |
 | Install and run the private local edition | [Local Setup](docs/LOCAL_SETUP.md) |
 | Operate the public Azure deployment | [Public Beta Hosting](docs/HOSTING.md) |
@@ -300,7 +301,10 @@ planning, structural repair and exact changed-packet synthesis. A01 is consumed.
 9/9 but regeneration passed only 4/9, so its aggregate machine gate also failed and is consumed. A01R
 now gates class-aware reacquisition, while A02R gates 24 patch-only reliability samples; both lack
 fresh budgets. Native provider compatibility has synthetic coverage only; see the detailed
-[code comparison](docs/NATIVE_TOOL_CALLING.md). A03 lacks an accepted A01R packet and a budget.
+[code comparison](docs/NATIVE_TOOL_CALLING.md). GuideLLM and lm-evaluation-harness are mock-qualified,
+but no mock timing or score is product evidence; the consolidated
+[benchmark audit](docs/AGENT_BENCHMARK_AUDIT.md) records current numbers and improvement priorities.
+A03 lacks an accepted A01R packet and a budget.
 
 The public beta is intentionally narrower than the local edition. Azure Static Web Apps and Azure
 Container Apps use separate origins and custom domains. Public mode does not publish local settings,
@@ -990,6 +994,7 @@ FirstRoll/
 │       ├── index.html
 │       └── styles.css
 ├── docs/
+│   ├── AGENT_BENCHMARK_AUDIT.md
 │   ├── API_REFERENCE.md
 │   ├── ARCHITECTURE.md
 │   ├── DATA_MODEL.md
@@ -1006,6 +1011,7 @@ FirstRoll/
 │   ├── PROGRESS.md
 │   └── RELEASE.md
 ├── evals/
+│   ├── benchmark_tools/        # GuideLLM mock profile and public lm-eval tasks
 │   ├── agent_cases.json
 │   ├── agent_go_no_go.json
 │   ├── autonomous_agent_programme.json
@@ -1097,7 +1103,7 @@ fallback behaviour; these are tracked separately from the new FirstRoll modules.
 | Clip-to-study evidence bridge | Deferred | Do not begin multimodal Agent work until the five-stage text programme is accepted |
 | Creator primary-source layer | Partial | Discovered interview descriptions and public YouTube captions are stored and cited; verified speaker attribution and dedicated interview search remain planned |
 | Persistent film projects | Planned | Retain film records, clips, analyses, notes and studies; the current autonomous phase store is a private run checkpoint, not a complete project model |
-| Evaluation suite | Baseline recorded | Five frozen Agent-comparison cases now record accepted quality, operational and quality failure rates, latency, repair use and token consumption |
+| Evaluation suite | Audit current; Agent gates open | Immutable fixed/Agent/A01/A02 metrics are fingerprinted; GuideLLM/lm-eval are mock-qualified, while current native-Agent value remains unmeasured |
 
 Progress is maintained in [docs/PROGRESS.md](docs/PROGRESS.md), including dated changes
 and acceptance evidence. Update that file whenever a milestone changes state.
@@ -1114,7 +1120,16 @@ The harness writes only redacted stage timings, aggregate packet shape, safe IDs
 it never calls DeepSeek or stores packet text. Run
 `uv run python tools/evaluate_packet_quality.py --output evals/results/packet-quality-YYYY-MM-DD.json`
 to assess the separate synthetic abundant, sparse, duplicate, multilingual, ambiguous-identity and
-malicious-instruction fixtures before synthesis.
+malicious-instruction fixtures before synthesis. The current cross-result Agent inventory and
+third-party-tool suitability assessment are in
+[Agent Benchmark Audit](docs/AGENT_BENCHMARK_AUDIT.md). Its audit command makes no model call; the
+separate smoke command contacts only a named local mock:
+
+```bash
+uv run python tools/audit_agent_benchmarks.py \
+  --output evals/results/agent-benchmark-audit-current.json
+tools/run_benchmark_tooling_smoke.sh
+```
 
 The human packet gate runs locally because it deliberately displays selected private passages in the
 terminal. Resumable scores and notes remain under Git-ignored `.firstroll/evaluations/`, while its

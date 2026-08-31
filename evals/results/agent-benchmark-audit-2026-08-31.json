@@ -1,0 +1,256 @@
+{
+  "schema_version": 1,
+  "audit_id": "firstroll-agent-benchmark-audit-v1",
+  "recorded_at": "2026-08-31T09:52:00Z",
+  "benchmark_subject_revision": "f582387516e02f7d8c1167a676e0956415af0e2e",
+  "scope": "Redacted synthesis of immutable FirstRoll benchmark artefacts plus mock-only third-party tooling qualification; this audit makes no model or provider call.",
+  "input_artefacts": [
+    {
+      "name": "fixed_reliability",
+      "path": "evals/results/baseline-reliability-2026-08-21.json",
+      "sha256": "18ea51ad64f0363de7b5374a56796402fb627c005537596ee23e8e2214abc97f",
+      "source_revision": "c680a95220983b510f5b6a320cbb7aa305556337"
+    },
+    {
+      "name": "original_agent",
+      "path": "evals/results/local-agent-paired-2026-08-24.json",
+      "sha256": "3e9050c3e7be97232879f6acb871f16c883dde35a029dde95002e0636696a739",
+      "source_revision": "10a587e366c121270b9515fec27bb3b886e46155"
+    },
+    {
+      "name": "repeated_agent",
+      "path": "evals/results/text-agent-repeated-2026-08-25.json",
+      "sha256": "6c3a5cd4e816ee8e05d6339d86070e50041f9f157c875930eaf84aa41e52315a",
+      "source_revision": "f442f5cedf800d0be09f2d5051453f7441debca5"
+    },
+    {
+      "name": "structural_agent",
+      "path": "evals/results/text-agent-structural-repair-2026-08-25.json",
+      "sha256": "b6f535facbe88b76a3e81e80a653391423cccd33acb23216a6c8b1bfbb446183",
+      "source_revision": "038392dff2dcd0127c9b5b15d3b747953d9a722f"
+    },
+    {
+      "name": "acquisition_ablation",
+      "path": "evals/results/autonomous-agent-acquisition-2026-08-28.json",
+      "sha256": "b2988b6bca7c77946e55e25b2e902cf14d4b23e5c861bbd9441722449320b3a5",
+      "source_revision": "497be3c1c9225bbe77b3a5792b45188ae3879861"
+    },
+    {
+      "name": "repair_ablation",
+      "path": "evals/results/autonomous-agent-repair-2026-08-28.json",
+      "sha256": "cd5750c92ea15c86d15ee7183ef162e65ae3574e4a5490aec5f2fba6bb0e60b1",
+      "source_revision": "9be19e7bd9fd565bd362eb479d9c0666465e03c3"
+    },
+    {
+      "name": "packet_latency",
+      "path": "evals/results/packet-latency-prewarm-2026-08-21.json",
+      "sha256": "03733d1dd766e2497232fc8b1cddcb3ccefba93cc65b9e2b18dbc508f12cf986",
+      "source_revision": "a272d5bdaaab61f5ee05ac6688b8de7f0da3f3ca"
+    },
+    {
+      "name": "tooling_smoke",
+      "path": "evals/results/benchmark-tooling-smoke-2026-08-31.json",
+      "sha256": "2d2b636b28f8e725e11297b695e3a0d9de442f75fd5647293e40287dda603aba",
+      "source_revision": "f582387516e02f7d8c1167a676e0956415af0e2e"
+    },
+    {
+      "name": "programme",
+      "path": "evals/autonomous_agent_programme.json",
+      "sha256": "aa6f0d433ed9caafd1766b071353b809536e3505869a81cc56beb3b2db5d826c",
+      "source_revision": null
+    }
+  ],
+  "current_benchmark": {
+    "fixed_workflow_reference": {
+      "source_revision": "c680a95220983b510f5b6a320cbb7aa305556337",
+      "observations": 5,
+      "completion_ratio": 1.0,
+      "mean_quality": 98.65,
+      "p50_end_to_end_seconds": 55.407,
+      "p95_end_to_end_seconds": 62.129,
+      "model_calls": 5,
+      "total_tokens": 38875,
+      "interpretation": "five-case capability checkpoint, not reliability evidence"
+    },
+    "original_local_agent": {
+      "source_revision": "10a587e366c121270b9515fec27bb3b886e46155",
+      "fixed_completion_ratio": 1.0,
+      "agent_completion_ratio": 0.8,
+      "fixed_mean_quality": 97.4,
+      "agent_mean_quality": 94.77,
+      "machine_targets_passed": false
+    },
+    "repeated_synthesis": {
+      "source_revision": "f442f5cedf800d0be09f2d5051453f7441debca5",
+      "scheduled_samples_per_lane": 15,
+      "fixed_completion_ratio": 1.0,
+      "agent_completion_ratio": 1.0,
+      "agent_minus_fixed_mean_quality": 0.63,
+      "p50_latency_ratio": 1.100404,
+      "p95_latency_ratio": 1.993109,
+      "token_ratio": 1.186853,
+      "machine_targets_passed": false
+    },
+    "structural_revision": {
+      "source_revision": "038392dff2dcd0127c9b5b15d3b747953d9a722f",
+      "scheduled_samples_per_lane": 15,
+      "fixed_completion_ratio": 1.0,
+      "agent_completion_ratio": 1.0,
+      "agent_minus_fixed_mean_quality": -0.44,
+      "p50_latency_ratio": 1.003191,
+      "p95_latency_ratio": 0.888329,
+      "token_ratio": 1.002379,
+      "repair_samples_observed": 0,
+      "machine_targets_passed": true,
+      "evaluation_artefacts_complete": false,
+      "changed_packet_quality": {
+        "changed_case_count": 1,
+        "cases": [
+          {
+            "case_id": "the-thing-ambiguous-identity",
+            "fixed_mean_quality": 98.25,
+            "agent_mean_quality": 95.97,
+            "agent_minus_fixed": -2.28
+          }
+        ]
+      }
+    },
+    "A01_acquisition_ablation": {
+      "source_revision": "497be3c1c9225bbe77b3a5792b45188ae3879861",
+      "model_planner_calls": 3,
+      "physical_provider_observations": 4,
+      "deterministic_lane_status": "failed",
+      "model_lane_status": "failed",
+      "machine_targets_passed": false,
+      "human_review_ready": false
+    },
+    "A02_repair_ablation": {
+      "source_revision": "9be19e7bd9fd565bd362eb479d9c0666465e03c3",
+      "targeted_patch_scheduled": 9,
+      "targeted_patch_completed": 9,
+      "targeted_patch_valid_ratio": 1.0,
+      "targeted_patch_p95_seconds": 2.079,
+      "regeneration_completed": 4,
+      "regeneration_valid_ratio": 0.4444,
+      "machine_targets_passed": false
+    },
+    "packet_preparation": {
+      "source_revision": "a272d5bdaaab61f5ee05ac6688b8de7f0da3f3ca",
+      "samples": 35,
+      "failed_samples": 0,
+      "cold_p95_ms": 361.549,
+      "warm_p95_ms": 182.709,
+      "scope": "model-free packet preparation after explicit encoder prewarm"
+    },
+    "current_unrun_gates": {
+      "A01R": {
+        "status": "harness_implemented_awaiting_fresh_budget",
+        "planner_protocol": "native_tool_calls",
+        "paid_budget_confirmed": false
+      },
+      "A02R": {
+        "status": "harness_implemented_awaiting_fresh_budget",
+        "scheduled_samples": 24,
+        "paid_budget_confirmed": false
+      },
+      "A03": {
+        "status": "blocked_by_A01R_machine_and_human_evidence",
+        "paid_budget_confirmed": false
+      }
+    }
+  },
+  "third_party_tooling": {
+    "qualification_report": "evals/results/benchmark-tooling-smoke-2026-08-31.json",
+    "qualification_status": "passed_with_recorded_repairs",
+    "guidellm_version": "0.7.3",
+    "lm_eval_version": "0.4.12",
+    "external_model_provider_calls": 0,
+    "current_firstroll_performance_measured": false,
+    "current_firstroll_quality_measured": false
+  },
+  "coverage_assessment": [
+    {
+      "dimension": "fixed_workflow_capability",
+      "status": "measured_five_cases_not_reliability"
+    },
+    {
+      "dimension": "agent_completion_and_quality",
+      "status": "historical_mixed_results_current_revision_unmeasured"
+    },
+    {
+      "dimension": "native_tool_call_provider_compatibility",
+      "status": "synthetic_only"
+    },
+    {
+      "dimension": "planner_value_against_deterministic_router",
+      "status": "not_demonstrated"
+    },
+    {
+      "dimension": "targeted_patch_capability",
+      "status": "promising_nine_samples_reliability_unmeasured"
+    },
+    {
+      "dimension": "changed_packet_causal_study_value",
+      "status": "not_demonstrated"
+    },
+    {
+      "dimension": "owner_attested_agent_usefulness",
+      "status": "absent"
+    },
+    {
+      "dimension": "serving_ttft_itl_and_concurrency",
+      "status": "not_applicable_until_benchmark_endpoint_exists"
+    },
+    {
+      "dimension": "claim_audit_edit_and_coach_provider_behaviour",
+      "status": "synthetic_only"
+    }
+  ],
+  "improvement_priorities": [
+    {
+      "priority": 1,
+      "id": "validate_native_acquisition_causally",
+      "action": "Run A01R once under its frozen class-aware and native-protocol gate, then obtain personal blinded packet review.",
+      "blocked_by": "fresh_exact_A01R_budget"
+    },
+    {
+      "priority": 2,
+      "id": "establish_patch_reliability",
+      "action": "Run A02R's 24 controlled patch samples and retain every failed or second-call sample.",
+      "blocked_by": "fresh_exact_A02R_budget"
+    },
+    {
+      "priority": 3,
+      "id": "prove_changed_packet_study_value",
+      "action": "Run A03 only with the exact accepted A01R packet and owner-review repetitions 1, 5 and 10.",
+      "blocked_by": "A01R_machine_and_human_pass_plus_fresh_A03_budget"
+    },
+    {
+      "priority": 4,
+      "id": "add_model_level_grounding_diagnostics",
+      "action": "Run the 12-case commit-safe lm-eval claim-support task as a diagnostic; do not substitute it for FirstRoll graph or human gates.",
+      "blocked_by": "separate_exact_12_call_model_budget_and_fresh_private_output"
+    },
+    {
+      "priority": 5,
+      "id": "measure_serving_only_when_representative",
+      "action": "Use GuideLLM first for single-stream native planner transport, then bounded concurrency only against an authorised benchmark endpoint; never report mock throughput as FirstRoll performance.",
+      "blocked_by": "representative_OpenAI_compatible_benchmark_endpoint_and_exact_request_budget"
+    },
+    {
+      "priority": 6,
+      "id": "broaden_reliability",
+      "action": "Collect at least twenty comparable observations per retained critical strategy and validate audit, edit and coach with the real provider before hosted routing.",
+      "blocked_by": "earlier_causal_gates"
+    }
+  ],
+  "conclusion": {
+    "fixed_production_workflow_retained": true,
+    "autonomous_agent_value_demonstrated": false,
+    "autonomous_agent_reliable": false,
+    "native_tool_calling_provider_validated": false,
+    "targeted_patch_is_promising": true,
+    "third_party_tooling_ready_for_bounded_future_runs": true,
+    "new_paid_benchmark_authorised": false
+  }
+}

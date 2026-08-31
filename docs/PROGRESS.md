@@ -1,5 +1,51 @@
 # FirstRoll Project Progress
 
+### 31 August 2026 — GuideLLM/lm-eval benchmark audit and improvement plan
+
+Delivered without a configured/paid model, planner, acquisition-provider or deployment call:
+
+1. Used GuideLLM `0.7.3` against its named local OpenAI-compatible mock. The first scenario failed
+   preflight because zero synthetic variance is invalid; the next default-fork worker died with signal
+   11 on macOS. Both failures are retained. Positive variance plus `spawn`, one worker and disabled
+   tokenizer parallelism then completed 3/3 transport requests.
+2. Exercised GuideLLM's native tool-call workload with the FirstRoll-style Crossref function schema:
+   four mock requests completed, zero errored and two native tool calls were observed. Mock timing and
+   throughput were deliberately excluded from product claims.
+3. Used lm-evaluation-harness `0.4.12`: three dummy samples loaded; a local-chat attempt failed before
+   requests because the API extra was absent; `lm-eval[api]` then completed 3/3 requests against the
+   same local mock. All attempts remain in the redacted tooling report.
+4. Added and validated `firstroll_claim_support`, a commit-safe 12-case generation task over direct
+   support, interpretation, unsupported claims, overclaiming, creator statements, unverified video
+   context and retrieved prompt injection. A dummy processed all cases only to qualify loading; its
+   zero score is not retained as model evidence.
+5. Added `tools/run_benchmark_tooling_smoke.sh`. It pins both tools through `uvx`, refuses an occupied
+   port or `.firstroll` path escape, contacts only `127.0.0.1`, verifies request/tool-call counts and
+   keeps raw reports mode-`0600` under ignored storage.
+6. Added `tools/audit_agent_benchmarks.py` and the reproducible redacted
+   `agent-benchmark-audit-2026-08-31.json`, fingerprinting nine immutable report/contract inputs.
+7. Documented exact current fixed/Agent/A01/A02/packet metrics, tool suitability, unsupported claims
+   and prioritised improvements in [Agent Benchmark Audit](AGENT_BENCHMARK_AUDIT.md).
+8. Added ADR-023: GuideLLM/lm-eval are bounded diagnostics and cannot replace A01R–A03, complete
+   failure accounting, citation validation or personal owner review.
+9. Expanded synthetic coverage to 381 tests; both real-model benchmark authorisation and every
+   existing A01R/A02R/A03 paid confirmation remain false/null.
+
+Current benchmark conclusion:
+
+- fixed workflow capability is demonstrated over five cases, not reliable over twenty;
+- autonomous Agent value and reliability remain unproven;
+- native tool calling has synthetic/mock compatibility only;
+- targeted patching is promising at 9/9 but still below its 24-sample reliability gate;
+- no owner-attested acquisition or changed-study value exists.
+
+Next actionable work:
+
+1. Prioritise A01R, A02R and conditional A03 causal evidence over broad benchmark scores.
+2. If separately approved, run the 12-case lm-eval diagnostic with exactly 12 model requests, no
+   retry/provider acquisition and fresh private output; treat it as diagnostic only.
+3. Build a loopback-only representative GuideLLM adapter before proposing any paid TTFT/ITL or
+   concurrency profile; never add a production Agent route for benchmark convenience.
+
 ### 28 August 2026 — Native research-planner tool calls implemented
 
 Delivered without a model, planner or provider call:
