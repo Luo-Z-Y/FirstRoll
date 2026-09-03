@@ -24,6 +24,8 @@ keeps those layers visible instead of presenting one fluent but unsupported answ
 > private review artifact. A successor autonomous-Agent programme now adds typed evidence-gap
 > objectives, honest independent-origin recovery, a deterministic planner baseline and Crossref as
 > an Agent provider. It remains local, default-off and unvalidated by paid or human evidence.
+> A secure, single-use HMAC-based production approval system for the backend CD pipeline has been
+> designed and implemented; it remains undeployed pending final sign-off.
 
 See [Project Progress](docs/PROGRESS.md) for completed milestones, verification results,
 known limitations and the next priorities.

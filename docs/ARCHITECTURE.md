@@ -385,8 +385,6 @@ film-form statements generated without a clip remain viewing hypotheses.
 Retrieved reviews, captions and webpages are untrusted evidence. They may support attributed claims,
 but they cannot authorise tools, change system policy or become model instructions.
 
-## Development-agent boundary
-
 The repository's `.pi` directory is coding-harness configuration, not a FirstRoll product Agent.
 Trusted Pi sessions may delegate isolated scout, planner, reviewer or bounded-worker tasks to child Pi
 processes. The extension is absent from the web build, backend runtime and OpenAPI contract; it cannot
@@ -394,6 +392,41 @@ change local or hosted research routing. Children share the developer working tr
 allowance, so parallel dispatch is reserved for read-only work and the parent retains diff review,
 Git integration and delivery. Private `.firstroll` material remains outside every delegated role.
 See [FirstRoll Pi subagents](../.pi/README.md) for the operational boundary.
+
+## Secure Production Deployment Pipeline
+
+FirstRoll backend deployments follow a strict, human-approved continuous delivery pipeline. Production approval is governed by single-use delegated capabilities, preventing agents from acquiring standing deployment credentials.
+
+```text
+GitHub Actions CI triggers on push/PR to master
+→ runs fast static analysis, linting, and unit tests
+→ success triggers 'Backend Release' workflow (if on master)
+→ build job creates a release candidate Docker image
+→ container startup test and health endpoint validation
+→ image pushed to Azure Container Registry (immutable digest)
+→ job generates a structured Release Manifest (JSON) and computes a stable SHA-256 digest
+→ manifest artefact uploaded; job completes
+
+(Trust gap: workflow waits for GitHub 'production' environment gate)
+
+User or Agent reads the Release Manifest
+→ Agent generates a human-readable approval summary and risk classification
+→ User explicitly approves the exact candidate (tied to run ID, commit SHA, and image digest)
+→ Approval tool mints a short-lived, single-use HMAC-SHA256 signed capability
+→ Capability is submitted to the trusted Approval Broker service
+→ Broker verifies signature, bindings, expiry, and single-use nonce
+→ Broker uses a GitHub App token to approve the pending deployment API
+→ Broker records an append-only JSONL audit event
+
+deploy job resumes on a fresh runner
+→ downloads the manifest artefact
+→ logs into Azure production using federated credentials
+→ deploys the exact image digest (not a tag) to Azure Container Apps
+→ polls for readiness and performs smoke tests on the production health endpoint
+→ verifies the expected release identity (commit SHA) is reported by the API
+```
+
+This architecture explicitly isolates repository-controlled CI code from production credentials. The deploy job runs on a separate runner with no code checkout, ensuring malicious code introduced in a PR cannot steal deployment secrets. Agents facilitating the approval flow hold no permanent keys and can only mint capabilities after explicit user authorisation.
 
 ## Availability and Scaling
 

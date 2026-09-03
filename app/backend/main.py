@@ -127,10 +127,7 @@ def local_test_request(request: Request) -> bool:
     """
 
     client_host = request.client.host if request.client else ""
-    return bool(
-        _loopback_host(request.url.hostname)
-        and _loopback_host(client_host)
-    )
+    return bool(_loopback_host(request.url.hostname) and _loopback_host(client_host))
 
 
 def local_test_account_email(request: Request) -> str:
@@ -165,9 +162,7 @@ def frontend_build_identity() -> dict[str, str | int]:
     """
     configured_channel = os.getenv("FIRSTROLL_BUILD_CHANNEL", "").strip().casefold()
     default_channel = (
-        "local"
-        if hosted_frontend_preview_enabled() or not public_mode_enabled()
-        else "live"
+        "local" if hosted_frontend_preview_enabled() or not public_mode_enabled() else "live"
     )
     channel = configured_channel or default_channel
     if channel not in {"local", "live", "preview"}:
@@ -255,9 +250,7 @@ web_directory = Path(__file__).resolve().parents[1] / "web"
 
 
 def start_local_embedding_warmup() -> None:
-    if public_mode_enabled() or not environment_flag(
-        "FIRSTROLL_PREWARM_EMBEDDINGS", default=True
-    ):
+    if public_mode_enabled() or not environment_flag("FIRSTROLL_PREWARM_EMBEDDINGS", default=True):
         return
     library_index.start_embedding_warmup()
 
@@ -370,21 +363,13 @@ def prepare_film_study(
     trace.set_count("theory_omitted", int(theory_selection.get("omitted_items", 0)))
     trace.set_count("critical_claims", len(packet.critical_claims))
     critical_selection = packet.retrieval.get("critical_selection", {})
-    trace.set_count(
-        "critical_candidates", int(critical_selection.get("candidate_items", 0))
-    )
+    trace.set_count("critical_candidates", int(critical_selection.get("candidate_items", 0)))
     trace.set_count("critical_omitted", int(critical_selection.get("omitted_items", 0)))
     trace.set_count("attributed_sources", len(packet.attributed_sources))
     attributed_selection = packet.retrieval.get("attributed_selection", {})
-    trace.set_count(
-        "attributed_candidates", int(attributed_selection.get("candidate_items", 0))
-    )
-    trace.set_count(
-        "attributed_omitted", int(attributed_selection.get("omitted_items", 0))
-    )
-    trace.set_count(
-        "attributed_truncated", int(attributed_selection.get("truncated_items", 0))
-    )
+    trace.set_count("attributed_candidates", int(attributed_selection.get("candidate_items", 0)))
+    trace.set_count("attributed_omitted", int(attributed_selection.get("omitted_items", 0)))
+    trace.set_count("attributed_truncated", int(attributed_selection.get("truncated_items", 0)))
     return {
         "film": film,
         "claims": claims,
@@ -455,10 +440,7 @@ def build_local_autonomous_run_engine():
 
 def authenticated_user(request: Request) -> dict[str, str | None]:
     authorisation = request.headers.get("Authorization")
-    if (
-        local_test_request(request)
-        and authorisation == f"Bearer {LOCAL_TEST_ACCOUNT_TOKEN}"
-    ):
+    if local_test_request(request) and authorisation == f"Bearer {LOCAL_TEST_ACCOUNT_TOKEN}":
         return {
             "id": LOCAL_TEST_ACCOUNT_ID,
             "email": local_test_account_email(request),
@@ -522,8 +504,7 @@ def local_unlimited_quota() -> dict:
 
 def hosted_deep_study_enabled() -> bool:
     return bool(
-        hosted_deep_study_boundary_enabled()
-        and settings_store.secret_state("deepseek").configured
+        hosted_deep_study_boundary_enabled() and settings_store.secret_state("deepseek").configured
     )
 
 
@@ -549,7 +530,9 @@ def personal_provider_key(request: Request, provider: str) -> str | None:
     if not value:
         return None
     if not 16 <= len(value) <= 512 or not re.fullmatch(r"[A-Za-z0-9._-]+", value):
-        raise HTTPException(status_code=400, detail=f"The personal {provider.title()} key is invalid.")
+        raise HTTPException(
+            status_code=400, detail=f"The personal {provider.title()} key is invalid."
+        )
     return value
 
 
@@ -602,7 +585,9 @@ def require_local_settings_request(request: Request) -> None:
         raise HTTPException(status_code=404, detail="FirstRoll settings are not published.")
     client_host = request.client.host if request.client else ""
     if client_host not in {"127.0.0.1", "::1", "testclient"}:
-        raise HTTPException(status_code=403, detail="FirstRoll settings are available locally only.")
+        raise HTTPException(
+            status_code=403, detail="FirstRoll settings are available locally only."
+        )
 
 
 def public_connector(connector_id: str) -> dict:
@@ -624,10 +609,9 @@ def public_library_settings() -> dict:
     catalogue["indexable_document_count"] = sum(
         document["format"] == "PDF" for document in catalogue["documents"]
     )
-    catalogue["index_needs_rebuild"] = (
-        index.get("document_count") != catalogue["indexable_document_count"]
-        or (catalogue["indexable_document_count"] > 0 and index.get("state") != "ready")
-    )
+    catalogue["index_needs_rebuild"] = index.get("document_count") != catalogue[
+        "indexable_document_count"
+    ] or (catalogue["indexable_document_count"] > 0 and index.get("state") != "ready")
     return catalogue
 
 
@@ -643,8 +627,7 @@ def reception_summary(scores: list[dict]) -> dict:
     if douban and letterboxd:
         aggregate = {
             "score": round(
-                float(douban["normalised"]) * 0.5
-                + float(letterboxd["normalised"]) * 0.5,
+                float(douban["normalised"]) * 0.5 + float(letterboxd["normalised"]) * 0.5,
                 1,
             ),
             "scale": 100,
@@ -655,7 +638,14 @@ def reception_summary(scores: list[dict]) -> dict:
 
 @app.get("/api/health")
 def health() -> dict[str, str]:
-    return {"status": "ok"}
+    result: dict[str, str] = {"status": "ok"}
+    release_sha = os.environ.get("FIRSTROLL_RELEASE_SHA", "")
+    if release_sha:
+        result["release_sha"] = release_sha
+    release_digest = os.environ.get("FIRSTROLL_RELEASE_DIGEST", "")
+    if release_digest:
+        result["release_digest"] = release_digest
+    return result
 
 
 @app.get("/", response_class=FileResponse)
@@ -818,7 +808,9 @@ async def test_connector(connector_id: str, request: Request) -> dict:
             return await run_in_threadpool(youtube_video_adapter.test_connection)
         if connector_id == "tmdb":
             return await run_in_threadpool(tmdb_discovery_service.test_connection)
-        raise HTTPException(status_code=501, detail="This optional connector is not implemented yet.")
+        raise HTTPException(
+            status_code=501, detail="This optional connector is not implemented yet."
+        )
     except (StudyGenerationError, CriticismError, VideoSourceError, DiscoveryProviderError) as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
@@ -1066,9 +1058,10 @@ def generate_film_study(
     if public_mode:
         user = authenticated_user(request)
         is_local_test = local_test_user(user)
-        if not is_local_test and (not hosted_deep_study_boundary_enabled() or (
-            not personal_deepseek_key and not hosted_deep_study_enabled()
-        )):
+        if not is_local_test and (
+            not hosted_deep_study_boundary_enabled()
+            or (not personal_deepseek_key and not hosted_deep_study_enabled())
+        ):
             raise HTTPException(
                 status_code=503,
                 detail="Deep Study is not fully configured on this deployment yet.",
@@ -1106,9 +1099,7 @@ def generate_film_study(
             ),
         }
         if public_mode:
-            result["quota"] = (
-                local_unlimited_quota() if is_local_test else quota.as_dict()
-            )
+            result["quota"] = local_unlimited_quota() if is_local_test else quota.as_dict()
         return result
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
@@ -1143,9 +1134,13 @@ async def stream_film_study(
     owner_id = account_owner_id(user)
     public_mode = public_mode_enabled()
     personal_deepseek_key = personal_provider_key(request, "deepseek")
-    if public_mode and not is_local_test and (
-        not hosted_deep_study_boundary_enabled()
-        or (not personal_deepseek_key and not hosted_deep_study_enabled())
+    if (
+        public_mode
+        and not is_local_test
+        and (
+            not hosted_deep_study_boundary_enabled()
+            or (not personal_deepseek_key and not hosted_deep_study_enabled())
+        )
     ):
         raise HTTPException(
             status_code=503,
@@ -1211,9 +1206,7 @@ async def stream_film_study(
                 ),
             }
             if public_mode:
-                payload["quota"] = (
-                    local_unlimited_quota() if is_local_test else quota.as_dict()
-                )
+                payload["quota"] = local_unlimited_quota() if is_local_test else quota.as_dict()
             study_run_store.complete(run_id, owner_id, payload)
             quality_passed = study.get("quality", {}).get("status") == "passed"
             yield progress.frame(

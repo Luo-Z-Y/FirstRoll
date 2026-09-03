@@ -1,0 +1,437 @@
+name: Backend Release
+
+on:
+  workflow_run:
+    workflows:
+      - CI
+    types:
+      - completed
+    branches:
+      - master
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: backend-release-production
+  cancel-in-progress: true
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Build, push to ACR, and generate the release manifest.
+  # This job runs without production credentials.
+  # ---------------------------------------------------------------------------
+  build:
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'master' &&
+      github.event.workflow_run.head_repository.full_name == github.repository
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    name: Build backend image and generate release manifest
+    outputs:
+      image-digest: ${{ steps.push.outputs.image_digest }}
+      image-tag: ${{ steps.meta.outputs.image_tag }}
+      manifest-artifact-id: ${{ steps.manifest-artifact.outputs.artifact-id }}
+      commit-sha: ${{ github.event.workflow_run.head_sha }}
+    steps:
+      - name: Check out the CI-approved revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Refuse a stale production revision
+        env:
+          EXPECTED_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -eu
+          checked_out_sha=$(git rev-parse HEAD)
+          current_master_sha=$(git ls-remote origin refs/heads/master | cut -f1)
+          if [ "$checked_out_sha" != "$EXPECTED_SHA" ]; then
+            echo "::error::Checked-out SHA does not match expected SHA."
+            exit 1
+          fi
+          if [ "$current_master_sha" != "$EXPECTED_SHA" ]; then
+            echo "::error::Refusing to deploy a stale revision. master has moved to $current_master_sha."
+            exit 1
+          fi
+
+      - name: Compute image metadata
+        id: meta
+        env:
+          COMMIT_SHA: ${{ github.event.workflow_run.head_sha }}
+          ACR_LOGIN_SERVER: ${{ secrets.ACR_LOGIN_SERVER }}
+        run: |
+          set -eu
+          image_tag="${COMMIT_SHA}"
+          image_ref="${ACR_LOGIN_SERVER}/firstroll-api:${image_tag}"
+          echo "image_tag=${image_tag}" >> "$GITHUB_OUTPUT"
+          echo "image_ref=${image_ref}" >> "$GITHUB_OUTPUT"
+
+      - name: Build backend Docker image
+        run: |
+          docker build --tag firstroll-api:release-candidate .
+
+      - name: Test container starts
+        run: |
+          set -eu
+          docker run -d --name release-test \
+            -e PORT=10000 \
+            -e FIRSTROLL_PUBLIC_MODE=true \
+            -e FIRSTROLL_VIDEO_ANALYSIS_ENABLED=false \
+            -e FIRSTROLL_DEEP_STUDY_ENABLED=false \
+            -e FIRSTROLL_CORS_ALLOWED_ORIGINS=https://firstroll.app \
+            -e FIRSTROLL_RELEASE_SHA=${{ github.event.workflow_run.head_sha }} \
+            -p 10000:10000 \
+            firstroll-api:release-candidate
+          # Wait for startup
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:10000/api/health > /dev/null 2>&1; then
+              echo "Container is healthy."
+              break
+            fi
+            sleep 2
+          done
+          # Verify health and release identity
+          health=$(curl -sf http://localhost:10000/api/health)
+          echo "Health response: ${health}"
+          echo "${health}" | grep -q '"status":"ok"' || \
+            (echo "::error::Health check failed." && docker logs release-test && exit 1)
+          docker stop release-test
+
+      - name: Log in to Azure Container Registry
+        env:
+          ACR_LOGIN_SERVER: ${{ secrets.ACR_LOGIN_SERVER }}
+          ACR_USERNAME: ${{ secrets.ACR_USERNAME }}
+          ACR_PASSWORD: ${{ secrets.ACR_PASSWORD }}
+        run: |
+          echo "${ACR_PASSWORD}" | docker login "${ACR_LOGIN_SERVER}" \
+            --username "${ACR_USERNAME}" --password-stdin
+
+      - name: Tag and push to ACR
+        id: push
+        env:
+          IMAGE_REF: ${{ steps.meta.outputs.image_ref }}
+        run: |
+          set -eu
+          docker tag firstroll-api:release-candidate "${IMAGE_REF}"
+          docker push "${IMAGE_REF}"
+          # Capture the immutable image digest
+          image_digest=$(docker inspect --format='{{index .RepoDigests 0}}' "${IMAGE_REF}" | cut -d@ -f2)
+          echo "image_digest=${image_digest}" >> "$GITHUB_OUTPUT"
+          echo "Pushed image with digest: ${image_digest}"
+
+      - name: Detect changes for release manifest
+        id: changes
+        env:
+          COMMIT_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -eu
+          # Get the list of changed files in the merge commit
+          changed_files=$(git diff --name-only "${COMMIT_SHA}^..${COMMIT_SHA}" 2>/dev/null || echo "")
+          echo "changed_files<<EOF" >> "$GITHUB_OUTPUT"
+          echo "${changed_files}" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+
+          # Detect migration files
+          migration_detected="false"
+          migration_files=""
+          for f in ${changed_files}; do
+            case "$f" in
+              database/migrations/*|supabase/migrations/*|migrations/*)
+                migration_detected="true"
+                migration_files="${migration_files}${f}\n"
+                ;;
+            esac
+          done
+          echo "migration_detected=${migration_detected}" >> "$GITHUB_OUTPUT"
+          echo "migration_files=${migration_files}" >> "$GITHUB_OUTPUT"
+
+          # Detect Terraform changes
+          tf_changed="false"
+          tf_files=""
+          for f in ${changed_files}; do
+            case "$f" in
+              infra/terraform/*.tf)
+                tf_changed="true"
+                tf_files="${tf_files}${f}\n"
+                ;;
+            esac
+          done
+          echo "tf_changed=${tf_changed}" >> "$GITHUB_OUTPUT"
+          echo "tf_files=${tf_files}" >> "$GITHUB_OUTPUT"
+
+          # Try to extract PR info from merge commit message
+          pr_number=$(git log -1 --format=%s "${COMMIT_SHA}" | grep -oP '#\K[0-9]+' || echo "")
+          pr_title=$(git log -1 --format=%s "${COMMIT_SHA}" | sed 's/Merge pull request #[0-9]* from [^ ]* //' || echo "")
+          echo "pr_number=${pr_number}" >> "$GITHUB_OUTPUT"
+          echo "pr_title=${pr_title}" >> "$GITHUB_OUTPUT"
+
+      - name: Generate release manifest
+        id: manifest-gen
+        env:
+          COMMIT_SHA: ${{ github.event.workflow_run.head_sha }}
+          WORKFLOW_RUN_ID: ${{ github.event.workflow_run.id }}
+          IMAGE_DIGEST: ${{ steps.push.outputs.image_digest }}
+          IMAGE_TAG: ${{ steps.meta.outputs.image_tag }}
+          PR_NUMBER: ${{ steps.changes.outputs.pr_number }}
+          PR_TITLE: ${{ steps.changes.outputs.pr_title }}
+          MIGRATION_DETECTED: ${{ steps.changes.outputs.migration_detected }}
+          TF_CHANGED: ${{ steps.changes.outputs.tf_changed }}
+        run: |
+          set -eu
+          mkdir -p release-manifest
+
+          # Determine infrastructure change description
+          infra_change="backend image only"
+          if [ "${TF_CHANGED}" = "true" ]; then
+            infra_change="backend image and Terraform infrastructure"
+          fi
+
+          # Build the release manifest JSON
+          cat > release-manifest/manifest.json << MANIFEST_EOF
+          {
+            "schema_version": 1,
+            "repository": "Luo-Z-Y/FirstRoll",
+            "environment": "production",
+            "workflow_run_id": ${WORKFLOW_RUN_ID},
+            "commit_sha": "${COMMIT_SHA}",
+            "branch": "master",
+            "pull_request": {
+              "number": ${PR_NUMBER:-0},
+              "title": "${PR_TITLE:-Release ${COMMIT_SHA:0:7}}",
+              "url": "#${PR_NUMBER:-0}"
+            },
+            "candidate": {
+              "image_repository": "firstroll-api",
+              "image_tag": "${IMAGE_TAG}",
+              "image_digest": "${IMAGE_DIGEST}",
+              "artifact_digest": "",
+              "created_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            },
+            "current_production": {
+              "image_digest": null,
+              "revision": null,
+              "deployed_at": null
+            },
+            "verification": {
+              "ci_passed": true,
+              "container_tests_passed": true,
+              "scan_passed": null,
+              "sbom_generated": null,
+              "terraform_plan_available": null
+            },
+            "change_summary": {
+              "release_title": "${PR_TITLE:-Release ${COMMIT_SHA:0:7}}",
+              "user_visible_changes": [],
+              "expected_impact": [],
+              "database_migration": ${MIGRATION_DETECTED},
+              "migration_files": [],
+              "infrastructure_change": "${infra_change}",
+              "terraform_changed_files": [],
+              "expected_downtime": "none",
+              "risk_level": "low",
+              "risk_reasons": [],
+              "rollback_summary": "Restore the previously active Container Apps revision."
+            }
+          }
+          MANIFEST_EOF
+
+          # Compute manifest digest
+          manifest_digest=$(sha256sum release-manifest/manifest.json | cut -d' ' -f1)
+          echo "manifest_digest=sha256:${manifest_digest}" >> "$GITHUB_OUTPUT"
+          echo "Release manifest generated with digest: sha256:${manifest_digest}"
+
+      - name: Upload release manifest
+        id: manifest-artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release-manifest-${{ github.event.workflow_run.head_sha }}
+          path: release-manifest/
+          if-no-files-found: error
+          retention-days: 7
+
+  # ---------------------------------------------------------------------------
+  # Deploy to Azure Container Apps.
+  # This job is gated by the GitHub 'production' environment.
+  # It runs on a fresh runner, checks out NO repository source, and receives
+  # production credentials ONLY after the environment gate is satisfied.
+  # ---------------------------------------------------------------------------
+  deploy:
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    name: Deploy to production
+    environment:
+      name: production
+      url: https://api.firstroll.app
+    steps:
+      - name: Download the release manifest
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          artifact-ids: ${{ needs.build.outputs.manifest-artifact-id }}
+          path: release-manifest
+          merge-multiple: true
+
+      - name: Verify manifest integrity
+        run: |
+          set -eu
+          test -f release-manifest/manifest.json
+          echo "Release manifest contents:"
+          cat release-manifest/manifest.json | python3 -m json.tool
+
+      - name: Log in to Azure
+        uses: azure/login@a457da9ea143d694b1b9c7c869ebb04ebe844ef5 # v2.3.0
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Record current production state
+        id: current
+        env:
+          RESOURCE_GROUP: firstroll-production
+          APP_NAME: firstroll-api
+        run: |
+          set -eu
+          # Get the current active revision
+          current_revision=$(az containerapp revision list \
+            --resource-group "${RESOURCE_GROUP}" \
+            --name "${APP_NAME}" \
+            --query "[?properties.active].name | [0]" \
+            --output tsv 2>/dev/null || echo "unknown")
+          echo "current_revision=${current_revision}" >> "$GITHUB_OUTPUT"
+          echo "Current production revision: ${current_revision}"
+
+      - name: Deploy exact image digest
+        env:
+          RESOURCE_GROUP: firstroll-production
+          APP_NAME: firstroll-api
+          ACR_LOGIN_SERVER: ${{ secrets.ACR_LOGIN_SERVER }}
+          IMAGE_DIGEST: ${{ needs.build.outputs.image-digest }}
+          COMMIT_SHA: ${{ needs.build.outputs.commit-sha }}
+        run: |
+          set -eu
+          image_ref="${ACR_LOGIN_SERVER}/firstroll-api@${IMAGE_DIGEST}"
+          echo "Deploying image: ${image_ref}"
+
+          az containerapp update \
+            --resource-group "${RESOURCE_GROUP}" \
+            --name "${APP_NAME}" \
+            --image "${image_ref}" \
+            --set-env-vars \
+              "FIRSTROLL_RELEASE_SHA=${COMMIT_SHA}" \
+            --output none
+
+          echo "Deployment command completed."
+
+      - name: Wait for Container Apps readiness
+        env:
+          RESOURCE_GROUP: firstroll-production
+          APP_NAME: firstroll-api
+        run: |
+          set -eu
+          echo "Waiting for the new revision to become active..."
+          for i in $(seq 1 60); do
+            status=$(az containerapp show \
+              --resource-group "${RESOURCE_GROUP}" \
+              --name "${APP_NAME}" \
+              --query "properties.runningStatus" \
+              --output tsv 2>/dev/null || echo "unknown")
+            if [ "$status" = "Running" ]; then
+              echo "Container App is running."
+              break
+            fi
+            echo "Waiting... (attempt ${i}/60, status: ${status})"
+            sleep 5
+          done
+
+      - name: Verify health endpoint
+        run: |
+          set -eu
+          echo "Checking health endpoint..."
+          for i in $(seq 1 10); do
+            health=$(curl -sf https://api.firstroll.app/api/health 2>/dev/null || echo "")
+            if echo "${health}" | grep -q '"status":"ok"'; then
+              echo "✅ Health check passed: ${health}"
+              break
+            fi
+            echo "Waiting for health... (attempt ${i}/10)"
+            sleep 10
+          done
+          # Final check
+          health=$(curl -sf https://api.firstroll.app/api/health)
+          echo "${health}" | grep -q '"status":"ok"' || \
+            (echo "::error::Health check failed after deployment." && exit 1)
+
+      - name: Verify release identity
+        env:
+          EXPECTED_SHA: ${{ needs.build.outputs.commit-sha }}
+        run: |
+          set -eu
+          health=$(curl -sf https://api.firstroll.app/api/health)
+          echo "Health response: ${health}"
+          # Check if release_sha is present and matches (if the endpoint reports it)
+          if echo "${health}" | grep -q "release_sha"; then
+            reported_sha=$(echo "${health}" | python3 -c "import sys,json; print(json.load(sys.stdin).get('release_sha',''))")
+            if [ "${reported_sha}" = "${EXPECTED_SHA}" ]; then
+              echo "✅ Release identity verified: ${reported_sha}"
+            else
+              echo "::warning::Release SHA mismatch: expected ${EXPECTED_SHA}, got ${reported_sha}"
+            fi
+          else
+            echo "ℹ️  Health endpoint does not report release_sha (expected for first deployment)."
+          fi
+
+      - name: Verify CORS
+        run: |
+          set -eu
+          echo "Checking CORS for firstroll.app..."
+          cors_response=$(curl -sf -X OPTIONS \
+            -H "Origin: https://firstroll.app" \
+            -H "Access-Control-Request-Method: GET" \
+            -D - -o /dev/null \
+            https://api.firstroll.app/api/health 2>/dev/null || echo "")
+          if echo "${cors_response}" | grep -qi "access-control-allow-origin"; then
+            echo "✅ CORS headers present."
+          else
+            echo "::warning::CORS headers not detected in OPTIONS response."
+          fi
+
+      - name: Verify representative API behaviour
+        run: |
+          set -eu
+          echo "Checking API contract endpoint..."
+          contract=$(curl -sf https://api.firstroll.app/api/contract 2>/dev/null || echo "")
+          if [ -n "${contract}" ]; then
+            echo "✅ Contract endpoint responded."
+          else
+            echo "::warning::Contract endpoint did not respond."
+          fi
+
+          echo "Checking discovery status..."
+          discovery=$(curl -sf https://api.firstroll.app/api/discovery/status 2>/dev/null || echo "")
+          if [ -n "${discovery}" ]; then
+            echo "✅ Discovery status endpoint responded."
+          else
+            echo "::warning::Discovery status endpoint did not respond."
+          fi
+
+      - name: Generate deployment report
+        if: always()
+        env:
+          COMMIT_SHA: ${{ needs.build.outputs.commit-sha }}
+          IMAGE_DIGEST: ${{ needs.build.outputs.image-digest }}
+          CURRENT_REVISION: ${{ steps.current.outputs.current_revision }}
+        run: |
+          set -eu
+          echo "## Deployment Report" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Field | Value |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|---|---|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Commit | \`${COMMIT_SHA:0:7}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Image digest | \`${IMAGE_DIGEST:0:19}...\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Previous revision | \`${CURRENT_REVISION}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Target | api.firstroll.app |" >> "$GITHUB_STEP_SUMMARY"

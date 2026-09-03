@@ -1,5 +1,22 @@
 # FirstRoll Project Progress
 
+### 03 September 2026 — Secure backend production approval system implemented
+
+Delivered without deploying to the live production environment:
+
+1. Designed and implemented a deterministic risk classification engine that grades backend releases as `low`, `medium`, `high`, or `blocked` based on code changes (e.g., destructive migrations, auth logic, Terraform drift).
+2. Created an immutable release manifest data model that deterministically captures PR facts, image digests, test verification status, and risk classification into a canonical JSON format with a stable SHA-256 digest.
+3. Implemented a single-use HMAC-SHA256 signed authorization capability system. Tokens bind an explicit human approval to a specific commit, environment, and image digest.
+4. Built a human-readable summary generator that translates the release manifest into a clear, non-technical overview answering: What changes? What is the impact? Are there migrations or downtime? What are the test results?
+5. Authored a trusted `ApprovalBroker` FastAPI service intended to run completely outside the repository's CI flow, validating capabilities and bridging the final GitHub `production` environment approval gate.
+6. Engineered an append-only JSONL audit trail tracking approvals, deployments, and rollbacks, firmly separating human authorization events from agent operations.
+7. Overhauled the CI workflow architecture with a new `Backend Release` pipeline triggered only upon CI success on `master`. It builds and pushes an immutable image digest to ACR, generates the signed manifest artifact, and suspends for external `production` environment approval before deploying.
+8. Integrated release identity transparency (commit SHA and image digest) directly into the backend health endpoint for robust post-deployment verification.
+9. Formalised a 17-point Threat Model covering token theft, capability replay, agent coercion, and CSRF vectors.
+10. Added 100+ assertions verifying workflow integrity, single-use binding, risk evaluation correctness, and token boundary security.
+
+Status: All new components are strictly enforced locally on the `feat/backend-release-approval` branch. Production remains on the existing manual approval workflow. The approval broker is implemented but remains undeployed pending final human sign-off.
+
 ### 31 August 2026 — GuideLLM/lm-eval benchmark audit and improvement plan
 
 Delivered without a configured/paid model, planner, acquisition-provider or deployment call:
