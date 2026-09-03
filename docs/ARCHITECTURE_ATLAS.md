@@ -159,3 +159,8 @@ layout or content changes; deterministic validation alone does not prove visual 
 Update the relevant JSON and regenerate its HTML whenever a documented boundary, request order,
 budget, terminal state or deployment gate changes. Keep the pinned runtime revision explicit so
 future readers can distinguish an as-built record from a target architecture.
+
+This is enforced by the repository's `AGENTS.md`. An architecture-changing branch is incomplete
+until every affected JSON/HTML pair, the written architecture, README and progress record agree.
+Internal refactors that preserve all documented contracts may leave the diagrams unchanged, but the
+handoff must record that the architecture was reviewed and explain why regeneration was unnecessary.

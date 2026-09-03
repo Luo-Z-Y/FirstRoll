@@ -14,6 +14,9 @@ Delivered as documentation only; no runtime, provider, model or deployment behav
    persistence, tool-authority and human-approval boundaries represented in the diagrams.
 4. Retained the typed JSON beside each HTML artifact so future architectural changes can be reviewed
    and regenerated rather than hand-edited in the rendered output.
+5. Added a repository instruction gate requiring future architecture-changing work to update,
+   validate, deliver and browser-check every affected Archify JSON/HTML pair in the same branch.
+   Contract-preserving refactors may skip regeneration only with an explicit handoff explanation.
 
 Evidence:
 
