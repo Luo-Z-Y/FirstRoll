@@ -7,7 +7,6 @@ identifiers hidden behind details, and handling of unavailable facts.
 
 from __future__ import annotations
 
-import pytest
 
 from tools.release.manifest import build_manifest
 from tools.release.summary import (

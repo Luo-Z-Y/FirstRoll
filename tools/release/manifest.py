@@ -10,12 +10,16 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from dataclasses import dataclass, field, asdict
 from datetime import datetime, timezone
 from typing import Any
 
 
 SCHEMA_VERSION = 1
+_COMMIT_SHA = re.compile(r"^[0-9a-f]{40}$")
+_DIGEST = re.compile(r"^sha256:[0-9a-f]{64}$")
+_RISK_LEVELS = {"low", "medium", "high", "blocked"}
 
 
 @dataclass(frozen=True)
@@ -145,6 +149,69 @@ def manifest_from_json(text: str) -> ReleaseManifest:
     return manifest_from_dict(json.loads(text))
 
 
+def validate_manifest(
+    manifest: ReleaseManifest,
+    *,
+    expected_repository: str | None = None,
+    expected_environment: str | None = None,
+    expected_workflow_run_id: int | None = None,
+    expected_commit_sha: str | None = None,
+    expected_image_repository: str | None = None,
+    expected_image_digest: str | None = None,
+) -> None:
+    """Reject a release manifest that is malformed, unsafe or mis-bound.
+
+    The checks are deliberately deterministic.  A deployment caller supplies
+    the expected run, revision and image values from GitHub Actions rather than
+    trusting the downloaded artefact to describe itself honestly.
+    """
+
+    errors: list[str] = []
+    if manifest.schema_version != SCHEMA_VERSION:
+        errors.append(f"unsupported schema version {manifest.schema_version}")
+    if not _COMMIT_SHA.fullmatch(manifest.commit_sha):
+        errors.append("commit_sha must be a lower-case 40-character Git SHA")
+    if not _DIGEST.fullmatch(manifest.candidate.image_digest):
+        errors.append("candidate image_digest must be a sha256 digest")
+    if not _DIGEST.fullmatch(manifest.candidate.artifact_digest):
+        errors.append("candidate artifact_digest must be a sha256 digest")
+    elif manifest.candidate.artifact_digest != manifest.digest():
+        errors.append("manifest digest does not match its contents")
+    if manifest.candidate.image_tag != manifest.commit_sha:
+        errors.append("candidate image tag must equal the full commit SHA")
+    if manifest.branch != "master":
+        errors.append("production releases must come from master")
+    if not manifest.verification.ci_passed:
+        errors.append("CI did not pass")
+    if not manifest.verification.container_tests_passed:
+        errors.append("container tests did not pass")
+    if manifest.verification.scan_passed is False:
+        errors.append("the configured security scan failed")
+    if manifest.change_summary.risk_level not in _RISK_LEVELS:
+        errors.append("risk level is invalid")
+    if manifest.change_summary.risk_level == "blocked":
+        errors.append("risk classification blocks deployment")
+
+    expected = (
+        ("repository", manifest.repository, expected_repository),
+        ("environment", manifest.environment, expected_environment),
+        ("workflow_run_id", manifest.workflow_run_id, expected_workflow_run_id),
+        ("commit_sha", manifest.commit_sha, expected_commit_sha),
+        (
+            "image_repository",
+            manifest.candidate.image_repository,
+            expected_image_repository,
+        ),
+        ("image_digest", manifest.candidate.image_digest, expected_image_digest),
+    )
+    for field_name, actual, wanted in expected:
+        if wanted is not None and actual != wanted:
+            errors.append(f"{field_name} does not match the approved release")
+
+    if errors:
+        raise ValueError("Invalid release manifest: " + "; ".join(errors))
+
+
 def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
@@ -187,6 +254,15 @@ def build_manifest(
     Call this from the CI manifest-generation step with values sourced from
     deterministic workflow metadata, registry queries, and diff analysis.
     """
+    if not _COMMIT_SHA.fullmatch(commit_sha):
+        raise ValueError("commit_sha must be a lower-case 40-character Git SHA")
+    if not _DIGEST.fullmatch(image_digest):
+        raise ValueError("image_digest must be a sha256 digest")
+    if image_tag != commit_sha:
+        raise ValueError("image_tag must equal commit_sha")
+    if risk_level not in _RISK_LEVELS:
+        raise ValueError(f"Unknown risk level: {risk_level}")
+
     pr = None
     if pr_number is not None and pr_title is not None:
         pr = PullRequest(

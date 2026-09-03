@@ -154,8 +154,8 @@ def generate_technical_details(manifest: ReleaseManifest) -> str:
     lines: list[str] = []
     lines.append("## Technical details")
     lines.append("")
-    lines.append(f"| Field | Value |")
-    lines.append(f"|---|---|")
+    lines.append("| Field | Value |")
+    lines.append("|---|---|")
     lines.append(f"| Environment | `{manifest.environment}` |")
     lines.append(f"| Repository | `{manifest.repository}` |")
 

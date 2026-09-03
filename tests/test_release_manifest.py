@@ -6,20 +6,14 @@ and handling of unavailable data.
 
 from __future__ import annotations
 
-import json
 
 import pytest
 
 from tools.release.manifest import (
     SCHEMA_VERSION,
-    Candidate,
-    ChangeSummary,
-    CurrentProduction,
-    PullRequest,
-    ReleaseManifest,
-    Verification,
     build_manifest,
     manifest_from_json,
+    validate_manifest,
 )
 
 
@@ -45,6 +39,8 @@ def _sample_manifest(**overrides):
         pr_url="#42",
     )
     defaults.update(overrides)
+    if "commit_sha" in overrides and "image_tag" not in overrides:
+        defaults["image_tag"] = overrides["commit_sha"]
     return build_manifest(**defaults)
 
 
@@ -115,6 +111,22 @@ class TestManifestDigest:
         m = _sample_manifest()
         assert m.candidate.artifact_digest.startswith("sha256:")
         assert len(m.candidate.artifact_digest) == 71  # sha256: + 64 hex chars
+
+    def test_validate_accepts_exact_binding(self):
+        m = _sample_manifest()
+        validate_manifest(
+            m,
+            expected_repository="Luo-Z-Y/FirstRoll",
+            expected_environment="production",
+            expected_workflow_run_id=123456789,
+            expected_commit_sha="a" * 40,
+            expected_image_repository="firstroll-api",
+            expected_image_digest="sha256:" + "b" * 64,
+        )
+
+    def test_build_rejects_non_digest_image(self):
+        with pytest.raises(ValueError, match="image_digest"):
+            _sample_manifest(image_digest="latest")
 
 
 # ---------------------------------------------------------------------------

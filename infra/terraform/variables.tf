@@ -52,6 +52,17 @@ variable "frontend_domain" {
   default     = "firstroll.app"
 }
 
+variable "github_repository" {
+  description = "GitHub owner/repository allowed to exchange Actions OIDC tokens for Azure identities."
+  type        = string
+  default     = "Luo-Z-Y/FirstRoll"
+
+  validation {
+    condition     = can(regex("^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$", var.github_repository))
+    error_message = "github_repository must use the owner/repository form."
+  }
+}
+
 # -----------------------------------------------------------------------------
 # Container Apps names and image selection
 # -----------------------------------------------------------------------------

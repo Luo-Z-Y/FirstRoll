@@ -24,8 +24,9 @@ keeps those layers visible instead of presenting one fluent but unsupported answ
 > private review artifact. A successor autonomous-Agent programme now adds typed evidence-gap
 > objectives, honest independent-origin recovery, a deterministic planner baseline and Crossref as
 > an Agent provider. It remains local, default-off and unvalidated by paid or human evidence.
-> A secure, single-use HMAC-based production approval system for the backend CD pipeline has been
-> designed and implemented; it remains undeployed pending final sign-off.
+> A passwordless backend delivery pipeline is implemented but remains disabled until its Azure OIDC
+> identities and GitHub settings are applied. It seals deterministic release evidence, waits for the
+> existing human `production` review, deploys an immutable digest and rolls back failed verification.
 
 See [Project Progress](docs/PROGRESS.md) for completed milestones, verification results,
 known limitations and the next priorities.
@@ -1082,6 +1083,14 @@ separate runner checks out no repository code and waits at the protected `produc
 Only a human repository-owner approval releases its branch-restricted token to the pinned Azure
 upload action; an agent merge is never production approval. External actions are full-SHA pinned and
 reviewed weekly by Dependabot.
+
+Backend delivery follows the same human gate but uses two passwordless Azure identities instead of a
+deployment token. A branch-bound build identity can push an immutable image and read current app
+metadata; an environment-bound deploy identity can update only the FirstRoll Container App. The
+workflow binds a canonical manifest to the GitHub run, commit and image digest, validates it again on
+a source-free deploy runner, verifies the baked live commit and Azure-configured digest, and restores the prior image
+after failed post-deployment checks. It stays inert until `BACKEND_RELEASE_ENABLED=true`; complete
+setup and operating instructions are in [Backend Release Runbook](docs/RELEASE.md).
 
 The current verification baseline and its update protocol are recorded in
 [Evaluation](docs/EVALUATION.md); dated delivery evidence remains in

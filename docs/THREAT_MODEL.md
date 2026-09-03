@@ -1,265 +1,85 @@
-# Backend Release Approval — Threat Model
+# Backend Release Threat Model
 
-This document identifies the threats to the FirstRoll backend production
-approval system and records the mitigation for each threat.
+This model describes the implemented GitHub Actions → Azure Container Registry → Azure Container
+Apps release path. It does not claim that a separate approval broker, HMAC capability service or
+append-only audit database exists.
 
-## Trust boundaries
+## Assets and trust boundaries
 
-```
-┌─────────────────────────────────────────────┐
-│ Repository-controlled code                  │
-│ (CI, build scripts, workflow definitions)   │
-│ Trust level: contributor                    │
-├─────────────────────────────────────────────┤
-│ GitHub Actions runner                       │
-│ Trust level: ephemeral, sandboxed           │
-├─────────────────────────────────────────────┤
-│ GitHub platform                             │
-│ (environment protection, pending reviews)   │
-│ Trust level: platform                       │
-├─────────────────────────────────────────────┤
-│ Approval broker service                     │
-│ Trust level: trusted service identity       │
-├─────────────────────────────────────────────┤
-│ Azure Container Registry                    │
-│ Trust level: cloud infrastructure           │
-├─────────────────────────────────────────────┤
-│ Azure Container Apps (production)           │
-│ Trust level: production                     │
-├─────────────────────────────────────────────┤
-│ Agent runtime                               │
-│ Trust level: delegated, no standing access  │
-└─────────────────────────────────────────────┘
+Protected assets are the production API, its configuration, the ACR image set, the human approval
+decision and the evidence showing what was released.
+
+```text
+Pull-request code
+    │ read-only CI; no Azure identity
+    ▼
+protected master + successful CI
+    │ branch-bound GitHub OIDC token
+    ▼
+build runner ── AcrPush + app Reader ── ACR candidate + sealed manifest
+    │
+    ▼
+GitHub production environment ── required human owner review
+    │ environment-bound GitHub OIDC token
+    ▼
+fresh deploy runner (no checkout) ── Contributor on one Container App
+    │
+    ▼
+exact Azure revision ── health, identity, API, docs and CORS checks
+                         └─ failure restores previous image
 ```
 
----
+GitHub and Azure are external trusted platforms. Retrieved application evidence and visitor input
+are unrelated to deployment authority and cannot approve a release.
 
-## Threat catalogue
+## Threats and controls
 
-### T01 — Permanent agent authority
+| Threat | Implemented control | Residual risk |
+|---|---|---|
+| Pull-request code steals production credentials | PR CI receives no Azure token. OIDC subjects match `master` or the `production` environment. | A malicious change merged to `master` can affect later workflow behaviour; owner review and branch protection remain important. |
+| Build identity changes production | Build identity has only `AcrPush` on one registry and `Reader` on one app. | It can upload a malicious image, but cannot select it for production. |
+| Deploy identity changes unrelated Azure resources | `Contributor` is scoped to the exact FirstRoll Container App, not the resource group or subscription. | Contributor can change any setting on that app after approval. |
+| Long-lived Azure or registry secret leaks | GitHub exchanges a signed OIDC assertion for a short-lived Azure token; ACR admin access stays disabled. | GitHub/Azure platform compromise is out of scope. |
+| A different commit or image is deployed | Manifest binds repository, run ID, branch, full SHA, image repository/tag/digest and its own canonical digest. Deployment uses `repository@sha256:…`. | Pattern-based risk classification may miss a novel semantic risk. |
+| Manifest is edited after build | Deploy job recomputes its SHA-256 content digest before requesting Azure credentials. | GitHub artefact service integrity is still trusted. |
+| Old approved run overwrites newer `master` | Current remote `master` is checked before build and again after approval; concurrency does not cancel an approval in progress. Manual dispatch also requires successful push CI for the exact SHA. | A force-push by an administrator can invalidate governance assumptions. |
+| Repository code runs with deploy access | Deploy runner checks out no source and uses only platform tools plus inline validation. | Workflow YAML itself came from the approved commit, so workflow changes are classified high risk. |
+| Misleading release summary | Facts and risk minimum come from deterministic Git/digest/test inputs; unknown scan/SBOM states are shown as unconfigured. | Human-readable change descriptions are coarse file-area descriptions. |
+| Human approves the wrong run | GitHub shows the exact run and environment; manifest summary includes full technical bindings. | Human error remains possible; compare SHA and digest before approval. |
+| New revision is unhealthy or misidentified | Workflow waits for that exact revision, requires `Healthy` and `Running`, requires the baked SHA from `/api/health`, and compares Azure's configured image with the approved digest. | A shallow health endpoint cannot prove every user path works. |
+| Public API boundary regresses | Post-deploy checks cover representative endpoints, exact CORS origin and disabled API documentation. | Provider-specific failures may occur after smoke checks. |
+| Failed release leaves production broken | The previous image is captured before deployment and restored after a failed post-deploy check. Its commit identity is baked into that image. | Azure-wide outage or a broken previous image can make automated rollback fail. |
+| Approval is bypassed | Deploy job names the branch-restricted `production` environment with a required human reviewer. The deploy OIDC subject also names that environment. | Repository administrators can alter environment policy; GitHub audit history must be reviewed for such changes. |
+| Workflow starts before setup is complete | Entire release path requires `BACKEND_RELEASE_ENABLED=true`; preflight rejects missing variables/secrets. | A partially configured enabled workflow fails noisily but does not receive a valid Azure token. |
 
-| Field | Value |
-|---|---|
-| Asset | Production deployment gate |
-| Actor | Agent with standing credentials |
-| Precondition | Agent holds a reusable PAT or App key |
-| Trust boundary | Agent → GitHub production environment |
-| Mitigation | Agent never receives signing keys, PATs, App private keys, or reusable deployment tokens. Single-use HMAC capabilities expire in 15 minutes and are consumed after first use. |
-| Residual risk | If the signing key leaks, an attacker could mint capabilities until the key is rotated. |
-| Verification test | `test_agent_cannot_approve_without_signing_key` |
+## Deterministic release policy
 
-### T02 — Stolen reusable GitHub token
+The release tool assigns the highest applicable minimum:
 
-| Field | Value |
-|---|---|
-| Asset | GitHub deployment approval |
-| Actor | Attacker with a leaked PAT |
-| Precondition | A long-lived PAT exists |
-| Trust boundary | External → GitHub API |
-| Mitigation | No PATs are used. The approval broker uses short-lived GitHub App installation tokens (max 1 hour). The `GITHUB_TOKEN` in workflows cannot approve its own pending deployment. |
-| Residual risk | GitHub App private key compromise (see T16). |
-| Verification test | Workflow does not reference `secrets.GITHUB_TOKEN` for approval. |
+- `blocked`: CI, container test or configured scan failed;
+- `high`: destructive migration, cloud identity/permission change, or release-authority change;
+- `medium`: non-destructive migration, auth/quota/secret/CORS/API/base-image/infrastructure change;
+- `low`: no detected sensitive category and required checks passed.
 
-### T03 — Replayed approval capability
+The model cannot lower this classification. High risk still requires informed human review; it is
+not an automated approval.
 
-| Field | Value |
-|---|---|
-| Asset | Production deployment |
-| Actor | Attacker who intercepts a valid capability |
-| Precondition | Capability token intercepted |
-| Trust boundary | Agent/UI → Approval broker |
-| Mitigation | Single-use nonce consumed atomically. Expired capabilities (15-minute TTL) are rejected. HMAC signature prevents forgery. |
-| Residual risk | Race condition if nonce store is non-atomic (mitigated by thread lock; production should use Redis SETNX). |
-| Verification test | `test_reused_authorization_rejected` |
+## Evidence and auditability
 
-### T04 — Approval for one candidate applied to another
+GitHub retains the workflow run, protected-environment review, job logs, manifest artefact and job
+summary for the configured retention period. Azure retains activity and revision logs. This is a
+platform audit trail, not an application-owned append-only ledger.
 
-| Field | Value |
-|---|---|
-| Asset | Deployment integrity |
-| Actor | Attacker or confused agent |
-| Precondition | Valid capability exists for candidate A |
-| Trust boundary | Approval broker verification |
-| Mitigation | Capability is bound to commit SHA, image digest, workflow run ID, manifest digest. Verification rejects any mismatch. |
-| Residual risk | None if all binding fields are checked. |
-| Verification test | `test_approval_for_one_candidate_cannot_approve_another`, `test_wrong_commit_sha_rejected`, `test_wrong_image_digest_rejected` |
+The release manifest deliberately contains no access token, client secret, Supabase secret, API key
+or application evidence. The deploy client ID is stored in the protected environment, and no
+production credential is uploaded as an artefact.
 
-### T05 — Candidate changed after user review
+## Not yet implemented
 
-| Field | Value |
-|---|---|
-| Asset | User's informed consent |
-| Actor | Concurrent merge or image rebuild |
-| Precondition | User reviews candidate, then candidate changes |
-| Trust boundary | Manifest integrity |
-| Mitigation | Capability binds to manifest digest. If the candidate changes, the manifest digest changes, and the capability is rejected. Stale-revision check in the build job aborts if master has moved. |
-| Residual risk | None if manifest digest is verified. |
-| Verification test | `test_wrong_manifest_digest_rejected` |
+- container vulnerability scanning;
+- software bill of materials generation;
+- signed container attestations;
+- durable export of GitHub/Azure deployment audit events;
+- synthetic checks beyond the current representative HTTP boundary.
 
-### T06 — Stale release overwriting a newer release
-
-| Field | Value |
-|---|---|
-| Asset | Production currency |
-| Actor | Delayed approval of an older candidate |
-| Precondition | Newer master commit exists |
-| Trust boundary | Build job stale-revision check |
-| Mitigation | Strict latest-only policy: build job verifies `HEAD` of `origin/master` matches the triggering SHA. Concurrency group cancels older runs. |
-| Residual risk | Brief race window between stale check and image push. |
-| Verification test | Workflow YAML inspection (`test_branch_must_be_master`) |
-
-### T07 — Compromised repository code reaching approval credentials
-
-| Field | Value |
-|---|---|
-| Asset | Approval broker credentials |
-| Actor | Malicious PR author |
-| Precondition | PR merges code that exfiltrates secrets |
-| Trust boundary | Repository code → Approval service |
-| Mitigation | Build job does not have approval credentials. Deploy job runs on a fresh runner with no code checkout. Approval broker runs as a separate service with its own credentials. GitHub App private key is never in repository secrets. |
-| Residual risk | If the broker service itself is compromised (see T16). |
-| Verification test | `test_no_checkout_step` (deploy job) |
-
-### T08 — Prompt injection causing deployment
-
-| Field | Value |
-|---|---|
-| Asset | Production deployment |
-| Actor | Attacker injecting instructions via PR title/description |
-| Precondition | Agent processes untrusted text |
-| Trust boundary | Agent → Approval system |
-| Mitigation | LLM-generated prose is separate from the structured manifest. The approval binds to the manifest, not to the natural-language summary. Explicit approval action required; vague text ("go ahead") does not trigger approval. |
-| Residual risk | Agent could be confused about which candidate to present, but cannot mint a valid capability without the signing key. |
-| Verification test | `test_agent_cannot_approve_without_signing_key` |
-
-### T09 — Fabricated release summary
-
-| Field | Value |
-|---|---|
-| Asset | User's informed decision |
-| Actor | Compromised or hallucinating LLM |
-| Precondition | LLM generates the approval summary |
-| Trust boundary | Manifest → Summary |
-| Mitigation | Critical facts (CI status, digest, migration, scan) come from the structured manifest, not from LLM generation. The LLM may rephrase but cannot invent or alter test results, digests, migration presence, or risk classification. Summary tests verify unavailable facts are never fabricated. |
-| Residual risk | LLM could downplay non-deterministic risk reasons (mitigated by deterministic minimum risk level). |
-| Verification test | `test_never_fabricates_unavailable_facts` |
-
-### T10 — Misleading risk classification
-
-| Field | Value |
-|---|---|
-| Asset | User's risk perception |
-| Actor | Bug or LLM override |
-| Precondition | Risk level is incorrectly lowered |
-| Trust boundary | Risk engine |
-| Mitigation | Deterministic minimum risk level cannot be lowered. Migration presence forces ≥ medium. Destructive migration forces high. Failed checks force blocked. The `minimum_deterministic_level` field is recorded and compared. |
-| Residual risk | Novel risk factors not covered by pattern detection. |
-| Verification test | `test_deterministic_minimum_is_preserved` |
-
-### T11 — GitHub webhook spoofing
-
-| Field | Value |
-|---|---|
-| Asset | Workflow trigger integrity |
-| Actor | External attacker |
-| Precondition | Attacker sends fake webhook |
-| Trust boundary | GitHub platform |
-| Mitigation | GitHub Actions `workflow_run` events are platform-generated and cannot be spoofed via external webhooks. The build job additionally verifies `head_repository.full_name == github.repository`. |
-| Residual risk | GitHub platform compromise (out of scope). |
-| Verification test | `test_repository_must_match` |
-
-### T12 — CSRF against approval UI
-
-| Field | Value |
-|---|---|
-| Asset | Approval decision |
-| Actor | Attacker with cross-origin request |
-| Precondition | User is authenticated to approval UI |
-| Trust boundary | Browser → Approval broker |
-| Mitigation | If a browser-based approval UI is added, it must include CSRF tokens and SameSite cookies. Current implementation uses HMAC-signed capabilities which are inherently CSRF-resistant (the attacker cannot forge a valid token). GitHub's built-in review UI has its own CSRF protection. |
-| Residual risk | None for the current HMAC-based design. |
-| Verification test | N/A (no browser approval UI currently deployed) |
-
-### T13 — Race between approval and deployment
-
-| Field | Value |
-|---|---|
-| Asset | Deployment consistency |
-| Actor | Concurrent approvals |
-| Precondition | Two approval attempts for the same candidate |
-| Trust boundary | Nonce store |
-| Mitigation | Atomic nonce consumption (thread lock for in-memory; Redis SETNX for production). GitHub's pending deployment API is idempotent for the same run/environment. Concurrency group prevents parallel deploy jobs. |
-| Residual risk | In-memory nonce store is not durable across process restarts. |
-| Verification test | `test_reused_authorization_rejected` |
-
-### T14 — Audit-log tampering
-
-| Field | Value |
-|---|---|
-| Asset | Audit trail integrity |
-| Actor | Attacker with file system access |
-| Precondition | Audit log stored on mutable file system |
-| Trust boundary | Broker → Audit storage |
-| Mitigation | Production audit log should use an append-only service (Azure Monitor, CloudWatch). Current file-based log is for development. Audit events contain identifiers but no secrets. |
-| Residual risk | File-based log is mutable in development. |
-| Verification test | `test_audit_event_contains_no_secrets` |
-
-### T15 — Secret leakage
-
-| Field | Value |
-|---|---|
-| Asset | Credentials and tokens |
-| Actor | Build job, audit log, or error message |
-| Precondition | Secret appears in logs or artifacts |
-| Trust boundary | All boundaries |
-| Mitigation | Audit events never contain signing keys, tokens, or private keys. Workflow uses `persist-credentials: false`. Terraform state uses encrypted remote backend. Production secrets are environment-scoped. `.gitignore` and `.dockerignore` exclude sensitive paths. |
-| Residual risk | Docker layer caching could expose intermediate secrets (mitigated by multi-stage build). |
-| Verification test | `test_audit_event_contains_no_secrets` |
-
-### T16 — Approval broker compromise
-
-| Field | Value |
-|---|---|
-| Asset | GitHub App identity |
-| Actor | Attacker who compromises the broker service |
-| Precondition | Broker service is compromised |
-| Trust boundary | Broker → GitHub API |
-| Mitigation | GitHub App has minimal permissions (`deployments: write`, `actions: read`). Installation tokens are short-lived (1 hour). The App can only approve pending deployments for repositories where it is installed. Credential rotation and monitoring are operational controls. |
-| Residual risk | Until detection, attacker could approve pending deployments. |
-| Verification test | Operational: monitor GitHub audit log for unexpected approvals. |
-
-### T17 — Rollback to an unsafe revision
-
-| Field | Value |
-|---|---|
-| Asset | Production integrity |
-| Actor | Operator or automated rollback |
-| Precondition | Previous revision has a known vulnerability |
-| Trust boundary | Operational |
-| Mitigation | Rollback restores the immediately previous known-good revision. If that revision is also unsafe, manual intervention is required. Destructive rollback actions require explicit authorisation. |
-| Residual risk | No automated rollback-safety validation. |
-| Verification test | Manual: verify rollback target before executing. |
-
----
-
-## Summary
-
-| Threat | Severity | Mitigated | Test coverage |
-|---|---|---|---|
-| T01 Permanent agent authority | Critical | ✅ | ✅ |
-| T02 Stolen reusable token | Critical | ✅ | ✅ |
-| T03 Replayed capability | High | ✅ | ✅ |
-| T04 Cross-candidate approval | High | ✅ | ✅ |
-| T05 Changed candidate | High | ✅ | ✅ |
-| T06 Stale release | Medium | ✅ | ✅ |
-| T07 Compromised code → credentials | Critical | ✅ | ✅ |
-| T08 Prompt injection | High | ✅ | ✅ |
-| T09 Fabricated summary | Medium | ✅ | ✅ |
-| T10 Misleading risk | Medium | ✅ | ✅ |
-| T11 Webhook spoofing | Low | ✅ | ✅ |
-| T12 CSRF | Medium | ✅ | N/A |
-| T13 Race condition | Low | ✅ | ✅ |
-| T14 Audit tampering | Medium | Partial | ✅ |
-| T15 Secret leakage | Critical | ✅ | ✅ |
-| T16 Broker compromise | Critical | Partial | Operational |
-| T17 Unsafe rollback | Medium | Partial | Manual |
+These gaps must remain visible in release summaries and must not be described as passing controls.

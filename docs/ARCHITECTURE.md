@@ -395,38 +395,38 @@ See [FirstRoll Pi subagents](../.pi/README.md) for the operational boundary.
 
 ## Secure Production Deployment Pipeline
 
-FirstRoll backend deployments follow a strict, human-approved continuous delivery pipeline. Production approval is governed by single-use delegated capabilities, preventing agents from acquiring standing deployment credentials.
+FirstRoll backend deployments use GitHub's protected `production` environment as the sole human
+approval authority. Azure access is passwordless: separate managed identities trust short-lived
+GitHub OIDC assertions for building and deploying. The workflow is feature-gated off until those
+identities and GitHub settings have been configured.
 
 ```text
-GitHub Actions CI triggers on push/PR to master
-→ runs fast static analysis, linting, and unit tests
-→ success triggers 'Backend Release' workflow (if on master)
-→ build job creates a release candidate Docker image
-→ container startup test and health endpoint validation
-→ image pushed to Azure Container Registry (immutable digest)
-→ job generates a structured Release Manifest (JSON) and computes a stable SHA-256 digest
-→ manifest artefact uploaded; job completes
-
-(Trust gap: workflow waits for GitHub 'production' environment gate)
-
-User or Agent reads the Release Manifest
-→ Agent generates a human-readable approval summary and risk classification
-→ User explicitly approves the exact candidate (tied to run ID, commit SHA, and image digest)
-→ Approval tool mints a short-lived, single-use HMAC-SHA256 signed capability
-→ Capability is submitted to the trusted Approval Broker service
-→ Broker verifies signature, bindings, expiry, and single-use nonce
-→ Broker uses a GitHub App token to approve the pending deployment API
-→ Broker records an append-only JSONL audit event
-
-deploy job resumes on a fresh runner
-→ downloads the manifest artefact
-→ logs into Azure production using federated credentials
-→ deploys the exact image digest (not a tag) to Azure Container Apps
-→ polls for readiness and performs smoke tests on the production health endpoint
-→ verifies the expected release identity (commit SHA) is reported by the API
+protected master + successful CI
+→ release switch and backend-path filter
+→ exact current-master check
+→ container build and local public-boundary smoke test
+→ branch-bound OIDC exchange for the build identity
+→ immutable image push to ACR
+→ deterministic diff/risk analysis and self-digesting manifest
+→ human-readable summary plus seven-day sealed artefact
+→ GitHub production environment waits for required owner review
+→ manifest, run, commit, image and current-master binding rechecked
+→ environment-bound OIDC exchange for the deploy identity
+→ previous image captured as the rollback target
+→ exact ACR digest deployed to Azure Container Apps
+→ exact revision, baked commit identity, Azure image digest, APIs, hidden docs and CORS verified
+→ failure after rollout restores the previous image and retains a failed run
 ```
 
-This architecture explicitly isolates repository-controlled CI code from production credentials. The deploy job runs on a separate runner with no code checkout, ensuring malicious code introduced in a PR cannot steal deployment secrets. Agents facilitating the approval flow hold no permanent keys and can only mint capabilities after explicit user authorisation.
+The release workflow owns the Container App image field after bootstrap, while Terraform ignores
+only that field and continues to own configuration, probes, scaling and infrastructure. This avoids
+an infrastructure apply accidentally rolling back a newer approved image. The build identity has
+`AcrPush` on the FirstRoll registry and `Reader` on the exact app. It cannot
+deploy. The deploy identity has `Contributor` only on the exact Container App; its federated subject
+names GitHub's `production` environment. The fresh deploy runner checks out no repository source and
+validates the manifest before requesting an Azure token. No HMAC broker, GitHub App, ACR password or
+long-lived Azure JSON credential is part of the implemented path. GitHub and Azure platform logs are
+the current audit trail; an application-owned append-only ledger is not implemented.
 
 ## Availability and Scaling
 

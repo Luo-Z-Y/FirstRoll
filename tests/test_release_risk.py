@@ -58,6 +58,15 @@ class TestHighRisk:
         assert result.level == "high"
         assert any("permission" in r.lower() or "identity" in r.lower() for r in result.reasons)
 
+    @pytest.mark.parametrize(
+        "path",
+        [".github/workflows/backend-release.yml", "tools/release/manifest.py"],
+    )
+    def test_release_authority_change_is_high(self, path):
+        result = classify_risk(changed_files=[path])
+        assert result.level == "high"
+        assert any("release authority" in reason.lower() for reason in result.reasons)
+
 
 class TestMediumRisk:
     def test_migration_present_is_medium(self):
@@ -116,6 +125,19 @@ class TestMediumRisk:
         )
         assert result.level == "medium"
         assert any("base-image" in r.lower() for r in result.reasons)
+
+    def test_dockerfile_hunk_context_does_not_fake_a_base_image_change(self):
+        result = classify_risk(
+            changed_files=["Dockerfile"],
+            diff_contents={
+                "Dockerfile": (
+                    "@@ -26,0 +27,2 @@ FROM python:3.11-slim-bookworm\n"
+                    '+ARG FIRSTROLL_RELEASE_SHA=""\n'
+                )
+            },
+        )
+        assert result.level == "low"
+        assert all("base-image" not in reason.lower() for reason in result.reasons)
 
 
 class TestLowRisk:

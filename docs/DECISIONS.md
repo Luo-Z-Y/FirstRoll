@@ -1,7 +1,7 @@
 # FirstRoll Architecture Decision Register
 
 **Decision owner:** FirstRoll maintainer  
-**Last reconciled:** 28 August 2026
+**Last reconciled:** 4 September 2026
 
 This register captures the major decisions that shape the current product. It does not attempt to
 record every CSS or parsing implementation detail. A choice belongs here when changing it would
@@ -35,6 +35,7 @@ public API.
 | 021 | Activate autonomous value ablations sequentially | Accepted | Exact cost isolation versus parallel execution |
 | 022 | Use native planner tool calls without delegating execution authority | Accepted | Standard protocol versus a deliberately policy-owned loop |
 | 023 | Use third-party benchmark tools as bounded diagnostics, not product gates | Accepted | Broader standard metrics versus preserving causal and human evidence |
+| 024 | Use GitHub environment review and Azure OIDC for backend delivery | Accepted, setup pending | Simpler least-privilege delivery versus trusting two managed platforms |
 
 ## ADR-001: Evolve pyCinemetrics with preserved attribution
 
@@ -1002,6 +1003,72 @@ budget and fresh output path.
 3. [x] Add a redacted, reproducible audit over immutable FirstRoll reports.
 4. [x] Document current benchmark gaps and prioritised improvements.
 5. [ ] Run no real model or load profile without a fresh exact authorisation.
+
+## ADR-024: Use GitHub environment review and Azure OIDC for backend delivery
+
+**Status:** Accepted, setup pending
+**Date:** 4 September 2026
+**Decider:** FirstRoll maintainer
+
+### Context
+
+The first backend-CD proposal combined a useful release manifest and risk classifier with a proposed
+HMAC capability, Approval Broker and GitHub App. The broker was not a runnable HTTP service, used
+in-memory replay state, had an unimplemented GitHub approval operation and was not called by the
+workflow. Meanwhile, the workflow still used long-lived Azure/ACR credentials and treated several
+failed production checks as warnings. Operating the proposal would therefore add a sensitive service
+without making deployment authority safer.
+
+The repository already has a branch-restricted GitHub `production` environment with a required human
+owner review. Azure supports GitHub OIDC federation and exact-resource role scopes.
+
+### Decision
+
+Use GitHub's protected environment as the sole approval authority and defer any custom broker until a
+demonstrated requirement cannot be met by the platform gate. Terraform creates separate user-assigned
+managed identities:
+
+- build: GitHub `master` subject, `AcrPush` on one registry and `Reader` on one Container App;
+- deploy: GitHub `production` environment subject and `Contributor` on that exact Container App.
+
+The workflow generates and seals deterministic release evidence, deploys an immutable image digest
+on a fresh runner with no checkout, requires exact release-identity verification and automatically
+restores the previous image after a failed post-deployment check. A feature variable keeps the whole
+path disabled until the infrastructure and GitHub settings are complete.
+
+After bootstrap, the delivery workflow owns the Container App image field. The commit SHA is baked
+into each image, and Azure's configured image reference is compared with the approved digest.
+Terraform ignores only that image field while retaining ownership of configuration, secrets, probes,
+scaling, identities and ingress. This prevents an unrelated infrastructure apply from reverting a
+newer approved application release.
+
+### Options considered
+
+| Option | Assessment |
+|---|---|
+| GitHub environment plus Azure OIDC | Reuses an implemented human gate, removes stored cloud passwords and permits exact role scopes; accepted |
+| Complete and host a custom Approval Broker | Could add external policy and durable capabilities, but creates another high-value service, secret and failure mode without a current need; deferred |
+| Keep Azure JSON and ACR password secrets | Easier initially, but long-lived credentials have broader leakage and rotation risk; rejected |
+| Deploy automatically after green CI | Fast, but violates the explicit human production-approval boundary; rejected |
+
+### Consequences
+
+- Repository administrators still control GitHub environment policy and Azure federation configuration.
+- GitHub and Azure audit histories are relied on; FirstRoll has no separate append-only approval ledger.
+- Vulnerability scanning, SBOMs and signed attestations remain visible future controls, not fabricated passes.
+- An approved high-risk release is not automatically safe; the owner must inspect the risk reasons.
+- Applying Terraform and enabling the workflow are manual production changes with separate review.
+- Changing `image_tag` in Terraform no longer performs routine application releases after bootstrap.
+
+### Action items
+
+1. [x] Replace long-lived workflow credentials with two OIDC identities in code.
+2. [x] Integrate the deterministic manifest/risk implementation into the real workflow.
+3. [x] Add exact revision verification and automatic rollback.
+4. [x] Remove the unused broker/capability/audit implementation and claims.
+5. [ ] Review and apply the Terraform plan.
+6. [ ] Configure GitHub values and make one owner-approved proof deployment.
+7. [ ] Consider scanning, SBOMs and attestations as a later hardening slice.
 
 ## How to Add or Change a Decision
 

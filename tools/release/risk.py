@@ -94,6 +94,11 @@ _TERRAFORM_PATTERNS = (re.compile(r"^infra/terraform/.*\.tf$"),)
 
 _DOCKERFILE_PATTERN = re.compile(r"^Dockerfile$")
 
+_RELEASE_AUTHORITY_PATTERNS = (
+    re.compile(r"^\.github/workflows/backend-release\.yml$"),
+    re.compile(r"^tools/release/"),
+)
+
 
 def _matches_any(path: str, patterns: Sequence[re.Pattern[str]]) -> bool:
     return any(p.search(path) for p in patterns)
@@ -190,6 +195,11 @@ def classify_risk(
                 reasons.append(f"Cloud permission or identity change in {tf}.")
                 min_level = "high"
 
+    authority_files = [f for f in changed_files if _matches_any(f, _RELEASE_AUTHORITY_PATTERNS)]
+    if authority_files:
+        reasons.append("Production release authority changed: " + ", ".join(authority_files))
+        min_level = "high"
+
     # ── MEDIUM conditions ────────────────────────────────────────────────
     if database_migration and min_level not in ("high",):
         reasons.append("Database migration present.")
@@ -239,7 +249,12 @@ def classify_risk(
     dockerfile_changed = any(_DOCKERFILE_PATTERN.search(f) for f in changed_files)
     if dockerfile_changed:
         content = diffs.get("Dockerfile", "")
-        if "FROM" in content:
+        base_image_changed = any(
+            re.match(r"^[+-]\s*FROM\b", line)
+            and not line.startswith(("+++", "---"))
+            for line in content.splitlines()
+        )
+        if base_image_changed:
             reasons.append("Container base-image changed.")
             if LEVEL_ORDER.get(min_level, 3) > LEVEL_ORDER["medium"]:
                 min_level = "medium"
