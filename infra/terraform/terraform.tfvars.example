@@ -9,8 +9,12 @@ static_web_app_location = "centralus"
 static_web_app_sku      = "Free"
 frontend_domain        = "firstroll.app"
 
-# Repository whose GitHub Actions OIDC subjects Azure may trust.
-github_repository = "Luo-Z-Y/FirstRoll"
+# Repository identity whose exact GitHub Actions OIDC subjects Azure may trust.
+# These numeric IDs are public identifiers, not credentials. Verify the prefix
+# with: gh api repos/Luo-Z-Y/FirstRoll/actions/oidc/customization/sub
+github_repository          = "Luo-Z-Y/FirstRoll"
+github_repository_owner_id = "97681546"
+github_repository_id       = "1166686059"
 
 # The first apply creates only the registry, logs, identity and Container Apps environment.
 deploy_container_app = false

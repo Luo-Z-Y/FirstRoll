@@ -28,10 +28,18 @@ apply cannot silently roll the API back to the bootstrap tag.
 
 ## Passwordless GitHub delivery
 
-`github_repository` fixes the trusted OIDC subjects to `Luo-Z-Y/FirstRoll`. The build identity accepts
-only the `refs/heads/master` subject. The deploy identity accepts only the `production` environment
-subject, so GitHub does not receive its short-lived Azure token until the protected environment has
-passed its required human review.
+`github_repository`, `github_repository_owner_id` and `github_repository_id` fix the trusted OIDC
+subjects to the exact identity-bound prefix GitHub reports for `Luo-Z-Y/FirstRoll`. The numeric IDs
+are public identifiers, not credentials. This matters because the current assertion is not the older
+name-only `repo:owner/repository` form. Verify the live prefix before an apply:
+
+```bash
+gh api repos/Luo-Z-Y/FirstRoll/actions/oidc/customization/sub --jq .sub_claim_prefix
+```
+
+The build identity accepts only the `refs/heads/master` subject. The deploy identity accepts only
+the `production` environment subject, so GitHub does not receive its short-lived Azure token until
+the protected environment has passed its required human review.
 
 After a reviewed apply, use the non-sensitive outputs to configure GitHub as described in
 [`docs/RELEASE.md`](../../docs/RELEASE.md):

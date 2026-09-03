@@ -63,6 +63,28 @@ variable "github_repository" {
   }
 }
 
+variable "github_repository_owner_id" {
+  description = "Immutable numeric GitHub owner ID included in this repository's OIDC subject prefix."
+  type        = string
+  default     = "97681546"
+
+  validation {
+    condition     = can(regex("^[0-9]+$", var.github_repository_owner_id))
+    error_message = "github_repository_owner_id must contain digits only."
+  }
+}
+
+variable "github_repository_id" {
+  description = "Immutable numeric GitHub repository ID included in this repository's OIDC subject prefix."
+  type        = string
+  default     = "1166686059"
+
+  validation {
+    condition     = can(regex("^[0-9]+$", var.github_repository_id))
+    error_message = "github_repository_id must contain digits only."
+  }
+}
+
 # -----------------------------------------------------------------------------
 # Container Apps names and image selection
 # -----------------------------------------------------------------------------

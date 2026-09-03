@@ -189,8 +189,8 @@ state.
 
 ### Backend release automation
 
-The backend has a separate, default-off `Backend Release` workflow. It uses Azure OIDC rather than
-the Static Web Apps token or long-lived service-principal/registry passwords.
+The backend has a separate, explicitly enabled `Backend Release` workflow. It uses Azure OIDC
+rather than the Static Web Apps token or long-lived service-principal/registry passwords.
 
 | GitHub location | Name | Purpose |
 |---|---|---|
