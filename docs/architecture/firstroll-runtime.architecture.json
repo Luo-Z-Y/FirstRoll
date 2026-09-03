@@ -1,0 +1,245 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "FirstRoll Runtime Architecture",
+    "locale": "en",
+    "animation": "none",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/Luo-Z-Y/FirstRoll",
+      "revision": "126b606f862569cac8056c4cd5416f7cdf2c5f35"
+    },
+    "views": [
+      {
+        "id": "public_request",
+        "label": "Public request path",
+        "focus": ["visitor", "static_web", "api", "evidence_pipeline", "deepseek", "run_store"],
+        "note": "Follow a browser request through the hosted frontend, API, evidence assembly, synthesis and transient result store."
+      },
+      {
+        "id": "identity_state",
+        "label": "Identity and durable state",
+        "focus": ["visitor", "api", "supabase"],
+        "note": "Supabase owns authentication, profiles, preferences, saved films and quota counters."
+      },
+      {
+        "id": "provider_boundary",
+        "label": "External evidence",
+        "focus": ["discovery", "evidence_pipeline", "review_sources", "video_sources"],
+        "note": "Provider output is treated as untrusted data and normalised before it can reach synthesis."
+      },
+      {
+        "id": "local_research",
+        "label": "Private local edition",
+        "focus": ["local_runtime", "agent_graph", "evidence_pipeline"],
+        "note": "Private documents, local settings and the default-off Agent remain outside the public hosted surface."
+      }
+    ]
+  },
+  "components": [
+    {
+      "id": "visitor",
+      "type": "frontend",
+      "label": "Browser UI",
+      "sublabel": "Discover · Study · Analyse",
+      "tag": "visitor",
+      "pos": [40, 300],
+      "size": [150, 66],
+      "sources": [{"path": "app/web/index.html", "label": "web shell"}]
+    },
+    {
+      "id": "static_web",
+      "type": "cloud",
+      "label": "Azure Static Web Apps",
+      "sublabel": "firstroll.app",
+      "tag": "public edge",
+      "pos": [230, 300],
+      "size": [170, 66],
+      "sources": [{"path": "infra/terraform/frontend.tf", "label": "frontend IaC"}]
+    },
+    {
+      "id": "api",
+      "type": "backend",
+      "label": "FastAPI Container App",
+      "sublabel": "api.firstroll.app",
+      "tag": "hosted API",
+      "pos": [430, 300],
+      "size": [170, 66],
+      "sources": [{"path": "app/backend/main.py", "label": "HTTP boundary"}]
+    },
+    {
+      "id": "supabase",
+      "type": "security",
+      "label": "Supabase",
+      "sublabel": "Auth · PostgreSQL · RLS",
+      "tag": "durable account state",
+      "pos": [430, 90],
+      "size": [170, 66],
+      "sources": [
+        {"path": "app/backend/auth.py", "label": "bearer validation"},
+        {"path": "supabase/migrations/202608200002_persistent_accounts.sql", "label": "account schema"}
+      ]
+    },
+    {
+      "id": "discovery",
+      "type": "backend",
+      "label": "Film Discovery",
+      "sublabel": "TMDb · Wikidata · Wikipedia",
+      "tag": "deterministic",
+      "pos": [630, 90],
+      "size": [170, 66],
+      "sources": [
+        {"path": "app/backend/tmdb_discovery.py", "label": "TMDb path"},
+        {"path": "app/backend/discovery.py", "label": "fallback path"}
+      ]
+    },
+    {
+      "id": "evidence_pipeline",
+      "type": "backend",
+      "label": "Evidence Pipeline",
+      "sublabel": "rank · deduplicate · budget",
+      "tag": "trust boundary",
+      "pos": [630, 300],
+      "size": [170, 66],
+      "sources": [
+        {"path": "app/backend/evidence.py", "label": "typed packet"},
+        {"path": "app/backend/packet_quality.py", "label": "quality checks"}
+      ]
+    },
+    {
+      "id": "deepseek",
+      "type": "external",
+      "label": "DeepSeek",
+      "sublabel": "structured synthesis",
+      "tag": "probabilistic",
+      "pos": [830, 300],
+      "size": [150, 66],
+      "sources": [{"path": "app/backend/study_service.py", "label": "model client"}]
+    },
+    {
+      "id": "run_store",
+      "type": "database",
+      "label": "Transient Run Store",
+      "sublabel": "owner-scoped · 10 min TTL",
+      "tag": "process memory",
+      "pos": [1030, 300],
+      "size": [170, 66],
+      "sources": [{"path": "app/backend/research_stream.py", "label": "SSE run state"}]
+    },
+    {
+      "id": "review_sources",
+      "type": "external",
+      "label": "Critical Sources",
+      "sublabel": "Crossref · Guardian · Douban · Letterboxd",
+      "pos": [790, 505],
+      "size": [210, 62],
+      "sources": [{"path": "app/backend/criticism.py", "label": "source adapters"}]
+    },
+    {
+      "id": "video_sources",
+      "type": "external",
+      "label": "Video Sources",
+      "sublabel": "YouTube · Bilibili",
+      "pos": [1040, 505],
+      "size": [170, 62],
+      "sources": [{"path": "app/backend/video_sources.py", "label": "video discovery"}]
+    },
+    {
+      "id": "local_runtime",
+      "type": "database",
+      "label": "Private Local Library",
+      "sublabel": "SQLite FTS5 · embeddings · PDFs",
+      "tag": "not hosted",
+      "pos": [430, 700],
+      "size": [190, 66],
+      "sources": [
+        {"path": "app/backend/library.py", "label": "catalogue"},
+        {"path": "app/backend/library_index.py", "label": "hybrid retrieval"}
+      ]
+    },
+    {
+      "id": "agent_graph",
+      "type": "backend",
+      "label": "LangGraph Research Agent",
+      "sublabel": "bounded · default off · no HTTP route",
+      "tag": "evaluation only",
+      "pos": [680, 700],
+      "size": [205, 66],
+      "sources": [
+        {"path": "app/backend/research_graph/graph.py", "label": "graph factory"},
+        {"path": "app/backend/research_agent_contract.py", "label": "policy contract"}
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "Azure public beta",
+      "wraps": ["static_web", "api", "run_store"],
+      "pad": 18
+    },
+    {
+      "kind": "security-group",
+      "label": "authenticated account boundary",
+      "wraps": ["api", "supabase"],
+      "pad": 16
+    },
+    {
+      "kind": "region",
+      "label": "third-party providers",
+      "wraps": ["review_sources", "video_sources", "deepseek"],
+      "pad": 16
+    },
+    {
+      "kind": "security-group",
+      "label": "private local edition",
+      "wraps": ["local_runtime", "agent_graph"],
+      "pad": 18
+    }
+  ],
+  "connections": [
+    {"from": "visitor", "to": "static_web", "label": "HTTPS", "variant": "emphasis"},
+    {"from": "static_web", "to": "api", "label": "JSON + SSE", "variant": "emphasis", "labelAt": [415, 382]},
+    {"from": "api", "to": "evidence_pipeline", "label": "validated request", "variant": "emphasis", "labelAt": [610, 382]},
+    {"from": "evidence_pipeline", "to": "deepseek", "label": "bounded packet", "variant": "security", "labelAt": [810, 382]},
+    {"from": "deepseek", "to": "run_store", "label": "validated study", "variant": "emphasis", "labelAt": [1018, 382]},
+    {"from": "api", "to": "supabase", "variant": "security"},
+    {"from": "api", "to": "discovery", "variant": "dashed", "fromSide": "top", "toSide": "bottom"},
+    {"from": "discovery", "to": "evidence_pipeline", "variant": "dashed", "fromSide": "bottom", "toSide": "top"},
+    {"from": "review_sources", "to": "evidence_pipeline", "variant": "dashed", "fromSide": "top", "toSide": "bottom"},
+    {"from": "video_sources", "to": "evidence_pipeline", "variant": "dashed", "fromSide": "top", "toSide": "bottom"},
+    {"from": "local_runtime", "to": "evidence_pipeline", "variant": "dashed", "fromSide": "top", "toSide": "bottom"},
+    {"from": "local_runtime", "to": "agent_graph", "variant": "dashed"},
+    {"from": "agent_graph", "to": "evidence_pipeline", "variant": "dashed", "fromSide": "top", "toSide": "bottom"}
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Production truth",
+      "items": [
+        "The public beta is a fixed, bounded workflow; the LangGraph Agent is not exposed over HTTP.",
+        "Azure serves the frontend and API; Supabase remains the identity and durable account-data provider.",
+        "The run-result store is process-local and expires, so it is not durable history."
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Trust boundaries",
+      "items": [
+        "Bearer authentication, ownership and quota reservation happen before model work.",
+        "Retrieved pages and reviews are evidence, never instructions.",
+        "Provider keys are request-scoped and excluded from graph state, logs and persisted results."
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Local capability",
+      "items": [
+        "The local edition adds private PDFs, SQLite FTS5 and multilingual dense retrieval.",
+        "The Agent is bounded by typed state, explicit tool policy, deadlines and terminal states.",
+        "Experimental Agent results must beat the fixed workflow in evaluation before promotion."
+      ]
+    }
+  ]
+}

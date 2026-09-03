@@ -1,0 +1,113 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "Hosted Deep Study Request",
+    "locale": "en",
+    "animation": "none",
+    "quality_profile": "showcase",
+    "column_fit": "spread",
+    "viewBox": [1080, 1280],
+    "views": [
+      {
+        "id": "authenticate",
+        "label": "Authenticate and open run",
+        "focus": ["browser", "frontend", "api", "supabase", "run_store"],
+        "note": "The API validates the bearer identity and creates an owner-scoped transient run before streaming progress."
+      },
+      {
+        "id": "construct_evidence",
+        "label": "Construct trusted evidence",
+        "focus": ["api", "evidence", "providers", "supabase"],
+        "note": "Film context and cached or public evidence are normalised before quota is reserved for model work."
+      },
+      {
+        "id": "synthesise_validate",
+        "label": "Synthesis and quality gate",
+        "focus": ["api", "deepseek", "run_store", "browser"],
+        "note": "A probabilistic draft is accepted only after deterministic schema, citation and quality checks."
+      }
+    ]
+  },
+  "participants": [
+    {"id": "browser", "type": "frontend", "label": "Visitor", "sublabel": "browser"},
+    {"id": "frontend", "type": "cloud", "label": "Static Web", "sublabel": "Azure"},
+    {"id": "api", "type": "backend", "label": "FirstRoll API", "sublabel": "FastAPI"},
+    {"id": "supabase", "type": "security", "label": "Supabase", "sublabel": "Auth + quota"},
+    {"id": "evidence", "type": "backend", "label": "Evidence", "sublabel": "pipeline"},
+    {"id": "providers", "type": "external", "label": "Providers", "sublabel": "metadata + sources"},
+    {"id": "deepseek", "type": "external", "label": "DeepSeek", "sublabel": "LLM"},
+    {"id": "run_store", "type": "database", "label": "Run Store", "sublabel": "10 min TTL"}
+  ],
+  "segments": [
+    {"from": 150, "to": 352, "label": "Session boundary"},
+    {"from": 370, "to": 706, "label": "Evidence and quota"},
+    {"from": 724, "to": 958, "label": "Synthesis and validation"},
+    {"from": 976, "to": 1178, "label": "Owner-scoped result"}
+  ],
+  "messages": [
+    {"from": "browser", "to": "frontend", "y": 180, "label": "GET firstroll.app", "variant": "emphasis"},
+    {"from": "frontend", "to": "browser", "y": 222, "label": "versioned HTML, CSS and JS", "variant": "return"},
+    {"from": "browser", "to": "api", "y": 272, "label": "POST /study/stream + bearer", "variant": "security"},
+    {"from": "api", "to": "supabase", "y": 314, "label": "validate JWT and load subject", "variant": "security"},
+    {"from": "supabase", "to": "api", "y": 344, "label": "authenticated owner", "variant": "return"},
+    {"from": "api", "to": "run_store", "y": 400, "label": "create owner-scoped run", "variant": "emphasis"},
+    {"from": "api", "to": "browser", "y": 442, "label": "SSE opened + X-FirstRoll-Run-ID", "variant": "return"},
+    {"from": "api", "to": "evidence", "y": 492, "label": "resolve film and prepare study", "variant": "emphasis"},
+    {"from": "evidence", "to": "providers", "y": 534, "label": "load cached or public context", "variant": "default"},
+    {"from": "providers", "to": "evidence", "y": 576, "label": "untrusted provider records", "variant": "return"},
+    {"from": "evidence", "to": "api", "y": 618, "label": "typed, ranked, bounded packet", "variant": "security"},
+    {"from": "api", "to": "supabase", "y": 660, "label": "atomically reserve quota", "variant": "security"},
+    {"from": "supabase", "to": "api", "y": 698, "label": "allowance or safe rejection", "variant": "return"},
+    {"from": "api", "to": "deepseek", "y": 754, "label": "structured synthesis request", "variant": "emphasis"},
+    {"from": "deepseek", "to": "api", "y": 796, "label": "draft JSON or provider error", "variant": "return"},
+    {"from": "api", "to": "evidence", "y": 838, "label": "run schema, citation and quality checks", "variant": "security"},
+    {"from": "evidence", "to": "api", "y": 868, "label": "passed or repair findings", "variant": "return"},
+    {"from": "api", "to": "deepseek", "y": 900, "label": "bounded repair when eligible", "variant": "dashed"},
+    {"from": "deepseek", "to": "api", "y": 938, "label": "repaired structured draft", "variant": "return"},
+    {"from": "api", "to": "run_store", "y": 996, "label": "store completed or failed-safe result", "variant": "emphasis"},
+    {"from": "api", "to": "browser", "y": 1038, "label": "allow-listed completion event", "variant": "return"},
+    {"from": "browser", "to": "api", "y": 1080, "label": "GET /api/research/runs/{id}", "variant": "default"},
+    {"from": "api", "to": "run_store", "y": 1122, "label": "read for authenticated owner", "variant": "security"},
+    {"from": "run_store", "to": "api", "y": 1156, "label": "result, running or failed", "variant": "return"},
+    {"from": "api", "to": "browser", "y": 1194, "label": "escaped study JSON", "variant": "return"}
+  ],
+  "activations": [
+    {"participant": "api", "from": 266, "to": 1202, "type": "backend"},
+    {"participant": "supabase", "from": 308, "to": 352, "type": "security"},
+    {"participant": "evidence", "from": 486, "to": 626, "type": "backend"},
+    {"participant": "providers", "from": 528, "to": 584, "type": "external"},
+    {"participant": "supabase", "from": 654, "to": 706, "type": "security"},
+    {"participant": "deepseek", "from": 748, "to": 930, "type": "external"},
+    {"participant": "run_store", "from": 990, "to": 1164, "type": "database"}
+  ],
+  "cards": [
+    {
+      "dot": "rose",
+      "title": "Safe failure points",
+      "items": [
+        "Invalid identity, missing film, unavailable quota, provider failure and invalid study each terminate with sanitised public errors.",
+        "Disconnected streams mark the transient run failed; they do not leak partial model output.",
+        "A result can be read only by the account owner and disappears after the process-local TTL."
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "Deterministic versus probabilistic",
+      "items": [
+        "Authentication, ownership, quota, evidence budgets, schema validation, citation validation and quality thresholds are application code.",
+        "DeepSeek synthesis and repair are probabilistic model calls.",
+        "The application—not the model—decides whether a model result may be rendered."
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Credential handling",
+      "items": [
+        "A visitor may provide a DeepSeek key for one browser session.",
+        "The key travels in a dedicated header and is never placed in graph state, logs or stored output.",
+        "Without a personal key, the hosted platform key is used only when the deployment enables it."
+      ]
+    }
+  ]
+}

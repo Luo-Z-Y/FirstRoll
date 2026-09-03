@@ -7,6 +7,24 @@
   actionable work in `docs/PROGRESS.md` as part of the same change.
 - Treat documentation maintenance as part of implementation, not as a separate optional task.
 
+## Architecture documentation gate
+
+- Treat a change as architectural when it alters a service or component boundary, deployment
+  topology, authentication or trust boundary, persistent or transient state, provider/evidence
+  flow, material request sequence, Agent lifecycle/tool budget/terminal state, or CI/CD approval and
+  rollback path.
+- In the same branch as an architectural change, update every affected typed Archify source under
+  `docs/architecture/`, regenerate its paired self-contained HTML, and reconcile
+  `docs/ARCHITECTURE.md`, `docs/ARCHITECTURE_ATLAS.md`, `readme.md` and `docs/PROGRESS.md`.
+- Edit the typed JSON source, never the generated HTML. Run Archify `validate` with the `showcase`
+  quality profile after each source edit, then use `deliver` for the final HTML and run
+  `visual-check` before handoff. Commit the JSON and HTML together.
+- Keep diagram claims pinned to a real source revision and distinguish production, private-local,
+  experimental and planned behaviour. Report deterministic validation, browser evidence and
+  perceptual review separately; never conceal a failed or unavailable check.
+- An internal refactor that preserves every documented contract need not regenerate a diagram, but
+  the final handoff must state that the architecture was reviewed and why no Archify source changed.
+
 ## Pi subagent workflow
 
 - Trusted Pi sessions may use the project-local `subagent` tool for isolated reconnaissance,

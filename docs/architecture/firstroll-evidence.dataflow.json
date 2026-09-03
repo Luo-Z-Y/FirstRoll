@@ -1,0 +1,94 @@
+{
+  "schema_version": 1,
+  "diagram_type": "dataflow",
+  "meta": {
+    "title": "FirstRoll Evidence and Trust Flow",
+    "locale": "en",
+    "animation": "none",
+    "quality_profile": "showcase",
+    "viewBox": [1080, 840],
+    "views": [
+      {
+        "id": "evidence_ingest",
+        "label": "Evidence ingestion",
+        "focus": ["film", "local_sources", "external_sources", "adapters", "retrieval", "packet"],
+        "note": "Canonical identity, local passages and attributed provider records converge in one typed packet."
+      },
+      {
+        "id": "instruction_boundary",
+        "label": "Instruction boundary",
+        "focus": ["question", "external_sources", "adapters", "packet", "preflight"],
+        "note": "Only the visitor question can express intent; retrieved text remains untrusted evidence."
+      },
+      {
+        "id": "verified_output",
+        "label": "Verified output",
+        "focus": ["packet", "preflight", "deepseek", "validator", "run_store", "ui"],
+        "note": "Probabilistic generation is enclosed by deterministic input budgets and output validation."
+      }
+    ]
+  },
+  "stages": [
+    {"label": "Inputs"},
+    {"label": "Normalise"},
+    {"label": "Assemble"},
+    {"label": "Generate + verify"},
+    {"label": "Deliver"}
+  ],
+  "nodes": [
+    {"id": "question", "type": "frontend", "label": "Study Question", "sublabel": "visitor-authored intent", "stage": 0, "row": 0, "tag": "trusted intent"},
+    {"id": "film", "type": "database", "label": "Canonical Film", "sublabel": "stable id + identity", "stage": 0, "row": 1, "tag": "validated"},
+    {"id": "local_sources", "type": "database", "label": "Local Library", "sublabel": "PDFs + SQLite index", "stage": 0, "row": 4, "tag": "local only"},
+    {"id": "external_sources", "type": "external", "label": "Provider Records", "sublabel": "reviews + video context", "stage": 0, "row": 2, "tag": "untrusted"},
+    {"id": "adapters", "type": "security", "label": "Source Adapters", "sublabel": "identity + attribution", "stage": 1, "row": 1, "tag": "normalise"},
+    {"id": "retrieval", "type": "backend", "label": "Hybrid Retrieval", "sublabel": "FTS5 + dense + RRF", "stage": 1, "row": 4, "tag": "local edition"},
+    {"id": "packet", "type": "backend", "label": "EvidencePacket", "sublabel": "typed + ranked + unique", "stage": 2, "row": 2, "tag": "bounded"},
+    {"id": "preflight", "type": "security", "label": "Packet Quality", "sublabel": "coverage + injection", "stage": 2, "row": 4, "tag": "deterministic"},
+    {"id": "deepseek", "type": "external", "label": "DeepSeek", "sublabel": "structured draft", "stage": 3, "row": 1, "tag": "probabilistic"},
+    {"id": "validator", "type": "security", "label": "Output Gate", "sublabel": "schema · citations · quality", "stage": 3, "row": 3, "tag": "deterministic", "width": 140},
+    {"id": "run_store", "type": "database", "label": "Run Result", "sublabel": "owner-scoped + expiring", "stage": 4, "row": 2, "tag": "transient"},
+    {"id": "ui", "type": "frontend", "label": "Study Dossier", "sublabel": "escaped rendered output", "stage": 4, "row": 4, "tag": "visitor"}
+  ],
+  "flows": [
+    {"from": "question", "to": "adapters", "label": "analysis focus", "classification": "trusted user intent", "variant": "emphasis", "labelAt": [305, 188]},
+    {"from": "film", "to": "adapters", "label": "canonical identity", "classification": "validated metadata", "variant": "security", "labelAt": [315, 320]},
+    {"from": "external_sources", "to": "adapters", "label": "raw provider records", "classification": "untrusted evidence", "variant": "security"},
+    {"from": "local_sources", "to": "retrieval", "label": "indexed passages", "classification": "private local data", "variant": "dashed"},
+    {"from": "adapters", "to": "packet", "label": "attributed claims", "classification": "normalised evidence", "variant": "emphasis"},
+    {"from": "retrieval", "to": "packet", "label": "ranked passages", "classification": "citation-bearing", "variant": "dashed"},
+    {"from": "packet", "to": "preflight", "label": "quality scan", "classification": "safe aggregates", "variant": "security", "labelAt": [530, 442]},
+    {"from": "preflight", "to": "deepseek", "label": "bounded evidence packet", "classification": "model input", "variant": "security"},
+    {"from": "deepseek", "to": "validator", "label": "structured draft", "classification": "untrusted model output", "variant": "default", "labelAt": [738, 366]},
+    {"from": "validator", "to": "run_store", "label": "accepted result", "classification": "sanitised output", "variant": "emphasis", "labelAt": [850, 405]},
+    {"from": "run_store", "to": "ui", "label": "authorised read", "classification": "account result", "variant": "security", "labelAt": [960, 442]}
+  ],
+  "cards": [
+    {
+      "dot": "rose",
+      "title": "Evidence is data, not authority",
+      "items": [
+        "Reviews, abstracts, captions and retrieved passages cannot authorise tools or alter application policy.",
+        "Provider records are identity-checked, attributed and normalised before packet assembly.",
+        "Personal provider keys are deliberately absent from this data flow because they are request-scoped secrets."
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "Bounded context",
+      "items": [
+        "Ranking, deduplication and character budgets limit what reaches the model.",
+        "The public beta uses curated public context; private PDFs and hybrid retrieval remain local-only.",
+        "Packet diagnostics expose counts and gaps without exposing confidential content to a planner."
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Validated delivery",
+      "items": [
+        "The model produces a structured draft, not render-ready authority.",
+        "Schema, citation and quality gates either accept, repair within budget or fail safely.",
+        "Hosted results are transient; durable study history is a future architecture change."
+      ]
+    }
+  ]
+}

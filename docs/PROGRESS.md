@@ -1,5 +1,39 @@
 # FirstRoll Project Progress
 
+### 3 September 2026 — Source-pinned Archify architecture atlas
+
+Delivered as documentation only; no runtime, provider, model or deployment behaviour changed:
+
+1. Installed the upstream `tt-a1i/archify` skill locally and used its typed JSON intermediate
+   representation to document the current FirstRoll source at revision
+   `126b606f862569cac8056c4cd5416f7cdf2c5f35`.
+2. Added five self-contained interactive views: runtime architecture, hosted Deep Study sequence,
+   evidence dataflow, bounded LangGraph lifecycle and production delivery workflow.
+3. Added a guided [Architecture Atlas](ARCHITECTURE_ATLAS.md) that distinguishes production truth,
+   private-local capability and default-off experimental Agent work. It also records the trust,
+   persistence, tool-authority and human-approval boundaries represented in the diagrams.
+4. Retained the typed JSON beside each HTML artifact so future architectural changes can be reviewed
+   and regenerated rather than hand-edited in the rendered output.
+5. Added a repository instruction gate requiring future architecture-changing work to update,
+   validate, deliver and browser-check every affected Archify JSON/HTML pair in the same branch.
+   Contract-preserving refactors may skip regeneration only with an explicit handoff explanation.
+
+Evidence:
+
+- All five sources pass Archify's `showcase` profile with 9/9 deterministic checks, zero errors and
+  zero warnings.
+- Runtime architecture evidence validation resolves 17 file or symbol references against the
+  pinned repository revision.
+- Required desktop browser captures, projected-text readability and viewer-chrome checks pass.
+  Strict one-screen containment does not: the detailed documents deliberately scroll vertically,
+  with no horizontal overflow. This limitation is recorded in the atlas instead of being presented
+  as a visual pass.
+
+Next action:
+
+- Split or compact the views only if a presentation-specific, single-screen edition becomes useful;
+  keep the detailed scrolling edition as the source-auditable engineering record.
+
 ### 31 August 2026 — GuideLLM/lm-eval benchmark audit and improvement plan
 
 Delivered without a configured/paid model, planner, acquisition-provider or deployment call:
