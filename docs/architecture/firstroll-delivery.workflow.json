@@ -1,0 +1,114 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "FirstRoll Frontend Delivery Workflow",
+    "locale": "en",
+    "animation": "none",
+    "quality_profile": "showcase",
+    "views": [
+      {
+        "id": "change_to_merge",
+        "label": "Change to protected master",
+        "focus": ["branch", "pull_request", "ci_build", "quality", "merge"],
+        "note": "A short-lived branch reaches master only through a pull request and green blocking CI."
+      },
+      {
+        "id": "approved_release",
+        "label": "Approved production release",
+        "focus": ["merge", "release_build", "approval", "deploy", "verify_prod"],
+        "note": "The checked master SHA is built once, sealed, approved by a human and deployed without rebuilding."
+      },
+      {
+        "id": "safe_stop",
+        "label": "Failure and recovery",
+        "focus": ["quality", "stopped", "verify_prod", "rollback", "deploy"],
+        "note": "A red gate stops promotion; failed production verification returns to the last known-good release."
+      }
+    ]
+  },
+  "lanes": [
+    {"id": "developer", "label": "Developer"},
+    {"id": "ci", "label": "GitHub Actions"},
+    {"id": "governance", "label": "Repository + release governance"},
+    {"id": "azure", "label": "Azure Static Web Apps"},
+    {"id": "exceptions", "label": "Stop + recovery", "variant": "exception"}
+  ],
+  "phases": [
+    {"id": "change", "label": "Change", "fromCol": 0, "toCol": 1},
+    {"id": "verify", "label": "Verify + merge", "fromCol": 2, "toCol": 3, "variant": "emphasis"},
+    {"id": "release", "label": "Build + approve + deploy", "fromCol": 4, "toCol": 5, "variant": "security"}
+  ],
+  "groups": [
+    {"id": "blocking_ci", "label": "Blocking CI", "lane": "ci", "fromCol": 2, "toCol": 3, "variant": "emphasis"},
+    {"id": "production_gate", "label": "Production environment", "lane": "governance", "fromCol": 4, "toCol": 5, "variant": "security"}
+  ],
+  "mainPath": ["branch", "pull_request", "ci_build", "quality", "merge", "release_build", "approval", "deploy", "verify_prod"],
+  "semanticChecks": {
+    "allowedRoots": ["branch"],
+    "allowedTerminals": ["verify_prod", "stopped"],
+    "requiredEdges": [
+      {"from": "quality", "to": "merge"},
+      {"from": "approval", "to": "deploy"}
+    ],
+    "requiredPaths": [
+      {"from": "branch", "to": "verify_prod"},
+      {"from": "quality", "to": "stopped"}
+    ]
+  },
+  "nodes": [
+    {"id": "branch", "lane": "developer", "col": 0, "type": "frontend", "label": "Topic Branch", "sublabel": "scoped change"},
+    {"id": "pull_request", "lane": "developer", "col": 1, "type": "frontend", "label": "Pull Request", "sublabel": "reviewable diff"},
+    {"id": "ci_build", "lane": "ci", "col": 2, "type": "backend", "label": "CI Build", "sublabel": "locked toolchain", "tag": "pinned actions"},
+    {"id": "quality", "lane": "ci", "col": 3, "type": "security", "label": "Blocking Gates", "sublabel": "tests · audit · image", "tag": "read-only token"},
+    {"id": "merge", "lane": "governance", "col": 3, "type": "security", "label": "Merge Master", "sublabel": "protected branch", "tag": "green CI only"},
+    {"id": "release_build", "lane": "ci", "col": 4, "type": "backend", "label": "Release Build", "sublabel": "current SHA · dist", "tag": "master only"},
+    {"id": "approval", "lane": "governance", "col": 4, "type": "security", "label": "Human Approval", "sublabel": "production environment", "tag": "owner gate"},
+    {"id": "deploy", "lane": "azure", "col": 5, "type": "cloud", "label": "Deploy", "sublabel": "sealed dist", "tag": "Azure SWA"},
+    {"id": "verify_prod", "lane": "azure", "col": 5, "type": "backend", "label": "Verify", "sublabel": "version + smoke", "tag": "firstroll.app", "yOffset": 76},
+    {"id": "stopped", "lane": "exceptions", "col": 3, "type": "security", "label": "Stop Release", "sublabel": "CI or policy failed"},
+    {"id": "rollback", "lane": "exceptions", "col": 5, "type": "messagebus", "label": "Restore", "sublabel": "last good artefact", "tag": "manual decision"}
+  ],
+  "edges": [
+    {"from": "branch", "to": "pull_request", "role": "main"},
+    {"from": "pull_request", "to": "ci_build", "role": "main", "variant": "emphasis"},
+    {"from": "ci_build", "to": "quality", "role": "main"},
+    {"from": "quality", "to": "merge", "role": "main", "variant": "security"},
+    {"from": "merge", "to": "release_build", "role": "main", "variant": "emphasis"},
+    {"from": "release_build", "to": "approval", "role": "main", "variant": "security"},
+    {"from": "approval", "to": "deploy", "role": "main", "variant": "security"},
+    {"from": "deploy", "to": "verify_prod", "role": "main", "variant": "emphasis"},
+    {"from": "quality", "to": "stopped", "label": "red", "role": "error", "variant": "security"},
+    {"from": "verify_prod", "to": "rollback", "role": "error", "variant": "security"},
+    {"from": "rollback", "to": "deploy", "label": "restore", "role": "return", "variant": "dashed"}
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "One production artefact",
+      "items": [
+        "The release workflow confirms that the triggering SHA is still current master.",
+        "The frontend is built without runtime credentials and sealed as a seven-day GitHub artefact.",
+        "Deployment downloads that artefact without checking out or rebuilding source."
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Separation of authority",
+      "items": [
+        "CI may prove a revision green and a maintainer may merge it.",
+        "Only a human reviewer of the production environment may authorise public deployment.",
+        "The coding Agent cannot approve its own production release."
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "Infrastructure scope",
+      "items": [
+        "Terraform owns imported Static Web Apps, Container Apps, ACR, managed identity, logs and managed TLS.",
+        "Spaceship remains authoritative for DNS records; Supabase remains external identity and account data.",
+        "Backend image promotion and database migrations require their own explicit runbooks and checks."
+      ]
+    }
+  ]
+}

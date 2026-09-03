@@ -36,6 +36,7 @@ environment configuration, acceptance checks and operational limits.
 | Reader need | Document |
 |---|---|
 | Understand the local and Azure-hosted system | [Architecture](docs/ARCHITECTURE.md) |
+| Explore the runtime, Deep Study, evidence, Agent and delivery diagrams | [Architecture Atlas](docs/ARCHITECTURE_ATLAS.md) |
 | Integrate with every HTTP and SSE endpoint | [API Reference](docs/API_REFERENCE.md) |
 | Review Supabase, SQLite, JSON and in-memory storage | [Data Model](docs/DATA_MODEL.md) |
 | Understand why the major architectural choices were made | [Architecture Decisions](docs/DECISIONS.md) |

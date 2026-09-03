@@ -1,0 +1,88 @@
+{
+  "schema_version": 1,
+  "diagram_type": "lifecycle",
+  "meta": {
+    "title": "Bounded LangGraph Research Agent",
+    "locale": "en",
+    "animation": "none",
+    "quality_profile": "showcase",
+    "viewBox": [1060, 820],
+    "views": [
+      {
+        "id": "deterministic_control",
+        "label": "Deterministic control",
+        "focus": ["normalise", "resolve_load", "plan", "validate", "complete", "needs_user", "failed_safe"],
+        "note": "Application code owns state shape, policy, ambiguity, permissions, budgets and terminal routing."
+      },
+      {
+        "id": "bounded_tool_loop",
+        "label": "Bounded tool loop",
+        "focus": ["plan", "external_tool", "reassess", "failed_safe"],
+        "note": "The model may propose a tool, but the application authorises one call and rechecks remaining budgets."
+      },
+      {
+        "id": "finish_and_verify",
+        "label": "Finish and verify",
+        "focus": ["reassess", "synthesise", "validate", "complete", "failed_safe"],
+        "note": "Synthesis is probabilistic; validation and termination remain deterministic."
+      }
+    ]
+  },
+  "lanes": [
+    {"id": "main", "label": "Run phases"},
+    {"id": "tools", "label": "Bounded tool cycle"},
+    {"id": "terminal", "label": "Terminal outcomes"}
+  ],
+  "states": [
+    {"id": "normalise", "type": "start", "label": "Normalise", "sublabel": "typed state + policy", "lane": "main", "col": 0, "step": "01", "tag": "deterministic"},
+    {"id": "resolve_load", "type": "decision", "label": "Resolve + Load", "sublabel": "identity + evidence", "lane": "main", "col": 1, "step": "02", "tag": "deterministic"},
+    {"id": "plan", "type": "decision", "label": "Plan + Authorise", "sublabel": "proposal · app gate", "lane": "main", "col": 2, "step": "03", "tag": "bounded"},
+    {"id": "synthesise", "type": "active", "label": "Synthesise", "sublabel": "one final model call", "lane": "main", "col": 3, "step": "04", "tag": "probabilistic"},
+    {"id": "validate", "type": "decision", "label": "Validate", "sublabel": "schema · citations", "lane": "main", "col": 4, "step": "05", "tag": "quality gate"},
+    {"id": "external_tool", "type": "external", "label": "External Tool", "sublabel": "one provider call", "lane": "tools", "col": 0, "tag": "authorised", "width": 118},
+    {"id": "reassess", "type": "decision", "label": "Reassess", "sublabel": "gaps + budget", "lane": "tools", "col": 1, "tag": "deterministic", "width": 118},
+    {"id": "needs_user", "type": "waiting", "label": "Needs User", "sublabel": "ambiguous identity", "lane": "terminal", "col": 0, "tag": "terminal"},
+    {"id": "failed_safe", "type": "failure", "label": "Safe Stop", "sublabel": "budget · evidence · error", "lane": "terminal", "col": 1, "tag": "terminal"},
+    {"id": "complete", "type": "success", "label": "Complete", "sublabel": "validated response", "lane": "terminal", "col": 2, "tag": "terminal"}
+  ],
+  "transitions": [
+    {"from": "normalise", "to": "resolve_load", "variant": "emphasis"},
+    {"from": "resolve_load", "to": "plan", "variant": "emphasis"},
+    {"from": "plan", "to": "synthesise", "variant": "emphasis", "route": "straight"},
+    {"from": "plan", "to": "external_tool", "variant": "security"},
+    {"from": "external_tool", "to": "reassess", "variant": "default", "route": "straight"},
+    {"from": "reassess", "to": "plan", "variant": "dashed"},
+    {"from": "reassess", "to": "synthesise", "variant": "emphasis"},
+    {"from": "synthesise", "to": "validate", "variant": "emphasis"},
+    {"from": "validate", "to": "complete", "variant": "emphasis"}
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Explicit budgets",
+      "items": [
+        "8 graph steps; 4 planning calls; 3 external tool calls; 1 call per external provider.",
+        "12 evidence items; 36,000 evidence characters; 45-second research deadline.",
+        "1 synthesis call; bounded repair; 6 total model calls. Exhaustion routes to a terminal state."
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Authority model",
+      "items": [
+        "The model proposes an action; the application verifies tool allow-list, provider budget and deadline.",
+        "Credentials, ownership, authentication and quota state never enter the graph.",
+        "Retrieved instructions are ignored because evidence content has no control-plane authority."
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Terminal behaviour",
+      "items": [
+        "Typed outcomes include complete, evidence-ready, needs-user, insufficient, budget-exhausted and failed-safe.",
+        "Ambiguous identity stops for user input; missing evidence does not trigger an unbounded search.",
+        "This Agent remains default-off, local-only and without an HTTP route while evaluation is incomplete."
+      ]
+    }
+  ]
+}

@@ -1,11 +1,16 @@
 # FirstRoll Architecture
 
 **Status:** Current implementation  
-**Last reconciled:** 24 August 2026
+**Last reconciled:** 3 September 2026
 
 FirstRoll is a local-first film-study system with an Azure-hosted public beta. “Local-first”
 describes where private books, credentials, derived vectors and uploaded film clips are kept; it does
 not mean the product is available only on one computer.
+
+For an interactive, source-pinned view of the same system, start with the
+[FirstRoll Architecture Atlas](ARCHITECTURE_ATLAS.md). It includes self-contained Archify diagrams
+for runtime topology, the Deep Study sequence, evidence flow, the bounded Agent lifecycle and the
+human-controlled delivery workflow.
 
 ## Product Topology
 
