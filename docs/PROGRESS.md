@@ -1,5 +1,45 @@
 # FirstRoll Project Progress
 
+### 04 September 2026 — Backend release design simplified and hardened before activation
+
+Delivered without changing the live production environment:
+
+1. Replaced the unfinished HMAC/Approval Broker design with the already configured GitHub
+   `production` environment as the single required human approval authority.
+2. Added Terraform definitions for two passwordless GitHub OIDC identities. The branch-bound build
+   identity can push to one ACR and read one app; the approval-bound deploy identity can update only
+   the FirstRoll Container App.
+3. Removed Azure JSON credentials, ACR usernames and ACR passwords from the backend workflow design.
+4. Integrated the deterministic risk classifier and canonical release manifest into the actual build
+   path. Release-authority changes and cloud permission/identity changes now force high risk.
+5. Bound the manifest to repository, workflow run, current `master`, full commit SHA, image tag,
+   immutable image digest and its own canonical digest. The deploy runner recomputes and verifies
+   those facts before requesting an Azure token.
+6. Kept the deploy runner source-free, baked the commit SHA into the image, made either a live SHA or
+   Azure-configured image-digest mismatch fatal, added exact revision/API/docs/CORS checks, and added
+   automatic restoration of the prior image after failed post-deployment verification.
+7. Added `BACKEND_RELEASE_ENABLED` as a fail-closed activation switch so merging the design cannot
+   start building or deploying before Terraform and GitHub configuration are complete.
+8. Reconciled the architecture, threat model, hosting guide, release runbook, README, ADR and
+   Obsidian project log with the implemented design and its honest gaps.
+9. Split resource ownership explicitly: Terraform owns the Container App and all configuration but
+   ignores its post-bootstrap image field; the approved release workflow owns that field alone.
+
+Verification at this checkpoint:
+
+- 98 focused manifest, risk, summary, workflow, CLI and Terraform-structure tests pass;
+- all 479 repository tests, Python lint, JavaScript syntax, frontend production build and npm audit
+  pass; npm reports zero vulnerabilities;
+- Terraform formatting and static validation pass; the live-state plan is exactly seven additions,
+  zero changes and zero destroys (two identities, two federated credentials and three roles);
+- local Docker validation reached the build boundary, but Docker Hub timed out twice while resolving
+  the pinned base-image metadata. CI remains responsible for the final production-image build proof.
+
+Status: code is under review on PR #39. Terraform has not been applied, GitHub OIDC values have not
+been configured, `BACKEND_RELEASE_ENABLED` remains absent/false and no production deployment was
+approved or attempted. Scanning, SBOMs, attestations and an application-owned audit ledger remain
+future controls rather than claimed capabilities.
+
 ### 31 August 2026 — GuideLLM/lm-eval benchmark audit and improvement plan
 
 Delivered without a configured/paid model, planner, acquisition-provider or deployment call:

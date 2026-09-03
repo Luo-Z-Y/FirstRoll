@@ -24,10 +24,13 @@ RUN apt-get update \
 
 FROM python:3.11-slim-bookworm
 
+ARG FIRSTROLL_RELEASE_SHA=""
+
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
-    FIRSTROLL_DOUBAN_MCP_PATH=/opt/douban-mcp/dist/index.js
+    FIRSTROLL_DOUBAN_MCP_PATH=/opt/douban-mcp/dist/index.js \
+    FIRSTROLL_RELEASE_SHA=$FIRSTROLL_RELEASE_SHA
 
 WORKDIR /app
 

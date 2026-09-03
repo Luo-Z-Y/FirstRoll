@@ -27,6 +27,20 @@ output "container_registry_login_server" {
 }
 
 # -----------------------------------------------------------------------------
+# GitHub Actions OIDC setup values
+# -----------------------------------------------------------------------------
+
+output "github_build_client_id" {
+  description = "Client ID stored as the AZURE_BUILD_CLIENT_ID GitHub repository secret."
+  value       = azurerm_user_assigned_identity.github_build.client_id
+}
+
+output "github_deploy_client_id" {
+  description = "Client ID stored as the AZURE_DEPLOY_CLIENT_ID secret in the GitHub production environment."
+  value       = azurerm_user_assigned_identity.github_deploy.client_id
+}
+
+# -----------------------------------------------------------------------------
 # Backend hosting addresses
 # -----------------------------------------------------------------------------
 

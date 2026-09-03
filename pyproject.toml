@@ -53,7 +53,7 @@ dev = [
 transnetv2 = { git = "https://github.com/soCzech/TransNetV2" }
 
 [tool.pytest.ini_options]
-pythonpath = ["app"]
+pythonpath = [".", "app"]
 testpaths = []
 
 [tool.ruff]

@@ -105,6 +105,51 @@ resource "azurerm_role_assignment" "container_pull" {
 }
 
 # -----------------------------------------------------------------------------
+# Passwordless identities used by GitHub Actions
+# -----------------------------------------------------------------------------
+# The build identity can exchange a GitHub-signed OIDC token only for a run on
+# master. It can push an image to ACR, but it cannot update the Container App.
+resource "azurerm_user_assigned_identity" "github_build" {
+  name                = "firstroll-github-build"
+  location            = var.location
+  resource_group_name = data.azurerm_resource_group.firstroll.name
+  tags                = var.tags
+}
+
+resource "azurerm_federated_identity_credential" "github_build" {
+  name      = "github-master-build"
+  parent_id = azurerm_user_assigned_identity.github_build.id
+  issuer    = "https://token.actions.githubusercontent.com"
+  subject   = "repo:${var.github_repository}:ref:refs/heads/master"
+  audience  = ["api://AzureADTokenExchange"]
+}
+
+# AcrPush includes upload and metadata-read operations for this registry only.
+resource "azurerm_role_assignment" "github_build_registry" {
+  scope                            = azurerm_container_registry.firstroll.id
+  role_definition_name             = "AcrPush"
+  principal_id                     = azurerm_user_assigned_identity.github_build.principal_id
+  skip_service_principal_aad_check = true
+}
+
+# The deploy identity has a different OIDC subject. Azure issues its token only
+# to a job that GitHub identifies as using the protected production environment.
+resource "azurerm_user_assigned_identity" "github_deploy" {
+  name                = "firstroll-github-deploy"
+  location            = var.location
+  resource_group_name = data.azurerm_resource_group.firstroll.name
+  tags                = var.tags
+}
+
+resource "azurerm_federated_identity_credential" "github_deploy" {
+  name      = "github-production-deploy"
+  parent_id = azurerm_user_assigned_identity.github_deploy.id
+  issuer    = "https://token.actions.githubusercontent.com"
+  subject   = "repo:${var.github_repository}:environment:production"
+  audience  = ["api://AzureADTokenExchange"]
+}
+
+# -----------------------------------------------------------------------------
 # Shared Container Apps hosting environment
 # -----------------------------------------------------------------------------
 # The environment supplies the networking and logging boundary. It is not the
@@ -268,6 +313,12 @@ resource "azurerm_container_app" "api" {
   }
 
   lifecycle {
+    # Terraform owns the app, configuration, secrets, probes and scaling. The
+    # release workflow owns only the running image after bootstrap; ignoring
+    # this one field prevents a later infrastructure apply from rolling back a
+    # newer, human-approved digest.
+    ignore_changes = [template[0].container[0].image]
+
     # Reject invalid configurations before Azure receives a deployment request.
     precondition {
       condition     = var.maximum_replicas >= var.minimum_replicas
@@ -306,6 +357,28 @@ resource "azurerm_container_app" "api" {
   }
 
   depends_on = [azurerm_role_assignment.container_pull]
+}
+
+# The build job may read the current image and revision for its approval
+# summary. It cannot change the app. The conditional mirrors the app resource.
+resource "azurerm_role_assignment" "github_build_app_reader" {
+  count = var.deploy_container_app ? 1 : 0
+
+  scope                            = azurerm_container_app.api[0].id
+  role_definition_name             = "Reader"
+  principal_id                     = azurerm_user_assigned_identity.github_build.principal_id
+  skip_service_principal_aad_check = true
+}
+
+# Contributor is deliberately scoped to this one Container App rather than its
+# resource group or subscription. It cannot alter ACR, DNS or unrelated apps.
+resource "azurerm_role_assignment" "github_deploy_app" {
+  count = var.deploy_container_app ? 1 : 0
+
+  scope                            = azurerm_container_app.api[0].id
+  role_definition_name             = "Contributor"
+  principal_id                     = azurerm_user_assigned_identity.github_deploy.principal_id
+  skip_service_principal_aad_check = true
 }
 
 # Azure owns and renews the managed TLS certificate. DNS remains in Spaceship,

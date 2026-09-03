@@ -187,6 +187,34 @@ production run rather than approving or bypassing it. Custom-domain DNS and CDN 
 separate from the build job, and the frontend should appear independently of the API's deployment
 state.
 
+### Backend release automation
+
+The backend has a separate, default-off `Backend Release` workflow. It uses Azure OIDC rather than
+the Static Web Apps token or long-lived service-principal/registry passwords.
+
+| GitHub location | Name | Purpose |
+|---|---|---|
+| Repository secret | `AZURE_BUILD_CLIENT_ID` | Branch-bound managed identity that pushes ACR images and reads current app metadata |
+| `production` environment secret | `AZURE_DEPLOY_CLIENT_ID` | Approval-bound managed identity that updates only the FirstRoll Container App |
+| Repository variable | `AZURE_TENANT_ID` | Azure tenant used for both OIDC exchanges |
+| Repository variable | `AZURE_SUBSCRIPTION_ID` | Subscription containing FirstRoll resources |
+| Repository variable | `ACR_LOGIN_SERVER` | Terraform registry login-server output |
+| Repository variable | `AZURE_RESOURCE_GROUP` | `firstroll-production` |
+| Repository variable | `AZURE_CONTAINER_APP_NAME` | `firstroll-api` |
+| Repository variable | `BACKEND_RELEASE_ENABLED` | Must equal `true` only after every other item is configured |
+
+Terraform declares both identities, their GitHub federated subjects and least-privilege role
+assignments. The build identity cannot deploy; the deploy identity cannot push images or manage the
+resource group. The deploy job has no source checkout and receives a short-lived token only after
+the existing required owner review. It refuses stale `master`, altered manifests, mutable tags and
+live baked-SHA or Azure image-digest mismatches, and restores the previous image when verification
+fails after rollout. Terraform ignores only the running image after bootstrap so an infrastructure
+apply cannot roll back a newer approved release; it still owns the app's other configuration.
+
+Follow [Backend Release Runbook](RELEASE.md) for the exact setup, first proof run and operating rules.
+The implementation does not include an approval broker, HMAC token or GitHub App. GitHub's protected
+environment is the approval system and GitHub/Azure retain the current audit evidence.
+
 ## 3. Connect Supabase authentication
 
 The Supabase project URL and publishable key are designed to be public. Use the same two values in

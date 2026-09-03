@@ -385,8 +385,6 @@ film-form statements generated without a clip remain viewing hypotheses.
 Retrieved reviews, captions and webpages are untrusted evidence. They may support attributed claims,
 but they cannot authorise tools, change system policy or become model instructions.
 
-## Development-agent boundary
-
 The repository's `.pi` directory is coding-harness configuration, not a FirstRoll product Agent.
 Trusted Pi sessions may delegate isolated scout, planner, reviewer or bounded-worker tasks to child Pi
 processes. The extension is absent from the web build, backend runtime and OpenAPI contract; it cannot
@@ -394,6 +392,41 @@ change local or hosted research routing. Children share the developer working tr
 allowance, so parallel dispatch is reserved for read-only work and the parent retains diff review,
 Git integration and delivery. Private `.firstroll` material remains outside every delegated role.
 See [FirstRoll Pi subagents](../.pi/README.md) for the operational boundary.
+
+## Secure Production Deployment Pipeline
+
+FirstRoll backend deployments use GitHub's protected `production` environment as the sole human
+approval authority. Azure access is passwordless: separate managed identities trust short-lived
+GitHub OIDC assertions for building and deploying. The workflow is feature-gated off until those
+identities and GitHub settings have been configured.
+
+```text
+protected master + successful CI
+→ release switch and backend-path filter
+→ exact current-master check
+→ container build and local public-boundary smoke test
+→ branch-bound OIDC exchange for the build identity
+→ immutable image push to ACR
+→ deterministic diff/risk analysis and self-digesting manifest
+→ human-readable summary plus seven-day sealed artefact
+→ GitHub production environment waits for required owner review
+→ manifest, run, commit, image and current-master binding rechecked
+→ environment-bound OIDC exchange for the deploy identity
+→ previous image captured as the rollback target
+→ exact ACR digest deployed to Azure Container Apps
+→ exact revision, baked commit identity, Azure image digest, APIs, hidden docs and CORS verified
+→ failure after rollout restores the previous image and retains a failed run
+```
+
+The release workflow owns the Container App image field after bootstrap, while Terraform ignores
+only that field and continues to own configuration, probes, scaling and infrastructure. This avoids
+an infrastructure apply accidentally rolling back a newer approved image. The build identity has
+`AcrPush` on the FirstRoll registry and `Reader` on the exact app. It cannot
+deploy. The deploy identity has `Contributor` only on the exact Container App; its federated subject
+names GitHub's `production` environment. The fresh deploy runner checks out no repository source and
+validates the manifest before requesting an Azure token. No HMAC broker, GitHub App, ACR password or
+long-lived Azure JSON credential is part of the implemented path. GitHub and Azure platform logs are
+the current audit trail; an application-owned append-only ledger is not implemented.
 
 ## Availability and Scaling
 

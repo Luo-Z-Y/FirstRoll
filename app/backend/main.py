@@ -655,7 +655,14 @@ def reception_summary(scores: list[dict]) -> dict:
 
 @app.get("/api/health")
 def health() -> dict[str, str]:
-    return {"status": "ok"}
+    result: dict[str, str] = {"status": "ok"}
+    release_sha = os.environ.get("FIRSTROLL_RELEASE_SHA", "")
+    if release_sha:
+        result["release_sha"] = release_sha
+    release_digest = os.environ.get("FIRSTROLL_RELEASE_DIGEST", "")
+    if release_digest:
+        result["release_digest"] = release_digest
+    return result
 
 
 @app.get("/", response_class=FileResponse)

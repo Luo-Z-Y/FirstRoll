@@ -1,0 +1,478 @@
+name: Backend Release
+
+on:
+  workflow_run:
+    workflows:
+      - CI
+    types:
+      - completed
+    branches:
+      - master
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: backend-release-production
+  cancel-in-progress: false
+
+jobs:
+  scope:
+    name: Select the CI-approved backend revision
+    if: >-
+      vars.BACKEND_RELEASE_ENABLED == 'true' &&
+      (
+        github.event_name == 'workflow_dispatch' ||
+        (
+          github.event.workflow_run.conclusion == 'success' &&
+          github.event.workflow_run.event == 'push' &&
+          github.event.workflow_run.head_branch == 'master' &&
+          github.event.workflow_run.head_repository.full_name == github.repository
+        )
+      )
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      commit-sha: ${{ steps.revision.outputs.commit_sha }}
+      base-ref: ${{ steps.revision.outputs.base_ref }}
+      backend-changed: ${{ steps.changes.outputs.backend_changed }}
+    steps:
+      - name: Check out the candidate without retaining a GitHub credential
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+
+      - name: Bind the release to current master
+        id: revision
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          EXPECTED_SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          checked_out_sha=$(git rev-parse HEAD)
+          current_master_sha=$(git ls-remote origin refs/heads/master | cut -f1)
+          if [ "$checked_out_sha" != "$EXPECTED_SHA" ]; then
+            echo "::error::The checkout does not match the CI-approved revision."
+            exit 1
+          fi
+          if [ "$current_master_sha" != "$EXPECTED_SHA" ]; then
+            echo "::error::master moved after CI; refusing to release a stale revision."
+            exit 1
+          fi
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            successful_ci_runs=$(gh api -X GET \
+              "repos/$GITHUB_REPOSITORY/actions/workflows/ci.yml/runs" \
+              -f branch=master -f status=success -f per_page=20 | \
+              jq --arg sha "$EXPECTED_SHA" '[.workflow_runs[] | select(.head_sha == $sha and .event == "push")] | length')
+            if [ "$successful_ci_runs" -lt 1 ]; then
+              echo "::error::Manual release requires a successful push CI run for the exact master SHA."
+              exit 1
+            fi
+          fi
+          echo "commit_sha=$EXPECTED_SHA" >> "$GITHUB_OUTPUT"
+          echo "base_ref=${EXPECTED_SHA}^" >> "$GITHUB_OUTPUT"
+
+      - name: Detect a backend release
+        id: changes
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          COMMIT_SHA: ${{ steps.revision.outputs.commit_sha }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            echo "backend_changed=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          backend_changed=false
+          while IFS= read -r path; do
+            case "$path" in
+              Dockerfile|pyproject.toml|uv.lock|app/backend/*|tools/release/*|infra/terraform/*|.github/workflows/backend-release.yml)
+                backend_changed=true
+                break
+                ;;
+            esac
+          done < <(git diff --name-only "${COMMIT_SHA}^" "$COMMIT_SHA" --)
+          echo "backend_changed=$backend_changed" >> "$GITHUB_OUTPUT"
+
+  build:
+    name: Build and seal the backend candidate
+    needs: scope
+    if: needs.scope.outputs.backend-changed == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    permissions:
+      contents: read
+      actions: read
+      id-token: write
+    outputs:
+      image-digest: ${{ steps.push.outputs.image_digest }}
+      manifest-artifact-id: ${{ steps.upload.outputs.artifact-id }}
+      commit-sha: ${{ needs.scope.outputs.commit-sha }}
+    steps:
+      - name: Check required non-production configuration
+        env:
+          AZURE_BUILD_CLIENT_ID: ${{ secrets.AZURE_BUILD_CLIENT_ID }}
+          AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+          AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+          ACR_LOGIN_SERVER: ${{ vars.ACR_LOGIN_SERVER }}
+          AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+          AZURE_CONTAINER_APP_NAME: ${{ vars.AZURE_CONTAINER_APP_NAME }}
+        run: |
+          set -euo pipefail
+          for name in AZURE_BUILD_CLIENT_ID AZURE_TENANT_ID AZURE_SUBSCRIPTION_ID ACR_LOGIN_SERVER AZURE_RESOURCE_GROUP AZURE_CONTAINER_APP_NAME; do
+            if [ -z "${!name:-}" ]; then
+              echo "::error::Required release setting $name is missing."
+              exit 1
+            fi
+          done
+
+      - name: Check out the CI-approved revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+          ref: ${{ needs.scope.outputs.commit-sha }}
+
+      - name: Build the backend image
+        env:
+          COMMIT_SHA: ${{ needs.scope.outputs.commit-sha }}
+        run: >-
+          docker build
+          --build-arg "FIRSTROLL_RELEASE_SHA=$COMMIT_SHA"
+          --tag firstroll-api:release-candidate .
+
+      - name: Smoke-test the container and its public boundary
+        env:
+          COMMIT_SHA: ${{ needs.scope.outputs.commit-sha }}
+        run: |
+          set -euo pipefail
+          trap 'docker logs release-test || true; docker rm -f release-test >/dev/null 2>&1 || true' EXIT
+          docker run -d --name release-test \
+            -e PORT=10000 \
+            -e FIRSTROLL_PUBLIC_MODE=true \
+            -e FIRSTROLL_VIDEO_ANALYSIS_ENABLED=false \
+            -e FIRSTROLL_DEEP_STUDY_ENABLED=false \
+            -e FIRSTROLL_CORS_ALLOWED_ORIGINS=https://firstroll.app \
+            -e FIRSTROLL_RELEASE_SHA="$COMMIT_SHA" \
+            -p 10000:10000 \
+            firstroll-api:release-candidate
+          for attempt in $(seq 1 30); do
+            curl --fail --silent http://127.0.0.1:10000/api/health > health.json && break
+            sleep 2
+          done
+          python3 - "$COMMIT_SHA" <<'PY'
+          import json
+          import sys
+          health = json.load(open("health.json", encoding="utf-8"))
+          assert health.get("status") == "ok", health
+          assert health.get("release_sha") == sys.argv[1], health
+          PY
+          for path in docs redoc openapi.json; do
+            status=$(curl --silent --output /dev/null --write-out '%{http_code}' "http://127.0.0.1:10000/$path")
+            test "$status" = "404"
+          done
+
+      - name: Sign in to Azure with the build identity
+        uses: azure/login@a457da9ea143d694b1b9c7c869ebb04ebe844ef5 # v2.3.0
+        with:
+          client-id: ${{ secrets.AZURE_BUILD_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Push the immutable candidate to Azure Container Registry
+        id: push
+        env:
+          ACR_LOGIN_SERVER: ${{ vars.ACR_LOGIN_SERVER }}
+          COMMIT_SHA: ${{ needs.scope.outputs.commit-sha }}
+        run: |
+          set -euo pipefail
+          registry_name=${ACR_LOGIN_SERVER%%.*}
+          image_ref="$ACR_LOGIN_SERVER/firstroll-api:$COMMIT_SHA"
+          az acr login --name "$registry_name"
+          docker tag firstroll-api:release-candidate "$image_ref"
+          docker push "$image_ref"
+          image_digest=$(az acr repository show \
+            --name "$registry_name" \
+            --image "firstroll-api:$COMMIT_SHA" \
+            --query digest --output tsv)
+          case "$image_digest" in
+            sha256:????????????????????????????????????????????????????????????????) ;;
+            *) echo "::error::ACR did not return an immutable image digest."; exit 1 ;;
+          esac
+          echo "image_digest=$image_digest" >> "$GITHUB_OUTPUT"
+
+      - name: Read the current production identity
+        id: current
+        env:
+          RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+          APP_NAME: ${{ vars.AZURE_CONTAINER_APP_NAME }}
+        run: |
+          set -euo pipefail
+          current_revision=$(az containerapp show --resource-group "$RESOURCE_GROUP" --name "$APP_NAME" --query properties.latestReadyRevisionName --output tsv)
+          current_image=$(az containerapp show --resource-group "$RESOURCE_GROUP" --name "$APP_NAME" --query 'properties.template.containers[0].image' --output tsv)
+          current_image_digest=""
+          case "$current_image" in
+            *@sha256:*) current_image_digest=${current_image##*@} ;;
+          esac
+          echo "current_revision=$current_revision" >> "$GITHUB_OUTPUT"
+          echo "current_image_digest=$current_image_digest" >> "$GITHUB_OUTPUT"
+
+      - name: Generate deterministic release evidence
+        env:
+          COMMIT_SHA: ${{ needs.scope.outputs.commit-sha }}
+          BASE_REF: ${{ needs.scope.outputs.base-ref }}
+          IMAGE_DIGEST: ${{ steps.push.outputs.image_digest }}
+          CURRENT_IMAGE_DIGEST: ${{ steps.current.outputs.current_image_digest }}
+          CURRENT_REVISION: ${{ steps.current.outputs.current_revision }}
+        run: |
+          set -euo pipefail
+          python3 -m tools.release.cli create \
+            --repository "$GITHUB_REPOSITORY" \
+            --workflow-run-id "$GITHUB_RUN_ID" \
+            --commit-sha "$COMMIT_SHA" \
+            --base-ref "$BASE_REF" \
+            --image-digest "$IMAGE_DIGEST" \
+            --current-image-digest "$CURRENT_IMAGE_DIGEST" \
+            --current-revision "$CURRENT_REVISION" \
+            --output-directory release-manifest
+          cat release-manifest/approval-summary.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload the sealed release evidence
+        id: upload
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release-manifest-${{ needs.scope.outputs.commit-sha }}
+          path: release-manifest/
+          if-no-files-found: error
+          retention-days: 7
+
+  deploy:
+    name: Deploy the approved backend candidate
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      actions: read
+      id-token: write
+    environment:
+      name: production
+      url: https://api.firstroll.app
+    steps:
+      - name: Download only the sealed release evidence
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          artifact-ids: ${{ needs.build.outputs.manifest-artifact-id }}
+          path: release-manifest
+          merge-multiple: true
+
+      - name: Verify the release binding before credentials are issued
+        env:
+          EXPECTED_REPOSITORY: ${{ github.repository }}
+          EXPECTED_RUN_ID: ${{ github.run_id }}
+          EXPECTED_SHA: ${{ needs.build.outputs.commit-sha }}
+          EXPECTED_IMAGE_DIGEST: ${{ needs.build.outputs.image-digest }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib
+          import json
+          import os
+          import re
+
+          with open("release-manifest/manifest.json", encoding="utf-8") as handle:
+              manifest = json.load(handle)
+          candidate = manifest["candidate"]
+          checks = {
+              "schema version": manifest.get("schema_version") == 1,
+              "repository": manifest.get("repository") == os.environ["EXPECTED_REPOSITORY"],
+              "environment": manifest.get("environment") == "production",
+              "workflow run": manifest.get("workflow_run_id") == int(os.environ["EXPECTED_RUN_ID"]),
+              "branch": manifest.get("branch") == "master",
+              "commit": manifest.get("commit_sha") == os.environ["EXPECTED_SHA"],
+              "image repository": candidate.get("image_repository") == "firstroll-api",
+              "image tag": candidate.get("image_tag") == os.environ["EXPECTED_SHA"],
+              "image digest": candidate.get("image_digest") == os.environ["EXPECTED_IMAGE_DIGEST"],
+              "CI": manifest["verification"].get("ci_passed") is True,
+              "container test": manifest["verification"].get("container_tests_passed") is True,
+              "scan": manifest["verification"].get("scan_passed") is not False,
+              "risk": manifest["change_summary"].get("risk_level") in {"low", "medium", "high"},
+          }
+          digest = candidate.get("artifact_digest", "")
+          candidate["artifact_digest"] = ""
+          canonical = json.dumps(manifest, sort_keys=True, separators=(",", ":"))
+          computed = "sha256:" + hashlib.sha256(canonical.encode()).hexdigest()
+          checks["manifest digest"] = bool(re.fullmatch(r"sha256:[0-9a-f]{64}", digest)) and digest == computed
+          failures = [name for name, passed in checks.items() if not passed]
+          if failures:
+              raise SystemExit("Release evidence failed: " + ", ".join(failures))
+          PY
+
+      - name: Refuse a stale revision after approval
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EXPECTED_SHA: ${{ needs.build.outputs.commit-sha }}
+        run: |
+          set -euo pipefail
+          current_master_sha=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/master" --jq .object.sha)
+          if [ "$current_master_sha" != "$EXPECTED_SHA" ]; then
+            echo "::error::master moved while approval was pending; start a new release."
+            exit 1
+          fi
+
+      - name: Check required production configuration
+        env:
+          AZURE_DEPLOY_CLIENT_ID: ${{ secrets.AZURE_DEPLOY_CLIENT_ID }}
+          AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+          AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+          ACR_LOGIN_SERVER: ${{ vars.ACR_LOGIN_SERVER }}
+          AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+          AZURE_CONTAINER_APP_NAME: ${{ vars.AZURE_CONTAINER_APP_NAME }}
+        run: |
+          set -euo pipefail
+          for name in AZURE_DEPLOY_CLIENT_ID AZURE_TENANT_ID AZURE_SUBSCRIPTION_ID ACR_LOGIN_SERVER AZURE_RESOURCE_GROUP AZURE_CONTAINER_APP_NAME; do
+            if [ -z "${!name:-}" ]; then
+              echo "::error::Required production setting $name is missing."
+              exit 1
+            fi
+          done
+
+      - name: Sign in to Azure with the approval-bound deploy identity
+        uses: azure/login@a457da9ea143d694b1b9c7c869ebb04ebe844ef5 # v2.3.0
+        with:
+          client-id: ${{ secrets.AZURE_DEPLOY_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Record the rollback target
+        id: previous
+        env:
+          RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+          APP_NAME: ${{ vars.AZURE_CONTAINER_APP_NAME }}
+        run: |
+          set -euo pipefail
+          current=$(az containerapp show --resource-group "$RESOURCE_GROUP" --name "$APP_NAME" --output json)
+          echo "revision=$(jq -r '.properties.latestReadyRevisionName // ""' <<<"$current")" >> "$GITHUB_OUTPUT"
+          echo "image=$(jq -r '.properties.template.containers[0].image // ""' <<<"$current")" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy the exact image digest
+        id: rollout
+        env:
+          RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+          APP_NAME: ${{ vars.AZURE_CONTAINER_APP_NAME }}
+          ACR_LOGIN_SERVER: ${{ vars.ACR_LOGIN_SERVER }}
+          IMAGE_DIGEST: ${{ needs.build.outputs.image-digest }}
+        run: |
+          set -euo pipefail
+          echo "attempted=true" >> "$GITHUB_OUTPUT"
+          new_revision=$(az containerapp update \
+            --resource-group "$RESOURCE_GROUP" \
+            --name "$APP_NAME" \
+            --image "$ACR_LOGIN_SERVER/firstroll-api@$IMAGE_DIGEST" \
+            --query properties.latestRevisionName --output tsv)
+          test -n "$new_revision"
+          echo "new_revision=$new_revision" >> "$GITHUB_OUTPUT"
+
+      - name: Wait for the exact new revision
+        env:
+          RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+          APP_NAME: ${{ vars.AZURE_CONTAINER_APP_NAME }}
+          NEW_REVISION: ${{ steps.rollout.outputs.new_revision }}
+        run: |
+          set -euo pipefail
+          ready=false
+          for attempt in $(seq 1 60); do
+            revision=$(az containerapp revision show --resource-group "$RESOURCE_GROUP" --name "$APP_NAME" --revision "$NEW_REVISION" --output json 2>/dev/null || true)
+            health=$(jq -r '.properties.healthState // "Unknown"' <<<"$revision")
+            running=$(jq -r '.properties.runningState // "Unknown"' <<<"$revision")
+            if [ "$health" = "Healthy" ] && [ "$running" = "Running" ]; then
+              ready=true
+              break
+            fi
+            sleep 5
+          done
+          test "$ready" = "true"
+
+      - name: Verify the live API and release identity
+        env:
+          RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+          APP_NAME: ${{ vars.AZURE_CONTAINER_APP_NAME }}
+          ACR_LOGIN_SERVER: ${{ vars.ACR_LOGIN_SERVER }}
+          EXPECTED_SHA: ${{ needs.build.outputs.commit-sha }}
+          EXPECTED_DIGEST: ${{ needs.build.outputs.image-digest }}
+        run: |
+          set -euo pipefail
+          deployed_image=$(az containerapp show --resource-group "$RESOURCE_GROUP" --name "$APP_NAME" --query 'properties.template.containers[0].image' --output tsv)
+          expected_image="$ACR_LOGIN_SERVER/firstroll-api@$EXPECTED_DIGEST"
+          test "$deployed_image" = "$expected_image"
+          for attempt in $(seq 1 12); do
+            curl --fail --silent https://api.firstroll.app/api/health > health.json && break
+            sleep 5
+          done
+          python3 - "$EXPECTED_SHA" <<'PY'
+          import json
+          import sys
+          health = json.load(open("health.json", encoding="utf-8"))
+          assert health.get("status") == "ok", health
+          assert health.get("release_sha") == sys.argv[1], health
+          PY
+          for path in api/contract api/discovery/status; do
+            curl --fail --silent "https://api.firstroll.app/$path" > /dev/null
+          done
+          for path in docs redoc openapi.json; do
+            status=$(curl --silent --output /dev/null --write-out '%{http_code}' "https://api.firstroll.app/$path")
+            test "$status" = "404"
+          done
+          headers=$(curl --silent --show-error --request OPTIONS \
+            --header 'Origin: https://firstroll.app' \
+            --header 'Access-Control-Request-Method: GET' \
+            --dump-header - --output /dev/null \
+            https://api.firstroll.app/api/health)
+          grep -Eiq '^access-control-allow-origin: https://firstroll\.app\r?$' <<<"$headers"
+
+      - name: Roll back after failed post-deployment verification
+        if: ${{ failure() && steps.rollout.outputs.attempted == 'true' }}
+        env:
+          RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+          APP_NAME: ${{ vars.AZURE_CONTAINER_APP_NAME }}
+          PREVIOUS_IMAGE: ${{ steps.previous.outputs.image }}
+        run: |
+          set -euo pipefail
+          test -n "$PREVIOUS_IMAGE"
+          az containerapp update \
+            --resource-group "$RESOURCE_GROUP" \
+            --name "$APP_NAME" \
+            --image "$PREVIOUS_IMAGE" \
+            --output none
+          for attempt in $(seq 1 30); do
+            curl --fail --silent https://api.firstroll.app/api/health > /dev/null && exit 0
+            sleep 5
+          done
+          echo "::error::Rollback was requested but the previous API did not become healthy."
+          exit 1
+
+      - name: Record the deployment result
+        if: always()
+        env:
+          COMMIT_SHA: ${{ needs.build.outputs.commit-sha }}
+          IMAGE_DIGEST: ${{ needs.build.outputs.image-digest }}
+          PREVIOUS_REVISION: ${{ steps.previous.outputs.revision }}
+          NEW_REVISION: ${{ steps.rollout.outputs.new_revision }}
+        run: |
+          {
+            echo "## Backend deployment"
+            echo
+            echo "| Field | Value |"
+            echo "|---|---|"
+            echo "| Result | \`${{ job.status }}\` |"
+            echo "| Commit | \`$COMMIT_SHA\` |"
+            echo "| Image digest | \`$IMAGE_DIGEST\` |"
+            echo "| Previous revision | \`${PREVIOUS_REVISION:-unavailable}\` |"
+            echo "| Candidate revision | \`${NEW_REVISION:-unavailable}\` |"
+            echo "| Target | https://api.firstroll.app |"
+          } >> "$GITHUB_STEP_SUMMARY"

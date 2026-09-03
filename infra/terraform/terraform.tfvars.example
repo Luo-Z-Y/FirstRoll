@@ -9,6 +9,9 @@ static_web_app_location = "centralus"
 static_web_app_sku      = "Free"
 frontend_domain        = "firstroll.app"
 
+# Repository whose GitHub Actions OIDC subjects Azure may trust.
+github_repository = "Luo-Z-Y/FirstRoll"
+
 # The first apply creates only the registry, logs, identity and Container Apps environment.
 deploy_container_app = false
 image_tag             = "bootstrap"

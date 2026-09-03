@@ -1,8 +1,8 @@
 # FirstRoll Azure Infrastructure
 
 This Terraform root manages the Azure frontend and the production FastAPI service on Azure
-Container Apps. It does not manage the Spaceship DNS records, Supabase project, GitHub deployment
-secret or Render rollback service.
+Container Apps. It does not manage the Spaceship DNS records, Supabase project, GitHub repository
+settings/secrets or Render rollback service.
 
 ## Managed resources
 
@@ -12,11 +12,40 @@ secret or Render rollback service.
 - Log Analytics workspace with 30-day retention;
 - Azure Container Apps managed environment;
 - user-assigned identity with `AcrPull` only;
+- branch-bound GitHub build identity with `AcrPush` on ACR and `Reader` on the app;
+- protected-environment GitHub deploy identity with `Contributor` on the app only;
+- Azure federated credentials that exchange GitHub OIDC assertions without passwords;
 - a public Container App running the existing `Dockerfile` image;
 - the existing `api.firstroll.app` Container App custom-domain association.
 
 The application is controlled by `deploy_container_app`. It is `true` in production; use `false`
 only when bootstrapping a new environment before its first image exists.
+
+After bootstrap, Terraform deliberately ignores only `template[0].container[0].image`. The protected
+backend release workflow owns that field and deploys reviewed immutable digests. Terraform continues
+to own environment values, secrets, probes, scaling, identity and ingress, so a later infrastructure
+apply cannot silently roll the API back to the bootstrap tag.
+
+## Passwordless GitHub delivery
+
+`github_repository` fixes the trusted OIDC subjects to `Luo-Z-Y/FirstRoll`. The build identity accepts
+only the `refs/heads/master` subject. The deploy identity accepts only the `production` environment
+subject, so GitHub does not receive its short-lived Azure token until the protected environment has
+passed its required human review.
+
+After a reviewed apply, use the non-sensitive outputs to configure GitHub as described in
+[`docs/RELEASE.md`](../../docs/RELEASE.md):
+
+```bash
+terraform output -raw github_build_client_id
+terraform output -raw github_deploy_client_id
+terraform output -raw container_registry_login_server
+```
+
+Terraform deliberately does not create GitHub secrets or activate the workflow. Keep
+`BACKEND_RELEASE_ENABLED` absent until the identities, role assignments and all GitHub values are
+ready. Do not add `AZURE_CREDENTIALS`, `ACR_USERNAME` or `ACR_PASSWORD`; the workflow does not use
+them.
 
 ## Existing frontend import
 
@@ -64,6 +93,10 @@ sensitive Terraform variable so the Container App can declare the matching secre
 its provider switch. Load it from macOS Keychain through `TF_VAR_database_url`; never write it to a
 file or command history. It will be present in the encrypted remote state, so access to the state
 account remains privileged. Moving this secret to Azure Key Vault is the next hardening step.
+
+The GitHub identity client IDs are identifiers rather than passwords. They are outputs so the owner
+can place them in the appropriate GitHub secret boundaries; Terraform state contains no GitHub token
+and cannot approve a deployment.
 
 ## Bootstrap sequence
 
