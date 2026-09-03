@@ -100,7 +100,7 @@ class TestReleaseEvidence:
 
     def test_release_identity_mismatch_fails(self):
         text = WORKFLOW_PATH.read_text(encoding="utf-8")
-        assert '"release_sha": sys.argv[1]' in text
+        assert 'health.get("release_sha") == sys.argv[1]' in text
         assert 'expected_image="$ACR_LOGIN_SERVER/firstroll-api@$EXPECTED_DIGEST"' in text
         assert 'test "$deployed_image" = "$expected_image"' in text
         assert "::warning::Release SHA mismatch" not in text

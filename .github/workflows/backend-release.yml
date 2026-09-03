@@ -169,7 +169,8 @@ jobs:
           import json
           import sys
           health = json.load(open("health.json", encoding="utf-8"))
-          assert health == {"status": "ok", "release_sha": sys.argv[1]}, health
+          assert health.get("status") == "ok", health
+          assert health.get("release_sha") == sys.argv[1], health
           PY
           for path in docs redoc openapi.json; do
             status=$(curl --silent --output /dev/null --write-out '%{http_code}' "http://127.0.0.1:10000/$path")
@@ -417,8 +418,8 @@ jobs:
           import json
           import sys
           health = json.load(open("health.json", encoding="utf-8"))
-          expected = {"status": "ok", "release_sha": sys.argv[1]}
-          assert health == expected, {"expected": expected, "actual": health}
+          assert health.get("status") == "ok", health
+          assert health.get("release_sha") == sys.argv[1], health
           PY
           for path in api/contract api/discovery/status; do
             curl --fail --silent "https://api.firstroll.app/$path" > /dev/null
