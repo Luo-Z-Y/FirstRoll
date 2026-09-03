@@ -24,9 +24,10 @@ keeps those layers visible instead of presenting one fluent but unsupported answ
 > private review artifact. A successor autonomous-Agent programme now adds typed evidence-gap
 > objectives, honest independent-origin recovery, a deterministic planner baseline and Crossref as
 > an Agent provider. It remains local, default-off and unvalidated by paid or human evidence.
-> A passwordless backend delivery pipeline is implemented but remains disabled until its Azure OIDC
-> identities and GitHub settings are applied. It seals deterministic release evidence, waits for the
-> existing human `production` review, deploys an immutable digest and rolls back failed verification.
+> The passwordless backend delivery pipeline is configured and enabled. It seals deterministic
+> release evidence, waits for the existing human `production` review, deploys an immutable digest
+> and rolls back failed verification. A production change still cannot occur until the owner approves
+> that exact GitHub Actions run.
 
 See [Project Progress](docs/PROGRESS.md) for completed milestones, verification results,
 known limitations and the next priorities.

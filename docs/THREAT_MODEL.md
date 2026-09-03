@@ -36,7 +36,7 @@ are unrelated to deployment authority and cannot approve a release.
 
 | Threat | Implemented control | Residual risk |
 |---|---|---|
-| Pull-request code steals production credentials | PR CI receives no Azure token. OIDC subjects match `master` or the `production` environment. | A malicious change merged to `master` can affect later workflow behaviour; owner review and branch protection remain important. |
+| Pull-request code steals production credentials | PR CI receives no Azure token. OIDC subjects use GitHub's identity-bound owner/repository prefix and match `master` or the `production` environment. | A malicious change merged to `master` can affect later workflow behaviour; owner review and branch protection remain important. |
 | Build identity changes production | Build identity has only `AcrPush` on one registry and `Reader` on one app. | It can upload a malicious image, but cannot select it for production. |
 | Deploy identity changes unrelated Azure resources | `Contributor` is scoped to the exact FirstRoll Container App, not the resource group or subscription. | Contributor can change any setting on that app after approval. |
 | Long-lived Azure or registry secret leaks | GitHub exchanges a signed OIDC assertion for a short-lived Azure token; ACR admin access stays disabled. | GitHub/Azure platform compromise is out of scope. |

@@ -421,7 +421,9 @@ protected master + successful CI
 The release workflow owns the Container App image field after bootstrap, while Terraform ignores
 only that field and continues to own configuration, probes, scaling and infrastructure. This avoids
 an infrastructure apply accidentally rolling back a newer approved image. The build identity has
-`AcrPush` on the FirstRoll registry and `Reader` on the exact app. It cannot
+an identity-bound GitHub subject prefix containing the public immutable owner and repository IDs;
+the older name-only prefix fails closed at Azure login. It has `AcrPush` on the FirstRoll registry
+and `Reader` on the exact app. It cannot
 deploy. The deploy identity has `Contributor` only on the exact Container App; its federated subject
 names GitHub's `production` environment. The fresh deploy runner checks out no repository source and
 validates the manifest before requesting an Azure token. No HMAC broker, GitHub App, ACR password or

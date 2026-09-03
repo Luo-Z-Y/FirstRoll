@@ -35,7 +35,7 @@ public API.
 | 021 | Activate autonomous value ablations sequentially | Accepted | Exact cost isolation versus parallel execution |
 | 022 | Use native planner tool calls without delegating execution authority | Accepted | Standard protocol versus a deliberately policy-owned loop |
 | 023 | Use third-party benchmark tools as bounded diagnostics, not product gates | Accepted | Broader standard metrics versus preserving causal and human evidence |
-| 024 | Use GitHub environment review and Azure OIDC for backend delivery | Accepted, setup pending | Simpler least-privilege delivery versus trusting two managed platforms |
+| 024 | Use GitHub environment review and Azure OIDC for backend delivery | Accepted and activated; proof approval pending | Simpler least-privilege delivery versus trusting two managed platforms |
 
 ## ADR-001: Evolve pyCinemetrics with preserved attribution
 
@@ -1006,7 +1006,7 @@ budget and fresh output path.
 
 ## ADR-024: Use GitHub environment review and Azure OIDC for backend delivery
 
-**Status:** Accepted, setup pending
+**Status:** Accepted and activated; proof approval pending
 **Date:** 4 September 2026
 **Decider:** FirstRoll maintainer
 
@@ -1030,6 +1030,10 @@ managed identities:
 
 - build: GitHub `master` subject, `AcrPush` on one registry and `Reader` on one Container App;
 - deploy: GitHub `production` environment subject and `Contributor` on that exact Container App.
+
+Both Azure federated credentials use the exact identity-bound subject prefix reported by GitHub,
+including the public immutable owner and repository IDs. The legacy name-only prefix does not match
+the token currently issued for this repository and therefore fails closed at Azure login.
 
 The workflow generates and seals deterministic release evidence, deploys an immutable image digest
 on a fresh runner with no checkout, requires exact release-identity verification and automatically
@@ -1066,9 +1070,10 @@ newer approved application release.
 2. [x] Integrate the deterministic manifest/risk implementation into the real workflow.
 3. [x] Add exact revision verification and automatic rollback.
 4. [x] Remove the unused broker/capability/audit implementation and claims.
-5. [ ] Review and apply the Terraform plan.
-6. [ ] Configure GitHub values and make one owner-approved proof deployment.
-7. [ ] Consider scanning, SBOMs and attestations as a later hardening slice.
+5. [x] Review and apply the Terraform plan.
+6. [x] Configure GitHub repository and protected-environment values.
+7. [ ] Complete one owner-approved proof deployment.
+8. [ ] Consider scanning, SBOMs and attestations as a later hardening slice.
 
 ## How to Add or Change a Decision
 

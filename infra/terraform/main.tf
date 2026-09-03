@@ -24,9 +24,15 @@ resource "random_string" "registry_suffix" {
 # `locals` are internal calculations rather than user inputs. They build the
 # complete Docker image address and the environment variables passed to FastAPI.
 locals {
-  registry_name  = "firstroll${random_string.registry_suffix.result}"
-  image          = "${azurerm_container_registry.firstroll.login_server}/${var.image_repository}:${var.image_tag}"
-  needs_supabase = var.auth_provider == "supabase" || var.quota_provider == "supabase"
+  registry_name           = "firstroll${random_string.registry_suffix.result}"
+  image                   = "${azurerm_container_registry.firstroll.login_server}/${var.image_repository}:${var.image_tag}"
+  needs_supabase          = var.auth_provider == "supabase" || var.quota_provider == "supabase"
+  github_repository_parts = split("/", var.github_repository)
+
+  # GitHub's live OIDC configuration includes immutable owner/repository IDs in
+  # the assertion subject. Azure must trust that exact prefix, not the older
+  # name-only `repo:owner/repository` form.
+  github_oidc_subject_prefix = "repo:${local.github_repository_parts[0]}@${var.github_repository_owner_id}/${local.github_repository_parts[1]}@${var.github_repository_id}"
 
   application_environment = merge(
     {
@@ -117,11 +123,11 @@ resource "azurerm_user_assigned_identity" "github_build" {
 }
 
 resource "azurerm_federated_identity_credential" "github_build" {
-  name      = "github-master-build"
-  parent_id = azurerm_user_assigned_identity.github_build.id
-  issuer    = "https://token.actions.githubusercontent.com"
-  subject   = "repo:${var.github_repository}:ref:refs/heads/master"
-  audience  = ["api://AzureADTokenExchange"]
+  name                      = "github-master-build"
+  user_assigned_identity_id = azurerm_user_assigned_identity.github_build.id
+  issuer                    = "https://token.actions.githubusercontent.com"
+  subject                   = "${local.github_oidc_subject_prefix}:ref:refs/heads/master"
+  audience                  = ["api://AzureADTokenExchange"]
 }
 
 # AcrPush includes upload and metadata-read operations for this registry only.
@@ -142,11 +148,11 @@ resource "azurerm_user_assigned_identity" "github_deploy" {
 }
 
 resource "azurerm_federated_identity_credential" "github_deploy" {
-  name      = "github-production-deploy"
-  parent_id = azurerm_user_assigned_identity.github_deploy.id
-  issuer    = "https://token.actions.githubusercontent.com"
-  subject   = "repo:${var.github_repository}:environment:production"
-  audience  = ["api://AzureADTokenExchange"]
+  name                      = "github-production-deploy"
+  user_assigned_identity_id = azurerm_user_assigned_identity.github_deploy.id
+  issuer                    = "https://token.actions.githubusercontent.com"
+  subject                   = "${local.github_oidc_subject_prefix}:environment:production"
+  audience                  = ["api://AzureADTokenExchange"]
 }
 
 # -----------------------------------------------------------------------------

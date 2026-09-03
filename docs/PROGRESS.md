@@ -1,5 +1,38 @@
 # FirstRoll Project Progress
 
+### 04 September 2026 — Passwordless backend delivery activated and live-validated
+
+Delivered without approving or changing the production API image:
+
+1. Merged PR #39 after both required CI checks passed and removed its short-lived branch locally and
+   remotely.
+2. Applied the reviewed Terraform plan exactly: two managed identities, two federated credentials
+   and three narrow role assignments were added; no existing resource changed or was destroyed.
+3. Configured the GitHub repository and protected `production` environment with separate build and
+   deploy client IDs, Azure resource variables and the fail-closed release switch.
+4. Preserved the selected-Actions policy and mandatory full-SHA pinning while allowing only the
+   pinned `azure/login` integration required by the release workflow.
+5. Ran a real proof build. Revision binding, Docker build and public-boundary smoke tests passed; the
+   first Azure token exchange then failed closed before registry access because GitHub's live OIDC
+   subject includes immutable owner and repository IDs.
+6. Corrected Terraform to trust the exact identity-bound prefix reported by GitHub and replaced the
+   AzureRM provider's deprecated federated-identity argument.
+
+Verification at this checkpoint:
+
+- the merged master CI run for `1dac6de7b3642d492cd2abd067d0e3fe079ba4d1` passed;
+- the post-apply Terraform plan reported no drift;
+- the proof image built and passed its container smoke test before the deliberately rejected OIDC
+  exchange;
+- the correction plan contains only two in-place federated-subject updates, with no additions or
+  destroys and no application/runtime changes;
+- all 480 repository tests pass; focused release tests, Terraform formatting/validation and
+  repository checks cover the corrected subject construction.
+
+Status: the production API still runs its previous image. The next proof run may build and seal a
+candidate, but deployment must remain paused at GitHub's protected `production` environment until
+the owner reviews and approves that exact run.
+
 ### 04 September 2026 — Backend release design simplified and hardened before activation
 
 Delivered without changing the live production environment:

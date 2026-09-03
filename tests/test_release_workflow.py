@@ -149,11 +149,23 @@ class TestDeploymentSafety:
 class TestTerraformLeastPrivilege:
     def test_two_oidc_identities_have_distinct_subjects(self):
         text = TERRAFORM_MAIN.read_text(encoding="utf-8")
-        assert 'subject   = "repo:${var.github_repository}:ref:refs/heads/master"' in text
+        assert "github_oidc_subject_prefix" in text
+        assert "github_repository_owner_id" in text
+        assert "github_repository_id" in text
         assert (
-            'subject   = "repo:${var.github_repository}:environment:production"' in text
+            'subject                   = "${local.github_oidc_subject_prefix}:ref:refs/heads/master"'
+            in text
         )
-        assert 'issuer    = "https://token.actions.githubusercontent.com"' in text
+        assert (
+            'subject                   = "${local.github_oidc_subject_prefix}:environment:production"'
+            in text
+        )
+        assert 'issuer                    = "https://token.actions.githubusercontent.com"' in text
+
+    def test_federated_credentials_use_current_provider_argument(self):
+        text = TERRAFORM_MAIN.read_text(encoding="utf-8")
+        assert text.count("user_assigned_identity_id =") == 2
+        assert "parent_id =" not in text
 
     def test_build_and_deploy_roles_are_narrowly_scoped(self):
         text = TERRAFORM_MAIN.read_text(encoding="utf-8")

@@ -4,8 +4,9 @@ FirstRoll builds a backend candidate after successful CI on `master`, but a huma
 the exact GitHub Actions deployment before Azure credentials become available. The workflow deploys
 an immutable image digest and rolls back if the new revision fails its checks.
 
-The system is currently **disabled by default**. Do not create
-`BACKEND_RELEASE_ENABLED=true` until the one-time setup below is complete.
+The workflow is **fail-closed by default**. Production now sets
+`BACKEND_RELEASE_ENABLED=true` because the one-time identity and GitHub setup below is complete; a
+fresh installation must not enable it before completing those steps.
 
 ## Mental model
 
@@ -36,6 +37,16 @@ terraform plan
 
 The plan should add two managed identities, two federated credentials and three narrow role
 assignments. It must not replace the live Container App, registry, custom domain or Static Web App.
+Before applying, verify that Terraform's subject prefix matches GitHub's live value:
+
+```bash
+gh api repos/Luo-Z-Y/FirstRoll/actions/oidc/customization/sub --jq .sub_claim_prefix
+```
+
+The current prefix includes the immutable owner and repository IDs. A legacy
+`repo:Luo-Z-Y/FirstRoll` subject will be rejected by Azure before any registry or deployment access
+is issued.
+
 Apply only after reviewing that exact plan:
 
 ```bash
