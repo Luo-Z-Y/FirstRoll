@@ -113,6 +113,7 @@ rm -rf "$output_dir"
 mkdir -p "$output_dir/assets"
 
 cp "$source_dir/index.html" "$output_dir/index.html"
+cp "$source_dir/staticwebapp.config.json" "$output_dir/staticwebapp.config.json"
 cp "$source_dir/app.js" "$output_dir/assets/app.js"
 cp "$source_dir/integrations.js" "$output_dir/assets/integrations.js"
 cp "$source_dir/local-auth.js" "$output_dir/assets/local-auth.js"

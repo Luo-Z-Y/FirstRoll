@@ -5,15 +5,13 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 WORKFLOWS = ROOT / ".github" / "workflows"
 CI = (WORKFLOWS / "ci.yml").read_text(encoding="utf-8")
-DEPLOYMENT = (
-    WORKFLOWS / "azure-static-web-apps-salmon-field-03695a010.yml"
-).read_text(encoding="utf-8")
+DEPLOYMENT = (WORKFLOWS / "azure-static-web-apps-salmon-field-03695a010.yml").read_text(
+    encoding="utf-8"
+)
 BUILD = (ROOT / "tools" / "build_web.sh").read_text(encoding="utf-8")
 DEPENDABOT = (ROOT / ".github" / "dependabot.yml").read_text(encoding="utf-8")
 AGENT_POLICY = (ROOT / "AGENTS.md").read_text(encoding="utf-8")
-PULL_REQUEST_TEMPLATE = (ROOT / ".github" / "pull_request_template.md").read_text(
-    encoding="utf-8"
-)
+PULL_REQUEST_TEMPLATE = (ROOT / ".github" / "pull_request_template.md").read_text(encoding="utf-8")
 ACTION_REFERENCE = re.compile(r"^\s*(?:-\s+)?uses:\s+[^@\s]+@([^\s#]+)", re.MULTILINE)
 FULL_COMMIT_SHA = re.compile(r"[0-9a-f]{40}")
 
@@ -56,7 +54,11 @@ def test_production_deployment_accepts_only_a_successful_master_push() -> None:
     assert "workflow_run.event == 'push'" in DEPLOYMENT
     assert "workflow_run.head_branch == 'master'" in DEPLOYMENT
     assert "workflow_run.head_repository.full_name == github.repository" in DEPLOYMENT
-    assert "ref: ${{ github.event.workflow_run.head_sha }}" in DEPLOYMENT
+    assert (
+        "github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha"
+        in DEPLOYMENT
+    )
+    assert "Manual release requires a successful push CI run for the exact master SHA" in DEPLOYMENT
     assert "git ls-remote origin refs/heads/master" in DEPLOYMENT
     assert "environment:\n      name: production" in DEPLOYMENT
 
@@ -73,7 +75,8 @@ def test_deployment_secret_is_isolated_from_repository_build_code() -> None:
     assert "actions/download-artifact@" in deploy_job
     assert "artifact-ids: ${{ needs.build.outputs.artifact-id }}" in deploy_job
     assert "merge-multiple: true" in deploy_job
-    assert deploy_job.count("AZURE_STATIC_WEB_APPS_API_TOKEN_SALMON_FIELD_03695A010") == 1
+    # The same scoped token is used only by the initial upload and recovery upload.
+    assert deploy_job.count("AZURE_STATIC_WEB_APPS_API_TOKEN_SALMON_FIELD_03695A010") == 2
     assert "app_location: dist" in deploy_job
     assert "skip_app_build: true" in deploy_job
     assert "repo_token:" not in DEPLOYMENT
@@ -95,4 +98,4 @@ def test_agent_workflow_requires_protected_prs_and_human_deployment_approval() -
     assert "directly to `origin/master`" not in agent_policy
     assert "does **not** approve production" in pull_request_template
     assert "separate human approval" in pull_request_template
-    assert "retention-days: 7" in DEPLOYMENT
+    assert "retention-days: 90" in DEPLOYMENT

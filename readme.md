@@ -24,10 +24,12 @@ keeps those layers visible instead of presenting one fluent but unsupported answ
 > private review artifact. A successor autonomous-Agent programme now adds typed evidence-gap
 > objectives, honest independent-origin recovery, a deterministic planner baseline and Crossref as
 > an Agent provider. It remains local, default-off and unvalidated by paid or human evidence.
-> The passwordless backend delivery pipeline is configured and enabled. It seals deterministic
-> release evidence, waits for the existing human `production` review, deploys an immutable digest
-> and rolls back failed verification. A production change still cannot occur until the owner approves
-> that exact GitHub Actions run.
+> Frontend and backend delivery now share versioned release receipts, seven-day approval windows,
+> 90-day recovery-evidence retention, post-approval freshness checks and live verification. They keep
+> separate hosting, credentials and human `production` approvals. Backend delivery uses Azure OIDC;
+> the frontend retains its scoped Static Web Apps token. The first standardised frontend release
+> requires an explicit bootstrap acknowledgement because the legacy site has no verified rollback
+> package. Recovery paths are locally tested; live rollout/recovery proof still requires owner approval.
 
 See [Project Progress](docs/PROGRESS.md) for completed milestones, verification results,
 known limitations and the next priorities.
@@ -53,6 +55,7 @@ environment configuration, acceptance checks and operational limits.
 | Complete the private filmmaker packet-rating gate | [Human Evidence-Packet Review](docs/HUMAN_PACKET_REVIEW.md) |
 | Install and run the private local edition | [Local Setup](docs/LOCAL_SETUP.md) |
 | Operate the public Azure deployment | [Public Beta Hosting](docs/HOSTING.md) |
+| Approve, verify and recover frontend/backend releases | [Release Runbook](docs/RELEASE.md) |
 | Review provider, copyright and model-use boundaries | [Data Sources](docs/DATA_SOURCES.md) |
 | Check dated delivery evidence and next work | [Project Progress](docs/PROGRESS.md) |
 

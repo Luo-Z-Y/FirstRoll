@@ -1,0 +1,8 @@
+{
+  "routes": [
+    { "route": "/release.json", "headers": { "Cache-Control": "no-store" } },
+    { "route": "/index.html", "headers": { "Cache-Control": "no-cache, must-revalidate" } },
+    { "route": "/", "headers": { "Cache-Control": "no-cache, must-revalidate" } },
+    { "route": "/assets/*", "headers": { "Cache-Control": "no-cache, must-revalidate" } }
+  ]
+}

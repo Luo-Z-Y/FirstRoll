@@ -395,6 +395,27 @@ See [FirstRoll Pi subagents](../.pi/README.md) for the operational boundary.
 
 ## Secure Production Deployment Pipeline
 
+Frontend and backend now implement the same release contract using `tools/release/protocol.py`:
+exact source/run/build-attempt binding, a versioned receipt whose expected fingerprint comes from
+build-job outputs, a seven-day new-approval window, 90-day GitHub recovery-evidence retention,
+post-approval current-master checks and component-specific live verification. Both preserve active
+deployments rather than cancelling an upload/rollback when a newer candidate arrives. Each retains
+its own workflow and human approval; a combined atomic deployment is not implemented.
+
+The frontend is still a static artefact on Static Web Apps, not a container. `Frontend Release`
+inventories the build and records the existing live receipt and verified GitHub recovery artefact.
+After human approval, it verifies all candidate files and the unchanged rollback baseline before
+using its environment-scoped Azure deployment token. It publishes the exact files and checks the
+served receipt, public file hashes and API reachability. Failure after upload triggers reupload and
+verification of the saved previous package, without rebuilding. An initial manual bootstrap is
+required when the legacy site has no receipt; it explicitly has no automatic legacy rollback.
+
+Deploy runners fetch only the reviewed `protocol.py` and `frontend.py` control modules from the
+exact CI-approved Git commit. They do not check out the application, install dependencies or execute
+scripts from the deployment artefact. Workflow and control-module changes therefore remain trusted
+repository changes requiring review; receipt hashes are not signed supply-chain attestations.
+Receipt creation time, source version and GitHub-recorded deployment time are distinct facts.
+
 FirstRoll backend deployments use GitHub's protected `production` environment as the sole human
 approval authority. Azure access is passwordless: separate managed identities trust short-lived
 GitHub OIDC assertions for building and deploying. The workflow is feature-gated off until those
@@ -408,7 +429,7 @@ protected master + successful CI
 → branch-bound OIDC exchange for the build identity
 → immutable image push to ACR
 → deterministic diff/risk analysis and self-digesting manifest
-→ human-readable summary plus seven-day sealed artefact
+→ shared release receipt plus detailed risk summary (seven-day approval; 90-day evidence retention)
 → GitHub production environment waits for required owner review
 → manifest, run, commit, image and current-master binding rechecked
 → environment-bound OIDC exchange for the deploy identity
@@ -418,6 +439,10 @@ protected master + successful CI
 → failure after rollout restores the previous image and retains a failed run
 ```
 
+The backend compares changes with the deployed source SHA rather than just the latest merge; unknown
+legacy/non-ancestor versions force a conservative whole-tree review. Terraform and migration source
+changes are flagged, but neither application-release workflow applies infrastructure or migrations.
+
 The release workflow owns the Container App image field after bootstrap, while Terraform ignores
 only that field and continues to own configuration, probes, scaling and infrastructure. This avoids
 an infrastructure apply accidentally rolling back a newer approved image. The build identity has
@@ -425,10 +450,14 @@ an identity-bound GitHub subject prefix containing the public immutable owner an
 the older name-only prefix fails closed at Azure login. It has `AcrPush` on the FirstRoll registry
 and `Reader` on the exact app. It cannot
 deploy. The deploy identity has `Contributor` only on the exact Container App; its federated subject
-names GitHub's `production` environment. The fresh deploy runner checks out no repository source and
+names GitHub's `production` environment. The fresh deploy runner checks out no application source and
 validates the manifest before requesting an Azure token. No HMAC broker, GitHub App, ACR password or
 long-lived Azure JSON credential is part of the implemented path. GitHub and Azure platform logs are
 the current audit trail; an application-owned append-only ledger is not implemented.
+
+Recovery remains conditional on available artefacts/images and a runner/platform capable of
+finishing the recovery steps. Cancellation, timeouts and outages can require owner intervention.
+Neither mocked failure tests nor a green upload proves live recovery or all authenticated user flows.
 
 ## Availability and Scaling
 

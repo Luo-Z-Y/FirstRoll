@@ -42,7 +42,7 @@ jobs:
       - name: Check out the candidate without retaining a GitHub credential
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          fetch-depth: 2
+          fetch-depth: 0
           persist-credentials: false
           ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
 
@@ -65,6 +65,7 @@ jobs:
             exit 1
           fi
           if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            test "$GITHUB_REF" = "refs/heads/master"
             successful_ci_runs=$(gh api -X GET \
               "repos/$GITHUB_REPOSITORY/actions/workflows/ci.yml/runs" \
               -f branch=master -f status=success -f per_page=20 | \
@@ -75,13 +76,17 @@ jobs:
             fi
           fi
           echo "commit_sha=$EXPECTED_SHA" >> "$GITHUB_OUTPUT"
-          echo "base_ref=${EXPECTED_SHA}^" >> "$GITHUB_OUTPUT"
+          # Include accumulated undeployed changes, not only the latest merge.
+          curl --fail --silent --show-error --max-time 20 https://api.firstroll.app/api/health > deployed-health.json || true
+          base_ref=$(python3 -c 'import sys; from pathlib import Path; from tools.release.protocol import change_base, health_commit; print(change_base(sys.argv[1], health_commit(Path("deployed-health.json"))))' "$EXPECTED_SHA")
+          echo "base_ref=$base_ref" >> "$GITHUB_OUTPUT"
 
       - name: Detect a backend release
         id: changes
         env:
           EVENT_NAME: ${{ github.event_name }}
           COMMIT_SHA: ${{ steps.revision.outputs.commit_sha }}
+          BASE_REF: ${{ steps.revision.outputs.base_ref }}
         run: |
           set -euo pipefail
           if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
@@ -91,12 +96,12 @@ jobs:
           backend_changed=false
           while IFS= read -r path; do
             case "$path" in
-              Dockerfile|pyproject.toml|uv.lock|app/backend/*|tools/release/*|infra/terraform/*|.github/workflows/backend-release.yml)
+              Dockerfile|pyproject.toml|uv.lock|requirements*.txt|app/backend/*|tools/release/*|infra/terraform/*|supabase/migrations/*|.github/workflows/backend-release.yml|.github/workflows/ci.yml)
                 backend_changed=true
                 break
                 ;;
             esac
-          done < <(git diff --name-only "${COMMIT_SHA}^" "$COMMIT_SHA" --)
+          done < <(git diff --name-only "$BASE_REF" "$COMMIT_SHA" --)
           echo "backend_changed=$backend_changed" >> "$GITHUB_OUTPUT"
 
   build:
@@ -113,6 +118,8 @@ jobs:
       image-digest: ${{ steps.push.outputs.image_digest }}
       manifest-artifact-id: ${{ steps.upload.outputs.artifact-id }}
       commit-sha: ${{ needs.scope.outputs.commit-sha }}
+      receipt-digest: ${{ steps.receipt.outputs.receipt-digest }}
+      run-attempt: ${{ steps.receipt.outputs.run-attempt }}
     steps:
       - name: Check required non-production configuration
         env:
@@ -242,14 +249,26 @@ jobs:
             --output-directory release-manifest
           cat release-manifest/approval-summary.md >> "$GITHUB_STEP_SUMMARY"
 
+      - name: Seal the shared release receipt
+        id: receipt
+        env:
+          COMMIT_SHA: ${{ needs.scope.outputs.commit-sha }}
+        run: |
+          set -euo pipefail
+          python3 -m tools.release.protocol seal-backend \
+            --receipt release-manifest/release.json --evidence release-manifest/manifest.json \
+            --commit "$COMMIT_SHA" --run-id "$GITHUB_RUN_ID" --attempt "$GITHUB_RUN_ATTEMPT" \
+            >> "$GITHUB_STEP_SUMMARY"
+          echo "run-attempt=$GITHUB_RUN_ATTEMPT" >> "$GITHUB_OUTPUT"
+
       - name: Upload the sealed release evidence
         id: upload
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: release-manifest-${{ needs.scope.outputs.commit-sha }}
+          name: ${{ steps.receipt.outputs.artifact-name }}
           path: release-manifest/
           if-no-files-found: error
-          retention-days: 7
+          retention-days: 90
 
   deploy:
     name: Deploy the approved backend candidate
@@ -270,6 +289,33 @@ jobs:
           artifact-ids: ${{ needs.build.outputs.manifest-artifact-id }}
           path: release-manifest
           merge-multiple: true
+
+      # Only these reviewed control modules are read from the CI-approved commit.
+      # No application checkout, dependencies or artefact-supplied scripts run here.
+      - name: Fetch approved release control modules
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EXPECTED_SHA: ${{ needs.build.outputs.commit-sha }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/firstroll-control/tools/release"
+          for module in protocol frontend; do
+            gh api -H 'Accept: application/vnd.github.raw+json' \
+              "repos/$GITHUB_REPOSITORY/contents/tools/release/$module.py?ref=$EXPECTED_SHA" \
+              > "$RUNNER_TEMP/firstroll-control/tools/release/$module.py"
+          done
+          echo "PYTHONPATH=$RUNNER_TEMP/firstroll-control" >> "$GITHUB_ENV"
+
+      - name: Verify the shared receipt and approval expiry
+        env:
+          EXPECTED_SHA: ${{ needs.build.outputs.commit-sha }}
+          EXPECTED_DIGEST: ${{ needs.build.outputs.receipt-digest }}
+          BUILD_ATTEMPT: ${{ needs.build.outputs.run-attempt }}
+        run: |
+          python3 -m tools.release.protocol verify --component backend \
+            --receipt release-manifest/release.json --evidence release-manifest/manifest.json \
+            --commit "$EXPECTED_SHA" --run-id "$GITHUB_RUN_ID" --attempt "$BUILD_ATTEMPT" \
+            --expected-digest "$EXPECTED_DIGEST"
 
       - name: Verify the release binding before credentials are issued
         env:
@@ -475,4 +521,5 @@ jobs:
             echo "| Previous revision | \`${PREVIOUS_REVISION:-unavailable}\` |"
             echo "| Candidate revision | \`${NEW_REVISION:-unavailable}\` |"
             echo "| Target | https://api.firstroll.app |"
+            echo "| Recorded at (UTC) | $(date -u +%FT%TZ) |"
           } >> "$GITHUB_STEP_SUMMARY"

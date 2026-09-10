@@ -1073,6 +1073,70 @@ newer approved application release.
 5. [x] Review and apply the Terraform plan.
 6. [x] Configure GitHub repository and protected-environment values.
 7. [ ] Complete one owner-approved proof deployment.
+
+## ADR-025: Standardise release rules, not frontend/backend hosting
+
+**Status:** Accepted for implementation; production approval remains separate
+**Date:** 10 September 2026
+**Decider:** FirstRoll maintainer
+
+### Context
+
+The frontend had no post-approval freshness check, file-level live verification or retained-package
+recovery. The backend had stronger checks but its scope compared only the immediate merge parent,
+potentially overlooking accumulated undeployed work. Different cancellation and retention behaviour
+made an otherwise small product harder to operate.
+
+### Decision
+
+Keep independent static frontend and container backend workflows, hosting and credentials. Share a
+tested, standard-library release-receipt protocol and identical exact-commit control fetching and
+post-approval freshness checks. Bind source SHA, component, run, build attempt, payload hash and a
+seven-day approval expiry. Retain GitHub artefacts for 90 days for evidence and frontend recovery.
+Never cancel an active production deployment automatically to make room for newer code.
+
+The frontend establishes its first verified baseline through an explicit manual bootstrap candidate
+and owner approval. Later releases bind the known-good live receipt to a successful trusted GitHub
+run and available artefact. Verify the complete candidate and recovery inventories before using the
+Azure token; verify exact public files and API reachability after upload; restore and verify the
+previous package on failure. An expired new-approval window does not forbid recovery of an available
+known-good package. An unavailable recovery package cannot be silently replaced by an unrelated build.
+
+The backend retains its detailed risk manifest, Azure OIDC identities and immutable image deployment.
+It additionally binds that evidence to the common receipt and compares changes with the deployed
+source SHA (whole-tree review if unknown). Neither workflow applies Terraform or database migrations.
+
+### Options considered
+
+| Option | Trade-off | Decision |
+|---|---|---|
+| Shared release protocol, separate deploy workflows | Consistent checks without coupling unrelated changes; service-specific recovery remains necessary | Accepted |
+| Containerise the frontend to match the backend | Extra running-service responsibilities merely for symmetry | Rejected |
+| One combined release/credential | Fewer buttons but wider authority and harder partial-failure handling; not atomic across Azure services | Deferred |
+| Add a broker, new storage service or staging infrastructure now | Additional cost and administration before proving the existing delivery path | Deferred |
+
+### Consequences and limits
+
+- Receipt hashes are integrity checks, not independent signatures. Reviewed source/control modules,
+  workflow YAML, platform administrators and GitHub's environment configuration remain trusted.
+- Deploy runners download two fixed control modules from the approved source commit; no application
+  checkout, dependency installation or deployment-artefact script execution occurs.
+- Frontend risk is conservative: initial/release-control changes are high; other updates are at least
+  medium. The backend retains its detailed deterministic classifier. Neither replaces vulnerability
+  scanning, browser acceptance or independent review.
+- The first frontend rollout has no automatic legacy recovery. Later recovery depends on retained
+  packages, provider availability and enough job time; cancellation or outage can require intervention.
+- Ninety-day GitHub retention is bounded storage, not an archival guarantee. Registry image retention
+  remains separate. No permanent storage, signing service or extra Azure compute was added.
+- Browser testing, live rollout and deliberately failed-rollout recovery remain operational evidence
+  to collect after the owner approves the relevant production actions.
+
+### Acceptance
+
+Executable tests cover approval/run/attempt mismatches, independent fingerprint binding, expiry,
+unsafe paths, file alteration, baseline substitution, failed/provider-foreign recovery runs, expired
+backups, live receipt/file/API failures, rollback checks during API outages and cumulative change
+selection. Structural and executable-shell tests ensure both workflows retain the same gates.
 8. [ ] Consider scanning, SBOMs and attestations as a later hardening slice.
 
 ## How to Add or Change a Decision
