@@ -141,7 +141,7 @@ repository owner manually approves that exact run.
 
 | Setting | Value |
 |---|---|
-| Trigger | successful CI for a pull-request merge into protected `master` |
+| Trigger | successful push CI on protected `master`, or manual dispatch validated against exact-SHA CI |
 | Checked-out revision | exact CI-approved SHA, verified as the current `master` head |
 | App location | `dist`; pre-built before the deployment credential is used |
 | API location | empty; FastAPI is a separate service |
@@ -160,13 +160,17 @@ The workflow supplies these public build values:
 The Azure deployment token is rotated into the branch-restricted GitHub `production` environment as
 `AZURE_STATIC_WEB_APPS_API_TOKEN_SALMON_FIELD_03695A010`; it is not a repository-wide secret. Never
 place that token in source code or a public build variable. The uncredentialled build job validates
-`dist` and seals it in an immutable, seven-day GitHub Actions artefact, leaving time for manual
-review. A separate deployment runner checks out no repository code, downloads that artefact by its
-run-scoped ID and waits for the required owner approval before the token is released to the final
-pinned Azure action. `skip_app_build` prevents that action from running repository build code while
-credentialled.
+`dist`, inventories its file hashes and seals a shared `release.json` receipt. Artefacts are retained
+for 90 days but new approvals expire after seven days. A separate deployment runner waits for the
+owner, downloads the artefact by ID, fetches only exact-commit release-control modules, then verifies
+the receipt, current `master`, complete file inventory and known-good rollback package. It has no
+application checkout or dependency installation. `skip_app_build` prevents rebuilding while the
+Azure token is used. After upload, exact live files and API reachability are checked; a failed update
+attempts to restore the verified previous static package. The first standardised release explicitly
+acknowledges no legacy rollback baseline. See [Release Runbook](RELEASE.md) for bootstrap and recovery.
 
-Both workflows grant `GITHUB_TOKEN` only read access to repository contents, do not persist checkout
+Frontend release jobs grant `GITHUB_TOKEN` read-only contents/actions access; CI retains read-only
+contents access. Neither persists checkout
 credentials and pin every external action to a full commit SHA. Repository Actions policy enforces
 SHA pinning and permits only GitHub-owned actions plus the explicitly allow-listed HashiCorp and
 Azure actions. Dependabot checks the npm lock and action pins weekly; production dependency audit
@@ -179,7 +183,8 @@ The protected delivery sequence is:
 3. merge only when the branch is current, checks pass and conversations are resolved;
 4. inspect the sealed production candidate in GitHub Actions and manually approve the `production`
    environment deployment;
-5. verify `https://firstroll.app` and its `buildCommit` after Azure reports success.
+5. wait for automatic live file and API checks, then verify sign-in, search, the shelf and study in a
+   browser. `https://firstroll.app/release.json` identifies the deployed component and source commit.
 
 Failed, cancelled, pull-request, foreign-repository and already-stale CI runs cannot reach the
 approval gate. Agents may create and merge a green pull request, but must stop and report the pending

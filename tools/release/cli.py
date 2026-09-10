@@ -122,11 +122,9 @@ def create_manifest(arguments: argparse.Namespace) -> int:
         user_visible_changes=_release_description(changed_files),
         database_migration=bool(migration_files),
         migration_files=migration_files,
-        infrastructure_change=(
-            "the backend image and Terraform-managed Azure infrastructure"
-            if terraform_files
-            else "the backend image only"
-        ),
+        # Terraform source changes are review evidence, not operations performed
+        # by this application-release workflow. Infrastructure applies stay separate.
+        infrastructure_change="the backend image only (no Terraform apply or database migration)",
         terraform_changed_files=terraform_files,
         risk_level=risk.level,
         risk_reasons=risk.reasons,

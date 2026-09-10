@@ -1,4 +1,4 @@
-name: Azure Static Web Apps production
+name: Frontend Release
 
 on:
   workflow_run:
@@ -9,35 +9,53 @@ on:
     branches:
       - master
 
+  workflow_dispatch:
+    inputs:
+      allow_initial_release:
+        description: 'First standardised release only: acknowledge no automatic rollback baseline'
+        type: boolean
+        required: false
+        default: false
+
 permissions:
   contents: read
+  actions: read
 
 concurrency:
   group: azure-static-web-apps-production
-  cancel-in-progress: true
+  # Do not interrupt an active upload or rollback. Superseded candidates fail freshness checks.
+  cancel-in-progress: false
 
 jobs:
   build:
     if: >-
-      github.event.workflow_run.conclusion == 'success' &&
-      github.event.workflow_run.event == 'push' &&
-      github.event.workflow_run.head_branch == 'master' &&
-      github.event.workflow_run.head_repository.full_name == github.repository
+      github.event_name == 'workflow_dispatch' ||
+      (
+        github.event.workflow_run.conclusion == 'success' &&
+        github.event.workflow_run.event == 'push' &&
+        github.event.workflow_run.head_branch == 'master' &&
+        github.event.workflow_run.head_repository.full_name == github.repository
+      )
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     name: Build production frontend without credentials
     outputs:
       artifact-id: ${{ steps.frontend-artifact.outputs.artifact-id }}
+      commit-sha: ${{ steps.receipt.outputs.commit-sha }}
+      receipt-digest: ${{ steps.receipt.outputs.receipt-digest }}
+      run-attempt: ${{ steps.receipt.outputs.run-attempt }}
     steps:
       - name: Check out the CI-approved revision
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           persist-credentials: false
-          ref: ${{ github.event.workflow_run.head_sha }}
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
       - name: Refuse a stale production revision
         env:
-          EXPECTED_SHA: ${{ github.event.workflow_run.head_sha }}
+          GH_TOKEN: ${{ github.token }}
+          EVENT_NAME: ${{ github.event_name }}
+          EXPECTED_SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
         run: |
           set -eu
           checked_out_sha=$(git rev-parse HEAD)
@@ -45,6 +63,17 @@ jobs:
           if [ "$checked_out_sha" != "$EXPECTED_SHA" ] || [ "$current_master_sha" != "$EXPECTED_SHA" ]; then
             echo "Refusing to deploy a stale revision." >&2
             exit 1
+          fi
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            test "$GITHUB_REF" = "refs/heads/master"
+            successful_ci_runs=$(gh api -X GET \
+              "repos/$GITHUB_REPOSITORY/actions/workflows/ci.yml/runs" \
+              -f branch=master -f status=success -f per_page=20 | \
+              jq --arg sha "$EXPECTED_SHA" '[.workflow_runs[] | select(.head_sha == $sha and .event == "push")] | length')
+            if [ "$successful_ci_runs" -lt 1 ]; then
+              echo "::error::Manual release requires a successful push CI run for the exact master SHA."
+              exit 1
+            fi
           fi
       - name: Set up Node.js
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
@@ -59,7 +88,7 @@ jobs:
           # The UI renders a small comparable release badge; localhost reserves
           # the next Git-derived number and Azure publishes the current one.
           FIRSTROLL_BUILD_CHANNEL: live
-          # Keep the live provider explicit until the Entra customer tenant is ready.
+          # Supabase remains the production authentication provider.
           FIRSTROLL_AUTH_PROVIDER: supabase
           FIRSTROLL_SUPABASE_URL: https://obnxmfcvshbkbsgxbmgg.supabase.co
           FIRSTROLL_SUPABASE_PUBLISHABLE_KEY: sb_publishable_P6VzoeBdroR-2yeit62cbg_vvTXH47Y
@@ -80,21 +109,33 @@ jobs:
           node --check dist/assets/config.js
           grep -F 'apiBase: "https://api.firstroll.app"' dist/assets/config.js >/dev/null
           grep -F 'buildChannel: "live"' dist/assets/config.js >/dev/null
+      - name: Seal the shared release receipt
+        id: receipt
+        env:
+          GH_TOKEN: ${{ github.token }}
+          COMMIT_SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+          ALLOW_INITIAL: ${{ github.event_name == 'workflow_dispatch' && inputs.allow_initial_release || false }}
+        run: |
+          set -euo pipefail
+          python3 -m tools.release.frontend prepare --site dist \
+            --commit "$COMMIT_SHA" --run-id "$GITHUB_RUN_ID" --attempt "$GITHUB_RUN_ATTEMPT" \
+            --allow-initial "$ALLOW_INITIAL" >> "$GITHUB_STEP_SUMMARY"
+
       - name: Seal the deployment artifact
         id: frontend-artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: production-frontend-${{ github.event.workflow_run.head_sha }}
+          name: ${{ steps.receipt.outputs.artifact-name }}
           path: dist/
           if-no-files-found: error
-          # Leave enough time for the repository owner to inspect and approve the release.
-          retention-days: 7
+          # Recovery retention is separate from the receipt's seven-day approval window.
+          retention-days: 90
 
   deploy:
     needs: build
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
-    name: Deploy sealed production frontend
+    timeout-minutes: 20
+    name: Deploy the approved frontend candidate
     environment:
       name: production
       url: https://firstroll.app
@@ -105,16 +146,71 @@ jobs:
           artifact-ids: ${{ needs.build.outputs.artifact-id }}
           path: dist
           merge-multiple: true
-      - name: Check the deployment boundary
+
+      # Reviewed control code comes from GitHub at the exact CI-approved commit,
+      # never from the downloaded frontend package. No application checkout.
+      - name: Fetch approved release control modules
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EXPECTED_SHA: ${{ needs.build.outputs.commit-sha }}
         run: |
-          set -eu
-          test -f dist/index.html
-          test -f dist/assets/config.js
-          if find dist -type l -print -quit | grep -q .; then
-            echo "The deployment artifact must not contain symbolic links." >&2
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/firstroll-control/tools/release"
+          for module in protocol frontend; do
+            gh api -H 'Accept: application/vnd.github.raw+json' \
+              "repos/$GITHUB_REPOSITORY/contents/tools/release/$module.py?ref=$EXPECTED_SHA" \
+              > "$RUNNER_TEMP/firstroll-control/tools/release/$module.py"
+          done
+          echo "PYTHONPATH=$RUNNER_TEMP/firstroll-control" >> "$GITHUB_ENV"
+
+      - name: Verify the shared receipt and approval expiry
+        env:
+          EXPECTED_SHA: ${{ needs.build.outputs.commit-sha }}
+          EXPECTED_DIGEST: ${{ needs.build.outputs.receipt-digest }}
+          BUILD_ATTEMPT: ${{ needs.build.outputs.run-attempt }}
+        run: |
+          python3 -m tools.release.protocol verify --component frontend \
+            --receipt dist/release.json --site dist \
+            --commit "$EXPECTED_SHA" --run-id "$GITHUB_RUN_ID" --attempt "$BUILD_ATTEMPT" \
+            --expected-digest "$EXPECTED_DIGEST"
+
+      - name: Refuse a stale revision after approval
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EXPECTED_SHA: ${{ needs.build.outputs.commit-sha }}
+        run: |
+          set -euo pipefail
+          current_master_sha=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/master" --jq .object.sha)
+          if [ "$current_master_sha" != "$EXPECTED_SHA" ]; then
+            echo "::error::master moved while approval was pending; start a new release."
             exit 1
           fi
+
+      - name: Resolve the approved rollback baseline
+        id: previous
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 -m tools.release.frontend baseline --candidate dist/release.json
+
+      - name: Download the retained previous frontend
+        if: ${{ steps.previous.outputs.artifact-id != '' }}
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          artifact-ids: ${{ steps.previous.outputs.artifact-id }}
+          run-id: ${{ steps.previous.outputs.run-id }}
+          github-token: ${{ github.token }}
+          path: rollback-site
+          merge-multiple: true
+
+      - name: Verify the retained rollback package
+        id: rollback-ready
+        if: ${{ steps.previous.outputs.artifact-id != '' }}
+        run: |
+          python3 -m tools.release.frontend verify-rollback --candidate dist/release.json \
+            --site rollback-site
+
       - name: Upload the pre-built frontend
+        id: rollout
         uses: Azure/static-web-apps-deploy@1a947af9992250f3bc2e68ad0754c0b0c11566c9 # v1
         with:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_SALMON_FIELD_03695A010 }}
@@ -123,3 +219,54 @@ jobs:
           api_location: ''
           output_location: ''
           skip_app_build: true
+
+      - name: Verify the live frontend and API
+        run: python3 -m tools.release.frontend live --site dist
+
+      # A failed upload can already have changed production; recover in that case too.
+      - name: Restore the verified previous frontend
+        id: rollback
+        if: >-
+          ${{ failure() &&
+              (steps.rollout.outcome == 'success' || steps.rollout.outcome == 'failure') &&
+              steps.rollback-ready.outcome == 'success' }}
+        uses: Azure/static-web-apps-deploy@1a947af9992250f3bc2e68ad0754c0b0c11566c9 # v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_SALMON_FIELD_03695A010 }}
+          action: upload
+          app_location: rollback-site
+          api_location: ''
+          output_location: ''
+          skip_app_build: true
+
+      - name: Verify restored frontend identity and files
+        if: ${{ failure() && steps.rollback.outcome == 'success' }}
+        run: |
+          python3 -m tools.release.frontend live-rollback --candidate dist/release.json \
+            --site rollback-site
+
+      - name: Report an unrecoverable initial release
+        if: >-
+          ${{ failure() &&
+              (steps.rollout.outcome == 'success' || steps.rollout.outcome == 'failure') &&
+              steps.previous.outputs.artifact-id == '' }}
+        run: |
+          echo "::error::Initial release failed: no verified rollback package exists. Owner recovery is required."
+
+      - name: Record the deployment result
+        if: always()
+        env:
+          COMMIT_SHA: ${{ needs.build.outputs.commit-sha }}
+          RECEIPT_DIGEST: ${{ needs.build.outputs.receipt-digest }}
+          RESULT: ${{ job.status }}
+          ROLLBACK: ${{ steps.rollback.outcome }}
+        run: |
+          {
+            echo "## Frontend deployment"
+            echo "- Result: $RESULT"
+            echo "- Source commit: $COMMIT_SHA"
+            echo "- Receipt fingerprint: $RECEIPT_DIGEST"
+            echo "- Rollback: $ROLLBACK"
+            echo "- Recorded at (UTC): $(date -u +%FT%TZ)"
+            echo "- Target: https://firstroll.app"
+          } >> "$GITHUB_STEP_SUMMARY"

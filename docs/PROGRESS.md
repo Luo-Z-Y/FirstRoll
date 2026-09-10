@@ -1,5 +1,40 @@
 # FirstRoll Project Progress
 
+### 10 September 2026 — Standardised frontend/backend release contract
+
+Implemented on a short-lived feature branch; owner production approval remains required:
+
+1. Added shared, dependency-free release receipts bound to component, commit, run, build attempt,
+   payload fingerprint and a seven-day approval expiry. Build-job outputs independently bind the
+   expected receipt fingerprint; retained evidence lasts 90 days without extending old approvals.
+2. Added frontend post-approval stale-master refusal, candidate file hashing, live receipt/public-file
+   verification and API smoke checks. The Azure-consumed configuration file is verified in the
+   package, not fetched as a public asset. Version metadata is served without caching.
+3. Added a verified previous-package baseline and recovery upload on frontend upload/verification
+   failure. Recovery checks the restored exact files and does not depend on an unrelated API outage.
+   The run stays failed after recovery. Initial bootstrap explicitly acknowledges no legacy backup.
+4. Both workflows fetch only reviewed release-control modules from the CI-approved commit, retain
+   independent credentials/approvals and preserve active deployments. Neither applies Terraform,
+   migrates databases, installs deployment-time dependencies or executes artefact-provided scripts.
+5. Backend change selection now includes accumulated changes since the deployed source SHA, with a
+   conservative full-tree fallback for legacy/unknown versions. Corrected the summary's misleading
+   suggestion that an application release also applies changed Terraform files.
+6. Updated README, architecture, hosting and release runbooks, ADR-025 and Obsidian project notes.
+
+Verification at the implementation checkpoint:
+
+- All 553 repository tests passed after the final review pass; added executable
+  receipt, rollback, live-failure and workflow-parity cases rather than relying only on YAML strings.
+- The production-style frontend build passed with locked dependencies and lifecycle scripts disabled.
+- Ruff, Terraform formatting and the official checksum-verified actionlint 1.7.12 validator pass.
+  Docker is not running locally, so the protected GitHub CI build remains the container-build check.
+- The current live `/release.json` returns HTTP 404, confirming that bootstrap is genuinely required.
+- No production approval, deployment, Terraform apply, account change or paid model call occurred.
+
+Operational proof still required: owner-approved initial frontend release, backend release, browser
+acceptance and a separately approved live recovery drill. Image scans, SBOMs, signed provenance,
+permanent backups and coordinated/atomic cross-service deployment remain out of scope.
+
 ### 04 September 2026 — Passwordless backend delivery activated and live-validated
 
 Delivered without approving or changing the production API image:
