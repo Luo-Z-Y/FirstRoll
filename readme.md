@@ -57,6 +57,7 @@ environment configuration, acceptance checks and operational limits.
 | Operate the public Azure deployment | [Public Beta Hosting](docs/HOSTING.md) |
 | Approve, verify and recover frontend/backend releases | [Release Runbook](docs/RELEASE.md) |
 | Review provider, copyright and model-use boundaries | [Data Sources](docs/DATA_SOURCES.md) |
+| Reproduce web responsiveness checks and review remaining latency | [Web Responsiveness](docs/WEB_RESPONSIVENESS.md) |
 | Check dated delivery evidence and next work | [Project Progress](docs/PROGRESS.md) |
 
 ## Lineage and Attribution
@@ -80,7 +81,10 @@ The original GPL-3.0 licence and contributor attribution remain applicable. See
 - Reuse up to five locally stored recent searches, remove individual entries or clear the history;
   this browser-only convenience data is never attached to a FirstRoll account. Discovery follows a
   latest-search-wins contract: starting another query aborts the previous title and shelf requests,
-  and stale responses cannot replace the newly selected film.
+  and stale responses cannot replace the newly selected film. Dossier, reception, video and criticism
+  requests now follow the dossier's lifetime too: closing it or choosing another film aborts those
+  browser fetches, and delayed completions cannot overwrite the current film or attach another film's
+  criticism. A loading dossier can be closed immediately.
 - Keep the current Discover workspace while moving between Discover, Analyse and Settings, including
   each view's scroll position. A versioned per-tab `sessionStorage` snapshot restores the query,
   identity choices or hydrated shelf after refresh without repeating a completed search. It contains
@@ -99,7 +103,9 @@ The original GPL-3.0 licence and contributor attribution remain applicable. See
   retry; Deep Study also offers **Stop waiting**, while warning that an already-started provider call
   may still consume external quota. Focus moves to each terminal state or completed result, busy
   regions announce progress, tablists support arrows/Home/End and primary controls meet WCAG AA
-  contrast in both themes.
+  contrast in both themes. Deep Study shows its busy state and **Stop waiting** before authentication
+  finishes; repeated clicks cannot start overlapping studies, and cancelling during that wait prevents
+  an obsolete study request. This does not cancel a provider call that has already started.
 - Read an attributed catalogue overview, poster and field-level crew provenance. TMDb results retain
   their IMDb and Wikidata external IDs so later research adapters can resolve the same work safely.
 - Browse a native HTML/CSS director shelf with up to twelve front-facing film cases. The selected
@@ -1059,6 +1065,21 @@ uv run ruff check app/backend/library_index.py app/backend/evidence.py \
 node --check app/web/app.js
 git diff --check
 ```
+
+### Web responsiveness checks
+
+The static build minifies the application JavaScript and CSS while preserving classic-script globals,
+release filenames and cache revalidation. Async discovery/reception/criticism routes, library response
+metadata and SSE authentication/configuration checks dispatch blocking work through the existing
+worker pool; authentication, evidence selection, quota ordering and model-call budgets are unchanged.
+Local clip analysis and external provider/model latency remain material limitations, and worker-pool
+saturation is not solved by this pass.
+
+The Python suite includes same-loop API concurrency regressions and executable Node request/race
+checks. A separate synthetic Chrome diagnostic measures immediate study feedback without starting the
+backend or contacting providers. See [Web Responsiveness](docs/WEB_RESPONSIVENESS.md) for commands,
+asset-size evidence, browser/perceptual review and the next profiling priorities. Synthetic timing is
+not a live-site or model-speed claim.
 
 ### Pi subagents
 

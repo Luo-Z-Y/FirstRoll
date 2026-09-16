@@ -149,6 +149,11 @@ repository owner manually approves that exact run.
 | Build script | `./tools/build_web.sh` with lockfile-controlled, lifecycle-script-disabled installation |
 | Visitor domain | `https://firstroll.app` |
 
+The build minifies `app.js` and `styles.css` with the locked esbuild dependency, keeping classic-script
+globals, release inventory filenames and cache revalidation unchanged. Local source-served previews
+remain unminified. See [Web Responsiveness](WEB_RESPONSIVENESS.md) for synthetic byte/timing evidence
+and the distinction between worker dispatch and guaranteed responsiveness under load.
+
 The workflow supplies these public build values:
 
 | Key | Purpose |

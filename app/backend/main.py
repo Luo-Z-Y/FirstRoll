@@ -724,7 +724,7 @@ async def add_settings_library_document(
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     finally:
         await document.close()
-    return {"document": added, "library": public_library_settings()}
+    return {"document": added, "library": await run_in_threadpool(public_library_settings)}
 
 
 @app.delete("/api/settings/library/{document_id}")
@@ -749,7 +749,7 @@ async def rebuild_settings_library_index(request: Request) -> dict:
             status_code=500,
             detail="The private search index could not be rebuilt. Check the backend log.",
         ) from exc
-    return public_library_settings()
+    return await run_in_threadpool(public_library_settings)
 
 
 @app.put("/api/settings/connectors/{connector_id}")
@@ -964,12 +964,12 @@ async def discovery_film_reception(film_id: str) -> dict:
         return cached
 
     try:
-        film = discovery_service.detail(film_id)["film"]
+        film = (await run_in_threadpool(discovery_service.detail, film_id))["film"]
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
-    douban_status = douban_adapter.status()
-    letterboxd_status = letterboxd_web_adapter.status()
+    douban_status = await run_in_threadpool(douban_adapter.status)
+    letterboxd_status = await run_in_threadpool(letterboxd_web_adapter.status)
 
     async def douban_score() -> dict | None:
         if not douban_status.get("installed"):
@@ -1145,14 +1145,14 @@ async def stream_film_study(
 ) -> StreamingResponse:
     """Run Deep Study while streaming only allow-listed, public progress events."""
 
-    user = authenticated_user(request)
+    user = await run_in_threadpool(authenticated_user, request)
     is_local_test = local_test_user(user)
     owner_id = account_owner_id(user)
     public_mode = public_mode_enabled()
     personal_deepseek_key = personal_provider_key(request, "deepseek")
     if public_mode and not is_local_test and (
         not hosted_deep_study_boundary_enabled()
-        or (not personal_deepseek_key and not hosted_deep_study_enabled())
+        or (not personal_deepseek_key and not await run_in_threadpool(hosted_deep_study_enabled))
     ):
         raise HTTPException(
             status_code=503,
@@ -1305,7 +1305,7 @@ def research_run_result(run_id: str, request: Request) -> JSONResponse:
 @app.post("/api/discovery/films/{film_id:path}/criticism/douban")
 async def research_douban_criticism(film_id: str) -> dict:
     try:
-        detail = discovery_service.detail(film_id)
+        detail = await run_in_threadpool(discovery_service.detail, film_id)
         film = detail["film"]
         provider_id, provider_title, reviews = await douban_adapter.fetch_reviews(film)
         bundle = await run_in_threadpool(
@@ -1326,7 +1326,7 @@ async def research_douban_criticism(film_id: str) -> dict:
 @app.post("/api/discovery/films/{film_id:path}/criticism/letterboxd")
 async def research_letterboxd_criticism(film_id: str) -> dict:
     try:
-        detail = discovery_service.detail(film_id)
+        detail = await run_in_threadpool(discovery_service.detail, film_id)
         film = detail["film"]
         provider_id, provider_title, reviews = await run_in_threadpool(
             letterboxd_adapter.fetch_reviews, film
@@ -1349,7 +1349,7 @@ async def research_letterboxd_criticism(film_id: str) -> dict:
 @app.post("/api/discovery/films/{film_id:path}/criticism/letterboxd-web")
 async def research_letterboxd_web_criticism(film_id: str) -> dict:
     try:
-        detail = discovery_service.detail(film_id)
+        detail = await run_in_threadpool(discovery_service.detail, film_id)
         film = detail["film"]
         provider_id, provider_title, reviews = await run_in_threadpool(
             letterboxd_web_adapter.fetch_reviews, film
@@ -1372,7 +1372,7 @@ async def research_letterboxd_web_criticism(film_id: str) -> dict:
 @app.post("/api/discovery/films/{film_id:path}/criticism/guardian-web")
 async def research_guardian_web_criticism(film_id: str) -> dict:
     try:
-        detail = discovery_service.detail(film_id)
+        detail = await run_in_threadpool(discovery_service.detail, film_id)
         film = detail["film"]
         provider_id, provider_title, reviews = await run_in_threadpool(
             guardian_web_adapter.fetch_reviews, film
@@ -1395,7 +1395,7 @@ async def research_guardian_web_criticism(film_id: str) -> dict:
 @app.post("/api/discovery/films/{film_id:path}/criticism/crossref")
 async def research_crossref_criticism(film_id: str) -> dict:
     try:
-        detail = discovery_service.detail(film_id)
+        detail = await run_in_threadpool(discovery_service.detail, film_id)
         film = detail["film"]
         provider_id, provider_title, reviews = await run_in_threadpool(
             crossref_research_adapter.fetch_reviews, film
@@ -1422,8 +1422,8 @@ async def structure_cached_criticism(film_id: str, provider: str, request: Reque
     if not provider_name:
         raise HTTPException(status_code=404, detail="Unknown criticism provider.")
     try:
-        detail = discovery_service.detail(film_id)
-        bundle = criticism_store.load(film_id, provider_name)
+        detail = await run_in_threadpool(discovery_service.detail, film_id)
+        bundle = await run_in_threadpool(criticism_store.load, film_id, provider_name)
         if bundle is None or not bundle.reviews:
             raise HTTPException(
                 status_code=409,

@@ -293,7 +293,9 @@ beta service.
 - Reservation occurs before DeepSeek. A later provider timeout still consumes the reservation.
 - Provider adapters have bounded request timeouts and response sizes in code, but no shared public
   request-rate table is currently implemented.
-- Render may impose platform-level request and cold-start limits outside FirstRoll's API contract.
+- Azure Container Apps may impose platform-level request and cold-start limits outside FirstRoll's
+  API contract. Worker dispatch avoids event-loop blocking in the scoped web paths but does not
+  guarantee latency under worker-pool saturation; see [Web Responsiveness](WEB_RESPONSIVENESS.md).
 
 ## Compatibility Rules
 
