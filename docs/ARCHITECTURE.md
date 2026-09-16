@@ -1,7 +1,7 @@
 # FirstRoll Architecture
 
 **Status:** Current implementation  
-**Last reconciled:** 24 August 2026
+**Last reconciled:** 12 September 2026
 
 FirstRoll is a local-first film-study system with an Azure-hosted public beta. “Local-first”
 describes where private books, credentials, derived vectors and uploaded film clips are kept; it does
@@ -176,8 +176,8 @@ title/year/director query
 
 Film identity is selected before Deep Study. The model never decides silently between same-title
 films. TMDb detail calls run concurrently rather than serially, but the candidate cap and ten-second
-per-request deadline bound provider cost. Search and detail results share a process-memory cache.
-TMDb's director credits already contain poster paths for the shelf, avoiding per-film detail calls.
+per-request deadline bound provider cost. TMDb search hydration reuses the process-memory detail
+cache; the search listing itself is not cached. TMDb's director credits already contain poster paths for the shelf, avoiding per-film detail calls.
 The open fallback retains separate fast and enriched shelf caches; a provider-local page found from
 a title is accepted only when its structured title, year and director agree with the canonical
 record.
@@ -196,6 +196,30 @@ Product navigation changes only the active section. It neither rebuilds nor empt
 per-view scroll offsets are restored when moving among Discover, Analyse and Settings. This state is
 session continuity, not durable account persistence: closing the tab session clears it, and no state
 is synchronised across devices.
+
+Dossier requests use the same latest-selection ownership rule as search: closing/replacing a dossier
+or starting another query aborts its detail, reception, video and criticism browser fetches. Stale
+successes, failures and queued focus changes cannot replace the current dossier. This controller is
+in-memory request bookkeeping, not additional persisted session or evidence state. Deep Study's busy
+and cancellation controls are established before token retrieval; duplicate clicks and cancelled
+pre-authentication work cannot launch a later study POST. Product-view navigation still preserves an
+open dossier rather than cancelling it.
+
+### Request scheduling and web delivery
+
+Synchronous catalogue, status and cache reads in async reception/criticism handlers, library response
+metadata, and SSE authentication/platform-key checks use Starlette's existing worker pool. Ordinary
+synchronous routes already use worker dispatch. This preserves authentication before run creation,
+evidence before quota reservation and quota before generation; it neither caches authentication nor
+changes the owner-authenticated result request. The pool remains shared and finite. Local clip
+analysis still blocks the loop, and browser abort does not guarantee cancellation of synchronous
+provider work or restore spent quota.
+
+The static build minifies application JavaScript and CSS with the existing locked esbuild tool while
+preserving classic-script globals, fixed artefact filenames and cache revalidation. Local FastAPI
+serves readable source assets. These implementation refactors preserve the topology, evidence and
+release contracts above. Synthetic concurrency, browser and perceptual evidence are recorded
+separately in [Web Responsiveness](WEB_RESPONSIVENESS.md), not presented as production latency SLOs.
 
 ### Catalogue provider decision matrix
 

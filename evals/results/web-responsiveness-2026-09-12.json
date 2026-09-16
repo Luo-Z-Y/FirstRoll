@@ -1,0 +1,62 @@
+{
+  "baselineRevision": "40577ca534a4eade0df07c9da015e21b6c2ad06b",
+  "candidateAssetsSha256": {
+    "index.html": "b7c429dc7a89f44b516ee2c508fe862ece65df2af834190aab06fb7ad17a309a",
+    "app.js": "be0b7717ae92f69fe7b519795bfa9b62b66441e24a71087743193b56645f6b09",
+    "styles.css": "d67ef0b00b5e623a9bffcbe7488903888f808e017380c3f8fc9b2e82cea4adc5",
+    "integrations.js": "e3e39e4598c19108c17d5323195ed2aa4ddfd5eb81624ca5cbff6e0d3c1dcf87",
+    "favicon.svg": "99555e0a6410293fc524398f1dc731ecf9e624f6c4e097d8c2c48e51b95dd20c"
+  },
+  "browser": "152.0.7977.83",
+  "results": [
+    {
+      "variant": "baseline",
+      "width": 390,
+      "samples": 20,
+      "injectedAuthDelayMs": 500,
+      "cpuThrottle": 4,
+      "busyMs": { "median": 501.7, "p95": 504.1 },
+      "nextFrameMs": { "median": 511.1, "p95": 521 },
+      "mockStudyRequests": 20,
+      "pageErrors": 0,
+      "horizontalOverflow": false
+    },
+    {
+      "variant": "candidate",
+      "width": 390,
+      "samples": 20,
+      "injectedAuthDelayMs": 500,
+      "cpuThrottle": 4,
+      "busyMs": { "median": 0.4, "p95": 1 },
+      "nextFrameMs": { "median": 28, "p95": 28.7 },
+      "mockStudyRequests": 0,
+      "pageErrors": 0,
+      "horizontalOverflow": false
+    },
+    {
+      "variant": "baseline",
+      "width": 1440,
+      "samples": 20,
+      "injectedAuthDelayMs": 500,
+      "cpuThrottle": 4,
+      "busyMs": { "median": 501.7, "p95": 503.1 },
+      "nextFrameMs": { "median": 511.4, "p95": 512.4 },
+      "mockStudyRequests": 20,
+      "pageErrors": 0,
+      "horizontalOverflow": false
+    },
+    {
+      "variant": "candidate",
+      "width": 1440,
+      "samples": 20,
+      "injectedAuthDelayMs": 500,
+      "cpuThrottle": 4,
+      "busyMs": { "median": 0.8, "p95": 1.1 },
+      "nextFrameMs": { "median": 26.6, "p95": 28.1 },
+      "mockStudyRequests": 0,
+      "pageErrors": 0,
+      "horizontalOverflow": false
+    }
+  ],
+  "limitation": "Synthetic session-delay diagnostic, not live latency, INP or model performance. Next-frame timing is a paint proxy only. External page HTTP requests are blocked and speculative connection hints removed; this is not an OS-level network sandbox."
+}

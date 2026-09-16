@@ -23,6 +23,7 @@ const state = {
     results: [],
     selectedFilm: null,
     detailFilmId: null,
+    detailController: null,
     archive: null,
     archiveSelectionId: null,
     lastQuery: null,
@@ -214,7 +215,7 @@ function updateAccountFilmState() {
 
 function updateDeepStudyAuthState() {
   const button = refs.filmDetail.querySelector("[data-generate-study]");
-  if (!button || !runtimeConfig.accountUi) return;
+  if (!button || !runtimeConfig.accountUi || state.discovery.studyController) return;
   button.textContent = window.FirstRollAuth?.currentUser()
     ? "Generate study"
     : "Sign in to Deep Study";
@@ -824,7 +825,7 @@ async function onDiscoverySearch(event) {
     return;
   }
 
-  cancelDeepStudyRequest();
+  cancelFilmDetailRequests();
   const params = new URLSearchParams({ q: title });
   const year = refs.filmYear.value.trim();
   const director = refs.filmDirector.value.trim();
@@ -1080,6 +1081,7 @@ function setArchiveHeading(primary) {
 function confirmDiscoveryFilm(index) {
   const primary = state.discovery.results[index];
   if (!primary) return;
+  cancelFilmDetailRequests();
   cancelShelfRequests();
   const nearby = uniqueFilms(state.discovery.results, [primary]).slice(0, 10);
   state.discovery.selectedFilm = null;
@@ -1476,7 +1478,7 @@ function selectArchiveFilm(filmId) {
   const selected = available.find((film) => film.id === filmId);
   if (!selected) return;
   cancelShelfRequests();
-  cancelDeepStudyRequest();
+  cancelFilmDetailRequests();
   const remaining = uniqueFilms(available, [selected]);
   state.discovery.selectedFilm = null;
   state.discovery.detailFilmId = null;
@@ -1485,21 +1487,37 @@ function selectArchiveFilm(filmId) {
   void loadRelatedFilms(selected, remaining);
 }
 
-async function loadFilmDetail(filmId, options = {}) {
+function cancelFilmDetailRequests() {
   cancelDeepStudyRequest();
+  state.discovery.detailController?.abort();
+  state.discovery.detailController = null;
+  refs.filmDetail.setAttribute("aria-busy", "false");
+}
+
+async function loadFilmDetail(filmId, options = {}) {
+  cancelFilmDetailRequests();
+  const controller = new AbortController();
+  state.discovery.detailController = controller;
+  const currentRequest = () => (
+    state.discovery.detailController === controller && !controller.signal.aborted
+  );
   state.discovery.detailFilmId = filmId;
   state.discovery.selectedFilm = null;
   persistDiscoverySession();
   refs.filmDetail.classList.remove("hidden");
   refs.filmDetail.setAttribute("aria-busy", "true");
-  refs.filmDetail.innerHTML = fetchProgressMarkup("Building the film dossier…");
+  refs.filmDetail.innerHTML = `<button class="detail-close" type="button" data-detail-close aria-label="Close film dossier">×</button>${fetchProgressMarkup("Building the film dossier…")}`;
   if (options.scroll !== false) {
     refs.filmDetail.scrollIntoView({ behavior: "smooth", block: "start" });
   }
   try {
-    const res = await fetch(`${discoveryApiBase()}/api/discovery/films/${encodeURIComponent(filmId)}`);
+    const res = await fetch(
+      `${discoveryApiBase()}/api/discovery/films/${encodeURIComponent(filmId)}`,
+      { signal: controller.signal },
+    );
     if (!res.ok) throw new Error(await readApiError(res));
     const data = await res.json();
+    if (!currentRequest()) return;
     state.discovery.selectedFilm = data.film;
     state.discovery.activeCriticismProvider = firstLoadedCriticismRoute(
       data.film.critical_research?.bundles || {},
@@ -1509,11 +1527,13 @@ async function loadFilmDetail(filmId, options = {}) {
     loadFilmReception(data.film);
     if (options.scroll !== false) {
       window.requestAnimationFrame(() => {
+        if (!currentRequest()) return;
         refs.filmDetail.scrollIntoView({ behavior: "smooth", block: "start" });
         refs.filmDetail.querySelector("[data-dossier-heading]")?.focus({ preventScroll: true });
       });
     }
   } catch (err) {
+    if (err?.name === "AbortError" || !currentRequest()) return;
     console.warn("Film dossier request did not complete", err);
     state.discovery.selectedFilm = null;
     state.discovery.detailFilmId = filmId;
@@ -1527,7 +1547,8 @@ async function loadFilmDetail(filmId, options = {}) {
       </div>`;
     focusInterfaceState(refs.filmDetail);
   } finally {
-    refs.filmDetail.setAttribute("aria-busy", "false");
+    // Keep the controller for reception and evidence requests until the dossier closes.
+    if (currentRequest()) refs.filmDetail.setAttribute("aria-busy", "false");
   }
 }
 
@@ -1766,9 +1787,11 @@ async function loadFilmReception(film) {
   try {
     const response = await fetch(
       `${discoveryApiBase()}/api/discovery/films/${encodeURIComponent(film.id)}/reception`,
+      { signal: state.discovery.detailController?.signal },
     );
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const reception = await response.json();
+    if (state.discovery.selectedFilm !== film) return;
     const scores = Array.isArray(reception.scores) ? reception.scores : [];
     if (!scores.length) {
       output.innerHTML = "";
@@ -1783,6 +1806,7 @@ async function loadFilmReception(film) {
       ${scores.map((score) => `<article class="score-card"><span>${escapeHtml(score.provider)}</span><strong>${escapeHtml(formatRating(score.score))}</strong><small>/ ${escapeHtml(score.scale)}${score.votes ? ` · ${escapeHtml(formatCompactCount(score.votes))} ratings` : ""}</small></article>`).join("")}
     </div>${doubanUnavailable ? '<p class="reception-provider-note">Douban is not connected on this hosted server yet.</p>' : ""}`;
   } catch (_) {
+    if (state.discovery.selectedFilm !== film) return;
     output.innerHTML = "";
     if (!section.querySelector(".reception-awards article")) section.classList.add("hidden");
   }
@@ -1815,7 +1839,7 @@ function reviewCard(review) {
 
 async function onFilmDetailClick(event) {
   if (event.target.closest("[data-detail-close]")) {
-    cancelDeepStudyRequest();
+    cancelFilmDetailRequests();
     state.discovery.selectedFilm = null;
     state.discovery.detailFilmId = null;
     refs.filmDetail.classList.add("hidden");
@@ -1965,19 +1989,26 @@ async function loadFilmVideos(button) {
   output.innerHTML = fetchProgressMarkup(videoButtonProgressLabel(Boolean(film.video_sources?.bundle)));
   try {
     const authorisation = await window.FirstRollAuth?.authorisationHeaders?.() || {};
+    if (state.discovery.selectedFilm !== film) return;
     const integration = window.FirstRollIntegrations?.requestHeaders?.("youtube") || {};
     const response = await fetch(
       `${discoveryApiBase()}/api/discovery/films/${encodeURIComponent(film.id)}/videos`,
-      { method: "POST", headers: { ...authorisation, ...integration } },
+      {
+        method: "POST",
+        headers: { ...authorisation, ...integration },
+        signal: state.discovery.detailController?.signal,
+      },
     );
     if (!response.ok) throw new Error(await readApiError(response));
     const data = await response.json();
+    if (state.discovery.selectedFilm !== film) return;
     film.video_sources = film.video_sources || {};
     film.video_sources.bundle = data.video_sources;
     output.innerHTML = filmVideosMarkup(data.video_sources);
     focusInterfaceState(output);
     button.textContent = "Find more videos";
   } catch (error) {
+    if (error?.name === "AbortError" || state.discovery.selectedFilm !== film) return;
     console.warn("Video source request did not complete", error);
     output.innerHTML = `<div class="interface-state is-error is-compact" role="alert" tabindex="-1" data-interface-state>
       <span>Viewing context</span>
@@ -1988,8 +2019,10 @@ async function loadFilmVideos(button) {
     button.textContent = originalLabel;
     focusInterfaceState(output);
   } finally {
-    output.setAttribute("aria-busy", "false");
-    button.disabled = false;
+    if (state.discovery.selectedFilm === film) {
+      output.setAttribute("aria-busy", "false");
+      button.disabled = false;
+    }
   }
 }
 
@@ -2090,6 +2123,7 @@ async function selectCriticismSource(button) {
   updateCriticismSourceTabs(provider);
   const bundle = criticismBundleForRoute(film.critical_research?.bundles || {}, provider);
   if (bundle) {
+    output.setAttribute("aria-busy", "false");
     output.innerHTML = criticalResearchMarkup(bundle);
     return;
   }
@@ -2113,12 +2147,13 @@ async function loadProviderCriticism(button, providerOverride = null) {
   try {
     const response = await fetch(
       `${discoveryApiBase()}/api/discovery/films/${encodeURIComponent(film.id)}/criticism/${provider}`,
-      { method: "POST" },
+      { method: "POST", signal: state.discovery.detailController?.signal },
     );
     if (!response.ok) throw new Error(await readApiError(response));
     const data = await response.json();
+    if (state.discovery.selectedFilm !== film) return;
     const bundle = data.critical_research;
-    const research = state.discovery.selectedFilm.critical_research;
+    const research = film.critical_research ||= {};
     research.bundles = research.bundles || {};
     research.bundles[String(bundle.provider || provider).toLowerCase()] = bundle;
     if (state.discovery.activeCriticismProvider === provider) {
@@ -2132,6 +2167,7 @@ async function loadProviderCriticism(button, providerOverride = null) {
       await structureProviderCriticism(provider, structureButton);
     }
   } catch (error) {
+    if (error?.name === "AbortError" || state.discovery.selectedFilm !== film) return;
     console.warn("Criticism source request did not complete", error);
     if (state.discovery.activeCriticismProvider === provider) {
       output.innerHTML = `<div class="interface-state is-error is-compact" role="alert" tabindex="-1" data-interface-state>
@@ -2143,9 +2179,13 @@ async function loadProviderCriticism(button, providerOverride = null) {
       focusInterfaceState(output);
     }
   } finally {
-    output.setAttribute("aria-busy", "false");
-    button.disabled = false;
-    button.textContent = originalLabel;
+    if (state.discovery.selectedFilm === film) {
+      if (state.discovery.activeCriticismProvider === provider) {
+        output.setAttribute("aria-busy", "false");
+      }
+      button.disabled = false;
+      button.textContent = originalLabel;
+    }
   }
 }
 
@@ -2170,18 +2210,20 @@ async function structureProviderCriticism(provider, button = null) {
   try {
     const response = await fetch(
       `${discoveryApiBase()}/api/discovery/films/${encodeURIComponent(film.id)}/criticism/${provider}/structure`,
-      { method: "POST" },
+      { method: "POST", signal: state.discovery.detailController?.signal },
     );
     if (!response.ok) throw new Error(await readApiError(response));
     const data = await response.json();
+    if (state.discovery.selectedFilm !== film) return;
     const bundle = data.critical_research;
-    const research = state.discovery.selectedFilm.critical_research;
+    const research = film.critical_research ||= {};
     research.bundles = research.bundles || {};
     research.bundles[String(bundle.provider || provider).toLowerCase()] = bundle;
     if (state.discovery.activeCriticismProvider === provider) {
       output.innerHTML = criticalResearchMarkup(bundle);
     }
   } catch (error) {
+    if (error?.name === "AbortError" || state.discovery.selectedFilm !== film) return;
     console.warn("Criticism structuring did not complete", error);
     if (state.discovery.activeCriticismProvider !== provider) return;
     output.querySelector("[data-active-fetch-progress]")?.remove();
@@ -2201,7 +2243,9 @@ async function structureProviderCriticism(provider, button = null) {
       button.textContent = "Retry DeepSeek";
     }
   } finally {
-    output.setAttribute("aria-busy", "false");
+    if (state.discovery.selectedFilm === film && state.discovery.activeCriticismProvider === provider) {
+      output.setAttribute("aria-busy", "false");
+    }
   }
 }
 
@@ -2384,20 +2428,7 @@ async function generateDeepStudy(button) {
   const output = refs.filmDetail.querySelector("[data-study-output]");
   const cancelButton = refs.filmDetail.querySelector("[data-cancel-study]");
   const question = refs.filmDetail.querySelector("[data-study-question]")?.value.trim() || null;
-  if (!film || !output) return;
-  const authorisation = await window.FirstRollAuth?.authorisationHeaders?.() || {};
-  if (runtimeConfig.publicMode && !authorisation.Authorization) {
-    window.FirstRollAuth?.open?.();
-    output.innerHTML = `<div class="interface-state is-error is-inverse" role="alert" tabindex="-1" data-interface-state>
-      <span>Account required</span>
-      <h4>Sign in to use Deep Study.</h4>
-      <p>The selected film and focus remain ready. Complete sign-in, then generate the study again.</p>
-    </div>`;
-    focusInterfaceState(output);
-    return;
-  }
-
-  cancelDeepStudyRequest();
+  if (!film || !output || state.discovery.studyController) return;
   const requestId = state.discovery.studyRequestId + 1;
   const controller = new AbortController();
   state.discovery.studyRequestId = requestId;
@@ -2409,17 +2440,32 @@ async function generateDeepStudy(button) {
   state.discovery.studyProgress = [{
     sequence: 1,
     kind: "existing_evidence_loading",
-    message: "Reading the film record against your cited sources…",
+    message: runtimeConfig.publicMode
+      ? "Checking your session before starting…"
+      : "Reading the film record against your cited sources…",
     elapsed_ms: 0,
     counts: {},
   }];
   output.innerHTML = researchProgressMarkup(state.discovery.studyProgress);
   const currentRequest = () => (
     state.discovery.studyRequestId === requestId
-    && state.discovery.selectedFilm?.id === film.id
+    && state.discovery.selectedFilm === film
+    && !controller.signal.aborted
   );
 
   try {
+    const authorisation = await window.FirstRollAuth?.authorisationHeaders?.() || {};
+    if (!currentRequest()) return;
+    if (runtimeConfig.publicMode && !authorisation.Authorization) {
+      window.FirstRollAuth?.open?.();
+      output.innerHTML = `<div class="interface-state is-error is-inverse" role="alert" tabindex="-1" data-interface-state>
+        <span>Account required</span>
+        <h4>Sign in to use Deep Study.</h4>
+        <p>The selected film and focus remain ready. Complete sign-in, then generate the study again.</p>
+      </div>`;
+      focusInterfaceState(output);
+      return;
+    }
     const integration = window.FirstRollIntegrations?.requestHeaders?.("deepseek") || {};
     let data;
     if (runtimeConfig.publicMode) {
@@ -2442,6 +2488,7 @@ async function generateDeepStudy(button) {
         state.discovery.studyProgress.push(progress);
         output.innerHTML = researchProgressMarkup(state.discovery.studyProgress);
       });
+      if (!currentRequest()) return;
       const resultResponse = await fetch(
         `${discoveryApiBase()}/api/research/runs/${encodeURIComponent(runId)}`,
         { headers: authorisation, signal: controller.signal },

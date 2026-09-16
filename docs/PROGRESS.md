@@ -1,5 +1,64 @@
 # FirstRoll Project Progress
 
+### 12 September 2026 — First web/backend responsiveness pass
+
+Implemented on `fix/web-responsiveness`, without a production approval or provider/model call:
+
+1. Offloaded synchronous catalogue/status/cache work in async reception and criticism handlers,
+   library upload/rebuild response metadata, and SSE authentication/platform-key checks to the
+   existing Starlette worker pool. Authentication, ownership, evidence, quota and model order remain
+   unchanged; no cache, executor, acquisition stage or call budget was added.
+2. Made dossier/evidence browser work follow the selected dossier's lifetime. Closing a loading
+   dossier, changing film or searching again aborts obsolete fetches; late results, errors and focus
+   callbacks cannot replace the current film or attach another film's criticism.
+3. Established Deep Study busy/cancel controls before token retrieval, prevented overlapping clicks
+   and blocked obsolete study POSTs after cancellation during authentication. Provider work already
+   started can still consume quota; no backend cancellation/refund guarantee is claimed.
+4. Minified application JavaScript and CSS with the existing locked esbuild dependency, preserving
+   globals, release filenames and cache policy. The pair is 21.5% smaller than the baseline shipped
+   files (249,828 → 196,202 bytes), or 12.0% smaller with local deterministic gzip.
+5. Added dependency-free executable JavaScript race tests to the existing Python CI gate and an
+   optional, pinned-tool Chrome diagnostic that starts no backend, fulfils/blocks page HTTP traffic
+   and removes speculative connection hints. This is not an OS-level network sandbox.
+6. Reconciled README, architecture/API/hosting prose and [Web Responsiveness](WEB_RESPONSIVENESS.md)
+   with the implementation, measurements and remaining work.
+
+Acceptance evidence, recorded separately:
+
+- **Deterministic:** all 588 repository tests passed in a temporary tracked-source copy with no private
+  runtime. Included 34 same-ASGI-loop concurrency checks and 27 Node request/race checks; the same
+  27 Node checks also pass against the minified build. Locked production-style build, scoped Ruff,
+  JavaScript/shell syntax and whitespace checks pass. Global Ruff was unavailable; `.venv/bin/ruff`
+  supplied the passing lint check.
+- **Browser:** Chrome 152, 4× CPU throttle, 390px/1440px, twenty interactions per variant/viewport.
+  With a synthetic 500 ms token delay, median click-to-busy mutation improved from about 502 ms to
+  0.4–0.8 ms. The next-frame paint proxy improved from about 511 ms to 27–28 ms; it is not INP. Forty
+  candidate cancellations before token readiness sent zero mocked study POSTs. Both widths had zero
+  uncaught page errors and no horizontal overflow. The hash-bound
+  [synthetic report](../evals/results/web-responsiveness-2026-09-12.json) is retained; no live latency or
+  model-speed result is claimed.
+- **Review:** fixed the reviewer's cached-criticism-tab busy-state regression and added both fetch and
+  structuring transition tests. Also removed speculative connection hints from the browser fixture
+  and narrowed its network-isolation claim.
+- **Perceptual:** inspected both synthetic full-page screenshots; progress and cancellation controls
+  are visible. Long titles still wrap tightly in the existing desktop edition card. Real fonts,
+  complete accessibility and other browsers remain outside this acceptance run.
+- **Architecture:** reviewed as an internal scheduling/ownership refactor preserving documented
+  contracts. No Archify source changed: the baseline has no typed architecture sources/atlas and
+  Archify is unavailable. No validate, deliver or visual-check result is claimed; existing Markdown
+  architecture documentation is reconciled.
+
+Known constraints and next actionable work:
+
+- Authorised live search → shelf → dossier → reception profiling is still required. Investigate
+  repeated Wikidata enrichment, redundant TMDb shelf work, video captions delaying cards, and
+  unnecessary shelf/player DOM replacement before introducing new cache or provider-flow contracts.
+- Authentication still waits for initial account-data hydration. The shared worker pool can saturate;
+  local clip analysis still blocks the API loop and renders hidden analysis panels eagerly. A bounded
+  serial analysis worker needs a separate review of shared output paths and model state.
+- Publish through a green protected-master pull request; any resulting production deployment must
+  remain pending for the human owner's approval of that exact run.
+
 ### 10 September 2026 — Standardised frontend/backend release contract
 
 Implemented on a short-lived feature branch; owner production approval remains required:
