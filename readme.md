@@ -1022,6 +1022,7 @@ FirstRoll/
 │   ├── NATIVE_TOOL_CALLING.md
 │   ├── PRE_AGENT_HARDENING.md
 │   ├── PROGRESS.md
+│   ├── PROGRESS_ARCHIVE_2026-08.md
 │   └── RELEASE.md
 ├── evals/
 │   ├── benchmark_tools/        # GuideLLM mock profile and public lm-eval tasks
