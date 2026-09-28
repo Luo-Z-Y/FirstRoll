@@ -18,3 +18,12 @@ updates:
       timezone: Asia/Singapore
     open-pull-requests-limit: 5
     versioning-strategy: increase
+
+  - package-ecosystem: docker
+    directory: /infra/vps
+    schedule:
+      interval: weekly
+      day: monday
+      time: '05:00'
+      timezone: Asia/Singapore
+    open-pull-requests-limit: 2

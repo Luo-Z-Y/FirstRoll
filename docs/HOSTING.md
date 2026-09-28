@@ -1,29 +1,30 @@
 # FirstRoll Public Beta Hosting
 
-**Deployment status:** Active Azure frontend and Azure API
+**Deployment status:** Offline. The Azure Free Trial subscription was disabled when its credit
+expired (observed 27 September 2026), which suspended both the Static Web App and the Container
+Apps environment. The public beta is being moved to one rented Linux server.
 
 **Visitor URL:** `https://firstroll.app`
 
 **API URL:** `https://api.firstroll.app`
 
-**Last reconciled:** 21 August 2026
+**Last reconciled:** 28 September 2026
 
-FirstRoll is not merely a local application. Its active public beta uses Azure Static Web Apps for
-the frontend and Azure Container Apps for the Docker API, while private-library and clip-analysis
-capabilities remain local by design:
+FirstRoll is not merely a local application. Its public beta serves the static browser bundle and the
+Docker API from separate origins, while private-library and clip-analysis capabilities remain local
+by design. The current target is a single self-managed server on which Caddy terminates TLS for both
+hostnames, serves the static release and proxies the API container:
 
 ```text
-Browser  ->  Azure Static Web Apps  ->  Azure Container Apps  ->  public film sources
-              firstroll.app             api.firstroll.app
+Browser  ->  Caddy on the rented server  ->  FastAPI container  ->  public film sources
+              firstroll.app (static files)   api.firstroll.app
 ```
 
 The hosted edition publishes discovery, the native director shelf, Supabase email-and-password
 accounts with saved films, and an authenticated Integration Centre. Private-library settings, local
 documents, clip uploads, computer-vision analysis and unauthenticated Deep Study are blocked by the
-backend. Authenticated Deep Study is
-protected by durable Supabase usage counters.
-The separate origins keep the public boundary explicit and allow either service to be deployed or
-rolled back independently.
+backend. Authenticated Deep Study is protected by durable Supabase usage counters. The separate
+origins keep the public boundary explicit even though both are now served by one host.
 
 The frontend and API origins are deployment configuration. `FIRSTROLL_API_BASE` points to
 `https://api.firstroll.app`, while `FIRSTROLL_CORS_ALLOWED_ORIGINS` must include the exact
@@ -31,9 +32,162 @@ The frontend and API origins are deployment configuration. `FIRSTROLL_API_BASE` 
 [Architecture](ARCHITECTURE.md), [API Reference](API_REFERENCE.md), [Data Model](DATA_MODEL.md) and
 [Architecture Decisions](DECISIONS.md) for the corresponding runtime contracts.
 
-Terraform under `infra/terraform` manages the imported Static Web App, both custom-domain
-associations, Azure Container Registry, Log Analytics, the Container Apps environment and the
-FastAPI Container App. Spaceship remains the DNS provider.
+The server stack lives under `infra/vps`; the `VPS Release` workflow and
+[Release Runbook](RELEASE.md) deliver it. Terraform under `infra/terraform` still describes the
+legacy Azure resources, which remain in the disabled subscription and could be reactivated by
+upgrading it to pay-as-you-go. Spaceship remains the DNS provider. The Azure sections later in this
+document are kept as legacy reference until that path is removed.
+
+## Single-server hosting
+
+The server holds no durable product data: accounts, saved films and quotas stay in Supabase, and
+study results remain transient in the API process. Losing the server therefore costs availability,
+not data, and a replacement can be bootstrapped from this repository.
+
+### 1. Buy the server
+
+| Setting | Recommendation |
+|---|---|
+| Provider and region | DigitalOcean Singapore is the simplest well-documented choice for an Asia-based audience; Vultr Singapore is comparable. Hetzner's cheapest tier is Europe-only. |
+| Size | 1 shared vCPU, 2 GB memory and 25 GB or more of SSD. 1 GB works with the swap file `bootstrap.sh` creates, but leaves little headroom for the API and its Node connector. |
+| Image | Ubuntu 24.04 LTS, 64-bit |
+| Access | Add your personal SSH public key at creation. Do not enable password login. |
+| Extras | No managed database, load balancer or paid backups are needed. |
+
+Approximate list prices in September 2026 are $6 a month for 1 GB and $12 a month for 2 GB at
+DigitalOcean; check the provider's page before buying. Record the server's public IPv4 address.
+
+### 2. Create a dedicated deploy key
+
+GitHub Actions connects with its own key, never with your personal one:
+
+```bash
+ssh-keygen -t ed25519 -N '' -C firstroll-github-deploy -f ~/.ssh/firstroll-deploy
+```
+
+The public half (`~/.ssh/firstroll-deploy.pub`) goes to the server in the next step. The private
+half becomes the `VPS_SSH_PRIVATE_KEY` secret of the protected `production` environment and is not
+stored anywhere else.
+
+### 3. Bootstrap the server
+
+Copy the stack directory to the server and run the one-time root script:
+
+```bash
+scp -r infra/vps root@SERVER_IP:/root/firstroll-vps
+ssh root@SERVER_IP "FIRSTROLL_DEPLOY_PUBLIC_KEY='$(cat ~/.ssh/firstroll-deploy.pub)' \
+  bash /root/firstroll-vps/bootstrap.sh"
+```
+
+`bootstrap.sh` upgrades packages, installs Docker and Compose from Ubuntu, rotates container logs,
+creates the `firstroll` service account with your keys, installs the stack under `/opt/firstroll`
+with a placeholder site, adds a 1 GB swap file on small servers, enables the `ufw` firewall
+(SSH, 80, 443), turns on unattended security updates and restricts SSH to key authentication. It is
+safe to rerun. At the end it prints the server's Ed25519 host key line; keep it for step 6.
+
+Then edit the private environment file on the server:
+
+```bash
+ssh firstroll@SERVER_IP
+nano /opt/firstroll/.env     # set CADDY_ACME_EMAIL; leave FIRSTROLL_IMAGE_DIGEST as printed
+```
+
+The file already carries the public Supabase values and the public-mode switches from
+`infra/vps/.env.example`. Keep Deep Study disabled until section
+[Enable quota-controlled Deep Study](#enable-quota-controlled-deep-study) is complete.
+
+### 4. Point DNS at the server
+
+In Spaceship, replace the Azure records with the server address:
+
+| Record | Type | Value |
+|---|---|---|
+| `firstroll.app` | A | `SERVER_IP` (replaces the Static Web Apps records) |
+| `api.firstroll.app` | A | `SERVER_IP` (replaces the `*.azurecontainerapps.io` CNAME) |
+| `asuid.api.firstroll.app` | TXT | delete; it was only Azure's domain verification |
+
+Wait until `dig +short firstroll.app` and `dig +short api.firstroll.app` both return the server
+address before continuing, otherwise certificate issuance fails and is rate-limited by Let's Encrypt.
+
+### 5. Start Caddy and obtain certificates
+
+```bash
+ssh firstroll@SERVER_IP
+docker compose --project-directory /opt/firstroll up -d --no-deps caddy
+docker compose --project-directory /opt/firstroll logs -f caddy
+```
+
+The log should report a certificate obtained for each hostname. `https://firstroll.app` then shows
+the placeholder page and `https://api.firstroll.app` returns `502` until the first release. Starting
+only Caddy is deliberate: the API image is published by the release workflow, not built on the server.
+
+### 6. Configure GitHub
+
+| Location | Name | Value |
+|---|---|---|
+| `production` environment secret | `VPS_SSH_PRIVATE_KEY` | contents of `~/.ssh/firstroll-deploy` |
+| Repository variable | `VPS_HOST` | the server IP address (or a hostname that resolves to it) |
+| Repository variable | `VPS_SSH_HOST_KEY` | the `ssh-ed25519 AAAA...` line printed by `bootstrap.sh` |
+| Repository variable | `VPS_USER` | `firstroll` (optional; this is the default) |
+| Repository variable | `VPS_RELEASE_ENABLED` | `true` only after every other value is in place |
+
+Also keep the legacy Azure workflows inert: leave `BACKEND_RELEASE_ENABLED` unset or `false`, and
+disable `Frontend Release` from **Actions → Frontend Release → ⋯ → Disable workflow**, because it
+would otherwise build a candidate on every `master` push and fail at the Azure token.
+
+After the first build, open your GitHub **Packages** list, select `firstroll-api` and confirm its
+visibility is **Public**. The server pulls the image anonymously; the repository is public GPL code,
+so the image contains nothing private.
+
+### 7. Run the first release
+
+A merge to `master` with green CI starts `VPS Release`, or start it from **Actions → VPS Release →
+Run workflow** on `master`. The build job audits dependencies, builds the frontend and the image,
+smoke-tests the container, pushes the image to GitHub Container Registry, seals `release.json` and
+uploads the package. The run then waits at the protected `production` environment.
+
+Read the step summary, then choose **Review deployments → production → Approve and deploy**. The
+deploy job verifies the receipt, archive and current `master`, connects with the pinned host key,
+uploads the package, runs `/opt/firstroll/deploy.sh release`, and verifies the live receipt, every
+static file, the API's baked commit, hidden documentation routes and the exact CORS origin.
+
+Confirm in a browser: `https://firstroll.app/release.json` names the merged commit, the header shows
+`vN · LIVE`, sign-in works, a search fills the shelf and a dossier opens.
+
+### 8. Operate the server
+
+```bash
+/opt/firstroll/deploy.sh status                                        # releases and containers
+docker compose --project-directory /opt/firstroll logs --tail 200 api  # API log
+/opt/firstroll/deploy.sh rollback                                      # previous release
+docker compose --project-directory /opt/firstroll up -d api            # apply a .env change
+sudo reboot                                                            # containers restart themselves
+```
+
+Enable Deep Study by setting `FIRSTROLL_DEEP_STUDY_ENABLED=true` and `DEEPSEEK_API_KEY` in
+`/opt/firstroll/.env`, then re-run the `up -d api` command. Never edit `deploy.sh`, `Caddyfile` or
+`docker-compose.yml` on the server by hand: the workflow overwrites them from the approved commit on
+each release, so change them in the repository instead.
+
+Rotate the deploy key by generating a new pair, appending the public key to
+`/home/firstroll/.ssh/authorized_keys`, replacing the `production` secret and removing the old line.
+
+### 9. Cost, limits and risks
+
+- The bill is a flat monthly server price regardless of traffic; there is no per-request charge and
+  no free tier to fall out of.
+- One server is a single point of failure with no autoscaling and no CDN; static assets are served
+  from one region. Each release restarts the API container, so the API is unavailable for a few
+  seconds while Caddy keeps serving the static shell.
+- The deploy key is a long-lived credential, unlike the Azure OIDC exchange. It lives only in the
+  approval-bound `production` environment, is restricted to one pinned host and should be rotated if
+  it is ever exposed. Membership of the `docker` group is equivalent to root on that host.
+- Rollback needs the previous image in GitHub Container Registry and the previous site directory on
+  the server; the very first release has nothing to roll back to.
+- Public criticism and video sources may treat the new IP address differently from Azure's. Their
+  absence degrades evidence coverage rather than availability.
+- The Supabase Free plan pauses a project after seven idle days; a paused project breaks sign-in until
+  it is resumed in the Supabase dashboard.
 
 ## Local production checks
 
@@ -85,7 +239,7 @@ curl http://127.0.0.1:18000/api/discovery/status
 
 Stop the test container with `docker stop firstroll-azure-test`.
 
-## 1. Render rollback procedure
+## Legacy: Render rollback procedure
 
 Render is no longer the production API. Use these steps only if an Azure rollback cannot be
 completed by selecting the last healthy immutable Container App revision:
@@ -126,7 +280,7 @@ Record the complete backend URL. It is required when building the Azure frontend
 Open the root service URL. In public mode it identifies itself as the FirstRoll API; it is not the
 visitor-facing website.
 
-## 2. Operate the Azure Static Web Apps frontend
+## Legacy Azure: operate the Static Web Apps frontend
 
 The active Static Web App deploys through
 `.github/workflows/azure-static-web-apps-salmon-field-03695a010.yml`. Protected `master` is the
@@ -225,7 +379,7 @@ Follow [Backend Release Runbook](RELEASE.md) for the exact setup, first proof ru
 The implementation does not include an approval broker, HMAC token or GitHub App. GitHub's protected
 environment is the approval system and GitHub/Azure retain the current audit evidence.
 
-## 3. Connect Supabase authentication
+## Connect Supabase authentication
 
 The Supabase project URL and publishable key are designed to be public. Use the same two values in
 the Azure frontend build and Container App; never use the secret or service-role key for these
@@ -242,14 +396,15 @@ settings.
 
 3. Trigger a new Azure Static Web Apps build after changing either value; they are compiled into
    `dist/assets/config.js`.
-4. Configure the matching Container App values through Terraform and Azure's secret boundary:
+4. Configure the matching API values in `/opt/firstroll/.env` on the server (formerly the Azure
+   Container App secret boundary):
 
    | Key | Value |
    |---|---|
    | `SUPABASE_URL` | the same Supabase Project URL |
    | `SUPABASE_PUBLISHABLE_KEY` | the same `sb_publishable_...` key |
 
-5. Deploy a new immutable Container App revision.
+5. Apply them with `docker compose --project-directory /opt/firstroll up -d api`.
 6. Keep Supabase **Authentication → URL Configuration → Site URL** set to
    `https://firstroll.app`, and include `https://firstroll.app/**` in **Redirect URLs**. Retain the
    Azure-generated hostname only when it remains an intentional test entry point; remove obsolete
@@ -284,7 +439,7 @@ The account migration backfills profile and preference rows for existing Auth us
 table access to `anon`, needs no service-role key and stores no password, provider API key, study
 prompt, evidence or generated result.
 
-## 4. Enable quota-controlled Deep Study
+## Enable quota-controlled Deep Study
 
 The public demo permits three Deep Studies per account per UTC day and thirty across all accounts.
 It stores only the Supabase user UUID, UTC day and counters; prompts and generated studies are not
@@ -296,7 +451,8 @@ stored in Supabase.
 3. Confirm the result reports success. The migration creates two RLS-enabled tables in the
    non-exposed `firstroll_private` schema and two authenticated-only functions:
    `deep_study_quota_status()` and `reserve_deep_study_quota()`.
-4. Add these values to the Azure Container App—not the Static Web App—and deploy a new revision:
+4. Add these values to `/opt/firstroll/.env` on the server—never to the static build—and restart
+   the API container:
 
    | Key | Value |
    |---|---|
@@ -304,9 +460,9 @@ stored in Supabase.
    | `DEEPSEEK_MODEL` | `deepseek-v4-flash` |
    | `FIRSTROLL_DEEP_STUDY_ENABLED` | `true` |
 
-5. Never add `DEEPSEEK_API_KEY` to the Static Site or repository. No Supabase secret or
+5. Never add `DEEPSEEK_API_KEY` to the static site or repository. No Supabase secret or
    service-role key is required.
-6. Save and redeploy the backend. The explicit feature switch must remain absent or false until the
+6. Run `docker compose --project-directory /opt/firstroll up -d api` and confirm `/api/health`. The explicit feature switch must remain absent or false until the
    SQL migration and key are both ready.
 7. Sign in on the frontend, open a dossier and generate a study. The result displays the remaining
    account and global allowance. A fourth account request on the same UTC day returns HTTP 429.
@@ -326,16 +482,16 @@ Supabase PostgreSQL first and moved unchanged to Azure PostgreSQL later.
 2. Create a dedicated `firstroll_backend` login and grant only schema usage and execute permission
    on `firstroll_private.deep_study_quota_decision(text, text, boolean)`, as shown at the end of the
    migration. Do not grant direct table access.
-3. Store its `postgresql://...?...sslmode=require` connection URL in macOS Keychain and provide it
-   to Terraform through `TF_VAR_database_url`; never commit or print it.
-4. Set `quota_provider = "postgres"`, review the plan, deploy a new API image and test quota status,
+3. Store its `postgresql://...?...sslmode=require` connection URL as `FIRSTROLL_DATABASE_URL` in
+   `/opt/firstroll/.env` (legacy Azure: `TF_VAR_database_url`); never commit or print it.
+4. Set `FIRSTROLL_QUOTA_PROVIDER=postgres`, restart the API container and test quota status,
    reservation, the fourth-request 429 and concurrent reservations.
 5. Observe one complete UTC quota day before removing the legacy Supabase RPC.
 
 The API passes PostgreSQL only the verified identity-provider name and immutable subject. It does
 not forward the browser bearer token, email, study question or generated result.
 
-## 5. Allow the Azure frontend to call the API
+## Legacy Azure: allow the frontend to call the API
 
 1. Set this Container App environment value through Terraform:
 
@@ -363,8 +519,8 @@ revenue-generating deployment.
 
 ## Optional public video provider
 
-YouTube search can use a server-side YouTube Data API v3 key. Add `YOUTUBE_API_KEY` to the Container
-App's secret boundary and deploy a new revision; never add it to the Azure static build.
+YouTube search can use a server-side YouTube Data API v3 key. Add `YOUTUBE_API_KEY` to the server's
+`/opt/firstroll/.env` and restart the API container; never add it to the static build.
 Alternatively, a
 signed-in visitor can supply a personal key for one browser tab through Settings. The browser holds
 that key only in memory and sends it only with an authenticated video-search request. Restrict keys
@@ -376,7 +532,7 @@ Settings reports whether that hosted runtime is ready but provides no Douban cre
 the API never accepts or stores a visitor's Douban cookie. Provider page changes, access controls or
 rate limits can still make this optional source temporarily unavailable.
 
-## 6. Current public-beta acceptance checks
+## Current public-beta acceptance checks
 
 - `/api/health` returns HTTP 200.
 - `/docs`, `/redoc` and `/openapi.json` return HTTP 404 in public mode; generated API documentation
@@ -398,9 +554,11 @@ rate limits can still make this optional source temporarily unavailable.
 - No `.firstroll` data, uploaded clips, API keys or private library files appear in the image,
   repository, frontend source or network responses.
 
-## 7. Azure Container Apps production state
+## Legacy Azure: Container Apps production state (suspended)
 
-The API migration is complete:
+**Suspended since 27 September 2026.** The disabled Free Trial subscription stopped these resources;
+they are retained for reference and possible reactivation only. Before the suspension the API
+migration was complete:
 
 ```text
 firstroll.app     -> Azure Static Web Apps
@@ -417,7 +575,7 @@ live association and reports no infrastructure drift.
 Render may remain available briefly as a rollback target, but it is not the active API. Prefer
 rolling the Container App back to the last healthy immutable image before changing DNS.
 
-## 8. Optional Entra External ID learning path
+## Legacy: optional Entra External ID learning path
 
 ADR-017 keeps Supabase as production authentication because it already supplies password accounts,
 session management and user-scoped PostgreSQL on the appropriate cost tier. Entra External ID is no
@@ -434,18 +592,20 @@ immutable subject and never forwards browser tokens. Before enabling Entra, inst
 configure the dedicated database login and set `FIRSTROLL_QUOTA_PROVIDER=postgres`. Terraform
 rejects an Entra deployment that still selects the legacy Supabase quota RPC.
 
-## 9. Next security milestone
+## Next security milestone
 
 Add cost telemetry and an operator-visible kill switch before raising either daily limit. Video
 analysis remains a local feature and is presented as **Coming soon** in the public interface.
 
 ## Cost and availability notes
 
-The Container App filesystem is ephemeral. Durable account, quota or study data must live in a
-database rather than the container. Fast and poster-enriched filmography responses are bounded
-process-memory caches and are rebuilt after a revision or replica restart. Azure Static Web Apps is
-CDN-served and does not depend on the backend process to display the interface.
+The API container's filesystem is ephemeral and the server holds no durable product data. Durable
+account, quota or study data must live in a database rather than on the host. Fast and
+poster-enriched filmography responses are bounded process-memory caches and are rebuilt after every
+release. The static site is served by Caddy from `/opt/firstroll/releases/current`, so it does not
+depend on the API process.
 
-The Container App defaults to one minimum replica to address cold starts. Lowering it to
-zero reduces compute cost but reintroduces a wake-up delay. Azure Container Registry Basic and Log
-Analytics can incur charges even before application traffic arrives.
+The server runs one API container continuously for a flat monthly price: no cold starts, no
+autoscaling and no per-request billing. The suspended Azure resources incur no charge while the
+subscription is disabled; reactivating them would restore Container Apps, Container Registry and Log
+Analytics charges.

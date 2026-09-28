@@ -42,6 +42,23 @@ jobs:
           terraform -chdir=infra/terraform fmt -check -recursive
           terraform -chdir=infra/terraform init -backend=false -input=false
           terraform -chdir=infra/terraform validate
+      - name: Validate the single-server stack
+        run: |
+          set -eu
+          bash -n infra/vps/bootstrap.sh infra/vps/deploy.sh
+          shellcheck infra/vps/bootstrap.sh infra/vps/deploy.sh
+          # The template stands in for the server's private .env during validation only.
+          cp infra/vps/.env.example infra/vps/.env
+          docker compose -f infra/vps/docker-compose.yml config --quiet
+          rm -f infra/vps/.env
+          caddy_image=$(sed -n 's/^ *image: *\(caddy:[^ ]*\) *$/\1/p' infra/vps/docker-compose.yml)
+          test -n "$caddy_image"
+          docker run --rm \
+            -e FIRSTROLL_SITE_DOMAIN=firstroll.example.com \
+            -e FIRSTROLL_API_DOMAIN=api.firstroll.example.com \
+            -e CADDY_ACME_EMAIL=ops@firstroll.example.com \
+            -v "$PWD/infra/vps/Caddyfile:/etc/caddy/Caddyfile:ro" \
+            "$caddy_image" caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
       - name: Install API runtime deps
         run: |
           python -m pip install --upgrade pip

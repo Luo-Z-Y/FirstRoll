@@ -1,0 +1,396 @@
+name: VPS Release
+
+on:
+  workflow_run:
+    workflows:
+      - CI
+    types:
+      - completed
+    branches:
+      - master
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: vps-release-production
+  # Do not interrupt an active release or rollback. Superseded candidates fail freshness checks.
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build, test and publish the release candidate
+    if: >-
+      vars.VPS_RELEASE_ENABLED == 'true' &&
+      (
+        github.event_name == 'workflow_dispatch' ||
+        (
+          github.event.workflow_run.conclusion == 'success' &&
+          github.event.workflow_run.event == 'push' &&
+          github.event.workflow_run.head_branch == 'master' &&
+          github.event.workflow_run.head_repository.full_name == github.repository
+        )
+      )
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      actions: read
+      # Publishes the candidate image to GitHub Container Registry. It is not a production
+      # credential: nothing here can reach the server.
+      packages: write
+    outputs:
+      artifact-id: ${{ steps.upload.outputs.artifact-id }}
+      commit-sha: ${{ steps.revision.outputs.commit_sha }}
+      image-digest: ${{ steps.push.outputs.image_digest }}
+      receipt-digest: ${{ steps.receipt.outputs.receipt-digest }}
+      run-attempt: ${{ github.run_attempt }}
+    steps:
+      - name: Check out the CI-approved revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+
+      - name: Bind the release to current master
+        id: revision
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          EXPECTED_SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          checked_out_sha=$(git rev-parse HEAD)
+          current_master_sha=$(git ls-remote origin refs/heads/master | cut -f1)
+          if [ "$checked_out_sha" != "$EXPECTED_SHA" ]; then
+            echo "::error::The checkout does not match the CI-approved revision."
+            exit 1
+          fi
+          if [ "$current_master_sha" != "$EXPECTED_SHA" ]; then
+            echo "::error::master moved after CI; refusing to release a stale revision."
+            exit 1
+          fi
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            test "$GITHUB_REF" = "refs/heads/master"
+            successful_ci_runs=$(gh api -X GET \
+              "repos/$GITHUB_REPOSITORY/actions/workflows/ci.yml/runs" \
+              -f branch=master -f status=success -f per_page=20 | \
+              jq --arg sha "$EXPECTED_SHA" '[.workflow_runs[] | select(.head_sha == $sha and .event == "push")] | length')
+            if [ "$successful_ci_runs" -lt 1 ]; then
+              echo "::error::Manual release requires a successful push CI run for the exact master SHA."
+              exit 1
+            fi
+          fi
+          echo "commit_sha=$EXPECTED_SHA" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Audit frontend dependency lock
+        run: npm audit --audit-level=high
+
+      - name: Build the production frontend
+        env:
+          FIRSTROLL_API_BASE: https://api.firstroll.app
+          FIRSTROLL_BUILD_CHANNEL: live
+          FIRSTROLL_AUTH_PROVIDER: supabase
+          # Public Supabase values; the browser bundle never receives a secret.
+          FIRSTROLL_SUPABASE_URL: https://obnxmfcvshbkbsgxbmgg.supabase.co
+          FIRSTROLL_SUPABASE_PUBLISHABLE_KEY: sb_publishable_P6VzoeBdroR-2yeit62cbg_vvTXH47Y
+        run: ./tools/build_web.sh
+
+      - name: Validate the bounded site directory
+        run: |
+          set -euo pipefail
+          # Caddy does not read the Static Web Apps routing file and it is not a public asset.
+          rm -f dist/staticwebapp.config.json
+          test -f dist/index.html
+          test -f dist/assets/config.js
+          test -f dist/assets/app.js
+          test -f dist/assets/auth.js
+          if find dist -type l -print -quit | grep -q .; then
+            echo "::error::The site directory must not contain symbolic links."
+            exit 1
+          fi
+          node --check dist/assets/app.js
+          node --check dist/assets/auth.js
+          node --check dist/assets/config.js
+          grep -F 'apiBase: "https://api.firstroll.app"' dist/assets/config.js >/dev/null
+          grep -F 'buildChannel: "live"' dist/assets/config.js >/dev/null
+
+      - name: Build the backend image
+        env:
+          COMMIT_SHA: ${{ steps.revision.outputs.commit_sha }}
+        run: >-
+          docker build
+          --build-arg "FIRSTROLL_RELEASE_SHA=$COMMIT_SHA"
+          --tag firstroll-api:release-candidate .
+
+      - name: Smoke-test the container and its public boundary
+        env:
+          COMMIT_SHA: ${{ steps.revision.outputs.commit_sha }}
+        run: |
+          set -euo pipefail
+          trap 'docker logs release-test || true; docker rm -f release-test >/dev/null 2>&1 || true' EXIT
+          docker run -d --name release-test \
+            -e PORT=10000 \
+            -e FIRSTROLL_PUBLIC_MODE=true \
+            -e FIRSTROLL_VIDEO_ANALYSIS_ENABLED=false \
+            -e FIRSTROLL_DEEP_STUDY_ENABLED=false \
+            -e FIRSTROLL_CORS_ALLOWED_ORIGINS=https://firstroll.app \
+            -e FIRSTROLL_RELEASE_SHA="$COMMIT_SHA" \
+            -p 10000:10000 \
+            firstroll-api:release-candidate
+          for attempt in $(seq 1 30); do
+            curl --fail --silent http://127.0.0.1:10000/api/health > health.json && break
+            sleep 2
+          done
+          python3 - "$COMMIT_SHA" <<'PY'
+          import json
+          import sys
+          health = json.load(open("health.json", encoding="utf-8"))
+          assert health.get("status") == "ok", health
+          assert health.get("release_sha") == sys.argv[1], health
+          PY
+          for path in docs redoc openapi.json; do
+            status=$(curl --silent --output /dev/null --write-out '%{http_code}' "http://127.0.0.1:10000/$path")
+            test "$status" = "404"
+          done
+
+      - name: Publish the immutable candidate to GitHub Container Registry
+        id: push
+        env:
+          COMMIT_SHA: ${{ steps.revision.outputs.commit_sha }}
+          GHCR_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          owner=${GITHUB_REPOSITORY_OWNER,,}
+          image_ref="ghcr.io/$owner/firstroll-api:$COMMIT_SHA"
+          printf '%s' "$GHCR_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
+          docker tag firstroll-api:release-candidate "$image_ref"
+          docker push "$image_ref"
+          docker logout ghcr.io
+          image_digest=$(docker inspect --format '{{join .RepoDigests "\n"}}' "$image_ref" \
+            | sed -n "s#^ghcr.io/$owner/firstroll-api@##p" | head -n 1)
+          case "$image_digest" in
+            sha256:????????????????????????????????????????????????????????????????) ;;
+            *) echo "::error::The registry did not return an immutable image digest."; exit 1 ;;
+          esac
+          echo "image_ref=$image_ref" >> "$GITHUB_OUTPUT"
+          echo "image_digest=$image_digest" >> "$GITHUB_OUTPUT"
+
+      - name: Seal the release receipt
+        id: receipt
+        env:
+          COMMIT_SHA: ${{ steps.revision.outputs.commit_sha }}
+          IMAGE_REF: ${{ steps.push.outputs.image_ref }}
+          IMAGE_DIGEST: ${{ steps.push.outputs.image_digest }}
+        run: |
+          set -euo pipefail
+          python3 -m tools.release.vps prepare --site dist \
+            --commit "$COMMIT_SHA" --run-id "$GITHUB_RUN_ID" --attempt "$GITHUB_RUN_ATTEMPT" \
+            --image "$IMAGE_REF" --image-digest "$IMAGE_DIGEST" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Package the site and server stack
+        run: |
+          set -euo pipefail
+          mkdir -p vps-release/stack
+          tar --owner=0 --group=0 --numeric-owner --sort=name -czf vps-release/site.tar.gz -C dist .
+          cp dist/release.json vps-release/release.json
+          cp infra/vps/docker-compose.yml infra/vps/Caddyfile infra/vps/deploy.sh vps-release/stack/
+
+      - name: Upload the sealed release package
+        id: upload
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: vps-release-${{ github.run_id }}-${{ github.run_attempt }}
+          path: vps-release/
+          if-no-files-found: error
+          retention-days: 90
+
+  deploy:
+    name: Deploy the approved candidate to the server
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment:
+      name: production
+      url: https://firstroll.app
+    steps:
+      - name: Download only the sealed release package
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          artifact-ids: ${{ needs.build.outputs.artifact-id }}
+          path: vps-release
+          merge-multiple: true
+
+      # Only these reviewed control modules are read from the CI-approved commit.
+      # No application checkout, dependencies or artefact-supplied scripts run here.
+      - name: Fetch approved release control modules
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EXPECTED_SHA: ${{ needs.build.outputs.commit-sha }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/firstroll-control/tools/release"
+          for module in protocol vps; do
+            gh api -H 'Accept: application/vnd.github.raw+json' \
+              "repos/$GITHUB_REPOSITORY/contents/tools/release/$module.py?ref=$EXPECTED_SHA" \
+              > "$RUNNER_TEMP/firstroll-control/tools/release/$module.py"
+          done
+          echo "PYTHONPATH=$RUNNER_TEMP/firstroll-control" >> "$GITHUB_ENV"
+
+      - name: Verify the receipt, site archive and approval expiry
+        env:
+          EXPECTED_SHA: ${{ needs.build.outputs.commit-sha }}
+          EXPECTED_DIGEST: ${{ needs.build.outputs.receipt-digest }}
+          IMAGE_DIGEST: ${{ needs.build.outputs.image-digest }}
+          BUILD_ATTEMPT: ${{ needs.build.outputs.run-attempt }}
+        run: |
+          python3 -m tools.release.vps verify \
+            --receipt vps-release/release.json --archive vps-release/site.tar.gz \
+            --commit "$EXPECTED_SHA" --run-id "$GITHUB_RUN_ID" --attempt "$BUILD_ATTEMPT" \
+            --expected-digest "$EXPECTED_DIGEST" --image-digest "$IMAGE_DIGEST"
+
+      - name: Refuse a stale revision after approval
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EXPECTED_SHA: ${{ needs.build.outputs.commit-sha }}
+        run: |
+          set -euo pipefail
+          current_master_sha=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/master" --jq .object.sha)
+          if [ "$current_master_sha" != "$EXPECTED_SHA" ]; then
+            echo "::error::master moved while approval was pending; start a new release."
+            exit 1
+          fi
+
+      - name: Check required production configuration
+        env:
+          VPS_SSH_PRIVATE_KEY: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
+          VPS_HOST: ${{ vars.VPS_HOST }}
+          VPS_SSH_HOST_KEY: ${{ vars.VPS_SSH_HOST_KEY }}
+        run: |
+          set -euo pipefail
+          for name in VPS_SSH_PRIVATE_KEY VPS_HOST VPS_SSH_HOST_KEY; do
+            if [ -z "${!name:-}" ]; then
+              echo "::error::Required production setting $name is missing."
+              exit 1
+            fi
+          done
+          case "$VPS_SSH_HOST_KEY" in
+            ssh-ed25519\ *|ecdsa-sha2-*\ *|ssh-rsa\ *) ;;
+            *) echo "::error::VPS_SSH_HOST_KEY must be the server's public host key (type and base64)."; exit 1 ;;
+          esac
+
+      # The deploy key is written only after the receipt, archive and current master were
+      # verified. The server identity is pinned, so a DNS or network change cannot redirect it.
+      - name: Prepare the pinned SSH identity
+        env:
+          VPS_SSH_PRIVATE_KEY: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
+          VPS_HOST: ${{ vars.VPS_HOST }}
+          VPS_SSH_HOST_KEY: ${{ vars.VPS_SSH_HOST_KEY }}
+          VPS_USER: ${{ vars.VPS_USER || 'firstroll' }}
+        run: |
+          set -euo pipefail
+          ssh_dir="$RUNNER_TEMP/ssh"
+          mkdir -p "$ssh_dir"
+          chmod 0700 "$ssh_dir"
+          printf '%s\n' "$VPS_SSH_PRIVATE_KEY" > "$ssh_dir/id"
+          chmod 0600 "$ssh_dir/id"
+          printf '%s %s\n' "$VPS_HOST" "$VPS_SSH_HOST_KEY" > "$ssh_dir/known_hosts"
+          cat > "$ssh_dir/config" <<CONF
+          Host firstroll
+            HostName $VPS_HOST
+            User $VPS_USER
+            IdentityFile $ssh_dir/id
+            IdentitiesOnly yes
+            UserKnownHostsFile $ssh_dir/known_hosts
+            StrictHostKeyChecking yes
+            BatchMode yes
+            ConnectTimeout 20
+            ServerAliveInterval 15
+          CONF
+          chmod 0600 "$ssh_dir/config"
+          echo "SSH_CONFIG=$ssh_dir/config" >> "$GITHUB_ENV"
+          ssh -F "$ssh_dir/config" firstroll true
+
+      - name: Record the rollback target
+        id: previous
+        run: |
+          set -euo pipefail
+          ssh -F "$SSH_CONFIG" firstroll /opt/firstroll/deploy.sh status | tee previous-status.txt
+          previous=$(sed -n 's/^Current release: *//p' previous-status.txt | head -n 1)
+          echo "release=${previous:-none}" >> "$GITHUB_OUTPUT"
+
+      - name: Upload the release package to the server
+        env:
+          COMMIT_SHA: ${{ needs.build.outputs.commit-sha }}
+        run: |
+          set -euo pipefail
+          remote_dir="/opt/firstroll/incoming/$COMMIT_SHA"
+          ssh -F "$SSH_CONFIG" firstroll "rm -rf '$remote_dir' && mkdir -p '$remote_dir'"
+          scp -F "$SSH_CONFIG" -q \
+            vps-release/site.tar.gz \
+            vps-release/stack/docker-compose.yml \
+            vps-release/stack/Caddyfile \
+            vps-release/stack/deploy.sh \
+            "firstroll:$remote_dir/"
+          # The server always runs the stack files reviewed in the approved commit.
+          ssh -F "$SSH_CONFIG" firstroll \
+            "install -m 0755 '$remote_dir/deploy.sh' /opt/firstroll/deploy.sh && install -m 0644 '$remote_dir/docker-compose.yml' '$remote_dir/Caddyfile' /opt/firstroll/"
+
+      - name: Release on the server
+        id: rollout
+        env:
+          COMMIT_SHA: ${{ needs.build.outputs.commit-sha }}
+          IMAGE_DIGEST: ${{ needs.build.outputs.image-digest }}
+        run: |
+          set -euo pipefail
+          echo "attempted=true" >> "$GITHUB_OUTPUT"
+          ssh -F "$SSH_CONFIG" firstroll \
+            "/opt/firstroll/deploy.sh release '$COMMIT_SHA' '$IMAGE_DIGEST' '/opt/firstroll/incoming/$COMMIT_SHA/site.tar.gz'"
+
+      - name: Verify the live site and API identity
+        env:
+          EXPECTED_SHA: ${{ needs.build.outputs.commit-sha }}
+        run: python3 -m tools.release.vps live --receipt vps-release/release.json --commit "$EXPECTED_SHA"
+
+      - name: Roll back after failed post-deployment verification
+        if: ${{ failure() && steps.rollout.outputs.attempted == 'true' }}
+        run: |
+          set -euo pipefail
+          ssh -F "$SSH_CONFIG" firstroll /opt/firstroll/deploy.sh rollback
+          python3 -m tools.release.vps health
+          echo "::error::Release verification failed; the previous release was restored."
+
+      - name: Remove the uploaded package
+        if: ${{ always() && env.SSH_CONFIG != '' }}
+        env:
+          COMMIT_SHA: ${{ needs.build.outputs.commit-sha }}
+        run: ssh -F "$SSH_CONFIG" firstroll "rm -rf '/opt/firstroll/incoming/$COMMIT_SHA'" || true
+
+      - name: Record the deployment result
+        if: always()
+        env:
+          COMMIT_SHA: ${{ needs.build.outputs.commit-sha }}
+          IMAGE_DIGEST: ${{ needs.build.outputs.image-digest }}
+          PREVIOUS_RELEASE: ${{ steps.previous.outputs.release }}
+        run: |
+          {
+            echo "## Single-server deployment"
+            echo
+            echo "| Field | Value |"
+            echo "|---|---|"
+            echo "| Result | \`${{ job.status }}\` |"
+            echo "| Commit | \`$COMMIT_SHA\` |"
+            echo "| Image digest | \`$IMAGE_DIGEST\` |"
+            echo "| Previous release | \`${PREVIOUS_RELEASE:-unavailable}\` |"
+            echo "| Targets | https://firstroll.app · https://api.firstroll.app |"
+            echo "| Recorded at (UTC) | $(date -u +%FT%TZ) |"
+          } >> "$GITHUB_STEP_SUMMARY"

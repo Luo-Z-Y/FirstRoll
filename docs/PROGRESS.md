@@ -13,16 +13,18 @@ Status vocabulary:
 
 ## Current Snapshot
 
-**Last updated:** 27 September 2026 (reconciled against `master` at `6028a98`, merged 16 September 2026)
+**Last updated:** 28 September 2026 (reconciled against `master` at `829348d`, merged 28 September 2026)
 
-**Release stage:** local working prototype and deployed Azure public beta. The standardised
-frontend/backend release contract is implemented, but the first standardised frontend release, the
-next backend release and a live recovery drill still await owner approval.
+**Release stage:** local working prototype; the public beta is offline. The Azure Free Trial
+subscription was disabled when its credit expired (observed 27 September 2026), suspending the Static
+Web App and the Container Apps environment. A single-server hosting path (`infra/vps` and the
+`VPS Release` workflow) is implemented and tested locally; the server purchase, the first approved
+release and a recovery drill remain.
 
 **Primary development URL:** `http://127.0.0.1:8000`
-**Public beta URL:** `https://firstroll.app`
-**Automated verification:** 588 repository tests passing (12 September 2026 run, including 34
-same-ASGI-loop concurrency checks and 27 Node request/race checks)
+**Public beta URL:** `https://firstroll.app` (offline until the single-server cut-over)
+**Automated verification:** 618 repository tests passing (28 September 2026 run, including 30
+single-server release checks, 34 same-ASGI-loop concurrency checks and 27 Node request/race checks)
 
 | Area | Status | Current evidence |
 |---|---|---|
@@ -31,7 +33,7 @@ same-ASGI-loop concurrency checks and 27 Node request/race checks)
 | Product navigation | Complete | Discover, Analyse and Settings preserve per-tab view content and scroll; a versioned `sessionStorage` snapshot makes the Discover workspace refresh-safe; Study remains consolidated into Discover |
 | Theme support | Complete | System-aware light/dark themes with a locally persisted accessible toggle |
 | Local settings | Complete | Write-only connector credentials plus local add, remove and index controls for the private library |
-| Hosted public beta | Deployed | Azure Static Web Apps frontend and Azure Container Apps FastAPI service; private-library tools, clip analysis and unauthenticated model use stay disabled in the hosted edition |
+| Hosted public beta | Blocked — offline | Azure suspended with the expired Free Trial; the Caddy + Docker Compose single-server stack, `deploy.sh` and `VPS Release` workflow are implemented and CI-validated with the same public-mode boundary; awaiting the server purchase and the first approved release |
 | Accounts and quotas | Complete | Supabase email authentication, atomic daily Deep Study quotas and a launch-independent localhost test account |
 | Authenticated research progress | Implemented | Allow-listed SSE lifecycle events, owner-scoped result retrieval and secret/evidence redaction tests; final interactive browser observation remains pending |
 | Private library catalogue | Complete | Seven existing film-study PDFs retained; managed uploads and non-destructive removal; paths and content withheld from public APIs |
@@ -51,7 +53,7 @@ same-ASGI-loop concurrency checks and 27 Node request/race checks)
 | Evidence-layered UI | Complete | Inspectable progress, packet and citations; quality status, validated `S*`/`C*`/`E*` citations, retrieval rationale and expandable excerpts; WCAG-audited keyboard flow |
 | Fixed-workflow evaluation baseline | Complete | Frozen, fingerprinted fixed/Agent/A01/A02 metrics; the entry gate passes all 17 targets and 11 required steps; GuideLLM/lm-eval tooling is mock-qualified only |
 | Autonomous research Agent | Blocked | Local, default-off. A01R class-aware acquisition and A02R patch-reliability harnesses are implemented with native tool calls; every paid comparison so far failed at least one gate, production remains NO-GO and no evaluation budget has been released since 31 August |
-| Release delivery | Complete — bootstrap pending | Protected `master`, human `production` gate, versioned receipts, rollback packages, Azure OIDC backend delivery and a scoped Static Web Apps token; the first standardised frontend release still needs the explicit bootstrap acknowledgement |
+| Release delivery | Complete — live proof pending | Protected `master`, human `production` gate, versioned receipts and rollback across all three workflows; `VPS Release` (digest deployment over a pinned SSH host key) is the current path and the Azure workflows are inert legacy paths |
 | Web responsiveness | In progress | Blocking API work offloaded to the worker pool, dossier-lifetime fetch cancellation, pre-authentication Deep Study cancel controls and minified assets, measured synthetically; live profiling of search → shelf → dossier → reception is still required |
 | Clip analysis | Complete | Scene/shot metrics, shot scale, colour, objects and JSON/CSV export (local edition only) |
 | Clip evidence in Deep Study | Planned (deferred) | Deferred until the text Agent programme is accepted; study generation does not consume measured clip observations or timecodes |
@@ -59,6 +61,30 @@ same-ASGI-loop concurrency checks and 27 Node request/race checks)
 | Persistent projects | Planned | Film, clip, study and note sessions are not retained as reusable projects; the autonomous phase store is a private run checkpoint only |
 
 ## Next Milestone
+
+### Single-server cut-over — Blocked (awaiting server purchase and owner approval)
+
+Objective: bring `firstroll.app` and `api.firstroll.app` back online on one rented server without
+weakening the human production gate.
+
+Acceptance criteria:
+
+- [x] Caddy + Docker Compose stack with the API deployed by immutable digest, the former static cache
+  policy and rotated logs (`infra/vps`).
+- [x] Idempotent Ubuntu 24.04 bootstrap: Docker, service account, firewall, swap, unattended
+  security updates and key-only SSH.
+- [x] Server-side release that switches the site only after the API reports the baked commit, with
+  rollback and status commands.
+- [x] `VPS Release` workflow: CI-gated candidate, credential-free build to GitHub Container Registry,
+  sealed receipt, verification before the deploy key exists, pinned host key, live checks and rollback.
+- [x] CI validation of the stack files and 30 structural/behavioural tests.
+- [ ] Server purchased, bootstrapped and reachable; DNS moved from Azure; certificates issued.
+- [ ] GitHub `production` secret and repository variables configured; `firstroll-api` package public.
+- [ ] First owner-approved release verified in a browser (receipt, sign-in, search, shelf, dossier).
+- [ ] Rollback drill on the server; legacy Azure workflows disabled.
+
+Blocking decision: the owner must buy the server and provide its address and host key, then approve
+the first `production` deployment.
 
 ### Autonomous Agent causal ablations — Blocked (awaiting owner evaluation budget)
 
@@ -82,9 +108,10 @@ Blocking decision: A01R and A02R are implemented but no paid or human evaluation
 released since 31 August 2026. The owner must either fund a bounded run or record the programme as
 parked.
 
-### Standardised production release bootstrap — Blocked (awaiting owner approval)
+### Standardised production release bootstrap — Superseded while Azure is suspended
 
-Carried from the 10 September 2026 entry. Operational proof still required:
+Carried from the 10 September 2026 entry. The single-server cut-over replaces this proof; it would
+only become relevant again if the Azure subscription were reactivated:
 
 - an owner-approved initial frontend release (`allow_initial_release` acknowledgement, then approval of
   the protected `production` environment), which establishes the first `/release.json` rollback
@@ -127,11 +154,49 @@ Carried from the 12 September 2026 entry:
 - Creator intention must not be inferred from style, criticism or theory alone.
 - The local multilingual model adds a first-load delay and a sizeable local download.
 - Inherited computer-vision dependencies may behave differently across operating systems.
+- The public beta will run on one rented server: a single point of failure with a long-lived deploy
+  key, no CDN and a brief API restart on every release.
+- The Supabase Free plan pauses the project after seven idle days, which breaks sign-in until it is
+  resumed in the dashboard.
 
 ## Milestone Ledger
 
 Dated entries, newest first. Entries dated 6–31 August 2026 were moved unchanged into
 [PROGRESS_ARCHIVE_2026-08.md](PROGRESS_ARCHIVE_2026-08.md) on 27 September 2026.
+
+### 28 September 2026 — Single-server hosting path prepared after the Azure suspension
+
+Context: the Azure Free Trial subscription (`FreeTrial` offer, spending limit on) was found `Disabled`
+on 27 September 2026. The Container Apps environment was suspended, `api.firstroll.app` timed out and
+`firstroll.app` returned 404, while the Supabase project remained active. The owner chose to move the
+public beta to a rented server rather than upgrade Azure to pay-as-you-go.
+
+1. Added `infra/vps`: `docker-compose.yml` (Caddy 2.11.4 plus the API container deployed by immutable
+   GitHub Container Registry digest, capabilities dropped, memory-limited, rotated logs), `Caddyfile`
+   (both hostnames, the former Static Web Apps cache policy, SSE-safe proxy), `.env.example`,
+   `bootstrap.sh` (Ubuntu 24.04: Docker, service account, firewall, swap, unattended security
+   updates, key-only SSH) and `deploy.sh` (release, rollback and status; the site switches only after
+   the API reports the baked commit).
+2. Added `tools/release/vps.py`, which seals a `vps` receipt binding the site inventory and the image
+   digest to the commit, verifies the receipt and archive on the deploy runner before any credential
+   exists, and checks the live receipt, every static file, API identity, hidden documentation routes
+   and the exact CORS origin.
+3. Added the `VPS Release` workflow with the same CI-gated candidate selection and human `production`
+   approval: a build job without production credentials pushes the image to GitHub Container Registry;
+   the deploy job verifies first, pins the server host key, installs the reviewed stack files, releases
+   by digest and rolls back on failed verification. It is fail-closed on `VPS_RELEASE_ENABLED`.
+4. CI validates the stack with `shellcheck`, `docker compose config` and `caddy validate`; Dependabot
+   watches the Caddy image pin.
+5. Reconciled `readme.md`, `HOSTING.md` (server purchase, deploy key, bootstrap, DNS, certificates,
+   GitHub configuration, first release, operations, cost and risks; Azure sections marked legacy),
+   `RELEASE.md`, `ARCHITECTURE.md` and `THREAT_MODEL.md`.
+
+Verification: 618 tests pass locally, including 30 new checks in `tests/test_vps_release.py`;
+`shellcheck`, `docker compose config` and `caddy validate` pass locally against the pinned images.
+No server exists yet, so certificate issuance, a live release and a rollback have not been exercised.
+
+Not done: server purchase, DNS change, bootstrap, GitHub configuration, first approved release,
+rollback drill, GitHub package visibility check and removal of the legacy Azure workflows and Terraform.
 
 ### 27 September 2026 — Progress ledger reconciled and repository housekeeping
 

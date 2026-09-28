@@ -1,9 +1,10 @@
 # FirstRoll Architecture
 
 **Status:** Current implementation  
-**Last reconciled:** 12 September 2026
+**Last reconciled:** 28 September 2026
 
-FirstRoll is a local-first film-study system with an Azure-hosted public beta. “Local-first”
+FirstRoll is a local-first film-study system with a hosted public beta that is moving from Azure
+to a single self-managed server. “Local-first”
 describes where private books, credentials, derived vectors and uploaded film clips are kept; it does
 not mean the product is available only on one computer.
 
@@ -16,11 +17,11 @@ flowchart LR
         Session["Persistent Supabase session<br/>email + password"]
     end
 
-    subgraph Azure["Azure public edge"]
-        Static["Static Web Apps<br/>firstroll.app<br/>HTML · CSS · JavaScript"]
+    subgraph Server["Rented server · Caddy"]
+        Static["Static site<br/>firstroll.app<br/>HTML · CSS · JavaScript"]
     end
 
-    subgraph ContainerApps["Azure Container Apps"]
+    subgraph ContainerApps["API container · Docker Compose"]
         API["FastAPI<br/>api.firstroll.app · public mode · Docker"]
         Runs["Transient run store<br/>50 items · 10-minute TTL"]
     end
@@ -68,18 +69,20 @@ flowchart LR
     LocalAPI --> Providers
 ```
 
-Azure Static Web Apps deploys the browser bundle from `master` and serves it at `firstroll.app`.
-Azure Container Apps runs the versioned FastAPI image at `api.firstroll.app`. The browser learns the
-API origin at build time through `FIRSTROLL_API_BASE`; the API accepts only configured frontend
-origins through `FIRSTROLL_CORS_ALLOWED_ORIGINS`. Terraform under `infra/terraform` owns the imported
-Static Web App, both Azure custom-domain associations and the Container Apps infrastructure. The
-Spaceship DNS records and deployed website content remain outside Terraform.
+One rented Linux server runs the public beta through Docker Compose (`infra/vps`). Caddy obtains
+certificates for both hostnames, serves the browser bundle built from `master` at `firstroll.app`
+from `releases/current`, and proxies `api.firstroll.app` to the versioned FastAPI container, which
+is deployed by immutable image digest. The browser learns the API origin at build time through
+`FIRSTROLL_API_BASE`; the API accepts only configured frontend origins through
+`FIRSTROLL_CORS_ALLOWED_ORIGINS`. The Azure topology (Static Web Apps, Container Apps, Terraform under
+`infra/terraform`) is retained as legacy reference while its disabled subscription still exists. The
+Spaceship DNS records remain outside both.
 
 ## Runtime Modes
 
 | Capability | Local private edition | Hosted public beta |
 |---|---|---|
-| Web delivery | FastAPI serves the interface and API on `127.0.0.1:8000` | Azure Static Web Apps serves the interface; Azure Container Apps serves the API |
+| Web delivery | FastAPI serves the interface and API on `127.0.0.1:8000` | Caddy on the rented server serves the static interface and proxies the API container (legacy: Azure Static Web Apps and Container Apps) |
 | Film discovery | TMDb primary when configured; Wikidata/Wikipedia key-free fallback | Same server-side provider policy; credentials never enter the browser bundle |
 | Criticism and videos | Public adapters plus optional local credentials and persistent private caches | Public/hosted adapters; personal DeepSeek and YouTube keys may be request-scoped in one signed-in tab |
 | Private document library | Enabled | Not published; local routes return 404 |
@@ -354,8 +357,8 @@ coverage and improvements.
 ```mermaid
 sequenceDiagram
     actor User
-    participant Web as Azure Static Web App
-    participant API as Azure Container Apps FastAPI
+    participant Web as Static site (Caddy)
+    participant API as FastAPI container
     participant Auth as Supabase Auth
     participant Quota as PostgreSQL quota function
     participant Model as DeepSeek
@@ -426,6 +429,17 @@ post-approval current-master checks and component-specific live verification. Bo
 deployments rather than cancelling an upload/rollback when a newer candidate arrives. Each retains
 its own workflow and human approval; a combined atomic deployment is not implemented.
 
+The current delivery path is `VPS Release`, which reuses that contract for the single server. Its
+build job has no production credential: it builds the site and image, smoke-tests the container,
+publishes the image to GitHub Container Registry and seals a `vps` receipt binding the site
+inventory and the image digest to the commit (`tools/release/vps.py`). After human approval, a
+source-free runner re-verifies the receipt, the archive and current `master` before writing the
+dedicated deploy key, connects to the pinned host key, installs the reviewed stack files and runs
+`deploy.sh`, which pulls by digest and switches the site only after the API reports the baked
+commit. Live verification covers the receipt, every static file, API identity, hidden documentation
+and CORS; failure restores the previous release. The Azure paths below remain documented as legacy;
+see [Threat Model](THREAT_MODEL.md) for the credential differences.
+
 The frontend is still a static artefact on Static Web Apps, not a container. `Frontend Release`
 inventories the build and records the existing live receipt and verified GitHub recovery artefact.
 After human approval, it verifies all candidate files and the unchanged rollback baseline before
@@ -485,8 +499,9 @@ Neither mocked failure tests nor a green upload proves live recovery or all auth
 
 ## Availability and Scaling
 
-- The Container App currently keeps one warm replica. Setting the minimum to zero would reduce cost
-  but reintroduce cold-start delay while the Azure-hosted static shell remained available.
+- The single server runs one API container continuously: no cold start, no autoscaling and no
+  second host. Each release restarts the container, so the API is unavailable for a few seconds while
+  Caddy keeps serving the static shell. The legacy Container App kept one warm replica.
 - Discovery, reception and related-film caches are process memory and reset on restart.
 - The hosted research result store is capped at 50 runs with a ten-minute TTL. It is suitable for a
   single-process beta, not horizontal scaling or resumable work.
@@ -501,9 +516,9 @@ Neither mocked failure tests nor a green upload proves live recovery or all auth
 
 | Setting class | Examples | Placement |
 |---|---|---|
-| Public static build values | `FIRSTROLL_API_BASE`, `FIRSTROLL_SUPABASE_URL`, `FIRSTROLL_SUPABASE_PUBLISHABLE_KEY` | Azure Static Web Apps GitHub Actions build environment |
-| Hosted backend public configuration | `FIRSTROLL_PUBLIC_MODE`, `FIRSTROLL_CORS_ALLOWED_ORIGINS`, `SUPABASE_URL`, `FIRSTROLL_AUTH_PROVIDER`, `FIRSTROLL_QUOTA_PROVIDER` | Azure Container App environment |
-| Hosted backend secrets | `SUPABASE_PUBLISHABLE_KEY`, `FIRSTROLL_DATABASE_URL`, `DEEPSEEK_API_KEY`, optional `YOUTUBE_API_KEY` | Azure Container Apps secret boundary only |
+| Public static build values | `FIRSTROLL_API_BASE`, `FIRSTROLL_SUPABASE_URL`, `FIRSTROLL_SUPABASE_PUBLISHABLE_KEY` | `VPS Release` build job (legacy: Static Web Apps workflow) |
+| Hosted backend public configuration | `FIRSTROLL_PUBLIC_MODE`, `FIRSTROLL_CORS_ALLOWED_ORIGINS`, `SUPABASE_URL`, `FIRSTROLL_AUTH_PROVIDER`, `FIRSTROLL_QUOTA_PROVIDER` | `/opt/firstroll/.env` on the server (legacy: Azure Container App environment) |
+| Hosted backend secrets | `SUPABASE_PUBLISHABLE_KEY`, `FIRSTROLL_DATABASE_URL`, `DEEPSEEK_API_KEY`, optional `YOUTUBE_API_KEY` | `/opt/firstroll/.env` (mode 0600) on the server only (legacy: Container Apps secret boundary) |
 | Local private paths | `FIRSTROLL_LIBRARY_PATH`, `FIRSTROLL_LIBRARY_MANIFEST`, `FIRSTROLL_LIBRARY_INDEX`, `FIRSTROLL_SETTINGS_PATH` | Local backend environment |
 | Local optional credentials | DeepSeek, Douban cookie, Letterboxd OAuth and YouTube key | Local Settings or local environment |
 

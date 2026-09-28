@@ -1,6 +1,7 @@
 # FirstRoll — Evidence-Grounded Film Study
 
-FirstRoll is a local-first film-study platform for filmmakers with a deployed Azure public beta.
+FirstRoll is a local-first film-study platform for filmmakers with a hosted public beta that is
+moving from Azure to a single rented server.
 It combines open film metadata, attributed criticism, a private study library,
 evidence-constrained language-model synthesis and clip-based visual analysis. The hosted and local
 editions share the discovery and study architecture, while private books and clip analysis remain
@@ -10,7 +11,8 @@ The central rule is simple: identity records, critic reports, theory frameworks,
 hypotheses and measured film observations are different kinds of evidence. FirstRoll
 keeps those layers visible instead of presenting one fluent but unsupported answer.
 
-> **Current status:** local working prototype and deployed Azure public beta. Discover,
+> **Current status:** local working prototype; the public beta is offline while it moves from the
+> expired Azure subscription to one rented server. Discover,
 > private-library retrieval, Crossref scholarship, optional Douban, Letterboxd and Guardian
 > criticism, DeepSeek synthesis and clip analysis are implemented. The hosted edition publishes
 > discovery, the native director shelf and authenticated Deep Study while keeping private-library
@@ -24,24 +26,25 @@ keeps those layers visible instead of presenting one fluent but unsupported answ
 > private review artifact. A successor autonomous-Agent programme now adds typed evidence-gap
 > objectives, honest independent-origin recovery, a deterministic planner baseline and Crossref as
 > an Agent provider. It remains local, default-off and unvalidated by paid or human evidence.
-> Frontend and backend delivery now share versioned release receipts, seven-day approval windows,
-> 90-day recovery-evidence retention, post-approval freshness checks and live verification. They keep
-> separate hosting, credentials and human `production` approvals. Backend delivery uses Azure OIDC;
-> the frontend retains its scoped Static Web Apps token. The first standardised frontend release
-> requires an explicit bootstrap acknowledgement because the legacy site has no verified rollback
-> package. Recovery paths are locally tested; live rollout/recovery proof still requires owner approval.
+> Delivery shares versioned release receipts, seven-day approval windows, 90-day recovery-evidence
+> retention, post-approval freshness checks and live verification. The current `VPS Release` path
+> publishes the static site and the API container by immutable digest to one server over a pinned SSH
+> connection after the same human `production` approval; the Azure workflows remain as inert legacy
+> paths. Server-side release and rollback scripts are tested locally; the first approved live release
+> and a recovery drill still require the server purchase and owner approval.
 
 See [Project Progress](docs/PROGRESS.md) for completed milestones, verification results,
 known limitations and the next priorities.
 
-See [Public Beta Hosting](docs/HOSTING.md) for the deployed Azure frontend/API topology,
-environment configuration, acceptance checks and operational limits.
+See [Public Beta Hosting](docs/HOSTING.md) for the single-server topology, server purchase and
+bootstrap steps, environment configuration, acceptance checks, operational limits and the legacy
+Azure reference.
 
 ## Documentation Map
 
 | Reader need | Document |
 |---|---|
-| Understand the local and Azure-hosted system | [Architecture](docs/ARCHITECTURE.md) |
+| Understand the local and hosted system | [Architecture](docs/ARCHITECTURE.md) |
 | Integrate with every HTTP and SSE endpoint | [API Reference](docs/API_REFERENCE.md) |
 | Review Supabase, SQLite, JSON and in-memory storage | [Data Model](docs/DATA_MODEL.md) |
 | Understand why the major architectural choices were made | [Architecture Decisions](docs/DECISIONS.md) |
@@ -54,7 +57,7 @@ environment configuration, acceptance checks and operational limits.
 | Review current Agent evidence, benchmark-tool fit and improvements | [Agent Benchmark Audit](docs/AGENT_BENCHMARK_AUDIT.md) |
 | Complete the private filmmaker packet-rating gate | [Human Evidence-Packet Review](docs/HUMAN_PACKET_REVIEW.md) |
 | Install and run the private local edition | [Local Setup](docs/LOCAL_SETUP.md) |
-| Operate the public Azure deployment | [Public Beta Hosting](docs/HOSTING.md) |
+| Buy, bootstrap and operate the public server | [Public Beta Hosting](docs/HOSTING.md) |
 | Approve, verify and recover frontend/backend releases | [Release Runbook](docs/RELEASE.md) |
 | Review provider, copyright and model-use boundaries | [Data Sources](docs/DATA_SOURCES.md) |
 | Reproduce web responsiveness checks and review remaining latency | [Web Responsiveness](docs/WEB_RESPONSIVENESS.md) |
@@ -192,7 +195,8 @@ implemented, film-specific formal claims remain viewing hypotheses.
 
 ## System Architecture
 
-FirstRoll has two deliberate runtime paths: an Azure-hosted public beta and a richer private edition
+FirstRoll has two deliberate runtime paths: a public beta hosted on one rented server and a richer
+private edition
 that runs on the filmmaker's computer. They share film identity, attributed research and the
 evidence-quality contract, but private books, derived vectors, connector secrets and uploaded clips
 remain inside the local boundary. The complete component contracts and trust boundaries are
@@ -207,9 +211,9 @@ flowchart TB
         SESSION["Supabase session<br/>email + password"]
     end
 
-    subgraph HOSTED["Azure-hosted public beta"]
-        STATIC["Azure Static Web Apps<br/>firstroll.app"]
-        API["Azure Container Apps<br/>FastAPI · api.firstroll.app"]
+    subgraph HOSTED["Hosted public beta · one rented server"]
+        STATIC["Caddy static site<br/>firstroll.app"]
+        API["FastAPI container<br/>api.firstroll.app"]
         HPACKET["Hosted evidence packet<br/>public frameworks + attributed sources"]
         HGATE["Schema · citation<br/>and quality validation"]
         RUNS[("Transient study results<br/>owner scoped · 10-minute TTL")]
@@ -277,8 +281,8 @@ flowchart TB
     class IDENTITY,CRITICISM,VIDEOS,DEEPSEEK external;
 ```
 
-The solid path through Azure is the deployed public product: Static Web Apps serves the browser,
-Container Apps runs the public-mode API, Supabase owns identity and user-scoped records, and a
+The solid path through the server is the public product: Caddy serves the browser bundle, the
+Docker container runs the public-mode API, Supabase owns identity and user-scoped records, and a
 backend-only PostgreSQL connection reserves provider quotas. Hosted study results remain transient
 and owner-scoped. The dotted path enters the private edition, where books, vectors, caches, secrets
 and clips stay on the user's machine. In either runtime, DeepSeek receives a typed, selected evidence
@@ -319,15 +323,15 @@ but no mock timing or score is product evidence; the consolidated
 [benchmark audit](docs/AGENT_BENCHMARK_AUDIT.md) records current numbers and improvement priorities.
 A03 lacks an accepted A01R packet and a budget.
 
-The public beta is intentionally narrower than the local edition. Azure Static Web Apps and Azure
-Container Apps use separate origins and custom domains. Public mode does not publish local settings,
+The public beta is intentionally narrower than the local edition. The static site and the API use
+separate origins and custom domains on one server. Public mode does not publish local settings,
 private-library retrieval or clip analysis. Hosted Deep Study verifies the Supabase bearer, reserves
 quota, streams only allow-listed progress and exposes the complete result through a separate
 owner-scoped request. Local development retains the convenient combined interface.
 
 | Layer | Primary stack |
 |---|---|
-| Hosted web and API | Azure Static Web Apps, Azure Container Apps, Docker, FastAPI and Uvicorn |
+| Hosted web and API | One Ubuntu server with Docker Compose, Caddy, Docker, FastAPI and Uvicorn (legacy: Azure Static Web Apps and Container Apps) |
 | Browser interface | HTML5, CSS3, vanilla JavaScript and Supabase JS |
 | Identity and account data | Supabase Auth plus PostgreSQL tables protected by RLS |
 | API and orchestration | Python 3.11, FastAPI, Pydantic and LangGraph 1.2 |
@@ -1024,6 +1028,9 @@ FirstRoll/
 │   ├── PROGRESS.md
 │   ├── PROGRESS_ARCHIVE_2026-08.md
 │   └── RELEASE.md
+├── infra/
+│   ├── terraform/             # legacy Azure resources (subscription suspended)
+│   └── vps/                   # single-server stack: Compose, Caddy, bootstrap and deploy scripts
 ├── evals/
 │   ├── benchmark_tools/        # GuideLLM mock profile and public lm-eval tasks
 │   ├── agent_cases.json
@@ -1101,22 +1108,21 @@ limitations are in [`.pi/README.md`](.pi/README.md).
 Development uses short-lived `feat/...`, `fix/...`, `docs/...` or `chore/...` branches rather than
 direct work on production-backed `master`; there is no permanent `local` or `develop` branch. Push a
 branch for read-only CI, then merge it into protected `master` through a current, green pull request.
-Pull-request code receives no Azure credential and is never deployed to an Azure preview environment.
+Pull-request code receives no deployment credential and is never deployed to a preview environment.
 
 After a merge, successful `master` CI checks that the approved SHA is still current and an
-uncredentialled runner seals the validated `dist` directory as a seven-day immutable artefact. A
-separate runner checks out no repository code and waits at the protected `production` environment.
-Only a human repository-owner approval releases its branch-restricted token to the pinned Azure
-upload action; an agent merge is never production approval. External actions are full-SHA pinned and
-reviewed weekly by Dependabot.
+uncredentialled runner builds the site and the API image, pushes the image to GitHub Container
+Registry and seals both into a seven-day receipt. A separate runner checks out no repository code and
+waits at the protected `production` environment. Only a human repository-owner approval releases the
+dedicated deploy key, which connects to a pinned server host key and runs the reviewed server script;
+an agent merge is never production approval. External actions are full-SHA pinned and reviewed weekly
+by Dependabot.
 
-Backend delivery follows the same human gate but uses two passwordless Azure identities instead of a
-deployment token. A branch-bound build identity can push an immutable image and read current app
-metadata; an environment-bound deploy identity can update only the FirstRoll Container App. The
-workflow binds a canonical manifest to the GitHub run, commit and image digest, validates it again on
-a source-free deploy runner, verifies the baked live commit and Azure-configured digest, and restores the prior image
-after failed post-deployment checks. It stays inert until `BACKEND_RELEASE_ENABLED=true`; complete
-setup and operating instructions are in [Backend Release Runbook](docs/RELEASE.md).
+The legacy Azure workflows (`Frontend Release` with a scoped Static Web Apps token and `Backend
+Release` with two passwordless Azure identities) remain in the repository while the disabled Azure
+subscription is retained, and must stay inert. The current `VPS Release` workflow stays inert until
+`VPS_RELEASE_ENABLED=true`; complete setup and operating instructions are in the
+[Release Runbook](docs/RELEASE.md) and [Public Beta Hosting](docs/HOSTING.md).
 
 The current verification baseline and its update protocol are recorded in
 [Evaluation](docs/EVALUATION.md); dated delivery evidence remains in
@@ -1129,7 +1135,7 @@ fallback behaviour; these are tracked separately from the new FirstRoll modules.
 | Milestone | Status | Outcome |
 |---|---|---|
 | Film discovery and dossier | Complete | Official TMDb primary catalogue, key-free open fallback, explicit ambiguity confirmation and identity bridges |
-| Azure public beta | Deployed | Azure Static Web Apps frontend and Azure Container Apps FastAPI service with Supabase authentication and bounded Deep Study |
+| Public beta hosting | In progress | Azure deployment suspended with the expired Free Trial; single-server stack, `VPS Release` workflow and documentation prepared, awaiting the server purchase and the first approved release |
 | Private RAG foundation | Complete | Token chunking, FTS5, local vectors, hybrid retrieval and citations |
 | Attributed criticism | Complete | Crossref, Douban, Letterboxd and Guardian retrieval with structured critic claims |
 | Evidence-grounded Deep Study | Complete | Typed theory, criticism, scholarly-abstract and video-context evidence; Pydantic output, citation validation and quality gate |

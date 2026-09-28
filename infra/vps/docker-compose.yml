@@ -1,0 +1,80 @@
+# FirstRoll single-server stack.
+#
+# Caddy terminates TLS for both public hostnames, serves the published static site and
+# proxies the API container. Durable account, quota and saved-film data live in Supabase,
+# so this host holds only the current static release, TLS certificates and rotated logs.
+#
+# `deploy.sh` rewrites FIRSTROLL_IMAGE_DIGEST in `.env` and switches `releases/current`;
+# it never edits this file. Keep the Caddy image pin in step with `.github/workflows/ci.yml`.
+name: firstroll
+
+services:
+  api:
+    # Deployed by immutable digest, never by a mutable tag. The digest is recorded in the
+    # sealed release receipt and verified against the baked commit after start-up.
+    image: ghcr.io/luo-z-y/firstroll-api@${FIRSTROLL_IMAGE_DIGEST:?set by deploy.sh}
+    # `.env` carries the public-mode switches and the backend-only secrets (mode 0600).
+    env_file: .env
+    environment:
+      PORT: "10000"
+    expose:
+      - "10000"
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    deploy:
+      resources:
+        limits:
+          memory: ${FIRSTROLL_API_MEMORY_LIMIT:-768M}
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - >-
+          import json, sys, urllib.request;
+          body = json.load(urllib.request.urlopen("http://127.0.0.1:10000/api/health", timeout=5));
+          sys.exit(0 if body.get("status") == "ok" else 1)
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 45s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  caddy:
+    image: caddy:2.11.4
+    depends_on:
+      - api
+    environment:
+      FIRSTROLL_SITE_DOMAIN: ${FIRSTROLL_SITE_DOMAIN:?set in .env}
+      FIRSTROLL_API_DOMAIN: ${FIRSTROLL_API_DOMAIN:?set in .env}
+      CADDY_ACME_EMAIL: ${CADDY_ACME_EMAIL:?set in .env}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      # `releases/current` is a relative symlink inside this directory, so switching it on
+      # the host is visible to Caddy without restarting the container.
+      - ./releases:/srv/releases:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  caddy_data:
+  caddy_config:
