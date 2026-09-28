@@ -1,0 +1,37 @@
+# Caddy configuration for the FirstRoll single-server stack.
+#
+# Both hostnames obtain and renew Let's Encrypt certificates automatically once their DNS
+# records point at this server. Hostnames and the ACME contact come from `.env` through
+# docker-compose.yml. Access logging stays off by default because request logs contain
+# visitor IP addresses; add a `log` block to a site if you need to debug traffic.
+{
+	email {$CADDY_ACME_EMAIL}
+}
+
+{$FIRSTROLL_SITE_DOMAIN} {
+	root * /srv/releases/current
+	encode zstd gzip
+	header {
+		-Server
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+		Strict-Transport-Security "max-age=31536000"
+	}
+	# Mirror the former Static Web Apps cache policy: the release receipt is never cached and
+	# the entry points revalidate, so a new release is visible on the next page load.
+	header /release.json Cache-Control "no-store"
+	header /index.html Cache-Control "no-cache, must-revalidate"
+	header /assets/* Cache-Control "no-cache, must-revalidate"
+	header / Cache-Control "no-cache, must-revalidate"
+	file_server
+}
+
+{$FIRSTROLL_API_DOMAIN} {
+	header {
+		-Server
+		Strict-Transport-Security "max-age=31536000"
+	}
+	# Caddy forwards X-Forwarded-For/Proto and streams text/event-stream responses without
+	# buffering, so authenticated Deep Study progress keeps working behind the proxy.
+	reverse_proxy api:10000
+}
