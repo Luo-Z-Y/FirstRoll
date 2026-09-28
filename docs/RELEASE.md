@@ -4,10 +4,12 @@ FirstRoll uses the same release rules for two independently deployable component
 
 **Check → package → record → owner approval → recheck → deploy → verify → recover on failure.**
 
-`Frontend Release` uploads static files to Azure Static Web Apps. `Backend Release` updates the
-Docker image on Azure Container Apps. Neither changes hosting, applies Terraform or runs database
-migrations. A backend-only fix does not require rebuilding or deploying the frontend; different
-component commits are valid when their API contract remains compatible.
+`VPS Release` is the current delivery path: it publishes the static site and the API container
+together to the single rented server described in [Public Beta Hosting](HOSTING.md). `Frontend
+Release` (Azure Static Web Apps) and `Backend Release` (Azure Container Apps) are the legacy Azure
+paths; they stay in the repository while the disabled Azure subscription is retained, but should be
+kept inert (see below). None of the workflows changes hosting, applies Terraform or runs database
+migrations.
 
 CI checks branches and pull requests without production deployment credentials. A successful push CI
 run on current `master` allows candidate preparation. Manual runs require successful push CI for that
@@ -39,6 +41,58 @@ manifest and container digest. GitHub job outputs independently bind the expecte
 Receipt hashes detect alteration; they are **not independently signed provenance**. Green checks
 do not prove application correctness. Browser-level acceptance still includes sign-in, film search,
 the shelf and Deep Study, without exposing user credentials or making paid calls automatically.
+
+## Single-server release (`VPS Release`)
+
+Preconditions: the server was prepared with `infra/vps/bootstrap.sh`, DNS points at it, Caddy holds
+certificates, and the GitHub values in [Public Beta Hosting](HOSTING.md#6-configure-github) exist.
+`VPS_RELEASE_ENABLED=true` is the fail-closed switch; without it no job starts.
+
+**Build job (no production credential).** After a successful push CI run on current `master`, or a
+manual run validated against exact-SHA CI, the job audits the npm lock, builds the frontend with the
+production API origin, removes the Static Web Apps routing file, builds the API image with the commit
+baked in, smoke-tests the container's health, identity and hidden documentation routes, and pushes
+the image to GitHub Container Registry as `ghcr.io/luo-z-y/firstroll-api:<commit>`. It then seals
+`release.json` through `tools/release/vps.py`: component `vps`, the commit, run and attempt, the
+image reference and its immutable digest, and a SHA-256 inventory of every site file. The site
+archive, receipt and the three server stack files are uploaded as one 90-day artefact and the run
+waits at the protected `production` environment.
+
+**Deploy job (after human approval).** A fresh runner downloads only that artefact and fetches the two
+reviewed control modules from the exact commit. Before any credential exists it verifies the receipt
+against the build job's outputs (commit, run, attempt, receipt digest and image digest), confirms the
+archive contains exactly the sealed inventory and receipt, checks the seven-day approval window and
+refuses a `master` that moved. Only then is the deploy key written, together with a `known_hosts`
+entry pinned to `VPS_SSH_HOST_KEY`, and used with `StrictHostKeyChecking yes`. The job records the
+server's current release, uploads the package, installs the stack files from the approved commit and
+runs `deploy.sh release <commit> <digest> <archive>`.
+
+On the server, `deploy.sh` pulls the image by digest, starts it and waits until `/api/health`
+reports the expected baked commit; only then does it switch `releases/current` to the new site and
+reload Caddy. The runner then verifies from outside that `/release.json` equals the receipt, every
+inventoried file matches its fingerprint, `/api/health` reports the commit, `/api/contract` and
+`/api/discovery/status` respond, `/docs`, `/redoc` and `/openapi.json` return 404, and CORS allows
+exactly `https://firstroll.app`. A failure after rollout runs `deploy.sh rollback`, which restores
+the previous digest and site, and the job stays failed so the incident is visible.
+
+Operating rules specific to this path:
+
+- Stop automated candidates with `VPS_RELEASE_ENABLED=false`; the running server is unaffected.
+- Rollback needs the previous image in GitHub Container Registry and the previous site directory on
+  the server. The first release has no rollback target; recovering from it means fixing forward.
+  Rolling back to an older commit than the previous release means reverting on `master`.
+- Do not edit `deploy.sh`, `Caddyfile` or `docker-compose.yml` on the server; each release overwrites
+  them from the approved commit.
+- Rotate `VPS_SSH_PRIVATE_KEY` if it is exposed: generate a new pair, add the public key to the
+  service account, replace the secret and remove the old line. The key is a long-lived credential,
+  unlike the Azure OIDC exchange, and its holder has root-equivalent access to that host.
+- Keep the legacy Azure workflows inert while the subscription is disabled: leave
+  `BACKEND_RELEASE_ENABLED` unset and disable `Frontend Release` in the Actions UI, otherwise it builds
+  a candidate on every push and fails at the Azure token.
+
+Live proof of this path (first approved release and a rollback drill) is still pending; the
+structure is covered by `tests/test_vps_release.py`, and CI validates the stack files with
+`shellcheck`, `docker compose config` and `caddy validate`.
 
 ## Frontend: first standardised release
 
