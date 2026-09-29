@@ -13,18 +13,22 @@ Status vocabulary:
 
 ## Current Snapshot
 
-**Last updated:** 28 September 2026 (reconciled against `master` at `829348d`, merged 28 September 2026)
+**Last updated:** 29 September 2026 (server preparation verified against the VPS stack from `d4863a9`,
+with the socket-activated SSH bootstrap fix recorded below)
 
 **Release stage:** local working prototype; the public beta is offline. The Azure Free Trial
 subscription was disabled when its credit expired (observed 27 September 2026), suspending the Static
 Web App and the Container Apps environment. A single-server hosting path (`infra/vps` and the
-`VPS Release` workflow) is implemented and tested locally; the server purchase, the first approved
-release and a recovery drill remain.
+`VPS Release` workflow) is implemented and tested locally. The purchased Tencent Lighthouse server
+is bootstrapped and verified after reboot; private configuration, DNS/TLS, GitHub deployment setup,
+the first owner-approved release and a recovery drill remain.
 
 **Primary development URL:** `http://127.0.0.1:8000`
 **Public beta URL:** `https://firstroll.app` (offline until the single-server cut-over)
 **Automated verification:** 618 repository tests passing (28 September 2026 run, including 30
-single-server release checks, 34 same-ASGI-loop concurrency checks and 27 Node request/race checks)
+single-server release checks, 34 same-ASGI-loop concurrency checks and 27 Node request/race checks).
+The focused VPS suite passes 33 tests on 29 September, including three new SSH bootstrap regressions;
+the full suite was not rerun for this preparation task.
 
 | Area | Status | Current evidence |
 |---|---|---|
@@ -33,7 +37,7 @@ single-server release checks, 34 same-ASGI-loop concurrency checks and 27 Node r
 | Product navigation | Complete | Discover, Analyse and Settings preserve per-tab view content and scroll; a versioned `sessionStorage` snapshot makes the Discover workspace refresh-safe; Study remains consolidated into Discover |
 | Theme support | Complete | System-aware light/dark themes with a locally persisted accessible toggle |
 | Local settings | Complete | Write-only connector credentials plus local add, remove and index controls for the private library |
-| Hosted public beta | Blocked — offline | Azure suspended with the expired Free Trial; the Caddy + Docker Compose single-server stack, `deploy.sh` and `VPS Release` workflow are implemented and CI-validated with the same public-mode boundary; awaiting the server purchase and the first approved release |
+| Hosted public beta | In progress — offline | Tencent VPS purchased and bootstrapped; administrator/deployment SSH, Docker, firewall, updates and configuration checks pass after reboot. DNS/TLS, private configuration, GitHub setup and the first approved release remain |
 | Accounts and quotas | Complete | Supabase email authentication, atomic daily Deep Study quotas and a launch-independent localhost test account |
 | Authenticated research progress | Implemented | Allow-listed SSE lifecycle events, owner-scoped result retrieval and secret/evidence redaction tests; final interactive browser observation remains pending |
 | Private library catalogue | Complete | Seven existing film-study PDFs retained; managed uploads and non-destructive removal; paths and content withheld from public APIs |
@@ -62,7 +66,7 @@ single-server release checks, 34 same-ASGI-loop concurrency checks and 27 Node r
 
 ## Next Milestone
 
-### Single-server cut-over — Blocked (awaiting server purchase and owner approval)
+### Single-server cut-over — In progress (server prepared; deployment not authorised)
 
 Objective: bring `firstroll.app` and `api.firstroll.app` back online on one rented server without
 weakening the human production gate.
@@ -78,13 +82,16 @@ Acceptance criteria:
 - [x] `VPS Release` workflow: CI-gated candidate, credential-free build to GitHub Container Registry,
   sealed receipt, verification before the deploy key exists, pinned host key, live checks and rollback.
 - [x] CI validation of the stack files and 30 structural/behavioural tests.
-- [ ] Server purchased, bootstrapped and reachable; DNS moved from Azure; certificates issued.
+- [x] Server purchased, bootstrapped and reachable through separate administrator/deployment keys;
+  approved reboot verified on the updated kernel.
+- [ ] Private provider configuration completed; DNS moved from Azure; certificates issued.
 - [ ] GitHub `production` secret and repository variables configured; `firstroll-api` package public.
 - [ ] First owner-approved release verified in a browser (receipt, sign-in, search, shelf, dossier).
 - [ ] Rollback drill on the server; legacy Azure workflows disabled.
 
-Blocking decision: the owner must buy the server and provide its address and host key, then approve
-the first `production` deployment.
+Next boundary: complete private configuration and GitHub setup, agree the DNS/TLS cut-over, then
+obtain owner approval for the exact first `production` deployment. Server-preparation approval does
+not authorise a release or database migration.
 
 ### Autonomous Agent causal ablations — Blocked (awaiting owner evaluation budget)
 
@@ -163,6 +170,40 @@ Carried from the 12 September 2026 entry:
 
 Dated entries, newest first. Entries dated 6–31 August 2026 were moved unchanged into
 [PROGRESS_ARCHIVE_2026-08.md](PROGRESS_ARCHIVE_2026-08.md) on 27 September 2026.
+
+### 29 September 2026 — Tencent VPS prepared and verified after reboot
+
+The owner purchased Tencent Lighthouse Starter in Singapore Zone 2 (2 vCPUs, 2 GB RAM, 40 GB SSD),
+bound the administrator key to `ubuntu`, supplied the host fingerprint through Tencent's browser
+terminal, and explicitly authorised preparation and a subsequent reboot.
+
+- Verified Ubuntu 24.04.4 LTS / x86-64 with pinned Ed25519 host checking. Created a separate local
+  deployment key outside Git and installed only its public half for `firstroll`; Docker group access
+  is explicitly root-equivalent. The administrator key remains local and ignored.
+- Applied the reviewed bootstrap: Ubuntu updates, Docker 29.1.3, Compose 2.40.3, rotated logs,
+  `/opt/firstroll` configuration, owner-only `.env`, unattended updates and UFW allowing only TCP
+  22/80/443 and UDP 443. Preserved the existing approximately 2 GB swap.
+- Found a real Ubuntu socket-activation edge case: the OpenSSH upgrade stopped `ssh.service` while
+  leaving `ssh.socket` active, so standalone `sshd -t` failed because systemd's `/run/sshd` was absent.
+  Starting the service recreated the runtime directory and allowed validation/reload. The bootstrap
+  now starts it before the standalone check; three shell-fake regression cases verify success and
+  fail-closed behaviour on start/validation failure.
+- Verified new SSH connections for both accounts before and after the owner-approved reboot into
+  kernel `6.8.0-142-generic`. Docker, SSH, unattended updates and UFW survived; `dpkg --audit` is clean
+  and no reboot-required marker remains. Approximately 31 GB disk space remains free.
+- `docker compose config --quiet` passes. Caddy 2.11.4 validates in a temporary, network-disabled
+  container with no published ports; that container was removed and no application containers run.
+- Updated the hosting runbook for Tencent's `ubuntu` account, explicit public-key-only uploads,
+  host verification, traffic limits, private-key storage and the distinction between host preparation
+  and production activation.
+
+Verification: 33 focused VPS tests, Ruff lint/format, Bash syntax and diff checks; live server checks
+above. Tencent's separate cloud-firewall rules and end-to-end HTTPS have not yet been verified.
+
+Not done: provider secrets or certificate-contact configuration, DNS changes, certificate issuance,
+GitHub deployment-secret/variable changes, an application release, database migration, paid model
+calls or a rollback drill. The public beta remains offline. The private deployment key has not been
+uploaded to GitHub.
 
 ### 28 September 2026 — Single-server hosting path prepared after the Azure suspension
 
