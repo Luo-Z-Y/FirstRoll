@@ -12,9 +12,13 @@ Apps environment. The public beta is being moved to one rented Linux server.
 
 **Preparation checkpoint:** Tencent VPS purchased and bootstrapped. Separate administrator and
 deployment logins, Docker/Compose, UFW and unattended updates pass after the owner-approved reboot.
-Caddy configuration validates, but its public service and the API have not been started. Private
-configuration, cloud-firewall verification, DNS/TLS, GitHub deployment setup and the first exact-run
-production approval remain. See [29 September evidence](PROGRESS.md#29-september-2026--tencent-vps-prepared-and-verified-after-reboot).
+Caddy configuration validates, but its public service and the API have not been started. GitHub's
+dedicated deployment secret and pinned-host variables are configured behind the existing owner
+review; both Azure release workflows are disabled. The certificate contact is saved privately.
+The owner has added the DeepSeek/YouTube keys and cloud TCP 443 rule; presence, permissions and
+configuration checks pass. Paid Deep Study remains disabled until quota verification. Candidate
+preparation is authorised, but package/image-pull checks, DNS/TLS and exact-run production approval
+remain. See [readiness evidence](PROGRESS.md#29-september-2026--provider-configuration-and-https-ingress-verified).
 
 FirstRoll is not merely a local application. Its public beta serves the static browser bundle and the
 Docker API from separate origins, while private-library and clip-analysis capabilities remain local
@@ -40,9 +44,10 @@ The frontend and API origins are deployment configuration. `FIRSTROLL_API_BASE` 
 
 The server stack lives under `infra/vps`; the `VPS Release` workflow and
 [Release Runbook](RELEASE.md) deliver it. Terraform under `infra/terraform` still describes the
-legacy Azure resources, which remain in the disabled subscription and could be reactivated by
-upgrading it to pay-as-you-go. Spaceship remains the DNS provider. The Azure sections later in this
-document are kept as legacy reference until that path is removed.
+legacy Azure resources. The subscription was disabled on 27 September; a 29 September read reports
+it enabled but the API resource still has failed provisioning. No healthy Azure service or billing
+change is inferred from that status. Spaceship remains the DNS provider. The Azure sections later
+in this document are kept as legacy reference until that path is removed.
 
 ## Single-server hosting
 
@@ -122,6 +127,10 @@ Tencent's cloud firewall is separate from `ufw`: verify it allows the intended S
 web traffic too. Do not expose the API's internal port 10000. Preparing files does not start Caddy,
 obtain certificates, change DNS or deploy the application.
 
+The first console inspection on 29 September found only TCP 22, TCP 80 and ICMP allowed from all
+IPv4 addresses. The owner subsequently added TCP 443; a refreshed console check confirms it is allowed.
+UDP 443 is optional for HTTP/3; TCP 443 is sufficient for ordinary HTTPS. Do not select **Allow all**.
+
 Then edit the private environment file on the server:
 
 ```bash
@@ -129,11 +138,23 @@ ssh -i ~/.ssh/firstroll-vps-deploy -o StrictHostKeyChecking=yes firstroll@SERVER
 nano /opt/firstroll/.env     # set CADDY_ACME_EMAIL; leave FIRSTROLL_IMAGE_DIGEST as printed
 ```
 
+For a migration, get explicit consent before copying existing provider credentials to a new host.
+Transfer only the named keys over host-verified SSH, never through chat, Git, build arguments or
+frontend files. Keep the destination owner-readable only (0600) and validate with
+`docker compose --project-directory /opt/firstroll config --quiet`; ordinary `config` prints resolved
+values and must not be used in shared logs. An unavailable optional TMDb key means discovery falls
+back to the open catalogue, not that a working TMDb integration has been verified. Keep paid Deep
+Study disabled until its provider key and authenticated quota boundary are verified.
+
 The file already carries the public Supabase values and the public-mode switches from
 `infra/vps/.env.example`. Keep Deep Study disabled until section
 [Enable quota-controlled Deep Study](#enable-quota-controlled-deep-study) is complete.
 
 ### 4. Point DNS at the server
+
+For this first migration, finish the GitHub configuration and candidate build in sections 6–7
+before changing DNS. Confirm the immutable image is downloadable, then return here and establish
+HTTPS before approving the waiting production job. A build does not require DNS to point at the VPS.
 
 In Spaceship, replace the Azure records with the server address:
 
@@ -174,6 +195,9 @@ only Caddy is deliberate: the API image is published by the release workflow, no
 Also keep the legacy Azure workflows inert: leave `BACKEND_RELEASE_ENABLED` unset or `false`, and
 disable `Frontend Release` from **Actions → Frontend Release → ⋯ → Disable workflow**, because it
 would otherwise build a candidate on every `master` push and fail at the Azure token.
+Disable `Backend Release` too when the Azure path is no longer being used, and cancel obsolete
+waiting Azure candidates instead of approving them. Preserve the existing environment reviewers
+and the master-only deployment branch policy. Saving a VPS key is not permission to approve a run.
 
 After the first build, open your GitHub **Packages** list, select `firstroll-api` and confirm its
 visibility is **Public** only after inspecting the build inputs for secrets and private data. The

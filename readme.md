@@ -32,8 +32,12 @@ keeps those layers visible instead of presenting one fluent but unsupported answ
 > connection after the same human `production` approval; the Azure workflows remain as inert legacy
 > paths. The Tencent Lighthouse server is purchased and bootstrapped as of 29 September 2026:
 > Docker/Compose, key-only SSH, firewall and unattended updates are verified after an approved reboot.
-> Caddy configuration validates, but no application containers are running. Private configuration,
-> DNS/TLS, GitHub deployment credentials, the first owner-approved release and a recovery drill remain.
+> Caddy configuration validates, but no application containers are running. The dedicated deployment
+> key and pinned host settings are configured behind GitHub's existing human approval gate; both
+> legacy Azure release workflows are disabled. The owner has added the DeepSeek/YouTube keys and
+> cloud HTTPS rule; their presence and configuration are verified without exposing secrets. Paid
+> Deep Study stays off pending quota verification. Release-candidate preparation is authorised;
+> image-pull verification, DNS/TLS, exact-run production approval and a recovery drill remain.
 
 See [Project Progress](docs/PROGRESS.md) for completed milestones, verification results,
 known limitations and the next priorities.

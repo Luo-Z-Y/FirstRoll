@@ -13,15 +13,17 @@ Status vocabulary:
 
 ## Current Snapshot
 
-**Last updated:** 29 September 2026 (server preparation verified against the VPS stack from `d4863a9`,
-with the socket-activated SSH bootstrap fix recorded below)
+**Last updated:** 29 September 2026 (preparation PRs #45/#46 merged; `master` at `1a8e2b6` has green CI;
+protected VPS access, provider-key presence and cloud HTTPS ingress verified; candidate preparation authorised)
 
 **Release stage:** local working prototype; the public beta is offline. The Azure Free Trial
 subscription was disabled when its credit expired (observed 27 September 2026), suspending the Static
 Web App and the Container Apps environment. A single-server hosting path (`infra/vps` and the
 `VPS Release` workflow) is implemented and tested locally. The purchased Tencent Lighthouse server
-is bootstrapped and verified after reboot; private configuration, DNS/TLS, GitHub deployment setup,
-the first owner-approved release and a recovery drill remain.
+is bootstrapped and verified after reboot. Protected GitHub VPS access and the certificate contact
+are configured. The owner has added the provider keys and cloud HTTPS rule; presence/permission
+checks pass. Candidate preparation is authorised; image-pull verification, DNS/TLS, exact-run
+production approval and a recovery drill remain. Paid Deep Study stays disabled.
 
 **Primary development URL:** `http://127.0.0.1:8000`
 **Public beta URL:** `https://firstroll.app` (offline until the single-server cut-over)
@@ -37,7 +39,7 @@ the full suite was not rerun for this preparation task.
 | Product navigation | Complete | Discover, Analyse and Settings preserve per-tab view content and scroll; a versioned `sessionStorage` snapshot makes the Discover workspace refresh-safe; Study remains consolidated into Discover |
 | Theme support | Complete | System-aware light/dark themes with a locally persisted accessible toggle |
 | Local settings | Complete | Write-only connector credentials plus local add, remove and index controls for the private library |
-| Hosted public beta | In progress — offline | Tencent VPS purchased and bootstrapped; administrator/deployment SSH, Docker, firewall, updates and configuration checks pass after reboot. DNS/TLS, private configuration, GitHub setup and the first approved release remain |
+| Hosted public beta | In progress — offline | Tencent host, protected deployment access, provider-key presence and cloud TCP 443 verified. Preparing the candidate; image-pull checks, DNS/TLS and exact-run production approval remain |
 | Accounts and quotas | Complete | Supabase email authentication, atomic daily Deep Study quotas and a launch-independent localhost test account |
 | Authenticated research progress | Implemented | Allow-listed SSE lifecycle events, owner-scoped result retrieval and secret/evidence redaction tests; final interactive browser observation remains pending |
 | Private library catalogue | Complete | Seven existing film-study PDFs retained; managed uploads and non-destructive removal; paths and content withheld from public APIs |
@@ -84,14 +86,20 @@ Acceptance criteria:
 - [x] CI validation of the stack files and 30 structural/behavioural tests.
 - [x] Server purchased, bootstrapped and reachable through separate administrator/deployment keys;
   approved reboot verified on the updated kernel.
-- [ ] Private provider configuration completed; DNS moved from Azure; certificates issued.
-- [ ] GitHub `production` secret and repository variables configured; `firstroll-api` package public.
+- [x] GitHub `production` deployment secret and pinned VPS host/user variables configured; existing
+  human reviewer and master-only deployment policy verified and preserved.
+- [x] Legacy Azure release workflows disabled and their two obsolete waiting candidates cancelled.
+- [x] Owner added DeepSeek/YouTube keys; presence and private configuration validated without values.
+- [x] Cloud TCP 443 allow rule observed after the owner's setup.
+- [ ] Authenticated quota readiness verified before enabling paid Deep Study.
+- [ ] DNS moved from Azure; certificates issued.
+- [ ] VPS release activation enabled; candidate built; image contents/visibility and server pull verified.
 - [ ] First owner-approved release verified in a browser (receipt, sign-in, search, shelf, dossier).
-- [ ] Rollback drill on the server; legacy Azure workflows disabled.
+- [ ] Rollback drill on the server.
 
-Next boundary: complete private configuration and GitHub setup, agree the DNS/TLS cut-over, then
-obtain owner approval for the exact first `production` deployment. Server-preparation approval does
-not authorise a release or database migration.
+Next boundary: prepare and verify the candidate, check its image can be pulled, then complete the
+agreed DNS/TLS cut-over and obtain approval for the exact first `production` run. General permission
+to prepare/deploy does not override the exact-run production gate or authorise database migration.
 
 ### Autonomous Agent causal ablations — Blocked (awaiting owner evaluation budget)
 
@@ -170,6 +178,51 @@ Carried from the 12 September 2026 entry:
 
 Dated entries, newest first. Entries dated 6–31 August 2026 were moved unchanged into
 [PROGRESS_ARCHIVE_2026-08.md](PROGRESS_ARCHIVE_2026-08.md) on 27 September 2026.
+
+### 29 September 2026 — Provider configuration and HTTPS ingress verified
+
+After the owner reported completing the setup, a pinned SSH check confirmed non-placeholder
+DeepSeek and YouTube keys in the server's resolved Compose configuration, `.env` mode 0600 and
+valid configuration. Only presence/boolean results were displayed; no credential values were
+retrieved into the conversation. TMDb remains unconfigured, so open catalogue fallback is expected.
+Public mode is on; paid Deep Study and video analysis stay off. These checks prove configuration
+presence, not provider-key validity or authenticated quota readiness.
+
+The refreshed Tencent console shows a TCP 443 allow rule alongside TCP 22/80 and ICMP. DNS still
+points to Azure, so HTTPS end-to-end acceptance remains outstanding. The owner authorised candidate
+preparation and deployment if possible; the existing exact-run human approval gate remains in force.
+The candidate must pass build/smoke checks and image-pull verification before DNS cut-over, and
+DNS/TLS must be ready before the waiting production job is approved. The first VPS release has no
+previous VPS release for automatic rollback. No production deployment is claimed by this checkpoint.
+
+### 29 September 2026 — Protected VPS access configured; activation held
+
+- Reviewed and merged the passing private-key ignore PR #45. Updated preparation PR #46 against
+  that master, waited for fresh checks and merged it; merged `master` CI passed at `1a8e2b6`.
+- Verified GitHub `production` still requires the human owner and permits deployments only from
+  `master`. Stored only the dedicated VPS deployment private key as `VPS_SSH_PRIVATE_KEY` in that
+  environment; the personal administrator key stays local. Configured `VPS_HOST`, `VPS_USER` and
+  the previously verified Ed25519 `VPS_SSH_HOST_KEY` as repository variables.
+- Set `BACKEND_RELEASE_ENABLED=false`, disabled both legacy Azure release workflows and cancelled
+  their obsolete waiting candidates `36367718705` and `36367718612`. No production gate was approved
+  or weakened. Kept `VPS_RELEASE_ENABLED` unset while configuration is incomplete.
+- Saved the owner-confirmed HTTPS certificate contact privately on the server. Verified `.env`
+  remains `0600`, owned by `firstroll`, and Compose's quiet validation passes. No application
+  containers run.
+- A names/presence-only check found existing local DeepSeek and YouTube keys, but no local TMDb key.
+  The security review blocked their transfer without explicit payload/destination consent; requested
+  that consent and did not retry or copy the keys. Paid Deep Study remains disabled.
+- Read Tencent's cloud firewall in the console: TCP 22, TCP 80 and ICMP are allowed; TCP 443 is
+  missing. Requested approval for that specific HTTPS rule; did not change the cloud firewall.
+- DNS still points to Azure. A read-only Azure account check now reports `Enabled`, but the API
+  resource reports failed provisioning with no container environment or secrets to recover; this
+  is not evidence that the former hosting has recovered, and no Azure resource was changed.
+
+Outstanding: the two explicit consents, provider/quota readiness, HTTPS ingress, candidate/package
+verification, DNS/TLS, the exact-run owner approval, browser acceptance and a recovery drill.
+No API-key transfer, database migration, production deployment or paid model request occurred.
+Verification: 33 focused VPS tests pass again; documentation diff checks, protected-environment
+read-back, cancelled-candidate status and the live quiet Compose/permissions checks pass.
 
 ### 29 September 2026 — Tencent VPS prepared and verified after reboot
 
