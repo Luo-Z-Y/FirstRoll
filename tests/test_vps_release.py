@@ -122,7 +122,9 @@ class TestWorkflowPolicy:
             "workflow_run.head_repository.full_name == github.repository",
         ):
             assert binding in condition
-        assert "Manual release requires a successful push CI run for the exact master SHA" in WORKFLOW
+        assert (
+            "Manual release requires a successful push CI run for the exact master SHA" in WORKFLOW
+        )
 
     def test_actions_are_github_owned_and_pinned_to_full_commits(self):
         references = ACTION_REFERENCE.findall(WORKFLOW)
@@ -192,7 +194,9 @@ class TestWorkflowPolicy:
         assert "python3 -m tools.release.vps health" in rollback["run"]
         live = step(workflow, "deploy", "Verify the live site and API identity")
         assert "python3 -m tools.release.vps live" in live["run"]
-        assert not any(item.get("continue-on-error") for item in workflow["jobs"]["deploy"]["steps"])
+        assert not any(
+            item.get("continue-on-error") for item in workflow["jobs"]["deploy"]["steps"]
+        )
 
     @pytest.mark.parametrize("current,expected_code", [(COMMIT, 0), ("b" * 40, 1)])
     def test_post_approval_script_refuses_moved_master(self, tmp_path, current, expected_code):
@@ -241,7 +245,11 @@ class TestServerStack:
         assert 'header /assets/* Cache-Control "no-cache, must-revalidate"' in CADDYFILE
         assert "reverse_proxy api:10000" in CADDYFILE
         assert "file_server" in CADDYFILE
-        for placeholder in ("{$FIRSTROLL_SITE_DOMAIN}", "{$FIRSTROLL_API_DOMAIN}", "{$CADDY_ACME_EMAIL}"):
+        for placeholder in (
+            "{$FIRSTROLL_SITE_DOMAIN}",
+            "{$FIRSTROLL_API_DOMAIN}",
+            "{$CADDY_ACME_EMAIL}",
+        ):
             assert placeholder in CADDYFILE
 
     def test_environment_template_keeps_the_public_boundary_and_no_secret_values(self):
@@ -256,7 +264,12 @@ class TestServerStack:
         for secret in ("DEEPSEEK_API_KEY", "TMDB_BEARER_TOKEN", "YOUTUBE_API_KEY"):
             assert values[secret] == ""
         assert re.fullmatch(r"sha256:0{64}", values["FIRSTROLL_IMAGE_DIGEST"])
-        for key in ("FIRSTROLL_IMAGE_DIGEST", "FIRSTROLL_SITE_DOMAIN", "FIRSTROLL_API_DOMAIN", "CADDY_ACME_EMAIL"):
+        for key in (
+            "FIRSTROLL_IMAGE_DIGEST",
+            "FIRSTROLL_SITE_DOMAIN",
+            "FIRSTROLL_API_DOMAIN",
+            "CADDY_ACME_EMAIL",
+        ):
             assert f"${{{key}" in (STACK / "docker-compose.yml").read_text(encoding="utf-8")
 
     def test_ci_validates_the_stack_without_a_server(self):
@@ -277,9 +290,56 @@ class TestServerStack:
             assert control in BOOTSTRAP
         if os.geteuid() == 0:
             pytest.skip("bootstrap refusal is only observable as a non-root user")
-        result = subprocess.run(["bash", str(STACK / "bootstrap.sh")], capture_output=True, text=True)
+        result = subprocess.run(
+            ["bash", str(STACK / "bootstrap.sh")], capture_output=True, text=True
+        )
         assert result.returncode == 1
         assert "must run as root" in result.stderr
+
+    @pytest.mark.parametrize(
+        ("failure", "expected_calls", "expected_code"),
+        [
+            ("", ["start", "validate", "reload"], 0),
+            ("start", ["start"], 1),
+            ("validate", ["start", "validate"], 1),
+        ],
+    )
+    def test_bootstrap_starts_socket_activated_ssh_before_validation(
+        self, failure, expected_calls, expected_code
+    ):
+        # Execute only the SSH service sequence with shell fakes: no system changes,
+        # root access or local systemctl/sshd invocation are permitted by this harness.
+        start = BOOTSTRAP.index("  systemctl start ssh\n")
+        end = BOOTSTRAP.index("  systemctl reload ssh\n", start) + len("  systemctl reload ssh\n")
+        harness = r"""
+set -e
+ssh_runtime_ready=0
+systemctl() {
+  case "$*" in
+    "start ssh")
+      printf 'start\n'
+      test "$SIMULATED_SSH_FAILURE" != start
+      ssh_runtime_ready=1
+      ;;
+    "reload ssh") printf 'reload\n' ;;
+    *) return 99 ;;
+  esac
+}
+sshd() {
+  test "$*" = '-t'
+  printf 'validate\n'
+  test "$ssh_runtime_ready" = 1
+  test "$SIMULATED_SSH_FAILURE" != validate
+}
+"""
+        result = subprocess.run(
+            ["bash", "-c", harness + BOOTSTRAP[start:end]],
+            env={**os.environ, "SIMULATED_SSH_FAILURE": failure},
+            capture_output=True,
+            text=True,
+        )
+        assert result.returncode == expected_code, result.stderr
+        assert result.stdout.splitlines() == expected_calls
 
 
 class TestDeployScript:
@@ -307,7 +367,9 @@ class TestDeployScript:
         result = self.run(tmp_path, "release", COMMIT, "latest", str(archive))
         assert result.returncode == 1
         assert "image digest" in result.stderr
-        result = self.run(tmp_path, "release", COMMIT, IMAGE_DIGEST, str(tmp_path / "missing.tar.gz"))
+        result = self.run(
+            tmp_path, "release", COMMIT, IMAGE_DIGEST, str(tmp_path / "missing.tar.gz")
+        )
         assert result.returncode == 1
         assert "not found" in result.stderr
 
@@ -403,7 +465,9 @@ class TestReleaseTooling:
     def test_verify_live_accepts_the_served_release(self, tmp_path):
         receipt, site = sealed(tmp_path)
         client = FakeClient(receipt, site)
-        vps.verify_live(receipt, commit=COMMIT, client=client, clock=lambda: 0.0, sleep=lambda _: None)
+        vps.verify_live(
+            receipt, commit=COMMIT, client=client, clock=lambda: 0.0, sleep=lambda _: None
+        )
         assert any(url.endswith("/api/contract") for url in client.requests)
         assert any(url.endswith("/openapi.json") for url in client.requests)
 

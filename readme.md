@@ -30,8 +30,10 @@ keeps those layers visible instead of presenting one fluent but unsupported answ
 > retention, post-approval freshness checks and live verification. The current `VPS Release` path
 > publishes the static site and the API container by immutable digest to one server over a pinned SSH
 > connection after the same human `production` approval; the Azure workflows remain as inert legacy
-> paths. Server-side release and rollback scripts are tested locally; the first approved live release
-> and a recovery drill still require the server purchase and owner approval.
+> paths. The Tencent Lighthouse server is purchased and bootstrapped as of 29 September 2026:
+> Docker/Compose, key-only SSH, firewall and unattended updates are verified after an approved reboot.
+> Caddy configuration validates, but no application containers are running. Private configuration,
+> DNS/TLS, GitHub deployment credentials, the first owner-approved release and a recovery drill remain.
 
 See [Project Progress](docs/PROGRESS.md) for completed milestones, verification results,
 known limitations and the next priorities.

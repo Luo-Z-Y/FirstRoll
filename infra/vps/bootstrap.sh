@@ -125,6 +125,10 @@ PasswordAuthentication no
 KbdInteractiveAuthentication no
 PermitRootLogin prohibit-password
 CONF
+  # Ubuntu may leave only ssh.socket running after an OpenSSH upgrade. Starting the
+  # service recreates its systemd-managed /run/sshd before the standalone syntax check.
+  # This is a no-op when already active and does not restart established sessions.
+  systemctl start ssh
   sshd -t
   systemctl reload ssh
 else

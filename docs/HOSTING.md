@@ -8,7 +8,13 @@ Apps environment. The public beta is being moved to one rented Linux server.
 
 **API URL:** `https://api.firstroll.app`
 
-**Last reconciled:** 28 September 2026
+**Last reconciled:** 29 September 2026
+
+**Preparation checkpoint:** Tencent VPS purchased and bootstrapped. Separate administrator and
+deployment logins, Docker/Compose, UFW and unattended updates pass after the owner-approved reboot.
+Caddy configuration validates, but its public service and the API have not been started. Private
+configuration, cloud-firewall verification, DNS/TLS, GitHub deployment setup and the first exact-run
+production approval remain. See [29 September evidence](PROGRESS.md#29-september-2026--tencent-vps-prepared-and-verified-after-reboot).
 
 FirstRoll is not merely a local application. Its public beta serves the static browser bundle and the
 Docker API from separate origins, while private-library and clip-analysis capabilities remain local
@@ -40,55 +46,86 @@ document are kept as legacy reference until that path is removed.
 
 ## Single-server hosting
 
-The server holds no durable product data: accounts, saved films and quotas stay in Supabase, and
-study results remain transient in the API process. Losing the server therefore costs availability,
-not data, and a replacement can be bootstrapped from this repository.
+Accounts, saved films and quotas stay in Supabase, and study results remain transient in the API
+process. A replacement server can be bootstrapped from this repository, but keep encrypted off-host
+backups of private configuration and a recovery plan for Supabase; the repository does not contain
+the server's secrets or TLS state.
 
-### 1. Buy the server
+### 1. Confirm the purchased server
 
-| Setting | Recommendation |
+| Setting | Purchased instance, verified 29 September 2026 |
 |---|---|
-| Provider and region | DigitalOcean Singapore is the simplest well-documented choice for an Asia-based audience; Vultr Singapore is comparable. Hetzner's cheapest tier is Europe-only. |
-| Size | 1 shared vCPU, 2 GB memory and 25 GB or more of SSD. 1 GB works with the swap file `bootstrap.sh` creates, but leaves little headroom for the API and its Node connector. |
-| Image | Ubuntu 24.04 LTS, 64-bit |
-| Access | Add your personal SSH public key at creation. Do not enable password login. |
-| Extras | No managed database, load balancer or paid backups are needed. |
+| Provider and region | Tencent Lighthouse Starter, Singapore Zone 2 |
+| Size | 2 vCPUs, 2 GB memory, 40 GB SSD; approximately 2 GB swap already configured |
+| Image | Ubuntu 24.04.4 LTS, x86-64 |
+| Access | Personal SSH key bound to `ubuntu`; use `sudo` for administration, not direct root login |
+| Transfer | Console reports 512 GB/month and 20 Mbps; check excess-traffic and renewal charges separately |
+| Expiry | 29 September 2027; renewal pricing has not been verified |
 
-Approximate list prices in September 2026 are $6 a month for 1 GB and $12 a month for 2 GB at
-DigitalOcean; check the provider's page before buying. Record the server's public IPv4 address.
+Before first SSH authentication, compare the server's Ed25519 fingerprint against
+`ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub` in Tencent's trusted browser terminal. Only then
+trust that host key locally. Never disable host-key checking. `SERVER_IP` below is the verified
+public IPv4 address. Replace the example personal-key path with the actual local filename.
 
 ### 2. Create a dedicated deploy key
 
 GitHub Actions connects with its own key, never with your personal one:
 
 ```bash
-ssh-keygen -t ed25519 -N '' -C firstroll-github-deploy -f ~/.ssh/firstroll-deploy
+ssh-keygen -t ed25519 -N '' -C firstroll-vps-github-actions -f ~/.ssh/firstroll-vps-deploy
 ```
 
-The public half (`~/.ssh/firstroll-deploy.pub`) goes to the server in the next step. The private
-half becomes the `VPS_SSH_PRIVATE_KEY` secret of the protected `production` environment and is not
-stored anywhere else.
+Do not overwrite an existing key. The public half (`~/.ssh/firstroll-vps-deploy.pub`) goes to the
+server in the next step. Keep the private half owner-readable only and outside the repository; it
+will later become the `VPS_SSH_PRIVATE_KEY` secret of the protected `production` environment.
+Creating the local key does not configure GitHub or authorise a release.
 
 ### 3. Bootstrap the server
 
-Copy the stack directory to the server and run the one-time root script:
+On a fresh server, copy only the setup files and deployment **public** key. Do not recursively
+upload `infra/`, which may contain a downloaded administrator key. These examples assume a personal
+key at `~/.ssh/firstroll-admin.pem` and a host key already verified and recorded locally:
 
 ```bash
-scp -r infra/vps root@SERVER_IP:/root/firstroll-vps
-ssh root@SERVER_IP "FIRSTROLL_DEPLOY_PUBLIC_KEY='$(cat ~/.ssh/firstroll-deploy.pub)' \
-  bash /root/firstroll-vps/bootstrap.sh"
+ssh -i ~/.ssh/firstroll-admin.pem -o StrictHostKeyChecking=yes ubuntu@SERVER_IP \
+  'mkdir -p /home/ubuntu/firstroll-vps'
+scp -i ~/.ssh/firstroll-admin.pem -o StrictHostKeyChecking=yes \
+  infra/vps/bootstrap.sh infra/vps/deploy.sh infra/vps/docker-compose.yml \
+  infra/vps/Caddyfile infra/vps/.env.example ~/.ssh/firstroll-vps-deploy.pub \
+  ubuntu@SERVER_IP:/home/ubuntu/firstroll-vps/
+ssh -i ~/.ssh/firstroll-admin.pem -o StrictHostKeyChecking=yes ubuntu@SERVER_IP
+# On the server; keep this session open until new administrator/deployment logins pass:
+sudo env NEEDRESTART_MODE=a \
+  FIRSTROLL_DEPLOY_PUBLIC_KEY="$(cat /home/ubuntu/firstroll-vps/firstroll-vps-deploy.pub)" \
+  bash /home/ubuntu/firstroll-vps/bootstrap.sh
 ```
 
 `bootstrap.sh` upgrades packages, installs Docker and Compose from Ubuntu, rotates container logs,
-creates the `firstroll` service account with your keys, installs the stack under `/opt/firstroll`
-with a placeholder site, adds a 1 GB swap file on small servers, enables the `ufw` firewall
-(SSH, 80, 443), turns on unattended security updates and restricts SSH to key authentication. It is
-safe to rerun. At the end it prints the server's Ed25519 host key line; keep it for step 6.
+creates the `firstroll` service account with the supplied deployment public key, installs the stack
+under `/opt/firstroll` with a placeholder site, adds swap only on qualifying small servers without
+existing swap, enables `ufw` (TCP 22/80/443 and UDP 443), turns on unattended security updates and
+restricts SSH to key authentication. It also copies root's authorised keys if present; it does not
+copy `ubuntu`'s personal key into the deployment account. The Docker group is root-equivalent.
+
+Reruns preserve `.env` and published releases but refresh stack files, upgrade packages and restart
+Docker, so review any existing workloads first. At the end the script prints the server's public
+Ed25519 host key line for step 6. Verify new logins for both `ubuntu` and `firstroll`, effective
+`sshd -T` settings, firewall rules and `docker compose config --quiet` before closing the original
+administrator session. Package updates may require a separately scheduled reboot.
+
+On Ubuntu's socket-activated SSH setup, an OpenSSH upgrade can leave `ssh.socket` active but
+`ssh.service` stopped, with `/run/sshd` absent. The bootstrap starts `ssh.service` before its final
+standalone `sshd -t`, letting systemd create that runtime directory. It then validates and reloads;
+failure must not be worked around by weakening SSH authentication.
+
+Tencent's cloud firewall is separate from `ufw`: verify it allows the intended SSH/deployment and
+web traffic too. Do not expose the API's internal port 10000. Preparing files does not start Caddy,
+obtain certificates, change DNS or deploy the application.
 
 Then edit the private environment file on the server:
 
 ```bash
-ssh firstroll@SERVER_IP
+ssh -i ~/.ssh/firstroll-vps-deploy -o StrictHostKeyChecking=yes firstroll@SERVER_IP
 nano /opt/firstroll/.env     # set CADDY_ACME_EMAIL; leave FIRSTROLL_IMAGE_DIGEST as printed
 ```
 
@@ -104,7 +141,10 @@ In Spaceship, replace the Azure records with the server address:
 |---|---|---|
 | `firstroll.app` | A | `SERVER_IP` (replaces the Static Web Apps records) |
 | `api.firstroll.app` | A | `SERVER_IP` (replaces the `*.azurecontainerapps.io` CNAME) |
-| `asuid.api.firstroll.app` | TXT | delete; it was only Azure's domain verification |
+| `asuid.api.firstroll.app` | TXT | Leave in place during cut-over; remove later only if no longer needed |
+
+Save the previous records first. Replace only conflicting website/API records, check for stale AAAA
+records, and preserve unrelated mail and verification records.
 
 Wait until `dig +short firstroll.app` and `dig +short api.firstroll.app` both return the server
 address before continuing, otherwise certificate issuance fails and is rate-limited by Let's Encrypt.
@@ -112,7 +152,7 @@ address before continuing, otherwise certificate issuance fails and is rate-limi
 ### 5. Start Caddy and obtain certificates
 
 ```bash
-ssh firstroll@SERVER_IP
+ssh -i ~/.ssh/firstroll-vps-deploy -o StrictHostKeyChecking=yes firstroll@SERVER_IP
 docker compose --project-directory /opt/firstroll up -d --no-deps caddy
 docker compose --project-directory /opt/firstroll logs -f caddy
 ```
@@ -125,7 +165,7 @@ only Caddy is deliberate: the API image is published by the release workflow, no
 
 | Location | Name | Value |
 |---|---|---|
-| `production` environment secret | `VPS_SSH_PRIVATE_KEY` | contents of `~/.ssh/firstroll-deploy` |
+| `production` environment secret | `VPS_SSH_PRIVATE_KEY` | contents of `~/.ssh/firstroll-vps-deploy` |
 | Repository variable | `VPS_HOST` | the server IP address (or a hostname that resolves to it) |
 | Repository variable | `VPS_SSH_HOST_KEY` | the `ssh-ed25519 AAAA...` line printed by `bootstrap.sh` |
 | Repository variable | `VPS_USER` | `firstroll` (optional; this is the default) |
@@ -136,8 +176,9 @@ disable `Frontend Release` from **Actions → Frontend Release → ⋯ → Disab
 would otherwise build a candidate on every `master` push and fail at the Azure token.
 
 After the first build, open your GitHub **Packages** list, select `firstroll-api` and confirm its
-visibility is **Public**. The server pulls the image anonymously; the repository is public GPL code,
-so the image contains nothing private.
+visibility is **Public** only after inspecting the build inputs for secrets and private data. The
+server currently pulls anonymously; a public repository alone does not prove an image is safe to
+publish. Confirm that `production` has a required human reviewer before enabling releases.
 
 ### 7. Run the first release
 
@@ -161,7 +202,8 @@ Confirm in a browser: `https://firstroll.app/release.json` names the merged comm
 docker compose --project-directory /opt/firstroll logs --tail 200 api  # API log
 /opt/firstroll/deploy.sh rollback                                      # previous release
 docker compose --project-directory /opt/firstroll up -d api            # apply a .env change
-sudo reboot                                                            # containers restart themselves
+# Reboot through the administrator's ubuntu account, not the deployment account:
+# sudo reboot
 ```
 
 Enable Deep Study by setting `FIRSTROLL_DEEP_STUDY_ENABLED=true` and `DEEPSEEK_API_KEY` in
@@ -174,14 +216,16 @@ Rotate the deploy key by generating a new pair, appending the public key to
 
 ### 9. Cost, limits and risks
 
-- The bill is a flat monthly server price regardless of traffic; there is no per-request charge and
-  no free tier to fall out of.
+- The purchased instance has a prepaid server term and a finite traffic allowance. Excess traffic,
+  optional services and renewal may cost extra; check the account's actual rates and alerts. Paid
+  model/API usage is a separate cost.
 - One server is a single point of failure with no autoscaling and no CDN; static assets are served
   from one region. Each release restarts the API container, so the API is unavailable for a few
   seconds while Caddy keeps serving the static shell.
-- The deploy key is a long-lived credential, unlike the Azure OIDC exchange. It lives only in the
-  approval-bound `production` environment, is restricted to one pinned host and should be rotated if
-  it is ever exposed. Membership of the `docker` group is equivalent to root on that host.
+- The deploy key is a long-lived credential, unlike the Azure OIDC exchange. Its private half stays
+  on the operator's Mac and, once configured, in the approval-bound `production` environment. The
+  workflow pins the server identity; this does not itself restrict where a stolen key could be
+  used. Rotate the key if exposed. Membership of the `docker` group is equivalent to root.
 - Rollback needs the previous image in GitHub Container Registry and the previous site directory on
   the server; the very first release has nothing to roll back to.
 - Public criticism and video sources may treat the new IP address differently from Azure's. Their
