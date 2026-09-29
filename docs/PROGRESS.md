@@ -13,8 +13,8 @@ Status vocabulary:
 
 ## Current Snapshot
 
-**Last updated:** 29 September 2026 (preparation PRs #45/#46 merged; `master` at `1a8e2b6` has green CI;
-protected VPS access, provider-key presence and cloud HTTPS ingress verified; candidate preparation authorised)
+**Last updated:** 29 September 2026 (readiness PR #47 merged; `f1192476` CI passed; first candidate
+cancelled before approval after failure-path review; activation recovery fixes pass 642 local tests)
 
 **Release stage:** local working prototype; the public beta is offline. The Azure Free Trial
 subscription was disabled when its credit expired (observed 27 September 2026), suspending the Static
@@ -22,15 +22,16 @@ Web App and the Container Apps environment. A single-server hosting path (`infra
 `VPS Release` workflow) is implemented and tested locally. The purchased Tencent Lighthouse server
 is bootstrapped and verified after reboot. Protected GitHub VPS access and the certificate contact
 are configured. The owner has added the provider keys and cloud HTTPS rule; presence/permission
-checks pass. Candidate preparation is authorised; image-pull verification, DNS/TLS, exact-run
-production approval and a recovery drill remain. Paid Deep Study stays disabled.
+checks pass. The VPS workflow is enabled. Its first candidate built successfully but was cancelled
+before approval after failure-path review. A replacement candidate, image-pull verification,
+DNS/TLS, exact-run production approval and a recovery drill remain. Paid Deep Study stays disabled.
 
 **Primary development URL:** `http://127.0.0.1:8000`
 **Public beta URL:** `https://firstroll.app` (offline until the single-server cut-over)
-**Automated verification:** 618 repository tests passing (28 September 2026 run, including 30
-single-server release checks, 34 same-ASGI-loop concurrency checks and 27 Node request/race checks).
-The focused VPS suite passes 33 tests on 29 September, including three new SSH bootstrap regressions;
-the full suite was not rerun for this preparation task.
+**Automated verification:** 642 repository tests passing locally on 29 September 2026, including
+54 single-server checks, 34 same-ASGI-loop concurrency checks and 27 Node request/race checks.
+The new VPS cases simulate activation and recovery failures without touching a server. They do not
+replace first-live-release acceptance or a real recovery drill.
 
 | Area | Status | Current evidence |
 |---|---|---|
@@ -178,6 +179,32 @@ Carried from the 12 September 2026 entry:
 
 Dated entries, newest first. Entries dated 6–31 August 2026 were moved unchanged into
 [PROGRESS_ARCHIVE_2026-08.md](PROGRESS_ARCHIVE_2026-08.md) on 27 September 2026.
+
+### 29 September 2026 — First candidate held; deployment failure handling corrected
+
+Readiness PR #47 merged after green checks; exact-master CI at `f1192476` passed 621 tests.
+Enabled `VPS_RELEASE_ENABLED`. Candidate run `36532955695` passed frontend/container build, npm
+audit and container smoke checks, uploaded its sealed package and stopped at the human gate.
+It was cancelled without approval when a read-only review reproduced a shell error-propagation bug.
+
+- Bash suppresses `set -e` inside conditionally called functions: failed digest writes, image pulls,
+  site switches or Caddy reloads could reach a success-state write. Activation and multi-command
+  helpers now propagate failures explicitly; environment and current-release writes are atomic.
+- A failed local activation restores the pre-release site and digest. With a real previous release
+  it checks that API again; on first deployment it stops the candidate API and restores the bootstrap
+  site, never attempting to pull the all-zero placeholder digest. Failed recovery retains files and
+  explicitly requires manual intervention.
+- Each attempt uses a unique site directory, so same-commit retries cannot delete the active site.
+- A failed rollback-record write recovers the previous state; housekeeping failures are warnings
+  so an already active release still reaches the runner's live verification.
+- GitHub performs post-deployment rollback only after a successful rollout whose live check fails,
+  avoiding a second rollback after local recovery. A first successful release still has no previous
+  application target for post-verification rollback. Stack/configuration and database rollback are
+  not claimed.
+
+Verification: 642 tests pass, including 54 focused VPS checks; Ruff, shell syntax and diff checks
+pass. No DNS change, application deployment, production approval or paid model call occurred.
+Build fingerprints for the cancelled candidate remain in its GitHub artefact; it must not be deployed.
 
 ### 29 September 2026 — Provider configuration and HTTPS ingress verified
 

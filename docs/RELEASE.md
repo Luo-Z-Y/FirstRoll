@@ -69,17 +69,26 @@ runs `deploy.sh release <commit> <digest> <archive>`.
 
 On the server, `deploy.sh` pulls the image by digest, starts it and waits until `/api/health`
 reports the expected baked commit; only then does it switch `releases/current` to the new site and
-reload Caddy. The runner then verifies from outside that `/release.json` equals the receipt, every
+reload Caddy. Each activation step explicitly propagates errors even inside Bash conditionals;
+the current-release record is written atomically only after all steps succeed. Every attempt gets
+a unique site directory, including retries of the same commit. A local failure restores the
+pre-release site and API, or restores the bootstrap site and stops the API if none was previously
+deployed. Recovery failure retains the candidate and reports the need for manual intervention.
+The runner then verifies from outside that `/release.json` equals the receipt, every
 inventoried file matches its fingerprint, `/api/health` reports the commit, `/api/contract` and
 `/api/discovery/status` respond, `/docs`, `/redoc` and `/openapi.json` return 404, and CORS allows
-exactly `https://firstroll.app`. A failure after rollout runs `deploy.sh rollback`, which restores
-the previous digest and site, and the job stays failed so the incident is visible.
+exactly `https://firstroll.app`. Only a successful rollout followed by failed live verification runs
+`deploy.sh rollback`, which restores the previous digest and site; a locally recovered rollout is
+not rolled back a second time. The job stays failed so the incident is visible. These recovery paths
+do not restore Compose/Caddy configuration, environment settings or external data.
 
 Operating rules specific to this path:
 
 - Stop automated candidates with `VPS_RELEASE_ENABLED=false`; the running server is unaffected.
 - Rollback needs the previous image in GitHub Container Registry and the previous site directory on
-  the server. The first release has no rollback target; recovering from it means fixing forward.
+  the server. The first successful release has no previous application rollback target; a failure
+  of its subsequent live verification requires manual recovery/fixing forward. This is distinct
+  from a failed local activation, which restores the bootstrap site and stops the candidate API.
   Rolling back to an older commit than the previous release means reverting on `master`.
 - Do not edit `deploy.sh`, `Caddyfile` or `docker-compose.yml` on the server; each release overwrites
   them from the approved commit.

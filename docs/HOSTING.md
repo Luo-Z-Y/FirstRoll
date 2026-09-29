@@ -17,8 +17,10 @@ dedicated deployment secret and pinned-host variables are configured behind the 
 review; both Azure release workflows are disabled. The certificate contact is saved privately.
 The owner has added the DeepSeek/YouTube keys and cloud TCP 443 rule; presence, permissions and
 configuration checks pass. Paid Deep Study remains disabled until quota verification. Candidate
-preparation is authorised, but package/image-pull checks, DNS/TLS and exact-run production approval
-remain. See [readiness evidence](PROGRESS.md#29-september-2026--provider-configuration-and-https-ingress-verified).
+preparation is authorised and the workflow is enabled. The first candidate built successfully, but
+was cancelled before approval after failure-path review; recovery fixes are regression-tested.
+A replacement candidate, image-pull checks, DNS/TLS and exact-run production approval remain.
+See [failure-path evidence](PROGRESS.md#29-september-2026--first-candidate-held-deployment-failure-handling-corrected).
 
 FirstRoll is not merely a local application. Its public beta serves the static browser bundle and the
 Docker API from separate origins, while private-library and clip-analysis capabilities remain local
@@ -215,6 +217,13 @@ Read the step summary, then choose **Review deployments → production → Appro
 deploy job verifies the receipt, archive and current `master`, connects with the pinned host key,
 uploads the package, runs `/opt/firstroll/deploy.sh release`, and verifies the live receipt, every
 static file, the API's baked commit, hidden documentation routes and the exact CORS origin.
+
+Activation stops on every failed step. Local failure restores the pre-release site/API; during the
+first attempt it restores the bootstrap page and stops the API instead of pulling the placeholder
+digest. A failed recovery is reported, with candidate files retained. A successful first release
+still has no previous application release for rollback after an external acceptance failure: keep
+the gate closed until prerequisites pass and be prepared to fix forward. Subsequent rollback restores
+the recorded image/site only, not the stack configuration, environment or Supabase data.
 
 Confirm in a browser: `https://firstroll.app/release.json` names the merged commit, the header shows
 `vN · LIVE`, sign-in works, a search fills the shelf and a dossier opens.
