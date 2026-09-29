@@ -362,7 +362,9 @@ jobs:
         run: python3 -m tools.release.vps live --receipt vps-release/release.json --commit "$EXPECTED_SHA"
 
       - name: Roll back after failed post-deployment verification
-        if: ${{ failure() && steps.rollout.outputs.attempted == 'true' }}
+        # A failed rollout already restores its pre-release state on the server. Only
+        # undo a successful rollout whose subsequent live verification failed.
+        if: ${{ failure() && steps.rollout.outcome == 'success' }}
         run: |
           set -euo pipefail
           ssh -F "$SSH_CONFIG" firstroll /opt/firstroll/deploy.sh rollback

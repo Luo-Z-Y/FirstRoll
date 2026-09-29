@@ -36,8 +36,11 @@ keeps those layers visible instead of presenting one fluent but unsupported answ
 > key and pinned host settings are configured behind GitHub's existing human approval gate; both
 > legacy Azure release workflows are disabled. The owner has added the DeepSeek/YouTube keys and
 > cloud HTTPS rule; their presence and configuration are verified without exposing secrets. Paid
-> Deep Study stays off pending quota verification. Release-candidate preparation is authorised;
-> image-pull verification, DNS/TLS, exact-run production approval and a recovery drill remain.
+> Deep Study stays off pending quota verification. The first candidate passed its build and smoke
+> tests, but was cancelled before approval after review exposed deployment failure-handling bugs.
+> Explicit failure propagation, bootstrap/previous-site recovery and same-version retry protection
+> are now regression-tested (642 tests pass). A replacement candidate, image-pull verification,
+> DNS/TLS, exact-run production approval and a live recovery drill remain.
 
 See [Project Progress](docs/PROGRESS.md) for completed milestones, verification results,
 known limitations and the next priorities.

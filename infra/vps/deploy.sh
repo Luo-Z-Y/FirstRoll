@@ -6,8 +6,9 @@
 #   deploy.sh status
 #
 # A release pulls the API image by immutable digest, waits until the container reports the
-# expected baked commit, then switches the static site. If the API never becomes healthy the
-# previous digest is restored and the site is left untouched. The GitHub VPS Release workflow
+# expected baked commit, then switches the static site. Any activation failure restores the
+# previous site and API; a first-release failure restores the bootstrap site and stops the API.
+# Recovery failures remain failures and retain the candidate for investigation. The workflow
 # uploads this script from the approved commit before running it, so the server always
 # executes the reviewed version.
 set -euo pipefail
@@ -51,22 +52,38 @@ current_sha() {
 # Rewrite the single digest line without leaving a partially written env file.
 set_digest() {
   local digest=$1 tmp
-  tmp=$(mktemp "$root/.env.XXXXXX")
-  { grep -v '^FIRSTROLL_IMAGE_DIGEST=' "$env_file" || true; printf 'FIRSTROLL_IMAGE_DIGEST=%s\n' "$digest"; } > "$tmp"
-  chmod 0600 "$tmp"
-  mv -f "$tmp" "$env_file"
+  tmp=$(mktemp "$root/.env.XXXXXX") || return 1
+  if ! awk '!/^FIRSTROLL_IMAGE_DIGEST=/' "$env_file" > "$tmp" \
+    || ! printf 'FIRSTROLL_IMAGE_DIGEST=%s\n' "$digest" >> "$tmp" \
+    || ! chmod 0600 "$tmp" || ! mv -f "$tmp" "$env_file"; then
+    rm -f "$tmp"
+    return 1
+  fi
 }
+
+write_record() {
+  local target=$1 sha=$2 digest=$3 site=$4 tmp
+  tmp=$(mktemp "$state_dir/.record.XXXXXX") || return 1
+  if ! printf '%s %s %s\n' "$sha" "$digest" "$site" > "$tmp" \
+    || ! mv -f "$tmp" "$target"; then
+    rm -f "$tmp"
+    return 1
+  fi
+}
+
+write_current() { write_record "$current_file" "$@"; }
+write_previous() { write_record "$previous_file" "$@"; }
 
 # Switch releases/current atomically to a directory inside releases/.
 point_site() {
   local name=$1
-  [ -d "$releases/$name" ] || fail "site directory $name is missing"
-  ln -sfn "$name" "$releases/current.tmp"
+  [ -d "$releases/$name" ] || { echo "site directory $name is missing" >&2; return 1; }
+  ln -sfn "$name" "$releases/current.tmp" || return 1
   mv -Tf "$releases/current.tmp" "$releases/current"
 }
 
 start_api() {
-  "${compose[@]}" pull --quiet api
+  "${compose[@]}" pull --quiet api || return 1
   "${compose[@]}" up -d --remove-orphans
 }
 
@@ -105,12 +122,31 @@ prune_sites() {
 
 activate() {
   local sha=$1 digest=$2 site=$3
-  set_digest "$digest"
-  start_api
+  # Bash disables errexit inside functions used by `if`/`||`. Every step and every
+  # multi-command helper must propagate failure explicitly before state is committed.
+  set_digest "$digest" || return 1
+  start_api || return 1
   wait_for_api "$sha" || return 1
-  point_site "$site"
-  reload_caddy
-  printf '%s %s %s\n' "$sha" "$digest" "$site" > "$current_file"
+  point_site "$site" || return 1
+  reload_caddy || return 1
+  write_current "$sha" "$digest" "$site"
+}
+
+restore_before_release() {
+  local sha=$1 digest=$2 site=$3
+  # Restore the site before attempting API recovery; never leave a dangling candidate
+  # symlink if the old API cannot start. An empty SHA means no API has been deployed yet.
+  point_site "$site" || return 1
+  set_digest "$digest" || return 1
+  if valid_sha "$sha"; then
+    start_api || return 1
+    wait_for_api "$sha" || return 1
+    reload_caddy || return 1
+    write_current "$sha" "$digest" "$site" || return 1
+  else
+    # The bootstrap digest is a placeholder, not a downloadable rollback image.
+    "${compose[@]}" stop api || return 1
+  fi
 }
 
 release() {
@@ -124,32 +160,37 @@ release() {
   previous_sha=$(current_sha)
   previous_digest=$(current_digest)
   previous_site=$(current_site)
-  site="site-$sha"
-
-  staging=$(mktemp -d "$releases/.staging.XXXXXX")
+  # Each attempt gets a new directory, including retries of the same commit. Never
+  # remove a directory that the current or previous release may still reference.
+  staging=$(mktemp -d "$releases/site-$sha.XXXXXX")
+  site=$(basename "$staging")
   tar --no-same-owner -xzf "$archive" -C "$staging"
   [ -f "$staging/index.html" ] || { rm -rf "$staging"; fail "site archive lacks index.html"; }
   [ -f "$staging/release.json" ] || { rm -rf "$staging"; fail "site archive lacks release.json"; }
   chmod 0755 "$staging"
-  rm -rf "${releases:?}/${site:?}"
-  mv "$staging" "$releases/$site"
 
   if activate "$sha" "$digest" "$site"; then
-    if valid_sha "$previous_sha" && valid_digest "$previous_digest"; then
-      printf '%s %s %s\n' "$previous_sha" "$previous_digest" "$previous_site" > "$previous_file"
+    if valid_sha "$previous_sha" && valid_digest "$previous_digest" \
+      && ! write_previous "$previous_sha" "$previous_digest" "$previous_site"; then
+      echo "Could not record the rollback target; recovering the pre-release state." >&2
+    else
+      # Housekeeping is not activation. A pruning problem must not turn an active
+      # release into a failed rollout that skips the runner's live verification.
+      prune_sites || echo "Warning: old site cleanup failed." >&2
+      docker image prune -f >/dev/null || echo "Warning: unused image cleanup failed." >&2
+      echo "Released $sha ($digest)"
+      return 0
     fi
-    prune_sites
-    docker image prune -f >/dev/null
-    echo "Released $sha ($digest)"
-    return 0
   fi
 
-  echo "The API did not report release $sha; restoring the previous image." >&2
-  if valid_digest "$previous_digest"; then
-    set_digest "$previous_digest"
-    start_api || true
+  echo "Release activation failed; restoring the pre-release site and API state." >&2
+  if restore_before_release "$previous_sha" "$previous_digest" "$previous_site"; then
+    if [ "$(current_site)" != "$site" ]; then
+      rm -rf "${releases:?}/${site:?}"
+    fi
+  else
+    echo "Recovery also failed; candidate files retained. Manual recovery is required." >&2
   fi
-  rm -rf "${releases:?}/${site:?}"
   exit 1
 }
 

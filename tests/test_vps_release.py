@@ -189,7 +189,7 @@ class TestWorkflowPolicy:
         assert "deploy.sh release '$COMMIT_SHA' '$IMAGE_DIGEST'" in rollout["run"]
         rollback = step(workflow, "deploy", "Roll back after failed post-deployment verification")
         assert "failure()" in rollback["if"]
-        assert "steps.rollout.outputs.attempted == 'true'" in rollback["if"]
+        assert "steps.rollout.outcome == 'success'" in rollback["if"]
         assert "deploy.sh rollback" in rollback["run"]
         assert "python3 -m tools.release.vps health" in rollback["run"]
         live = step(workflow, "deploy", "Verify the live site and API identity")
@@ -392,6 +392,200 @@ class TestDeployScript:
         assert 'body.get("release_sha") == sys.argv[1]' in DEPLOY
         assert "mv -Tf" in DEPLOY
         assert "--no-same-owner" in DEPLOY
+
+
+class TestDeploymentFailures:
+    """Execute the real shell control flow with Docker replaced by harmless stubs."""
+
+    def run_shell(self, tmp_path, body, **variables):
+        definitions = DEPLOY.split("\ncase ${1:-} in", 1)[0]
+        return subprocess.run(
+            ["bash", "-c", definitions + "\n" + body],
+            env={**os.environ, "FIRSTROLL_INSTALL_ROOT": str(tmp_path), **variables},
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+
+    @pytest.mark.parametrize(
+        "failure",
+        ["set_digest", "start_api", "wait_for_api", "point_site", "reload_caddy", "write_current"],
+    )
+    def test_activation_stops_at_each_failed_step(self, tmp_path, failure):
+        operations = [
+            "set_digest",
+            "start_api",
+            "wait_for_api",
+            "point_site",
+            "reload_caddy",
+            "write_current",
+        ]
+        stubs = "\n".join(
+            f'{name}() {{ echo {name}; test "$FAIL_AT" != {name}; }}' for name in operations
+        )
+        result = self.run_shell(
+            tmp_path,
+            stubs + "\nif activate a b c; then echo false-success; exit 0; else exit 7; fi",
+            FAIL_AT=failure,
+        )
+        assert result.returncode == 7
+        assert result.stdout.splitlines() == operations[: operations.index(failure) + 1]
+
+    def test_failed_image_pull_does_not_start_services(self, tmp_path):
+        result = self.run_shell(
+            tmp_path,
+            'docker() { echo "$*"; return 1; }\nif start_api; then exit 0; else exit 7; fi',
+        )
+        assert result.returncode == 7
+        assert "pull --quiet api" in result.stdout
+        assert "up -d" not in result.stdout
+
+    def test_failed_symlink_creation_does_not_move_it(self, tmp_path):
+        (tmp_path / "releases" / "site-test").mkdir(parents=True)
+        result = self.run_shell(
+            tmp_path,
+            "ln() { return 1; }\nmv() { echo wrong-move; }\n"
+            "if point_site site-test; then exit 0; else exit 7; fi",
+        )
+        assert result.returncode == 7
+        assert "wrong-move" not in result.stdout
+
+    def test_failed_environment_rewrite_preserves_the_original(self, tmp_path):
+        original = "FIRSTROLL_IMAGE_DIGEST=old\nPRIVATE_SETTING=preserve-me\n"
+        (tmp_path / ".env").write_text(original)
+        result = self.run_shell(
+            tmp_path,
+            "awk() { return 1; }\nif set_digest new; then exit 0; else exit 7; fi",
+        )
+        assert result.returncode == 7
+        assert (tmp_path / ".env").read_text() == original
+        assert list(tmp_path.glob(".env.*")) == []
+
+    def transaction(
+        self, tmp_path, *, previous=False, failure="", recovery_failure=False, same_sha=False
+    ):
+        releases = tmp_path / "releases"
+        state = tmp_path / "state"
+        releases.mkdir()
+        state.mkdir()
+        old_site = f"site-{COMMIT}" if same_sha else "site-old" if previous else "site-bootstrap"
+        (releases / old_site).mkdir()
+        (releases / old_site / "index.html").write_text("previous site")
+        (releases / "current").symlink_to(old_site)
+        old_digest = "sha256:" + ("c" if previous else "0") * 64
+        (tmp_path / ".env").write_text(f"FIRSTROLL_IMAGE_DIGEST={old_digest}\n")
+        if previous:
+            (state / "current-release").write_text(
+                f"{COMMIT if same_sha else 'd' * 40} {old_digest} {old_site}\n"
+            )
+            (state / "previous-release").write_text("older recorded release\n")
+        site = tmp_path / "payload"
+        site.mkdir()
+        (site / "index.html").write_text("candidate site")
+        (site / "release.json").write_text("{}")
+        archive = tmp_path / "site.tar.gz"
+        with tarfile.open(archive, "w:gz") as tar:
+            for path in site.iterdir():
+                tar.add(path, arcname=path.name)
+        stubs = r"""
+# No real Docker calls, waits, pruning or platform-specific symlink moves occur.
+docker() { printf '%s\n' "$*" >> "$root/docker-calls"; test "$FAIL_AT" != image_prune; }
+prune_sites() { test "$FAIL_AT" != prune_sites; }
+write_previous() {
+  test "$FAIL_AT" != write_previous || return 1
+  write_record "$previous_file" "$@"
+}
+start_api() {
+  printf 'start:%s\n' "$(current_digest)" >> "$root/events"
+  if [ "$(current_digest)" = "$OLD_DIGEST" ] && [ "$RECOVERY_FAILURE" = 1 ]; then return 1; fi
+  test "$FAIL_AT" != start_api
+}
+wait_for_api() { test "$FAIL_AT" != wait_for_api || test "$1" != "$NEW_SHA"; }
+point_site() { ln -sfn "$1" "$releases/current"; }
+reload_caddy() {
+  if [ "$FAIL_AT" = reload_caddy ] && [ "$(current_digest)" != "$OLD_DIGEST" ]; then return 1; fi
+}
+release "$NEW_SHA" "$NEW_DIGEST" "$ARCHIVE"
+"""
+        result = self.run_shell(
+            tmp_path,
+            stubs,
+            NEW_SHA=COMMIT,
+            NEW_DIGEST=IMAGE_DIGEST,
+            OLD_DIGEST=old_digest,
+            ARCHIVE=str(archive),
+            FAIL_AT=failure,
+            RECOVERY_FAILURE=str(int(recovery_failure)),
+        )
+        return result, old_site, old_digest
+
+    @pytest.mark.parametrize("failure", ["start_api", "wait_for_api", "reload_caddy"])
+    def test_first_activation_failure_restores_bootstrap_without_pulling_zero_digest(
+        self, tmp_path, failure
+    ):
+        result, old_site, old_digest = self.transaction(tmp_path, failure=failure)
+        assert result.returncode != 0
+        assert (tmp_path / "releases" / "current").readlink() == Path(old_site)
+        assert old_digest in (tmp_path / ".env").read_text()
+        assert not (tmp_path / "state" / "current-release").exists()
+        assert not (tmp_path / "state" / "previous-release").exists()
+        assert "stop api" in (tmp_path / "docker-calls").read_text()
+        assert old_digest not in (tmp_path / "events").read_text()
+        assert list((tmp_path / "releases").glob(f"site-{COMMIT}.*")) == []
+
+    @pytest.mark.parametrize("failure", ["wait_for_api", "reload_caddy", "write_previous"])
+    def test_later_failure_restores_exact_previous_release(self, tmp_path, failure):
+        result, old_site, old_digest = self.transaction(tmp_path, previous=True, failure=failure)
+        assert result.returncode != 0
+        assert (tmp_path / "releases" / "current").readlink() == Path(old_site)
+        assert (
+            tmp_path / "state" / "current-release"
+        ).read_text() == f"{'d' * 40} {old_digest} {old_site}\n"
+        assert (tmp_path / "state" / "previous-release").read_text() == "older recorded release\n"
+        assert (tmp_path / "events").read_text().splitlines()[-1] == f"start:{old_digest}"
+
+    def test_failed_recovery_retains_candidate_and_reports_manual_action(self, tmp_path):
+        result, old_site, _ = self.transaction(
+            tmp_path, previous=True, failure="reload_caddy", recovery_failure=True
+        )
+        assert result.returncode != 0
+        assert "Recovery also failed" in result.stderr
+        assert (tmp_path / "releases" / "current").readlink() == Path(old_site)
+        assert len(list((tmp_path / "releases").glob(f"site-{COMMIT}.*"))) == 1
+
+    def test_success_records_new_release_and_keeps_old_site(self, tmp_path):
+        result, old_site, old_digest = self.transaction(tmp_path, previous=True)
+        assert result.returncode == 0, result.stderr
+        active = (tmp_path / "releases" / "current").readlink()
+        assert str(active).startswith(f"site-{COMMIT}.")
+        assert (
+            tmp_path / "state" / "current-release"
+        ).read_text() == f"{COMMIT} {IMAGE_DIGEST} {active}\n"
+        assert (
+            tmp_path / "state" / "previous-release"
+        ).read_text() == f"{'d' * 40} {old_digest} {old_site}\n"
+        assert (tmp_path / "releases" / old_site / "index.html").read_text() == "previous site"
+
+    def test_workflow_does_not_roll_back_an_already_recovered_rollout(self):
+        rollback = step(
+            load_workflow(WORKFLOW), "deploy", "Roll back after failed post-deployment verification"
+        )
+        assert "steps.rollout.outcome == 'success'" in rollback["if"]
+        assert "attempted" not in rollback["if"]
+
+    def test_same_commit_retry_never_deletes_the_active_site(self, tmp_path):
+        result, old_site, _ = self.transaction(tmp_path, previous=True, same_sha=True)
+        assert result.returncode == 0, result.stderr
+        assert (tmp_path / "releases" / old_site / "index.html").read_text() == "previous site"
+        assert str((tmp_path / "releases" / "current").readlink()) != old_site
+
+    @pytest.mark.parametrize("failure", ["prune_sites", "image_prune"])
+    def test_housekeeping_failure_still_allows_live_verification(self, tmp_path, failure):
+        result, _, _ = self.transaction(tmp_path, previous=True, failure=failure)
+        assert result.returncode == 0, result.stderr
+        assert "Warning:" in result.stderr
+        assert "Released " in result.stdout
+        assert (tmp_path / "state" / "current-release").read_text().startswith(COMMIT)
 
 
 class TestReleaseTooling:
