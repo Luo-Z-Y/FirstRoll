@@ -1,8 +1,9 @@
 # FirstRoll Public Beta Hosting
 
-**Deployment status:** Offline. The Azure Free Trial subscription was disabled when its credit
-expired (observed 27 September 2026), which suspended both the Static Web App and the Container
-Apps environment. The public beta is being moved to one rented Linux server.
+**Deployment status:** **v219 is live on Tencent Lighthouse**, revision `b678e52e`, following explicit
+owner approval of release run `36534759362` on 29 September 2026. GitHub's live verification passed.
+The former Azure deployment is no longer the DNS target; clients with old cached DNS answers may
+still see its error page temporarily. Browser acceptance remains pending local DNS-cache expiry.
 
 **Visitor URL:** `https://firstroll.app`
 
@@ -10,21 +11,18 @@ Apps environment. The public beta is being moved to one rented Linux server.
 
 **Last reconciled:** 29 September 2026
 
-**Preparation checkpoint:** Tencent VPS purchased and bootstrapped. Separate administrator and
-deployment logins, Docker/Compose, UFW and unattended updates pass after the owner-approved reboot.
-Caddy configuration validates, but its public service and the API have not been started. GitHub's
-dedicated deployment secret and pinned-host variables are configured behind the existing owner
-review; both Azure release workflows are disabled. The certificate contact is saved privately.
-The owner has added the DeepSeek/YouTube keys and cloud TCP 443 rule; presence, permissions and
-configuration checks pass. Paid Deep Study remains disabled until quota verification. Candidate
-preparation is authorised and the workflow is enabled. The first candidate built successfully, but
-was cancelled before approval after failure-path review; recovery fixes are regression-tested.
-A replacement candidate, image-pull checks, DNS/TLS and exact-run production approval remain.
-See [failure-path evidence](PROGRESS.md#29-september-2026--first-candidate-held-deployment-failure-handling-corrected).
+**Launch checkpoint:** The dedicated deployment key and pinned SSH host are protected by the
+unchanged human production gate. Both Azure release workflows remain disabled. The approved image
+was pulled anonymously by digest; Caddy and the API are running. Health reports the exact source
+revision, generated API docs return 404 and unauthenticated account access returns 401. Paid Deep
+Study and video analysis remain disabled. DeepSeek/YouTube key presence is verified, but no paid
+model call or authenticated quota test was performed. TMDb is absent; open catalogue fallback is
+active. There is no previous working VPS release for application rollback. See the
+[launch evidence](PROGRESS.md#29-september-2026--v219-deployed-to-tencent-with-owner-approval).
 
 FirstRoll is not merely a local application. Its public beta serves the static browser bundle and the
 Docker API from separate origins, while private-library and clip-analysis capabilities remain local
-by design. The current target is a single self-managed server on which Caddy terminates TLS for both
+by design. The current host is a single self-managed server on which Caddy terminates TLS for both
 hostnames, serves the static release and proxies the API container:
 
 ```text

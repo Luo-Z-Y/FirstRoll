@@ -1,10 +1,10 @@
 # FirstRoll Architecture
 
 **Status:** Current implementation  
-**Last reconciled:** 28 September 2026
+**Last reconciled:** 29 September 2026
 
-FirstRoll is a local-first film-study system with a hosted public beta that is moving from Azure
-to a single self-managed server. “Local-first”
+FirstRoll is a local-first film-study system with a hosted public beta running on one Tencent
+Lighthouse server in Singapore (v219, owner-approved deployment on 29 September 2026). “Local-first”
 describes where private books, credentials, derived vectors and uploaded film clips are kept; it does
 not mean the product is available only on one computer.
 

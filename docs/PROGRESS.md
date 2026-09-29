@@ -13,21 +13,19 @@ Status vocabulary:
 
 ## Current Snapshot
 
-**Last updated:** 29 September 2026 (readiness PR #47 merged; `f1192476` CI passed; first candidate
-cancelled before approval after failure-path review; activation recovery fixes pass 642 local tests)
+**Last updated:** 29 September 2026 (v219 deployed with exact-run owner approval; DNS/HTTPS and
+workflow live checks pass; browser acceptance pending local DNS-cache expiry)
 
-**Release stage:** local working prototype; the public beta is offline. The Azure Free Trial
-subscription was disabled when its credit expired (observed 27 September 2026), suspending the Static
-Web App and the Container Apps environment. A single-server hosting path (`infra/vps` and the
-`VPS Release` workflow) is implemented and tested locally. The purchased Tencent Lighthouse server
-is bootstrapped and verified after reboot. Protected GitHub VPS access and the certificate contact
-are configured. The owner has added the provider keys and cloud HTTPS rule; presence/permission
-checks pass. The VPS workflow is enabled. Its first candidate built successfully but was cancelled
-before approval after failure-path review. A replacement candidate, image-pull verification,
-DNS/TLS, exact-run production approval and a recovery drill remain. Paid Deep Study stays disabled.
+**Release stage:** public beta v219 is running on Tencent Lighthouse in Singapore. The owner
+approved the two-record DNS switch and exact production run `36534759362`; the workflow deployed
+commit `b678e52e14deb84cdf7d2d1653e2c44405e0d988` and passed its external receipt/file/API/CORS
+verification. Both hostnames have valid HTTPS and public DNS points to `119.28.111.192`. This
+computer's browser still receives a cached Azure answer for the root domain, so browser sign-in and
+interactive acceptance are not yet claimed. Paid Deep Study stays disabled; quota verification and
+a live recovery drill remain. No previous working VPS release exists.
 
 **Primary development URL:** `http://127.0.0.1:8000`
-**Public beta URL:** `https://firstroll.app` (offline until the single-server cut-over)
+**Public beta URL:** `https://firstroll.app` (v219 live; old DNS caches may temporarily reach Azure)
 **Automated verification:** 642 repository tests passing locally on 29 September 2026, including
 54 single-server checks, 34 same-ASGI-loop concurrency checks and 27 Node request/race checks.
 The new VPS cases simulate activation and recovery failures without touching a server. They do not
@@ -40,7 +38,7 @@ replace first-live-release acceptance or a real recovery drill.
 | Product navigation | Complete | Discover, Analyse and Settings preserve per-tab view content and scroll; a versioned `sessionStorage` snapshot makes the Discover workspace refresh-safe; Study remains consolidated into Discover |
 | Theme support | Complete | System-aware light/dark themes with a locally persisted accessible toggle |
 | Local settings | Complete | Write-only connector credentials plus local add, remove and index controls for the private library |
-| Hosted public beta | In progress — offline | Tencent host, protected deployment access, provider-key presence and cloud TCP 443 verified. Preparing the candidate; image-pull checks, DNS/TLS and exact-run production approval remain |
+| Hosted public beta | Live — browser acceptance pending | v219 deployed on Tencent with owner approval; HTTPS and full workflow live verification pass; local root-domain DNS cache still reaches Azure |
 | Accounts and quotas | Complete | Supabase email authentication, atomic daily Deep Study quotas and a launch-independent localhost test account |
 | Authenticated research progress | Implemented | Allow-listed SSE lifecycle events, owner-scoped result retrieval and secret/evidence redaction tests; final interactive browser observation remains pending |
 | Private library catalogue | Complete | Seven existing film-study PDFs retained; managed uploads and non-destructive removal; paths and content withheld from public APIs |
@@ -60,7 +58,7 @@ replace first-live-release acceptance or a real recovery drill.
 | Evidence-layered UI | Complete | Inspectable progress, packet and citations; quality status, validated `S*`/`C*`/`E*` citations, retrieval rationale and expandable excerpts; WCAG-audited keyboard flow |
 | Fixed-workflow evaluation baseline | Complete | Frozen, fingerprinted fixed/Agent/A01/A02 metrics; the entry gate passes all 17 targets and 11 required steps; GuideLLM/lm-eval tooling is mock-qualified only |
 | Autonomous research Agent | Blocked | Local, default-off. A01R class-aware acquisition and A02R patch-reliability harnesses are implemented with native tool calls; every paid comparison so far failed at least one gate, production remains NO-GO and no evaluation budget has been released since 31 August |
-| Release delivery | Complete — live proof pending | Protected `master`, human `production` gate, versioned receipts and rollback across all three workflows; `VPS Release` (digest deployment over a pinned SSH host key) is the current path and the Azure workflows are inert legacy paths |
+| Release delivery | Live release verified — recovery drill pending | Protected master, exact-run owner approval, sealed v219 receipt, digest deployment over pinned SSH and successful external live checks; legacy Azure workflows remain disabled |
 | Web responsiveness | In progress | Blocking API work offloaded to the worker pool, dossier-lifetime fetch cancellation, pre-authentication Deep Study cancel controls and minified assets, measured synthetically; live profiling of search → shelf → dossier → reception is still required |
 | Clip analysis | Complete | Scene/shot metrics, shot scale, colour, objects and JSON/CSV export (local edition only) |
 | Clip evidence in Deep Study | Planned (deferred) | Deferred until the text Agent programme is accepted; study generation does not consume measured clip observations or timecodes |
@@ -69,7 +67,7 @@ replace first-live-release acceptance or a real recovery drill.
 
 ## Next Milestone
 
-### Single-server cut-over — In progress (server prepared; deployment not authorised)
+### Single-server cut-over — Live (interactive acceptance and recovery drill pending)
 
 Objective: bring `firstroll.app` and `api.firstroll.app` back online on one rented server without
 weakening the human production gate.
@@ -93,14 +91,15 @@ Acceptance criteria:
 - [x] Owner added DeepSeek/YouTube keys; presence and private configuration validated without values.
 - [x] Cloud TCP 443 allow rule observed after the owner's setup.
 - [ ] Authenticated quota readiness verified before enabling paid Deep Study.
-- [ ] DNS moved from Azure; certificates issued.
-- [ ] VPS release activation enabled; candidate built; image contents/visibility and server pull verified.
+- [x] DNS moved from Azure; certificates issued for both hostnames.
+- [x] VPS release activation enabled; candidate built; image inputs and anonymous digest pull verified.
+- [x] Exact-run owner approval; deployment and external live verification pass.
 - [ ] First owner-approved release verified in a browser (receipt, sign-in, search, shelf, dossier).
 - [ ] Rollback drill on the server.
 
-Next boundary: prepare and verify the candidate, check its image can be pulled, then complete the
-agreed DNS/TLS cut-over and obtain approval for the exact first `production` run. General permission
-to prepare/deploy does not override the exact-run production gate or authorise database migration.
+Next boundary: complete interactive browser acceptance after DNS caches refresh, verify the
+authenticated quota boundary before enabling paid Deep Study, then plan a separately approved live
+recovery drill. The v219 approval does not approve another run, a database migration or paid calls.
 
 ### Autonomous Agent causal ablations — Blocked (awaiting owner evaluation budget)
 
@@ -179,6 +178,36 @@ Carried from the 12 September 2026 entry:
 
 Dated entries, newest first. Entries dated 6–31 August 2026 were moved unchanged into
 [PROGRESS_ARCHIVE_2026-08.md](PROGRESS_ARCHIVE_2026-08.md) on 27 September 2026.
+
+### 29 September 2026 — v219 deployed to Tencent with owner approval
+
+After the owner explicitly confirmed the named v219 launch, changed only Spaceship's `@` and `api`
+CNAME records to A records for `119.28.111.192`. Reloaded the dashboard to confirm persistence;
+both existing TXT records and nameservers are unchanged. Public DNS-over-HTTPS and the VPS resolver
+confirm the new address. The local resolver/browser still caches Azure for the root domain; that
+temporary Azure 404 is not a VPS application response.
+
+Started Caddy without the API, verified trusted HTTPS for both exact hostnames, then approved only
+production run `36534759362` for commit `b678e52e14deb84cdf7d2d1653e2c44405e0d988`. The gate and
+branch policy were not weakened. The run completed successfully at 07:22 UTC, including receipt and
+archive checks before credentials, current-master checks, pinned SSH, release activation, external
+checks of every static asset, exact API identity, hidden documentation and CORS.
+
+- Image: `ghcr.io/luo-z-y/firstroll-api@sha256:9b7993d4fbe5abde15ade85cfa53d38d394636911bf192ff7f2118e89dc8a7a8`.
+- Live release: `vps-b678e52e-36534759362-1`, frontend version `v219`.
+- Health returns 200 with the approved SHA; docs/redoc/OpenAPI and private settings return 404;
+  account identity without a token returns 401. Public mode is on; Deep Study/video analysis are off.
+- Both containers have zero restarts in the initial inspection; the API is healthy. Initial memory
+  use was approximately 67 MiB for the API and 59 MiB for Caddy, not a sustained-load benchmark.
+- Public search returned the intended *In the Mood for Love* (2000) record in approximately eight
+  seconds using Wikidata/Wikipedia; TMDb remains unconfigured.
+- Its dossier returned the correct identity in 2.71 seconds; the director-only shelf endpoint
+  returned 12 films in 4.61 seconds. These are individual API samples, not browser/load benchmarks.
+
+Browser sign-in and interactive shelf/dossier acceptance, a full observation window and a real
+recovery drill are outstanding. No account/password change, database migration or paid model call
+was performed. No earlier VPS application release exists to roll back to. Documentation is kept on
+a separate branch; no further production run is approved by this launch.
 
 ### 29 September 2026 — First candidate held; deployment failure handling corrected
 

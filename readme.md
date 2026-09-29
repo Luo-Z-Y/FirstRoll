@@ -1,7 +1,7 @@
 # FirstRoll — Evidence-Grounded Film Study
 
-FirstRoll is a local-first film-study platform for filmmakers with a hosted public beta that is
-moving from Azure to a single rented server.
+FirstRoll is a local-first film-study platform for filmmakers with a hosted public beta running
+on a single Tencent Lighthouse server in Singapore.
 It combines open film metadata, attributed criticism, a private study library,
 evidence-constrained language-model synthesis and clip-based visual analysis. The hosted and local
 editions share the discovery and study architecture, while private books and clip analysis remain
@@ -11,12 +11,13 @@ The central rule is simple: identity records, critic reports, theory frameworks,
 hypotheses and measured film observations are different kinds of evidence. FirstRoll
 keeps those layers visible instead of presenting one fluent but unsupported answer.
 
-> **Current status:** local working prototype; the public beta is offline while it moves from the
-> expired Azure subscription to one rented server. Discover,
+> **Current status:** public beta **v219** is deployed on Tencent Lighthouse as of 29 September 2026
+> (revision `b678e52e`, approved release run `36534759362`). Discover,
 > private-library retrieval, Crossref scholarship, optional Douban, Letterboxd and Guardian
 > criticism, DeepSeek synthesis and clip analysis are implemented. The hosted edition publishes
-> discovery, the native director shelf and authenticated Deep Study while keeping private-library
-> tools, clip analysis and unauthenticated model use disabled. Supabase email authentication, atomic
+> discovery, the native director shelf and accounts. Authenticated Deep Study is implemented but
+> stays disabled for this launch pending quota verification. Hosted private-library tools,
+> clip analysis and unauthenticated model use remain disabled. Supabase email authentication, atomic
 > daily quotas and redacted SSE research progress are implemented. The fixed-workflow entry gate now
 > passes all 17 targets and 11 required steps. The owner has authorised a default-off local Agent
 > adapter and paired comparison. The original comparison failed completion and mean-quality targets,
@@ -30,17 +31,14 @@ keeps those layers visible instead of presenting one fluent but unsupported answ
 > retention, post-approval freshness checks and live verification. The current `VPS Release` path
 > publishes the static site and the API container by immutable digest to one server over a pinned SSH
 > connection after the same human `production` approval; the Azure workflows remain as inert legacy
-> paths. The Tencent Lighthouse server is purchased and bootstrapped as of 29 September 2026:
-> Docker/Compose, key-only SSH, firewall and unattended updates are verified after an approved reboot.
-> Caddy configuration validates, but no application containers are running. The dedicated deployment
-> key and pinned host settings are configured behind GitHub's existing human approval gate; both
-> legacy Azure release workflows are disabled. The owner has added the DeepSeek/YouTube keys and
-> cloud HTTPS rule; their presence and configuration are verified without exposing secrets. Paid
-> Deep Study stays off pending quota verification. The first candidate passed its build and smoke
-> tests, but was cancelled before approval after review exposed deployment failure-handling bugs.
-> Explicit failure propagation, bootstrap/previous-site recovery and same-version retry protection
-> are now regression-tested (642 tests pass). A replacement candidate, image-pull verification,
-> DNS/TLS, exact-run production approval and a live recovery drill remain.
+> paths. Caddy serves both domains over verified HTTPS; the API is healthy and reports the approved
+> revision. The workflow verified every live static-file fingerprint, API identity, hidden docs and
+> exact CORS origin. Both Spaceship website/API records now point to `119.28.111.192`; unrelated TXT
+> records were preserved. Some clients can still see cached Azure DNS answers during propagation.
+> Deployment failure handling passes 642 tests. Browser sign-in/search/shelf acceptance remains
+> pending local DNS-cache expiry; no authenticated quota check or live recovery drill is claimed.
+> There is no previous working VPS application release to roll back to. The Azure workflows remain
+> disabled. TMDb is not configured, so discovery currently uses its open catalogue fallback.
 
 See [Project Progress](docs/PROGRESS.md) for completed milestones, verification results,
 known limitations and the next priorities.
