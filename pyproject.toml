@@ -44,6 +44,7 @@ exclude = ["img*", "models*", "tests*", "video*"]
 dev = [
     "mypy>=1.18.2",
     "pytest>=8.4.2",
+    "pyyaml>=6.0,<7.0",
     "ruff>=0.13.1",
 ]
 

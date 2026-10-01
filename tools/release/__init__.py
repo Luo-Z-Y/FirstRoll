@@ -1,7 +1,8 @@
-# tools/release — deterministic FirstRoll backend release evidence.
+# tools/release — sealed single-server (VPS) release control for FirstRoll.
 #
 # This package provides:
-#   manifest       — structured release manifest data model
-#   risk           — deterministic risk classification
-#   summary        — human-readable approval summary generation
-#   cli            — workflow integration and manifest generation
+#   protocol       — dependency-free receipt primitives (hashing, inventory, outputs)
+#   vps            — seal, verify and live-check the single-server release
+#
+# The deploy job fetches only protocol.py and vps.py from the CI-approved commit, so
+# neither module may rely on initialisation in this file.
