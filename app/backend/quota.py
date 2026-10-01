@@ -134,7 +134,6 @@ class SupabaseQuotaClient:
     """Legacy rollback adapter for the visitor-token-authorised Supabase RPC."""
 
     max_response_bytes = 128_000
-    backend_owned = False
 
     def __init__(
         self,
@@ -242,8 +241,6 @@ class PostgresQuotaClient:
     The database receives only the already verified provider and immutable subject.
     Browser bearer tokens never cross this boundary.
     """
-
-    backend_owned = True
 
     def __init__(
         self,

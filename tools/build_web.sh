@@ -8,10 +8,6 @@ output_dir="$project_root/dist"
 api_base=${FIRSTROLL_API_BASE:-}
 supabase_url=${FIRSTROLL_SUPABASE_URL:-}
 supabase_publishable_key=${FIRSTROLL_SUPABASE_PUBLISHABLE_KEY:-}
-auth_provider=${FIRSTROLL_AUTH_PROVIDER:-supabase}
-entra_authority=${FIRSTROLL_ENTRA_AUTHORITY:-}
-entra_spa_client_id=${FIRSTROLL_ENTRA_SPA_CLIENT_ID:-}
-entra_api_scope=${FIRSTROLL_ENTRA_API_SCOPE:-}
 build_channel=${FIRSTROLL_BUILD_CHANNEL:-}
 build_number=${FIRSTROLL_BUILD_NUMBER:-}
 build_commit=${FIRSTROLL_BUILD_COMMIT:-}
@@ -88,32 +84,10 @@ if [ -n "$supabase_url" ] || [ -n "$supabase_publishable_key" ]; then
   esac
 fi
 
-case "$auth_provider" in
-  supabase) ;;
-  entra)
-    case "$entra_authority" in
-      https://*.ciamlogin.com/*) ;;
-      *)
-        echo "FIRSTROLL_ENTRA_AUTHORITY must be the External ID tenant's https://*.ciamlogin.com/... authority." >&2
-        exit 1
-        ;;
-    esac
-    if [ -z "$entra_spa_client_id" ] || [ -z "$entra_api_scope" ]; then
-      echo "FIRSTROLL_ENTRA_SPA_CLIENT_ID and FIRSTROLL_ENTRA_API_SCOPE are required for Entra authentication." >&2
-      exit 1
-    fi
-    ;;
-  *)
-    echo "FIRSTROLL_AUTH_PROVIDER must be either supabase or entra." >&2
-    exit 1
-    ;;
-esac
-
 rm -rf "$output_dir"
 mkdir -p "$output_dir/assets"
 
 cp "$source_dir/index.html" "$output_dir/index.html"
-cp "$source_dir/staticwebapp.config.json" "$output_dir/staticwebapp.config.json"
 cp "$source_dir/integrations.js" "$output_dir/assets/integrations.js"
 cp "$source_dir/local-auth.js" "$output_dir/assets/local-auth.js"
 cp "$source_dir/favicon.svg" "$output_dir/assets/favicon.svg"
@@ -129,23 +103,14 @@ npm ci --include=dev --ignore-scripts --no-audit --no-fund
   --minify \
   --format=iife \
   --outfile="$output_dir/assets/auth.js"
-./node_modules/.bin/esbuild "$source_dir/entra-auth.js" \
-  --bundle \
-  --minify \
-  --format=iife \
-  --outfile="$output_dir/assets/entra-auth.js"
 
 cat > "$output_dir/assets/config.js" <<EOF
 window.FIRSTROLL_CONFIG = Object.freeze({
   apiBase: "${api_base}",
   publicMode: true,
   videoAnalysisEnabled: false,
-  authProvider: "${auth_provider}",
   supabaseUrl: "${supabase_url}",
   supabasePublishableKey: "${supabase_publishable_key}",
-  entraAuthority: "${entra_authority}",
-  entraSpaClientId: "${entra_spa_client_id}",
-  entraApiScope: "${entra_api_scope}",
   localTestAccountEmail: "",
   buildId: "v${build_number}",
   buildNumber: ${build_number},

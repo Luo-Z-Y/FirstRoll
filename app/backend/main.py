@@ -120,7 +120,7 @@ def _loopback_host(value: str | None) -> bool:
 def local_test_request(request: Request) -> bool:
     """Permit the development account on any genuine loopback-served UI.
 
-    The token is deliberately useless on Azure, Render, or any non-loopback host,
+    The token is deliberately useless on the VPS or any other non-loopback host,
     even though the browser-side adapter is part of the public source tree. Requiring
     both the URL host and the connected client to be loopback keeps this independent
     of the local launch command without trusting a spoofed Host header by itself.
@@ -203,13 +203,6 @@ def video_analysis_enabled() -> bool:
     )
 
 
-def local_agent_enabled() -> bool:
-    return bool(
-        not public_mode_enabled()
-        and environment_flag("FIRSTROLL_LOCAL_AGENT_ENABLED", default=False)
-    )
-
-
 allowed_origins = [
     origin.strip().rstrip("/")
     for origin in os.getenv("FIRSTROLL_CORS_ALLOWED_ORIGINS", "").split(",")
@@ -269,19 +262,11 @@ app.router.add_event_handler("startup", start_local_embedding_warmup)
 def web_runtime_config(request: Request) -> Response:
     public_mode = public_mode_enabled()
     video_analysis = video_analysis_enabled()
-    auth_provider = os.getenv("FIRSTROLL_AUTH_PROVIDER", "supabase").strip().casefold()
     supabase_url = os.getenv("SUPABASE_URL", "").strip().rstrip("/")
     supabase_publishable_key = os.getenv("SUPABASE_PUBLISHABLE_KEY", "").strip()
     if not supabase_publishable_key.startswith("sb_publishable_"):
         supabase_url = ""
         supabase_publishable_key = ""
-    entra_authority = os.getenv("ENTRA_AUTHORITY", "").strip().rstrip("/")
-    entra_spa_client_id = os.getenv("ENTRA_SPA_CLIENT_ID", "").strip()
-    entra_api_scope = os.getenv("ENTRA_API_SCOPE", "").strip()
-    if not all((entra_authority, entra_spa_client_id, entra_api_scope)):
-        entra_authority = ""
-        entra_spa_client_id = ""
-        entra_api_scope = ""
     build = frontend_build_identity()
     test_email = local_test_account_email(request)
     content = (
@@ -289,12 +274,8 @@ def web_runtime_config(request: Request) -> Response:
         '  apiBase: "",\n'
         f"  publicMode: {str(public_mode).lower()},\n"
         f"  videoAnalysisEnabled: {str(video_analysis).lower()},\n"
-        f"  authProvider: {json.dumps(auth_provider)},\n"
         f"  supabaseUrl: {json.dumps(supabase_url)},\n"
         f"  supabasePublishableKey: {json.dumps(supabase_publishable_key)},\n"
-        f"  entraAuthority: {json.dumps(entra_authority)},\n"
-        f"  entraSpaClientId: {json.dumps(entra_spa_client_id)},\n"
-        f"  entraApiScope: {json.dumps(entra_api_scope)},\n"
         f"  localTestAccountEmail: {json.dumps(test_email)},\n"
         f"  buildId: {json.dumps(build['buildId'])},\n"
         f"  buildNumber: {build['buildNumber']},\n"
@@ -396,63 +377,6 @@ def prepare_film_study(
     }
 
 
-def build_local_agent_services():
-    """Build the approved local-only adapter without exposing an HTTP route."""
-
-    if not local_agent_enabled():
-        raise RuntimeError("The local Agent comparison is disabled.")
-    from app.backend.local_research_agent import (
-        LocalAttributedSourceAcquirer,
-        LocalResearchGraphServices,
-    )
-
-    return LocalResearchGraphServices(
-        detail=discovery_service.detail,
-        prepare=prepare_film_study,
-        acquirer=LocalAttributedSourceAcquirer(
-            douban=douban_adapter,
-            guardian=guardian_web_adapter,
-            letterboxd=letterboxd_adapter,
-            letterboxd_web=letterboxd_web_adapter,
-            crossref=crossref_research_adapter,
-            youtube=youtube_video_adapter,
-            bilibili=bilibili_video_adapter,
-        ),
-        study_service=study_service,
-    )
-
-
-def build_local_autonomous_agent():
-    """Build the default-off private research, audit, editing and coaching pipeline."""
-
-    from app.backend.autonomous_agent import (
-        AutonomousStudyFinisher,
-        LocalAutonomousResearchAgent,
-    )
-
-    services = build_local_agent_services()
-    return LocalAutonomousResearchAgent(
-        services,
-        AutonomousStudyFinisher(services.study_service),
-    )
-
-
-def build_local_autonomous_run_engine():
-    """Build private resumable autonomous phases without registering a route."""
-
-    from app.backend.autonomous_runs import (
-        DurableAutonomousRunEngine,
-        LocalAutonomousPhaseExecutor,
-        LocalAutonomousRunStore,
-    )
-
-    services = build_local_agent_services()
-    return DurableAutonomousRunEngine(
-        LocalAutonomousRunStore(),
-        LocalAutonomousPhaseExecutor(services, services.study_service),
-    )
-
-
 def authenticated_user(request: Request) -> dict[str, str | None]:
     authorisation = request.headers.get("Authorization")
     if (
@@ -528,13 +452,11 @@ def hosted_deep_study_enabled() -> bool:
 
 
 def hosted_deep_study_boundary_enabled() -> bool:
-    auth_provider = os.getenv("FIRSTROLL_AUTH_PROVIDER", "supabase").strip().casefold()
     return bool(
         public_mode_enabled()
         and environment_flag("FIRSTROLL_DEEP_STUDY_ENABLED")
         and auth_verifier.configured
         and quota_client.configured
-        and (auth_provider != "entra" or quota_client.backend_owned)
     )
 
 

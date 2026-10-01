@@ -332,11 +332,6 @@ html[data-build-channel="live"] .build-identity {
 .auth-dialog form button.auth-reset:hover { color: var(--ink); }
 .auth-close { position: absolute; top: 14px; right: 16px; border: 0; background: none; color: inherit; font-size: 1.4rem; cursor: pointer; }
 .auth-message { min-height: 1.5em; margin: 14px 0 0; color: var(--accent); font-size: 0.75rem; }
-.auth-provider-entra,
-.auth-dialog form.auth-provider-entra { display: none; }
-body[data-auth-provider="entra"] .auth-provider-supabase { display: none; }
-body[data-auth-provider="entra"] .auth-provider-entra { display: block; }
-body[data-auth-provider="entra"] form.auth-provider-entra { display: grid; }
 
 .integrations-view { padding: clamp(52px, 8vw, 104px) 0 90px; }
 .integrations-hero { display: grid; grid-template-columns: minmax(0, 1fr); align-items: end; margin-bottom: 38px; padding-bottom: 34px; border-bottom: 1px solid var(--line); }

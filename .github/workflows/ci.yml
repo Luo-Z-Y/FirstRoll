@@ -29,19 +29,10 @@ jobs:
         with:
           node-version: '22'
           cache: npm
-      - name: Set up Terraform
-        uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
-        with:
-          terraform_version: '1.14.9'
       - name: Audit frontend dependency lock
         run: npm audit --audit-level=high
       - name: Check frontend JavaScript syntax
         run: find app/web -maxdepth 1 -name '*.js' -exec node --check {} \;
-      - name: Validate Terraform
-        run: |
-          terraform -chdir=infra/terraform fmt -check -recursive
-          terraform -chdir=infra/terraform init -backend=false -input=false
-          terraform -chdir=infra/terraform validate
       - name: Validate the single-server stack
         run: |
           set -eu
