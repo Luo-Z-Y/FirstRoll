@@ -170,17 +170,19 @@ def test_entra_external_id_account_auth_is_staged_without_breaking_supabase() ->
 
 def test_public_deep_study_consumes_authenticated_safe_sse_progress() -> None:
     app = (WEB / "app.js").read_text(encoding="utf-8")
+    progress = (WEB / "src" / "study" / "progress.ts").read_text(encoding="utf-8")
 
     assert "/study/stream" in app
     assert "consumeResearchProgress" in app
-    assert "RESEARCH_PROGRESS_KINDS" in app
-    assert "progress.run_id !== expectedRunId" in app
-    assert "progress.sequence !== lastSequence + 1" in app
+    assert 'from "./src/study/progress"' in app
+    assert "RESEARCH_PROGRESS_KINDS" in progress
+    assert "progress.run_id !== expectedRunId" in progress
+    assert "progress.sequence !== lastSequence + 1" in progress
     assert 'streamResponse.headers.get("X-FirstRoll-Run-ID")' in app
     assert "/api/research/runs/" in app
-    assert 'eventName !== "progress"' in app
-    assert 'progress.kind === "run_failed"' in app
-    assert 'progress.kind === "run_completed"' in app
+    assert 'eventName !== "progress"' in progress
+    assert 'progress.kind === "run_failed"' in progress
+    assert 'progress.kind === "run_completed"' in progress
 
 
 def test_public_video_preview_uses_neutral_product_copy() -> None:

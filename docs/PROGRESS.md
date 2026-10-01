@@ -13,6 +13,21 @@ Status vocabulary:
 
 ## Current Snapshot
 
+**Development checkpoint — 1 October 2026:** first incremental frontend modularisation is
+implemented, separate from the live v219 release. `app/web/app.js` is reduced from 3,843 to
+2,597 lines; shared helpers, progress parsing and pure clip-analysis algorithms are strict
+TypeScript modules. Clip state is isolated in a JavaScript controller. The coordinator,
+auth/settings and DOM controllers are not yet fully typed. See [Frontend Guide](FRONTEND_GUIDE.md).
+
+Verification: **645 repository tests pass**, including 37 executable frontend cases (the
+existing 27 race tests plus 10 new module cases). All 27 race cases also pass against the
+minified hosted bundle; strict type-checking, local/hosted builds and scoped Ruff checks pass.
+The loopback server returns HTTP 200 for the compiled asset and healthy API. Interactive
+browser inspection was blocked by the preview client. Docker could not run locally because
+the daemon was unavailable; the existing CI container-build gate must still pass. No
+production deployment, paid provider call or data migration was performed. Next: review this
+checkpoint, then extract discovery/dossier feature controllers behind typed data boundaries.
+
 **Last updated:** 1 October 2026 (public HTTPS receipt/health still match v219; deployment architecture
 reconciled with code; interactive acceptance and authenticated quota verification remain open)
 

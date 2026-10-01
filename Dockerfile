@@ -22,6 +22,14 @@ RUN apt-get update \
     && npm audit --omit=dev --audit-level=high \
     && rm -rf .git src
 
+FROM node:22-bookworm-slim AS frontend-builder
+WORKDIR /web
+COPY package.json package-lock.json tsconfig.json ./
+RUN npm ci --include=dev --ignore-scripts --no-audit --no-fund
+COPY tools/frontend-build.cjs ./tools/frontend-build.cjs
+COPY app/web ./app/web
+RUN npm run build:local
+
 FROM python:3.11-slim-bookworm
 
 ARG FIRSTROLL_RELEASE_SHA=""
@@ -46,6 +54,7 @@ RUN python -m pip install --upgrade pip \
     && python -m pip install -r requirements-hosted.txt
 
 COPY app ./app
+COPY --from=frontend-builder /web/app/web/generated/app.js ./app/web/generated/app.js
 
 EXPOSE 10000
 

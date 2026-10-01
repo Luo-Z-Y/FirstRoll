@@ -10,6 +10,22 @@ not mean the product is available only on one computer.
 
 ## Product Topology
 
+### Frontend source boundaries (incremental refactor, not yet deployed)
+
+The browser still receives static HTML, CSS and JavaScript. `app/web/src/main.ts` imports
+the transitional `app/web/app.js` coordinator. Strict TypeScript modules own shared HTML/URL
+safety, formatting, API error display, research progress parsing and pure clip heuristics.
+The JavaScript `analysis/controller.js` factory owns clip state privately; discovery request
+ownership and cancellation remain together in the coordinator. Auth and integrations retain
+their existing entry points. This is not a React/Next.js migration or a full typing of the UI.
+
+`tools/frontend-build.cjs` is the shared compiler configuration: localhost generates
+`app/web/generated/app.js`, while hosted releases generate `dist/assets/app.js`. FastAPI's
+explicit asset route serves the former before its generic static mount. Docker compiles it
+in a Node builder stage; TypeScript/npm are not needed in the Python runtime. No API routes,
+authentication rules, quotas or production approval boundaries are relaxed. See
+[Frontend Guide](FRONTEND_GUIDE.md) for development commands and remaining migration stages.
+
 Read the [plain-English deployment guide](../readme.md#the-current-deployment-in-plain-english)
 first for the roles of DNS, the VPS, Caddy, Docker, Supabase and the image registry. On 1 October,
 the public release receipt and API health both still identify v219 / `b678e52e`; discovery status

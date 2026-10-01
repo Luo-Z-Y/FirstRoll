@@ -37,6 +37,11 @@ jobs:
         run: npm audit --audit-level=high
       - name: Check frontend JavaScript syntax
         run: find app/web -maxdepth 1 -name '*.js' -exec node --check {} \;
+      - name: Install and check the modular frontend
+        run: |
+          npm ci --include=dev --ignore-scripts --no-audit --no-fund
+          npm run build:local
+          npm run test:web
       - name: Validate Terraform
         run: |
           terraform -chdir=infra/terraform fmt -check -recursive
@@ -84,3 +89,7 @@ jobs:
           FIRSTROLL_SUPABASE_URL: https://example.supabase.co
           FIRSTROLL_SUPABASE_PUBLISHABLE_KEY: sb_publishable_test
         run: ./tools/build_web.sh
+      - name: Test the minified release application
+        env:
+          FIRSTROLL_TEST_APP: dist/assets/app.js
+        run: node --test tests/web/responsiveness.test.cjs
