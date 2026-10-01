@@ -69,7 +69,7 @@ def _flag_value(name: str, default: bool = False) -> bool:
 def create_api_application(*, public_mode: bool | None = None) -> FastAPI:
     """Create the API shell with production-only documentation hardening.
 
-    The public Container App does not register generated documentation routes,
+    The hosted public API does not register generated documentation routes,
     while the local edition retains Swagger, ReDoc and OpenAPI for development.
     Endpoint authentication remains independent of this discovery-surface rule.
     """

@@ -1,6 +1,6 @@
 # FirstRoll single-server stack
 
-These files run the public beta on one rented Linux server instead of Azure:
+These files run the hosted public beta on one rented Linux server:
 
 | File | Purpose |
 |---|---|
@@ -13,6 +13,5 @@ These files run the public beta on one rented Linux server instead of Azure:
 The GitHub `VPS Release` workflow uploads `deploy.sh`, `docker-compose.yml` and `Caddyfile` from
 the approved commit on every release, so the server always runs the reviewed versions.
 
-Purchase, DNS, bootstrap, first-release and operating instructions are in
-[docs/HOSTING.md](../../docs/HOSTING.md); the release contract is in
-[docs/RELEASE.md](../../docs/RELEASE.md).
+Server preparation, DNS, the release contract, rollback and day-to-day operation are in
+[docs/OPERATIONS.md](../../docs/OPERATIONS.md).

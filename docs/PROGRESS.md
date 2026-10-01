@@ -9,27 +9,31 @@ Status vocabulary:
 - **Complete** — implemented and verified against its current acceptance criteria.
 - **In progress** — active implementation exists, but required work remains.
 - **Planned** — accepted scope, not yet implemented.
+- **Partial** — part of the accepted scope works; the remainder is planned.
 - **Blocked** — cannot progress without a named decision, dependency or permission.
+- **Parked** — removed by a recorded decision; recoverable from a named archive tag.
+- **Live** — running on the public beta; a qualifier names any acceptance still pending.
 
 ## Current Snapshot
 
-**Last updated:** 1 October 2026 (public HTTPS receipt/health still match v219; deployment architecture
-reconciled with code; interactive acceptance and authenticated quota verification remain open)
+**Last updated:** 1 October 2026 (Agent programme parked, Azure path retired and documentation
+consolidated; public HTTPS receipt and health still match v219; interactive acceptance and
+authenticated quota verification remain open)
 
-**Release stage:** public beta v219 is running on Tencent Lighthouse in Singapore. The owner
-approved the two-record DNS switch and exact production run `36534759362`; the workflow deployed
-commit `b678e52e14deb84cdf7d2d1653e2c44405e0d988` and passed its external receipt/file/API/CORS
-verification. Both hostnames have valid HTTPS and public DNS points to `119.28.111.192`. Public HTTPS
-checks on 1 October return the correct receipt and API health without overriding DNS. Browser
-sign-in and interactive acceptance are still not claimed. Paid Deep Study stays disabled; quota verification and
-a live recovery drill remain. No previous working VPS release exists.
+**Release stage:** VPS public beta. v219 (commit `b678e52e`) runs on one Tencent Lighthouse server in
+Singapore, deployed by owner-approved production run `36534759362` on 29 September 2026 after
+external receipt, file, API and CORS verification. Public HTTPS checks on 1 October returned the
+v219 receipt and a healthy API. Browser sign-in and interactive acceptance are not yet claimed, paid
+Deep Study stays disabled until authenticated quota verification, and no live recovery drill has
+run. Hosting and release procedures: [Operations](OPERATIONS.md) and
+[infra/vps/README.md](../infra/vps/README.md).
 
 **Primary development URL:** `http://127.0.0.1:8000`
 **Public beta URL:** `https://firstroll.app` (v219 live; public HTTPS rechecked 1 October)
-**Automated verification:** 642 repository tests passing locally on 29 September 2026, including
-54 single-server checks, 34 same-ASGI-loop concurrency checks and 27 Node request/race checks.
-The new VPS cases simulate activation and recovery failures without touching a server. They do not
-replace first-live-release acceptance or a real recovery drill.
+**Automated verification:** 289 repository tests, Ruff and the production frontend build pass
+locally on 1 October 2026 (details in that day's ledger entry). The VPS tests simulate activation
+and recovery failures without touching a server; they do not replace browser acceptance or a real
+recovery drill.
 
 | Area | Status | Current evidence |
 |---|---|---|
@@ -38,9 +42,9 @@ replace first-live-release acceptance or a real recovery drill.
 | Product navigation | Complete | Discover, Analyse and Settings preserve per-tab view content and scroll; a versioned `sessionStorage` snapshot makes the Discover workspace refresh-safe; Study remains consolidated into Discover |
 | Theme support | Complete | System-aware light/dark themes with a locally persisted accessible toggle |
 | Local settings | Complete | Write-only connector credentials plus local add, remove and index controls for the private library |
-| Hosted public beta | Live — browser acceptance pending | v219 deployed on Tencent with owner approval; public HTTPS receipt/health match on 1 October; interactive account/shelf acceptance still outstanding |
-| Accounts and quotas | Complete | Supabase email authentication, atomic daily Deep Study quotas and a launch-independent localhost test account |
-| Authenticated research progress | Implemented | Allow-listed SSE lifecycle events, owner-scoped result retrieval and secret/evidence redaction tests; final interactive browser observation remains pending |
+| Hosted public beta | Live — browser acceptance pending | v219 on the Tencent server since 29 September with owner approval; public HTTPS receipt/health match on 1 October; interactive account/shelf acceptance still outstanding |
+| Accounts and quotas | Complete — hosted quota check pending | Supabase email-and-password authentication (the only provider), atomic daily Deep Study quotas through the Supabase RPC (portable PostgreSQL adapter staged, not active) and a launch-independent localhost test account; authenticated quota verification on the server is outstanding |
+| Authenticated research progress | Complete — browser observation pending | Allow-listed SSE lifecycle events, owner-scoped result retrieval and secret/evidence redaction tests; final interactive browser observation remains pending |
 | Private library catalogue | Complete | Seven existing film-study PDFs retained; managed uploads and non-destructive removal; paths and content withheld from public APIs |
 | PDF ingestion | Complete | Token-aware page chunks, overlap, section hints, language and stable IDs |
 | Local embeddings | Complete | 4,381 of 4,381 chunks embedded with a local multilingual 384-dimension model; background prewarm removes the cold packet stall |
@@ -54,109 +58,66 @@ replace first-live-release acceptance or a real recovery drill.
 | Criticism source controls | Complete | Tabbed provider switcher; first selection fetches and later selections reuse the cached bundle |
 | Evidence packet | Complete | Film record, theory, critic claims, raw review text and attributed video text separated by explicit permitted uses; focus-ranked bounded packet selection |
 | Deep Study schema | Complete | Critic, theory, hypothesis, mechanism, alternative, verification and confidence fields |
-| Quality control | Complete | Deterministic gate, citation checks, bounded synthesis recovery and at most one bounded repair call |
+| Quality control | Complete | Deterministic gate, citation checks and at most one bounded repair call (schema or quality), so no more than two model calls per study |
+| Packet-quality assessment | Complete | `app/backend/packet_quality.py` scores the evidence packet of each completed study for the UI; synthetic six-case fixture in `tests/fixtures/packet_quality_cases.json`. The frozen fixed-workflow evaluation baseline and its results are archived at tag `archive/agent-programme` |
 | Evidence-layered UI | Complete | Inspectable progress, packet and citations; quality status, validated `S*`/`C*`/`E*` citations, retrieval rationale and expandable excerpts; WCAG-audited keyboard flow |
-| Fixed-workflow evaluation baseline | Complete | Frozen, fingerprinted fixed/Agent/A01/A02 metrics; the entry gate passes all 17 targets and 11 required steps; GuideLLM/lm-eval tooling is mock-qualified only |
-| Autonomous research Agent | Blocked | Local, default-off. A01R class-aware acquisition and A02R patch-reliability harnesses are implemented with native tool calls; every paid comparison so far failed at least one gate, production remains NO-GO and no evaluation budget has been released since 31 August |
-| Release delivery | Live release verified — recovery drill pending | Protected master, exact-run owner approval, sealed v219 receipt, digest deployment over pinned SSH and successful external live checks; legacy Azure workflows remain disabled |
-| Web responsiveness | In progress | Blocking API work offloaded to the worker pool, dossier-lifetime fetch cancellation, pre-authentication Deep Study cancel controls and minified assets, measured synthetically; live profiling of search → shelf → dossier → reception is still required |
-| Clip analysis | Complete | Scene/shot metrics, shot scale, colour, objects and JSON/CSV export (local edition only) |
-| Clip evidence in Deep Study | Planned (deferred) | Deferred until the text Agent programme is accepted; study generation does not consume measured clip observations or timecodes |
+| Autonomous research Agent | Parked | Removed on 1 October 2026 (commit `9d29263`) after no paid comparison cleared its gate; recoverable from tag `archive/agent-programme`; revival conditions in [ADR-026](DECISIONS.md#adr-026-park-the-autonomous-research-agent-programme) |
+| Release delivery | Live release verified — recovery drill pending | `VPS Release`: protected `master`, exact-run owner approval in `production`, sealed receipt, image-digest deployment over pinned SSH, external live checks and rollback on failed verification; Azure delivery retired (tag `archive/azure`) |
+| Web responsiveness | In progress | Blocking API work offloaded to the worker pool, dossier-lifetime fetch cancellation, pre-authentication Deep Study cancel controls and minified assets, measured synthetically on 12 September; live profiling of search → shelf → dossier → reception is still required |
+| Clip analysis | Complete | Scene/shot metrics, shot scale, colour, objects and JSON/CSV export (local edition only); still runs on the API event loop |
+| Clip evidence in Deep Study | Planned (deferred) | Study generation does not consume measured clip observations or timecodes |
 | Creator primary sources | Partial | Relevant video descriptions and available public captions enter Deep Study; verified speaker attribution remains planned |
-| Persistent projects | Planned | Film, clip, study and note sessions are not retained as reusable projects; the autonomous phase store is a private run checkpoint only |
+| Persistent projects | Planned | Film, clip, study and note sessions are not retained as reusable projects; a completed study lives for ten minutes in API process memory |
 
 ## Next Milestone
 
-### Single-server cut-over — Live (interactive acceptance and recovery drill pending)
+### Public-beta acceptance on the server — In progress
 
-Objective: bring `firstroll.app` and `api.firstroll.app` back online on one rented server without
-weakening the human production gate.
-
-Acceptance criteria:
-
-- [x] Caddy + Docker Compose stack with the API deployed by immutable digest, the former static cache
-  policy and rotated logs (`infra/vps`).
-- [x] Idempotent Ubuntu 24.04 bootstrap: Docker, service account, firewall, swap, unattended
-  security updates and key-only SSH.
-- [x] Server-side release that switches the site only after the API reports the baked commit, with
-  rollback and status commands.
-- [x] `VPS Release` workflow: CI-gated candidate, credential-free build to GitHub Container Registry,
-  sealed receipt, verification before the deploy key exists, pinned host key, live checks and rollback.
-- [x] CI validation of the stack files and 30 structural/behavioural tests.
-- [x] Server purchased, bootstrapped and reachable through separate administrator/deployment keys;
-  approved reboot verified on the updated kernel.
-- [x] GitHub `production` deployment secret and pinned VPS host/user variables configured; existing
-  human reviewer and master-only deployment policy verified and preserved.
-- [x] Legacy Azure release workflows disabled and their two obsolete waiting candidates cancelled.
-- [x] Owner added DeepSeek/YouTube keys; presence and private configuration validated without values.
-- [x] Cloud TCP 443 allow rule observed after the owner's setup.
-- [ ] Authenticated quota readiness verified before enabling paid Deep Study.
-- [x] DNS moved from Azure; certificates issued for both hostnames.
-- [x] VPS release activation enabled; candidate built; image inputs and anonymous digest pull verified.
-- [x] Exact-run owner approval; deployment and external live verification pass.
-- [ ] First owner-approved release verified in a browser (receipt, sign-in, search, shelf, dossier).
-- [ ] Rollback drill on the server.
-
-Next boundary: complete interactive browser acceptance, verify the
-authenticated quota boundary before enabling paid Deep Study, then plan a separately approved live
-recovery drill. The v219 approval does not approve another run, a database migration or paid calls.
-
-### Autonomous Agent causal ablations — Blocked (awaiting owner evaluation budget)
-
-Objective: prove which autonomous components add value before integrating claim review, coaching or a
-product route.
+Objective: finish proving the live v219 deployment before enabling paid Deep Study. The single-server
+cut-over itself is complete (stack, bootstrap, `VPS Release`, DNS and TLS, exact-run approval and
+external live checks; see the 28–29 September entries).
 
 Acceptance criteria:
 
-- [x] Define typed evidence gaps and require independent origins for recovered packets.
-- [x] Add a deterministic acquisition baseline and Crossref Agent action.
-- [x] Acquire each provider observation once and share it privately across fixed, deterministic and
-  model-planned lanes.
-- [x] Blind lane identity during owner packet review.
-- [x] Provide a frozen field-patch versus regeneration harness with controlled schema/citation faults.
-- [x] Require exact preservation of accepted fields and complete citation validation.
-- [x] Freeze value, latency, token, privacy and human thresholds before any paid call.
-- [ ] Reuse an accepted private packet for synthesis without reacquisition.
-- [ ] Advance claim audit only if the preceding capability earns its cost against the baseline.
+- [ ] Browser acceptance of the live release (receipt, sign-in, saved films, search, shelf, dossier
+  and reception) against the checklist in [Operations](OPERATIONS.md).
+- [ ] Authenticated quota readiness verified on the server (status, concurrency and refusal once a
+  limit is reached) before paid Deep Study is enabled.
+- [ ] A separately approved rollback drill on the server, once a second release exists to roll back
+  to.
+- [ ] A Supabase keep-alive or monitor, so the Free-plan seven-day pause cannot silently break
+  sign-in.
+- [ ] Owner removes the Azure-era GitHub settings that no workflow reads. A names-only listing on
+  1 October showed repository variables `ACR_LOGIN_SERVER`, `AZURE_CONTAINER_APP_NAME`,
+  `AZURE_RESOURCE_GROUP`, `AZURE_SUBSCRIPTION_ID`, `AZURE_TENANT_ID` and `BACKEND_RELEASE_ENABLED`,
+  repository secret `AZURE_BUILD_CLIENT_ID`, and `production` secrets `AZURE_DEPLOY_CLIENT_ID` and
+  `AZURE_STATIC_WEB_APPS_API_TOKEN_*`, a deployment token that should also be reset in Azure if the
+  Static Web App still exists. The owner also decides on any remaining Azure resources and the
+  gitignored local Terraform state.
 
-Blocking decision: A01R and A02R are implemented but no paid or human evaluation budget has been
-released since 31 August 2026. The owner must either fund a bounded run or record the programme as
-parked.
-
-### Standardised production release bootstrap — Superseded while Azure is suspended
-
-Carried from the 10 September 2026 entry. The single-server cut-over replaces this proof; it would
-only become relevant again if the Azure subscription were reactivated:
-
-- an owner-approved initial frontend release (`allow_initial_release` acknowledgement, then approval of
-  the protected `production` environment), which establishes the first `/release.json` rollback
-  baseline;
-- an owner-approved backend release so the production API matches `master` (as recorded on
-  4 September 2026 it still ran its previous image);
-- browser acceptance of the released candidate and a separately approved live recovery drill.
+Boundary: the v219 approval does not approve another run, a database migration or paid calls. The
+next owner-approved release will be the first built after the trim.
 
 ### Live responsiveness profiling and API-loop isolation — Planned
 
-Carried from the 12 September 2026 entry:
-
-- authorised live search → shelf → dossier → reception profiling; investigate repeated Wikidata
-  enrichment, redundant TMDb shelf work, video captions delaying cards and unnecessary shelf/player DOM
-  replacement before introducing new cache or provider-flow contracts;
-- remove the authentication wait on initial account-data hydration;
-- move local clip analysis off the API loop onto a bounded serial worker, after a separate review of
-  shared output paths and model state.
+- Authorised live search → shelf → dossier → reception profiling. Investigate repeated Wikidata
+  enrichment, redundant TMDb shelf work, video captions delaying cards and unnecessary shelf/player
+  DOM replacement before introducing new cache or provider-flow contracts.
+- Remove the authentication wait on initial account-data hydration (saved films and settings).
+- Move local clip analysis off the API event loop onto a bounded serial worker, after a separate
+  review of shared output paths and model state.
 
 ## Subsequent Priorities
 
-1. **Claim audit and targeted editor** — classify evidential strength and patch only fields or
-   sections named by deterministic validation.
-2. **Evidence-grounded filmmaker coach** — turn accepted claims into traceable viewing and production
-   exercises without adding film facts.
-3. **Durable local Agent pilot** — add owner-scoped checkpointing, cancellation, resume and private
-   project retention after reliability gates pass.
-4. **Clip-to-study evidence bridge** — remain deferred until the complete text Agent is accepted.
-5. **Creator primary-source layer** — ingest attributed interviews, commentaries and production
+1. **Persistent film projects** — owner-scoped retention of film, clip, study and note sessions,
+   meeting ADR-014's revisit conditions: RLS, deletion, export and a migration with tests.
+2. **Cost telemetry and an operator kill switch** — required before raising either daily Deep Study
+   limit.
+3. **Clip-to-study evidence bridge** — let measured clip observations and timecodes enter the evidence
+   packet in the local edition.
+4. **Creator primary-source layer** — ingest attributed interviews, commentaries and production
    records; distinguish direct quotation, paraphrase and inference.
+5. **Release hardening** — image scanning, SBOMs and signed provenance for the `VPS Release` path.
 
 ## Known Risks and Constraints
 
@@ -169,15 +130,73 @@ Carried from the 12 September 2026 entry:
 - Creator intention must not be inferred from style, criticism or theory alone.
 - The local multilingual model adds a first-load delay and a sizeable local download.
 - Inherited computer-vision dependencies may behave differently across operating systems.
-- The public beta will run on one rented server: a single point of failure with a long-lived deploy
-  key, no CDN and a brief API restart on every release.
+- The public beta runs on one rented server: a single point of failure with a long-lived deploy key,
+  no CDN and a brief API restart on every release. The server's private configuration and TLS state
+  are not in the repository and need an owner-held off-host backup.
 - The Supabase Free plan pauses the project after seven idle days, which breaks sign-in until it is
   resumed in the dashboard.
+- Parked Agent and retired Azure code exist only at their archive tags and will drift from `master`.
 
 ## Milestone Ledger
 
 Dated entries, newest first. Entries dated 6–31 August 2026 were moved unchanged into
 [PROGRESS_ARCHIVE_2026-08.md](PROGRESS_ARCHIVE_2026-08.md) on 27 September 2026.
+
+### 1 October 2026 — Agent programme parked, Azure path retired and documentation consolidated
+
+Commit `9d29263` on `chore/trim-and-crystallise` removed the unused Agent and Azure paths; the same
+branch then consolidated the documentation. The change is confined to repository files: it made no
+provider, database, DNS, GitHub-setting, cloud-resource or production-deployment change, and live
+v219 predates it.
+
+| Removed | Recover from |
+|---|---|
+| Autonomous research Agent: six backend modules, `app/backend/research_graph/`, the Agent-only DeepSeek methods, `FIRSTROLL_LOCAL_AGENT_ENABLED` and the `langgraph` dependency | `archive/agent-programme` |
+| Evaluation harness: `tools/evaluate_*.py`, `tools/review_*.py`, the benchmark audit, gate, packet and smoke tools, the whole `evals/` directory and eight Agent/evaluation documents | `archive/agent-programme` |
+| Azure delivery: `infra/terraform`, the Static Web Apps and backend-release workflows, `tools/release/{cli,manifest,risk,summary,frontend}.py`, the Azure receipt functions and CLI in `tools/release/protocol.py` (now only the shared helpers `vps.py` imports) and `app/web/staticwebapp.config.json` | `archive/azure` |
+| Entra External ID: `EntraAuthVerifier`, `app/web/entra-auth.js`, `@azure/msal-browser`, the `ENTRA_*`/`FIRSTROLL_ENTRA_*` variables, browser `authProvider`/`entra*` fields and the PyJWT dependency | `archive/azure` |
+
+Kept: the fixed Deep Study workflow; packet-quality assessment, whose fixture moved to
+`tests/fixtures/packet_quality_cases.json`; Supabase Auth as the only accepted
+`FIRSTROLL_AUTH_PROVIDER`; the Supabase quota RPC by default, with `PostgresQuotaClient` selectable
+through `FIRSTROLL_QUOTA_PROVIDER=postgres`; the `infra/vps` stack and `VPS Release` with
+`tools/release/protocol.py` and `vps.py`; CI, minus its Terraform step; local clip analysis.
+
+Decisions: [ADR-026](DECISIONS.md#adr-026-park-the-autonomous-research-agent-programme) parks the
+Agent programme with revival conditions, and
+[ADR-027](DECISIONS.md#adr-027-retire-azure-and-host-the-public-beta-on-one-vps) records the VPS
+hosting and Azure retirement. ADR-003, 004, 011, 015 and 020–025 are condensed and marked
+superseded or parked. ADR-009's status is corrected: the Supabase RPC is the active quota default,
+and ADR-016's PostgreSQL adapter is staged, not active.
+
+Documentation: the readme was cut to an overview, and eight topic documents were folded into a set
+in which each topic has one owner (scopes in the readme's Documentation Map):
+
+| Former document | Now in |
+|---|---|
+| `API_REFERENCE`, `DATA_MODEL`, `DATA_SOURCES` | [Data](DATA.md) |
+| `HOSTING`, `RELEASE` | [Operations](OPERATIONS.md) and [infra/vps/README.md](../infra/vps/README.md) |
+| `LOCAL_SETUP` | [Setup](SETUP.md) |
+| `THREAT_MODEL`, `WEB_RESPONSIVENESS` | [Architecture](ARCHITECTURE.md) |
+
+Acceptance evidence:
+
+- `.venv/bin/python -m pytest -q tests`: 289 passed, including 54 single-server release checks,
+  16 shared release-primitive checks, 34 same-ASGI-loop concurrency checks and the test that runs
+  the 27 Node request/race checks (`node --test tests/web/responsiveness.test.cjs`). The fall from
+  642 tests on `058c747` reflects the removed Agent, evaluation and Azure release code.
+- `ruff check app/backend --exclude app/backend/algorithms`: clean.
+- Production frontend build (`tools/build_web.sh`, live channel): passes.
+
+Constraints:
+
+- Restoring the Agent requires ADR-026's revival conditions; its frozen evaluation results,
+  including the fixed-workflow baseline, are readable only from `archive/agent-programme`.
+- Azure-era GitHub settings, any remaining Azure resources and local Terraform state are untouched
+  and await the owner decision listed in **Next Milestone**.
+
+Next actionable work: the public-beta acceptance milestone above, starting with browser acceptance
+and authenticated quota verification; then live responsiveness profiling.
 
 ### 1 October 2026 — Explain the deployed architecture and correct stale documentation
 
@@ -409,8 +428,9 @@ Implemented on `fix/web-responsiveness`, without a production approval or provid
 5. Added dependency-free executable JavaScript race tests to the existing Python CI gate and an
    optional, pinned-tool Chrome diagnostic that starts no backend, fulfils/blocks page HTTP traffic
    and removes speculative connection hints. This is not an OS-level network sandbox.
-6. Reconciled README, architecture/API/hosting prose and [Web Responsiveness](WEB_RESPONSIVENESS.md)
-   with the implementation, measurements and remaining work.
+6. Reconciled README, architecture/API/hosting prose and the web-responsiveness note (since folded
+   into [Architecture](ARCHITECTURE.md#7-web-responsiveness)) with the implementation, measurements
+   and remaining work.
 
 Acceptance evidence, recorded separately:
 
@@ -423,9 +443,9 @@ Acceptance evidence, recorded separately:
   With a synthetic 500 ms token delay, median click-to-busy mutation improved from about 502 ms to
   0.4–0.8 ms. The next-frame paint proxy improved from about 511 ms to 27–28 ms; it is not INP. Forty
   candidate cancellations before token readiness sent zero mocked study POSTs. Both widths had zero
-  uncaught page errors and no horizontal overflow. The hash-bound
-  [synthetic report](../evals/results/web-responsiveness-2026-09-12.json) is retained; no live latency or
-  model-speed result is claimed.
+  uncaught page errors and no horizontal overflow. The hash-bound synthetic report
+  `evals/results/web-responsiveness-2026-09-12.json` is retained (at tag `archive/agent-programme`
+  since 1 October 2026); no live latency or model-speed result is claimed.
 - **Review:** fixed the reviewer's cached-criticism-tab busy-state regression and added both fetch and
   structuring transition tests. Also removed speculative connection hints from the browser fixture
   and narrowed its network-isolation claim.
@@ -564,7 +584,7 @@ For each meaningful implementation change:
 2. add a dated milestone entry when a coherent feature set completes;
 3. record automated and live acceptance evidence;
 4. move the next actionable milestone into **Next Milestone**;
-5. keep limitations explicit rather than silently removing unfinished scope.
+5. keep limitations explicit rather than silently removing unfinished scope;
 6. when the ledger grows past roughly one month or one thousand lines, move older dated entries
    unchanged into a dated `PROGRESS_ARCHIVE_<year>-<month>.md` file and link it from the ledger
    heading.

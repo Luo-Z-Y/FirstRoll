@@ -1,539 +1,470 @@
 # FirstRoll Architecture
 
-**Status:** Current implementation  
-**Last reconciled:** 1 October 2026
+**Status:** current implementation · **Last reconciled:** 1 October 2026 (code at `9d29263`)
 
-FirstRoll is a local-first film-study system with a hosted public beta running on one Tencent
-Lighthouse server in Singapore (v219, owner-approved deployment on 29 September 2026). “Local-first”
-describes where private books, credentials, derived vectors and uploaded film clips are kept; it does
-not mean the product is available only on one computer.
+FirstRoll is an evidence-grounded film-study system built from one codebase into two runtimes: a
+**local private edition** on the filmmaker's computer and a narrower **hosted public beta** on one
+rented server. "Local-first" describes where private books, derived vectors, connector secrets and
+uploaded clips live; it does not mean the product exists only on one computer.
 
-## Product Topology
+This document owns topology, component boundaries, data flows, the evidence rules, the threat
+model and the responsiveness design. Installation and verification commands are in
+[Setup](SETUP.md); hosting, release and recovery procedure in [Operations](OPERATIONS.md) and the
+[VPS stack](../infra/vps/README.md); schemas and provider sources in [Data](DATA.md); rationale in
+[Decisions](DECISIONS.md); status and acceptance evidence in [Progress](PROGRESS.md).
 
-Read the [plain-English deployment guide](../readme.md#the-current-deployment-in-plain-english)
-first for the roles of DNS, the VPS, Caddy, Docker, Supabase and the image registry. On 1 October,
-the public release receipt and API health both still identify v219 / `b678e52e`; discovery status
-reports Supabase configured, Wikidata/Wikipedia available and hosted study/video analysis disabled.
-The diagram below includes implemented but currently disabled research capabilities. It is not a
-claim that each provider is configured or every path has passed interactive production acceptance.
+## 1. Product Topology
 
 ```mermaid
 flowchart LR
-    subgraph Browser["User browser"]
-        UI["FirstRoll web interface<br/>Discover · Deep Study · Analyse"]
-        Session["Persistent Supabase session<br/>email + password"]
+    subgraph Browser["Visitor browser"]
+        UI["FirstRoll interface<br/>Discover · Deep Study · Analyse · Settings"]
+        Session["Supabase JS session<br/>email + password"]
     end
-
-    subgraph Server["Rented server · Caddy"]
-        Static["Static site<br/>firstroll.app<br/>HTML · CSS · JavaScript"]
+    subgraph VPS["One Tencent Lighthouse server · Docker Compose"]
+        Caddy["Caddy<br/>TLS · static site firstroll.app<br/>proxy for api.firstroll.app"]
+        API["FastAPI container<br/>public mode · deployed by digest"]
+        Runs[("Transient run store<br/>50 runs · 10-minute TTL")]
+        HCache[("Process and container caches<br/>catalogue · criticism · video")]
     end
-
-    subgraph ContainerApps["API container · Docker Compose"]
-        API["FastAPI<br/>api.firstroll.app · public mode · Docker"]
-        Runs["Transient run store<br/>50 items · 10-minute TTL"]
+    subgraph Supa["Supabase · managed"]
+        Auth["Supabase Auth"]
+        AccountDB[("PostgreSQL + RLS<br/>profiles · preferences · saved films")]
+        QuotaRPC[("Quota functions<br/>default adapter")]
     end
-
-    subgraph AccountData["Account services"]
-        Auth["Supabase Auth<br/>credentials · sessions · recovery"]
-        UserData[("Supabase PostgreSQL<br/>profiles · preferences · saved films")]
-        Quota["Supabase quota functions by default<br/>generic PostgreSQL adapter staged"]
-    end
-
-    subgraph Local["Local private edition"]
+    PG[("Any PostgreSQL<br/>identity-neutral quota<br/>opt-in, staged")]
+    subgraph Local["Local private edition · 127.0.0.1:8000"]
         LocalAPI["Combined FastAPI + web process"]
-        Library[("Managed documents<br/>and manifest")]
-        Index[("SQLite FTS5<br/>and local embeddings")]
-        Caches[("Criticism and video<br/>JSON caches")]
-        Clips[("Temporary clip analysis")]
-        Secrets[("Local secret store")]
+        Private[(".firstroll<br/>library · FTS5 + embeddings<br/>settings · criticism/video caches")]
+        Clip["Clip analysis<br/>pyCinemetrics-derived"]
     end
-
     subgraph Providers["External providers"]
-        FilmData["TMDb primary<br/>Wikidata · Wikipedia fallback<br/>IMDb identity bridge"]
-        Criticism["Crossref · Douban · Letterboxd · Guardian"]
+        Catalogue["TMDb · Wikidata · Wikipedia"]
+        Criticism["Crossref · Douban MCP<br/>Letterboxd · Guardian"]
         Video["YouTube · Bilibili"]
         DeepSeek["DeepSeek API"]
     end
+    GHCR[("GHCR image")]
 
-    UI --> Static
-    Static --> API
-    Session --> API
-    API --> Auth
-    Session --> UserData
-    API --> Quota
+    UI -->|"HTTPS"| Caddy --> API
+    UI --- Session
+    Session --> Auth
+    Session -->|"RLS-scoped queries"| AccountDB
+    API -->|"verify bearer"| Auth
+    API -->|"reserve quota"| QuotaRPC
+    API -.->|"FIRSTROLL_QUOTA_PROVIDER=postgres"| PG
     API --> Runs
-    API --> FilmData
-    API --> Criticism
-    API --> Video
-    API --> DeepSeek
+    API --> HCache
+    API --> Catalogue & Criticism & Video & DeepSeek
+    GHCR -.->|"pulled by digest after owner approval"| API
 
-    UI --> LocalAPI
-    LocalAPI --> Library
-    LocalAPI --> Index
-    LocalAPI --> Caches
-    LocalAPI --> Clips
-    LocalAPI --> Secrets
-    LocalAPI --> Providers
+    UI -.->|"loopback only"| LocalAPI
+    LocalAPI --> Private
+    LocalAPI --> Clip
+    LocalAPI --> Catalogue & Criticism & Video & DeepSeek
 ```
 
-One rented Linux server runs the public beta through Docker Compose (`infra/vps`). Caddy obtains
-certificates for both hostnames, serves the browser bundle built from `master` at `firstroll.app`
-from `releases/current`, and proxies `api.firstroll.app` to the versioned FastAPI container, which
-is deployed by immutable image digest. The browser learns the API origin at build time through
-`FIRSTROLL_API_BASE`; the API accepts only configured frontend origins through
-`FIRSTROLL_CORS_ALLOWED_ORIGINS`. The Azure topology (Static Web Apps, Container Apps, Terraform under
-`infra/terraform`) is retained as legacy reference, not the active serving path. Azure resource and
-billing status have not been re-audited as part of this documentation task. The
-Spaceship DNS records remain outside both.
+| Component | Where it runs | Responsibility |
+|---|---|---|
+| DNS | Spaceship | Points `firstroll.app` and `api.firstroll.app` at the server; runs no application code |
+| Server | Tencent Lighthouse, Singapore (sizing in [Operations](OPERATIONS.md)) | Runs the two production containers from `infra/vps` |
+| Caddy | Container on the server, ports 80/443 | Certificates for both hostnames; serves `releases/current`; reverse-proxies the API without buffering SSE |
+| Web interface | Static files from Caddy, executed in the browser | HTML, CSS and vanilla JavaScript plus the bundled Supabase client; no server-side rendering |
+| FastAPI | Container on the same server; port 10000 on the internal network only | Provider calls, identity checks, evidence assembly, validation, quota ordering |
+| Supabase | Managed service outside the server | Accounts, sessions, recovery; RLS-owned account rows; default quota functions |
+| GitHub Actions and GHCR | GitHub | CI, release builds and the image registry; never the running backend |
 
-## Runtime Modes
+Two hostnames are two browser origins on one machine: there is no second server, Kubernetes,
+autoscaling or CDN. The browser learns the API origin at build time (`FIRSTROLL_API_BASE`); the API
+accepts only the origins listed in `FIRSTROLL_CORS_ALLOWED_ORIGINS`. Releases are built by GitHub
+Actions, stored in GHCR and deployed only after a human owner approves the protected `production`
+environment; the procedure is in [Operations](OPERATIONS.md).
+
+**Current enablement.** The diagram shows implemented capability, not what is switched on. At the
+approved v219 launch, public mode is on, hosted Deep Study and clip analysis are off, and TMDb is
+unconfigured, so the Wikidata/Wikipedia fallback serves search. [Operations](OPERATIONS.md) holds the
+live status and [Progress](PROGRESS.md) the launch evidence and open acceptance items.
+
+**Retired paths.** The Azure delivery path (Static Web Apps, Container Apps, Terraform and Entra
+External ID) is retired and recoverable from tag `archive/azure`. The default-off research Agent
+programme and its evaluation harnesses are parked under tag `archive/agent-programme`; it never had
+an HTTP route. Neither is part of the running system.
+
+| Layer | Stack |
+|---|---|
+| Browser | HTML5, CSS3, vanilla JavaScript; `@supabase/supabase-js` bundled with esbuild |
+| API (hosted image: `Dockerfile`, `requirements-hosted.txt`) | Python 3.11, FastAPI, Pydantic, Uvicorn, PyPDF, NumPy, MCP client; `psycopg` for the PostgreSQL quota adapter; a Node 22 runtime for the bundled Douban MCP server |
+| Local-only additions (`pyproject.toml`) | Sentence Transformers (`paraphrase-multilingual-MiniLM-L12-v2`) over SQLite FTS5; OpenCV, FFmpeg, TransNetV2, TensorFlow and Torchvision for clip analysis |
+| Synthesis | DeepSeek chat completions in JSON mode with thinking disabled (`DEEPSEEK_MODEL`, code default `deepseek-v4-pro`) |
+
+## 2. Runtime Modes
 
 | Capability | Local private edition | Hosted public beta |
 |---|---|---|
-| Web delivery | FastAPI serves the interface and API on `127.0.0.1:8000` | Caddy on the rented server serves the static interface and proxies the API container (legacy: Azure Static Web Apps and Container Apps) |
-| Film discovery | TMDb primary when configured; Wikidata/Wikipedia key-free fallback | Same server-side provider policy; credentials never enter the browser bundle |
-| Criticism and videos | Public adapters plus optional local credentials and persistent private caches | Public/hosted adapters; personal DeepSeek and YouTube keys may be request-scoped in one signed-in tab |
-| Private document library | Enabled | Not published; local routes return 404 |
-| Hybrid PDF retrieval | Local SQLite FTS5 and Sentence Transformers | Replaced by bounded first-party study frameworks |
-| Deep Study | Local DeepSeek key; no hosted account quota | Disabled at the current launch checkpoint; when enabled, bearer authentication plus atomic quota reservation through the selected adapter (Supabase by default) |
-| Research progress | Synchronous result route remains available | Authenticated POST-based SSE followed by a separate owner-scoped result request |
-| Clip analysis | Enabled when local dependencies are available | Disabled by default and returns 503 |
-| Durable account state | Loopback-only test identity with browser-local profile, preferences and saved films | Supabase Auth plus RLS-owned profile, preferences and saved-film rows; generic PostgreSQL quota counters remain staged |
-| Durable study results | Not implemented | Not implemented; current result store is process-local and expires after ten minutes |
+| Process | `uv run firstroll`: one process serving UI and API on `127.0.0.1:8000` | Caddy serves the static build; FastAPI runs with `FIRSTROLL_PUBLIC_MODE=true` |
+| Generated API docs | `/docs`, `/redoc`, `/openapi.json` | Not registered (404); `/` returns a JSON service status |
+| Film discovery | TMDb when `TMDB_BEARER_TOKEN` is set, otherwise Wikidata/Wikipedia | Same server-side policy; catalogue keys never reach the browser |
+| Criticism and video | All adapters, local claim structuring, caches under `.firstroll/` | Public adapters and the image-bundled Douban MCP; no claim structuring; container-local caches |
+| Theory evidence | Private hybrid retrieval over the local library | Four first-party framework passages (`public_study.py`) |
+| Deep Study | Interface uses synchronous `POST …/study`; local DeepSeek key; no quota | Interface uses the SSE stream plus an owner-scoped result request; both study routes need a bearer, the feature gate and a quota reservation |
+| Clip analysis | Enabled when the CV dependencies are installed | Returns 503 by default; the image lacks the dependencies |
+| Identity and account state | Loopback development identity with browser-local profile, preferences and saved films; Supabase when configured | Supabase only; RLS-owned rows |
 
-## Account Identity and Persistence
+| Switch | Default | Effect |
+|---|---|---|
+| `FIRSTROLL_PUBLIC_MODE` | off | Selects the hosted boundary described below |
+| `FIRSTROLL_DEEP_STUDY_ENABLED` | off | Hosted Deep Study gate; also needs configured Supabase auth, a configured quota adapter and a platform or personal DeepSeek key |
+| `FIRSTROLL_VIDEO_ANALYSIS_ENABLED` | on locally, off in public mode | Clip-analysis gate |
+| `FIRSTROLL_SERVE_HOSTED_FRONTEND` | off | Serves the hosted interface from FastAPI for an exact local production preview |
+| `FIRSTROLL_PREWARM_EMBEDDINGS` | on (local only) | Loads the query encoder in the background at start-up |
+| `FIRSTROLL_AUTH_PROVIDER` / `FIRSTROLL_QUOTA_PROVIDER` | `supabase` / `supabase` | Auth accepts only `supabase`; quota `postgres` selects the identity-neutral adapter (needs `FIRSTROLL_DATABASE_URL`) |
 
-Supabase is the production identity provider. The browser uses password-based `signUp()` and
-`signInWithPassword()`, persists and refreshes the Supabase session, and sends the access token to
-FastAPI only for protected API operations. Password recovery also remains inside Supabase. The
-browser contains the publishable key, never a service-role key.
+**HTTP boundary.** Public mode answers 404 on every local-only route (settings, library, claim
+structuring) and does not register the generated docs; locally, the settings, library-management
+and claim-structuring routes also require a loopback TCP client (403 otherwise). Hosted Deep Study
+needs a verified bearer, the feature gate and a quota reservation, and a personal DeepSeek key
+bypasses none of them; a personal YouTube key also needs a bearer; clip analysis returns 503 by
+default. A fixed development token (unlimited, non-persistent quota) works only when both the
+request URL host and the TCP peer are loopback, so it cannot pass through Caddy. Per-route access
+classes and contracts are in [Data](DATA.md#3-http-api-reference).
 
-The private edition also exposes one development identity, `luo_zhiyang@outlook.com`, so signed-in
-interfaces can be exercised without coupling local work to Supabase availability. This is a
-separate adapter, not a Supabase bypass: FastAPI accepts its fixed development token only when both
-the URL host and connected client are loopback addresses. The condition is independent of port and
-launcher, which keeps `uv run firstroll` and the hosted-mode preview consistent. The adapter stores
-test profile, preference and saved-film state in the current browser and returns an unlimited local
-FirstRoll quota marker. Its presence selects the same account-navigation shell used in production,
-without changing the API's private/public execution boundary or disabling local video analysis.
-Non-loopback deployments never publish the local identity and cannot accept
-its token; they retain Supabase verification, RLS persistence and atomic production quota checks.
+## 3. Component Responsibilities
 
-FirstRoll application records are separate from credentials:
+Backend modules (`app/backend`):
 
-```text
-Supabase Auth auth.users(id)
-    -> public.firstroll_profiles(user_id)
-    -> public.firstroll_preferences(user_id)
-    -> public.firstroll_saved_films(user_id, canonical film_id)
-```
+| Module | Responsibility | Does not own |
+|---|---|---|
+| `main.py` | HTTP boundary, mode gates, CORS, runtime `config.js`, bearer checks, ordering (auth → evidence → quota → model), worker-pool dispatch, error mapping | Provider parsing, evidence policy, quality rules |
+| `auth.py` | `SupabaseAuthVerifier`: validates the bearer against Supabase `/auth/v1/user`, requires a UUID subject and the `authenticated` role | Passwords, sessions, account rows |
+| `quota.py` | `SupabaseQuotaClient` (default RPC) and `PostgresQuotaClient` (identity-neutral); status and atomic reservation | Token verification, prompts, evidence |
+| `settings.py`, `settings.html` | Connector catalogue and credential resolution: environment values first, then the local write-only store (`.firstroll/settings.json`, mode 0600); the local console page | Hosted secret storage, which is the server's `.env` |
+| `tmdb_discovery.py` | TMDb search and hydration, director credits, IMDb/Wikidata bridges; `HybridDiscoveryService` routing and failover | Interpretation; silent choice between candidates |
+| `discovery.py` | Key-free Wikidata/Wikipedia identity, overview reconciliation, related films and shelves | Critical interpretation, creator intention |
+| `criticism.py` | Douban MCP, Letterboxd API and public web, Guardian public web and Crossref adapters; identity checks; review and claim models; `CriticismStore` | Direct film observation |
+| `video_sources.py` | YouTube Data API and Bilibili discovery, classification, de-duplication, descriptions and captions; `FilmVideoStore` | Copyright adjudication; verified speaker identity |
+| `library.py` | Private document catalogue and managed files (PDF, EPUB, Markdown, text) | Extraction, ranking |
+| `library_index.py` | PDF-only chunking, FTS5, local embeddings, query planning, reciprocal-rank fusion, diversity, page citations, single-flight encoder warm-up; FTS-only fallback when embeddings are unavailable | Film-specific claims |
+| `public_study.py` | Four first-party formal-analysis passages for hosted studies | Private books |
+| `evidence.py` | Typed `EvidencePacket`: focus ranking, de-duplication, quotas, budgets, omission reasons, permitted claims and boundary statements | Model calls, provider access |
+| `packet_quality.py` | Deterministic packet diagnostics: identity, citation readiness, provenance, duplication, relevance, class diversity, instruction-like text | Factual correctness; blocking generation |
+| `study_service.py` | DeepSeek structured output, `GroundedStudy` schema, citation validation, `StudyQualityGate`, bounded retry or repair; review-claim structuring | Authentication, quota, transport retry |
+| `study_observability.py` | `StudyTrace`: allow-listed stage timings, statuses, counts and token usage | Prompts, evidence, credentials, model output |
+| `research_stream.py` | Fixed public SSE vocabulary; `StudyRunStore` (owner-scoped, 50 runs, 10-minute TTL) | Durable results, hidden reasoning |
+| `analysis_pipeline.py`, `algorithms/` | Shot, scene, colour, object and shot-scale measurement derived from pyCinemetrics | Study evidence (no bridge yet) |
 
-All three tables reference the stable `auth.users` primary key with `ON DELETE CASCADE`. They are
-in Supabase's exposed `public` schema, so RLS is mandatory: authenticated users can operate only on
-rows where `(select auth.uid()) = user_id`, and the `anon` role receives no table privileges. The
-saved-film interface queries these tables directly through the Supabase client because PostgreSQL,
-not browser conditionals, enforces ownership.
-
-Quota persistence is now decoupled in code. The PostgreSQL adapter uses a backend-only connection and
-keys quota rows by provider plus immutable subject; it never forwards the browser bearer token. The
-existing Supabase RPC remains the default selected by `configured_quota_client()` unless
-`FIRSTROLL_QUOTA_PROVIDER=postgres` explicitly selects the generic adapter. The generic migration and
-dedicated connection remain staged, not a verified production cut-over. Entra code remains an optional
-learning and future-enterprise path, but ADR-017 removes it from the production critical path.
-
-The repository includes a bring-your-own-key path, but a personal DeepSeek key does not bypass the
-hosted feature flag, verified account or quota reservation. Visitor keys are held in tab memory and
-sent only on relevant requests; account synchronisation does not persist those credentials.
-
-## Component Responsibilities
+Other components:
 
 | Component | Responsibility | Does not own |
 |---|---|---|
-| `app/web` | Search, disambiguation, per-tab Discover continuity, resilient native director shelf, password-account UI, RLS-backed saved films, retained safe progress history, packet/gap/timing diagnostics, exact citation targets and clip upload UI | Provider secrets, cross-account authorisation, durable study storage, evidence validation or quota decisions |
-| `main.py` | HTTP boundary, mode gates, authentication calls, quota ordering, request validation and error mapping | Provider parsing rules or model-quality policy |
-| `tmdb_discovery.py` | Official TMDb candidate hydration, provider-qualified routing, IMDb/Wikidata identity bridges and open-catalogue failover | Critical interpretation, browser-held catalogue secrets or silent first-result selection |
-| `discovery.py` | Key-free Wikidata/Wikipedia identity fallback, overview reconciliation and related films | Critical interpretation or creator intention |
-| `criticism.py` | Provider-specific acquisition, identity checks, attributed review models and private cache | Direct film observation |
-| `video_sources.py` | Public video discovery, classification, deduplication, captions/descriptions and private cache | Copyright adjudication or verified speaker identity by default |
-| `library.py` | Private document catalogue and managed-file metadata | Text extraction or ranking |
-| `library_index.py` | PDF extraction, chunking, FTS5, single-flight background query-encoder warm-up, local embeddings, rank fusion and page citations | Film-specific factual claims |
-| `evidence.py` | Typed packet; focus-aware theory/claim/attributed ranking; exact/near deduplication; source and character budgets; permitted-claim and omission boundaries | Model generation or provider access |
-| `packet_quality.py` | Pre-synthesis identity, citation, provenance, duplication, lexical relevance, diversity and retrieved-instruction diagnostics | Source-text persistence, factual correctness, human usefulness or model grading |
-| `agent_evidence.py` | Typed autonomous evidence gaps, independent-origin recovery rule and deterministic no-model planner baseline | Source acquisition, model calls or human usefulness judgements |
-| `autonomous_study.py` | Exact claim-audit coverage, path-local citation authority and traceable filmmaker-exercise validation | Model transport, source acquisition or hidden reasoning |
-| `autonomous_agent.py` | Default-off research-to-audit/edit/reaudit/coach controller with separate four-call budget and safe strategy metrics | HTTP routing, checkpoint persistence or production authorisation |
-| `autonomous_runs.py` | Owner-scoped mode-`0600` phase checkpoints, atomic writes, cancellation and interrupted-call replay prevention | Hosted coordination, cross-device projects or provider idempotency |
-| `local_research_agent.py` | Default-off local graph adapter, native-tool or deterministic gap planning and ephemeral multi-provider acquisition | HTTP routing, cache mutation, credentials in graph state or production cut-over |
-| `study_observability.py` | Allow-listed monotonic stage timings, terminal status and bounded aggregate counts | Prompts, evidence text, credentials, model output or exception details |
-| `study_service.py` | Bounded DeepSeek structured output, native planner schemas, strict tool-call/Pydantic/citation validation, study gating and complete field-patch revalidation | Authentication, quota reservation, automatic timeout retry or research-tool authorisation/execution |
-| `research_stream.py` | Fixed public progress vocabulary and transient owner-scoped result store | Hidden reasoning, prompts, credentials or private evidence bodies |
-| `research_graph` | Bounded LangGraph state, reducers, routes and deterministic safety boundaries | Production provider credentials or public cut-over decision |
-| `quota.py` + PostgreSQL function | Provider-neutral quota status and atomic reservation after authentication | Bearer tokens, prompts, evidence or generated studies |
-| Supabase account tables + RLS | Durable profile, preferences and saved-film ownership scoped by `auth.uid()` | Passwords, provider keys, prompts, evidence or studies |
+| `app/web` | `index.html`, `styles.css`, `config.js` (runtime configuration; generated by the hosted build and by FastAPI locally), `app.js` (views, session continuity, request ownership, escaped rendering), `auth.js` (Supabase accounts and saved films), `integrations.js` (Settings view: profile, password, theme, tab-memory personal keys, quota display), `local-auth.js` (development identity) | Secrets, authorisation decisions, evidence validation |
+| `supabase/migrations` | Account tables with RLS; quota functions in a revoked `firstroll_private` schema | Studies, prompts, evidence |
+| `database/migrations` | Portable identity-neutral quota migration for any PostgreSQL; staged, not the production path | Bearer tokens, email |
+| `Dockerfile`, `infra/vps`, `tools/build_web.sh`, `tools/release/`, `.github/workflows/` | Hosted image, server stack, static build, release receipts and verification, CI and the gated release | See [Operations](OPERATIONS.md) |
 
-## Core Data Flows
+## 4. Core Data Flows
 
-### Discovery
+### Discovery and identity
 
 ```text
-title/year/director query
-→ HybridDiscoveryService checks TMDb configuration
-→ TMDb /search/movie candidate IDs when configured
-→ at most eight /movie/{id} hydrations, four concurrent, with credits + external IDs appended
-→ local title, release-year and director validation
-→ Wikidata/Wikipedia fallback when TMDb is absent or its search fails
+title / year / director query
+→ HybridDiscoveryService: TMDb when configured, otherwise Wikidata/Wikipedia
+→ TMDb /search/movie, then at most 8 candidates hydrated from the detail cache or by detail calls
+  (4 concurrent, 10-second timeout each) with credits, external IDs, alternative titles and
+  release dates appended
+→ local title, year and director validation; open-catalogue failover if TMDb search fails
 → explicit user choice when more than one candidate remains
-→ provider-qualified tmdb:{id} or wikidata:{QID} identity
-→ IMDb/Wikidata external-ID bridge for secondary-provider reconciliation
-→ fast director filmography from TMDb person credits or the canonical Wikidata relationship
-→ attributed TMDb dossier, or Wikidata/Wikipedia fallback dossier
-→ optional ratings, criticism, video and related-film enrichment
+→ provider-qualified identity: tmdb:{id} or wikidata:{QID}
+→ IMDb/Wikidata external-ID bridge for secondary providers
+→ director shelf (TMDb person credits or the Wikidata relationship) and dossier
+→ optional reception, criticism, video and related-film enrichment
 ```
 
-Film identity is selected before Deep Study. The model never decides silently between same-title
-films. TMDb detail calls run concurrently rather than serially, but the candidate cap and ten-second
-per-request deadline bound provider cost. TMDb search hydration reuses the process-memory detail
-cache; the search listing itself is not cached. TMDb's director credits already contain poster paths for the shelf, avoiding per-film detail calls.
-The open fallback retains separate fast and enriched shelf caches; a provider-local page found from
-a title is accepted only when its structured title, year and director agree with the canonical
-record.
+Film identity is fixed before Deep Study; the model never chooses between same-title films. A
+provider-local page found from a title is accepted only when its structured title, year and
+director agree with the canonical record. Detail, related-film and reception caches are process
+memory; search listings are not cached.
 
-#### Browser session continuity
+A versioned per-tab `sessionStorage` snapshot (≤ 500,000 bytes, ≤ 24 hours) holds the query,
+candidate and shelf summaries and the open film ID, never dossier bodies, criticism, studies,
+credentials or account data. A completed shelf restores without new requests; an interrupted one
+reissues only its latest query. View switches preserve each view and its scroll position.
 
-After each stable discovery transition, the browser writes a versioned, size-bounded snapshot to
-per-tab `sessionStorage`. The snapshot contains the public query, candidate summaries, selected shelf
-summaries, shelf readiness and an optional open-dossier film ID. It excludes dossier bodies,
-criticism, studies, credentials and account data. A completed shelf restores synchronously after a
-refresh without repeating search or related-film requests; an interrupted loading snapshot safely
-reissues only its latest query. Invalid, oversized, incompatible or older-than-twenty-four-hour
-snapshots are discarded.
+### Criticism and video enrichment
 
-Product navigation changes only the active section. It neither rebuilds nor empties Discover, and
-per-view scroll offsets are restored when moving among Discover, Analyse and Settings. This state is
-session continuity, not durable account persistence: closing the tab session clears it, and no state
-is synchronised across devices.
+Each criticism provider is fetched on explicit selection and cached as a `CriticalResearchBundle`.
+Review summaries enter the packet as attributed text. Structured critic claims exist only after the
+local-only DeepSeek structuring route and survive a refresh when the review IDs are unchanged.
+Video search combines YouTube (platform or personal key) with Bilibili public search; interviews,
+video essays, lectures and behind-the-scenes items contribute their uploader description and up to
+two text tracks. In the hosted container these JSON caches are server-wide (public-source text
+only, no per-user content) and disappear whenever the container is recreated.
 
-Dossier requests use the same latest-selection ownership rule as search: closing/replacing a dossier
-or starting another query aborts its detail, reception, video and criticism browser fetches. Stale
-successes, failures and queued focus changes cannot replace the current dossier. This controller is
-in-memory request bookkeeping, not additional persisted session or evidence state. Deep Study's busy
-and cancellation controls are established before token retrieval; duplicate clicks and cancelled
-pre-authentication work cannot launch a later study POST. Product-view navigation still preserves an
-open dossier rather than cancelling it.
+### Evidence packet
 
-### Request scheduling and web delivery
+| Lane | IDs | Source | Bounds |
+|---|---|---|---|
+| Film record | — | Selected catalogue record, with its record, overview and crew sources | One record |
+| Theory frameworks | `S1…` | Private hybrid retrieval (up to 10 passages) or the 4 first-party passages | ≤ 8 items; ≤ 3 per title; near-duplicates (≥ 0.92 similarity) dropped |
+| Critic claims | `C1…` | Structured claims from cached criticism | ≤ 12 claims; ≤ 12,000 characters; ≤ 2 per source; near-duplicates (≥ 0.9) dropped |
+| Attributed text | `E1…` | Review summaries, Crossref abstracts, video descriptions and captions | ≤ 12 items; ≤ 18,000 characters, ≤ 3,000 per item; ≤ 2 per origin, ≤ 4 per domain; same-type near-duplicates (≥ 0.9) dropped |
 
-Synchronous catalogue, status and cache reads in async reception/criticism handlers, library response
-metadata, and SSE authentication/platform-key checks use Starlette's existing worker pool. Ordinary
-synchronous routes already use worker dispatch. This preserves authentication before run creation,
-evidence before quota reservation and quota before generation; it neither caches authentication nor
-changes the owner-authenticated result request. The pool remains shared and finite. Local clip
-analysis still blocks the loop, and browser abort does not guarantee cancellation of synchronous
-provider work or restore spent quota.
+Selection is focus-ranked (attributed text also favours reviews behind selected claims, verified
+creator statements and complete provenance); theory and attributed items under 40 characters are
+dropped and every omission is counted by reason. The packet carries eight boundary statements
+(section 5). The complete selected packet and its `packet_quality` diagnostics are returned with
+the study; the prompt omits redundant fields and whitespace but hides nothing from inspection.
+Retrieval and index details are in [Data](DATA.md#local-sqlite-retrieval-index).
 
-The static build minifies application JavaScript and CSS with the existing locked esbuild tool while
-preserving classic-script globals, fixed artefact filenames and cache revalidation. Local FastAPI
-serves readable source assets. These implementation refactors preserve the topology, evidence and
-release contracts above. Synthetic concurrency, browser and perceptual evidence are recorded
-separately in [Web Responsiveness](WEB_RESPONSIVENESS.md), not presented as production latency SLOs.
-
-### Catalogue provider decision matrix
-
-| Option | Metadata quality | Runtime/setup | Cost/access | Decision |
-|---|---|---|---|---|
-| TMDb official API | Strong search, posters, runtime, credits and external IDs | Simple bearer token; application-oriented REST; parallelisable | Free non-commercial use with attribution; commercial use requires review | Primary when configured |
-| Wikidata + Wikipedia | Uneven crew completeness but open, attributable records | Key-free; existing adapter; occasional query latency | CC0/CC BY-SA | Automatic fallback |
-| IMDb official API | High-authority title and credit graph | AWS Data Exchange subscription, SigV4 and multiple AWS identifiers | Licensed/commercial boundary | Future enterprise adapter |
-| OMDb | Convenient title/IMDb lookup; shallower credits and poster access | Simple key | Published use restrictions and patron-only poster API | Rejected as primary |
-| IMDb HTML scraping | Markup-dependent and difficult to attribute reliably | High maintenance and blocking risk | Not an official application interface | Rejected |
-
-### Local Deep Study
+### Deep Study synthesis (fixed workflow)
 
 ```text
-local API startup → background query-encoder warm-up while Discover remains available
-selected film
-→ cached criticism and video text
-→ private hybrid library retrieval
-→ focus-ranked, deduplicated and layer-budgeted EvidencePacket with explicit omission reasons and untrusted-instruction boundary
-→ deterministic packet-quality diagnostics in evaluation paths
-→ compact selected prompt records (complete selected packet remains inspectable in the result)
-→ concise DeepSeek structured draft (3,200-token ceiling)
-→ schema and citation validation
-→ deterministic quality gate
-→ at most one total invalid-schema/citation or quality repair; transport retry remains explicit
-→ redacted packet-quality and stage observability attached to the private result
-→ retained progress history, packet selection/gaps and exact citation-target rendering
-→ escaped article rendering
+selected film + optional focus question
+→ cached criticism and video bundles
+→ theory frameworks: private hybrid retrieval (local) or first-party passages (hosted)
+→ EvidencePacket assembly
+→ [hosted] atomic quota reservation
+→ DeepSeek call 1: JSON object, thinking disabled, temperature 0.2, ≤ 3,200 completion tokens,
+  90-second timeout
+→ GroundedStudy schema + citation-ID + evidence-status validation
+→ StudyQualityGate (deterministic)
+→ at most one follow-up call (temperature 0):
+    invalid draft (envelope, JSON, schema, citation or status) → one retry; a second failure,
+      or a failed retry call, is an error
+    quality not passed → one repair; an invalid or failed repair keeps the original draft
+→ study + quality + selected packet + packet_quality + observability
 ```
 
-Only selected excerpts and attributed source text in the evidence packet are sent to DeepSeek. Full
-books, vectors, local paths and uploaded clips do not leave the device. Encoder warm-up uses one
-fixed first-party phrase, accepts no private passage and reports only bounded state/duration. A model
-initialisation lock prevents startup and an early request from loading duplicate encoder instances;
-`FIRSTROLL_PREWARM_EMBEDDINGS=0` restores lazy loading, and a failed warm-up leaves FTS retrieval
-available. A shared `StudyTrace` spans
-the HTTP route, cache reads, public or private retrieval, packet assembly and synthesis. It emits only
-schema-controlled stage names, durations, statuses, attempt/failure totals and bounded counts.
-Selection keeps at most eight theory passages, twelve critic claims and twelve attributed excerpts,
-with 12,000/18,000-character claim/attributed budgets and per-source/domain quotas. The complete
-selected evidence and aggregate omission reasons appear in the owner-visible result; prompt JSON
-omits redundant fields and whitespace rather than hiding evidence from inspection. The observability
-record also appears as a redacted server log record;
-public SSE retains its smaller allow-list and receives no token counts or internal timings.
+`MAX_FIXED_STUDY_MODEL_CALLS = 2`. With no theory sources the study fails before any model call. A
+transport failure on the first call is reported, never retried automatically. A `GroundedStudy` has
+four to six sections, each labelled `viewing_hypothesis`. The gate scores every section for generic
+language, a missing or non-causal mechanism, unobservable verification, unexplained critic citations
+and uncalibrated hypotheses. It passes only when the overall score is at least 0.75, every section
+scores at least 0.6, no section lacks a mechanism and the central argument makes no unhedged claim
+about unseen form; otherwise the result is returned with quality status `insufficient_evidence`. A
+shared `StudyTrace` spans route, caches, retrieval, packet and synthesis.
 
-### Default-Off Autonomous Agent Foundation
-
-```text
-explicit selected film + frozen focus
-→ build the unchanged fixed evidence packet
-→ deterministic packet-quality and typed evidence-gap assessment
-→ if initially passed: zero planner or acquisition calls
-→ if limited: safe aggregate gaps + public identity/focus → one objective/tool proposal
-→ deterministic allow-list and budget authorisation
-→ ephemeral Guardian, Crossref, Douban, Letterboxd or video-text acquisition
-→ rebuild through unchanged EvidencePacket selection
-→ reassess and adapt; recovered packets need two origins and two required epistemic classes
-→ deterministic Agent synthesis, bounded field-patch recovery and complete quality/citation validation
-→ exact claim-support audit
-→ patch at most four weak claim fields and re-audit once
-→ produce three to six evidence-linked filmmaker exercises or stop safely
-```
-
-`FIRSTROLL_LOCAL_AGENT_ENABLED=0` is the default. Enabling it makes a Python service factory
-available to local evaluators but registers no HTTP route. The model planner now receives native
-function definitions and must return exactly one `tool_calls` proposal containing one supplied gap.
-It sees no evidence text, credentials, URLs or private locators, cannot supply execution arguments and
-never receives raw tool output. A separate
-deterministic gap router can run the same graph without a planner model call and is the required
-ablation baseline. Provider objects and credentials remain in runtime context; graph state receives
-bounded evidence only for the non-checkpointed local run.
-
-The revised text graph owns synthesis retries. `generate_once()` makes one deterministic-temperature
-call with no hidden repair. A quality-valid structure may route through `repair_once()`; a parseable
-schema/citation failure retains only a process-local candidate and routes through
-`repair_invalid_once()`. That method requests at most four exact field paths in an 800-token patch,
-merges it without changing accepted fields and revalidates the whole study. Malformed or unpatchable
-output may use one graph-budgeted full regeneration. Safe metrics expose strategy/category counts but
-never the candidate or patch. The graph still enforces one initial generation, two repairs and the
-total model-call budget, while the production fixed route keeps temperature `0.2` and its existing
-single internal repair. Evaluator-only context modes stop cleanly at
-`evidence_ready` or force synthesis over a frozen packet. Evidence-only completion reserves a virtual
-non-call slot after the last planner turn so a synthesis-oriented total-call check cannot block
-`evidence_ready`; planner, provider, step, deadline, item and character limits remain unchanged. They allow acquisition to run once and both
-packet lanes to use the same retry controller during three alternating repetitions, so packet content
-is the only synthesis difference. Reports contain safe aggregate quality/tool/timing/token fields.
-The complete former-versus-native request, response, validation and execution comparison is recorded
-in [Native Tool Calling](NATIVE_TOOL_CALLING.md).
-
-The successor local factory can connect a completed research graph to `AutonomousStudyFinisher`.
-The finisher audits every required central/section claim path exactly once, permits only path-local
-citation IDs and forbids interpretive claims from being labelled directly supported. At most four
-unsupported or stronger-than-evidence fields receive one targeted edit, followed by one mandatory
-re-audit. Only accepted paths may become three to six exercises using the explicit actions `log`,
-`compare`, `count`, `track`, `mark` or `inspect`. Audit, editor, re-audit and coaching share a separate
-four-model-call ceiling. Full private objects return to the local caller; safe metrics retain only
-strategy, status, duration, tokens and failure category. This pipeline has synthetic coverage but no
-provider validation or HTTP route.
-
-For local durability, `DurableAutonomousRunEngine` stores each completed phase beneath
-`.firstroll/autonomous-runs/` using a mode-`0700` directory and owner-checked mode-`0600` atomic JSON
-checkpoints. Research, audit, edit, re-audit and coaching can resume at phase boundaries. Cancellation
-is checked before each phase. The store writes an in-flight marker before a potentially paid action;
-if the process disappears before committing its outcome, the next invocation stops failed-safe
-instead of replaying a call whose spend is unknown. This is a single-device private pilot, not a
-multi-instance checkpointer: it has no distributed lease, hosted key management, cross-device sync or
-provider idempotency guarantee.
-Private packets may be written under ignored mode-`0600` `.firstroll` storage only after every machine
-gate passes. The completed repeated run failed P50/P95 ratios `1.100404/1.993109`, so it wrote no
-packet and its consumed authorisation now prevents rerun. The structural-repair revision has only
-synthetic evidence. Its paid validation used no repair and passed machine targets, but a worktree
-symlink escaped the private-output boundary, so the safe write was rejected and no human artifact
-exists. The evaluator now preflights resolved private paths; the budget is consumed. Hosted execution
-remains prohibited.
-
-### Third-Party Benchmark Tool Boundary
-
-GuideLLM and lm-evaluation-harness run only as pinned `uvx` development tools. Their no-spend smoke
-path starts a named loopback mock, refuses an occupied port and writes mode-`0600` reports beneath
-`.firstroll/benchmarks`; it registers no FastAPI route and cannot read FirstRoll credentials, packets
-or studies. GuideLLM is suitable for TTFT, ITL, throughput and tool-call transport only after a
-representative, separately authorised OpenAI-compatible benchmark endpoint exists. The current
-product API is deliberately not reshaped into one.
-
-The commit-safe lm-eval task covers twelve synthetic claim-support boundaries. It is a model-level
-diagnostic, not a graph, citation, causal or human-usefulness gate. Mock and dummy scores are never
-reported as product evidence. See [Agent Benchmark Audit](AGENT_BENCHMARK_AUDIT.md) for current
-coverage and improvements.
-
-### Hosted Deep Study
+### Hosted progress and result delivery
 
 ```mermaid
 sequenceDiagram
     actor User
-    participant Web as Static site (Caddy)
+    participant Web as Static site
     participant API as FastAPI container
     participant Auth as Supabase Auth
-    participant Quota as PostgreSQL quota function
+    participant Quota as Quota adapter
     participant Model as DeepSeek
-    participant Runs as Transient run store
+    participant Runs as Run store
 
     User->>Web: Generate study
-    Web->>API: POST /study/stream + bearer token
-    API->>Auth: Validate token
-    Auth-->>API: User UUID
-    API-->>Web: Safe SSE lifecycle events
-    API->>Quota: Provider + immutable subject; atomic reserve
-    Quota-->>API: Allowed and remaining counts
-    API->>Model: Public framework evidence packet
-    Model-->>API: Structured draft
-    API->>API: Validate citations and quality
-    API->>Runs: Store result under user UUID
-    API-->>Web: run_completed
-    Web->>API: GET /research/runs/{run_id}
-    API->>Auth: Revalidate token
+    Web->>API: POST /study/stream + bearer
+    API->>Auth: Verify token (worker pool)
+    API->>API: Feature gate, then create a run owned by provider and subject
+    API-->>Web: film_resolving · existing_evidence_loading · evidence_assessed
+    API->>Quota: Atomic reservation
+    API-->>Web: study_drafting
+    API->>Model: Selected evidence packet
+    API->>API: Validate schema, citations and quality
+    API->>Runs: Store complete result
+    API-->>Web: quality_checked · run_completed (or run_failed)
+    Web->>API: GET /api/research/runs/{run_id} + bearer
     API->>Runs: Read only if owner matches
-    Runs-->>Web: Complete no-store result
+    Runs-->>Web: Complete result, Cache-Control no-store
 ```
 
-Quota is reserved immediately before the paid model call. A provider failure after reservation still
-consumes the allowance; this prevents retries from becoming an unbounded cost path.
+Authentication precedes run creation, evidence precedes quota and quota precedes generation. Events
+carry only the run ID, an allow-listed kind, sequence, fixed message, elapsed time and allow-listed
+counts; failures map to fixed variants (`film_missing`, `quota_exhausted`, `quota_unavailable`,
+`invalid_study`, `safe_stop`, `disconnected`). The full event vocabulary, including kinds that are
+reserved but not emitted, is in [Data](DATA.md#deep-study). The result request re-authenticates:
+another owner's, an unknown or an expired run returns 404, a running one 409 and a failed one 502.
+Allowance reserved before a provider failure stays consumed, so retries cannot become an unbounded
+cost path.
 
-### Clip Analysis
+### Clip analysis (local edition)
 
 ```text
-private browser upload
-→ temporary server file
-→ metadata, shot, scene, colour, object and shot-scale analysis
-→ JSON/CSV response
-→ temporary file removal
+browser upload → temporary file → metadata, shots (TransNetV2), scenes, colour, objects, shot scale
+→ JSON response; frames and CSVs under the Git-ignored img/<file stem>/ → temporary upload removed
 ```
 
-The measurement result does not yet enter the Deep Study evidence packet. Until that bridge exists,
-film-form statements generated without a clip remain viewing hypotheses.
+Measurements do not yet enter the evidence packet, so film-form statements remain viewing
+hypotheses.
 
-## Trust and Privacy Boundaries
+## 5. Evidence and Reliability Rules
+
+Typed evidence separation is the governing product rule: every item states what it is and what it
+may support.
+
+| Evidence type | Produced from | May support | Never treated as |
+|---|---|---|---|
+| `film_record` | Catalogue record | Identity, credits, attributed overview | Interpretation or intention |
+| `theory_framework` | Private books or first-party passages | Defining a concept; motivating a viewing question | A description of this film |
+| `critic_reported` | Review summaries and structured claims | The attributed critic's interpretation; details to verify | Direct observation |
+| `scholarly_abstract` | Crossref abstracts | What the publication claims | Film observation or the full paper |
+| `video_context` | Uploader descriptions; captions without verified speakers | How a resource presents itself; what its text says | A transcript or a verified speaker |
+| `creator_stated` | Captions whose speaker is verified | An attributed creator statement | — no adapter verifies speakers yet, so this lane is empty |
+| `film_observed`, `model_hypothesis` | Reserved types | — | Not produced; `film_observed` awaits the clip bridge |
+
+| # | Rule | Enforcement in code |
+|---|---|---|
+| 1 | Catalogue sources establish identity and attributed context, not intention | Separate `film_record`; packet boundary statements |
+| 2 | A critic claim reports that critic's interpretation | `critic_reported` status; section `critic_reports` field; gate flags unexplained critic citations |
+| 3 | A theory passage supplies a framework; it does not describe the film | Boundary statement; `theory_explains` field |
+| 4 | Without clip evidence, formal claims remain conditional viewing hypotheses | Every section is `viewing_hypothesis`; the gate blocks an unhedged central claim of unseen form |
+| 5 | Creator intention requires an attributable creator statement | Required `creator_intent_boundary`; `creator_stated` only from verified speakers |
+| 6 | The model may cite only identifiers supplied in its request | Unknown `S*`, `C*` or `E*` IDs fail validation |
+| 7 | Missing evidence yields a verification task or an insufficient-evidence result, not invention | Required per-section `verify` task; no theory, no call; `insufficient_evidence`; counted omissions; `film_specific_evidence_sparse` |
+| 8 | Retrieved instructions are untrusted data and cannot authorise tools or change policy | Boundary statement; no tools in the fixed workflow; instruction-pattern diagnostics; escaped rendering |
+
+## 6. Trust, Privacy and Threat Model
+
+### Trust boundaries
 
 | Boundary | Allowed to cross | Must not cross |
 |---|---|---|
-| Static browser → hosted API | Search terms, selected film ID, bearer token, study question, optional request-scoped provider key | Local books, local vectors, stored connector secrets or uploaded clips |
-| Hosted API → identity provider | Bearer token for verification | Prompts, evidence, study text or database credentials |
-| Hosted API → quota PostgreSQL | Verified provider and immutable subject through a backend-only connection | Browser bearer token, email, prompt, evidence or study text |
-| Study service → DeepSeek | Typed selected evidence, question and schema instructions | Complete library, file paths, clip binaries or hidden application state |
-| Progress stream → browser | Run ID, allow-listed event kind, sequence, fixed public message, elapsed time and safe counts | Prompt, API key, review body, private passage, model output or chain-of-thought |
-| Local API → local disk | Managed documents, SQLite index, connector settings and provider caches | Nothing is committed to Git; `.firstroll` is ignored |
+| Browser → hosted API | Search terms, film ID, focus, bearer, optional personal DeepSeek/YouTube key header | Local books, vectors, connector secrets, clips |
+| Browser → Supabase | Credentials, session, RLS-scoped account rows (publishable key) | Service-role key; other users' rows |
+| API → Supabase Auth | Bearer and publishable key | Prompts, evidence, study text |
+| API → Supabase quota RPC (default) | The visitor's bearer, so `auth.uid()` names the caller | Prompts, evidence, study text, service-role key |
+| API → PostgreSQL quota adapter (opt-in) | Verified provider and immutable subject over a backend-only connection | Bearer token, email, prompts, evidence |
+| Study service → DeepSeek | Selected packet records, focus and schema instructions | Complete library, file paths, clips, hidden state |
+| SSE → browser | Fields listed in section 4 | Prompts, keys, review bodies, passages, model output, exception text |
+| Observability log | Stage names, durations, statuses, bounded counts, token usage | Prompts, evidence, credentials, model output |
+| Local API → disk | `.firstroll/` documents, index, settings and caches; `img/` outputs | Git: both are ignored |
+| Build context → image | `Dockerfile`, `requirements-hosted.txt`, `app/` (allow-list `.dockerignore`) | `.firstroll`, keys, any other local file |
 
-Retrieved reviews, captions and webpages are untrusted evidence. They may support attributed claims,
-but they cannot authorise tools, change system policy or become model instructions.
+### Assets
 
-The repository's `.pi` directory is coding-harness configuration, not a FirstRoll product Agent.
-Trusted Pi sessions may delegate isolated scout, planner, reviewer or bounded-worker tasks to child Pi
-processes. The extension is absent from the web build, backend runtime and OpenAPI contract; it cannot
-change local or hosted research routing. Children share the developer working tree and provider
-allowance, so parallel dispatch is reserved for read-only work and the parent retains diff review,
-Git integration and delivery. Private `.firstroll` material remains outside every delegated role.
-See [FirstRoll Pi subagents](../.pi/README.md) for the operational boundary.
+- Operator secrets (provider keys, optional `FIRSTROLL_DATABASE_URL`, deploy SSH key) and the paid
+  model allowance they unlock.
+- Supabase account data and transient hosted study results.
+- Local private material: books, index, vectors, connector secrets, caches and clips.
+- Release integrity: the approval decision, the sealed receipt and the deployed image digest.
 
-## Secure Production Deployment Pipeline
+### Application threats and controls
 
-Frontend and backend now implement the same release contract using `tools/release/protocol.py`:
-exact source/run/build-attempt binding, a versioned receipt whose expected fingerprint comes from
-build-job outputs, a seven-day new-approval window, 90-day GitHub recovery-evidence retention,
-post-approval current-master checks and component-specific live verification. Both preserve active
-deployments rather than cancelling an upload/rollback when a newer candidate arrives. Each retains
-its own workflow and human approval; a combined atomic deployment is not implemented.
+| Threat | Implemented control | Residual risk |
+|---|---|---|
+| Retrieved text injects instructions | Boundary statement in every packet; no tool access in the fixed workflow; JSON schema and citation validation; instruction-pattern diagnostics; escaped rendering and `http(s)`-only links | Lexical detection is heuristic; prose can still be influenced |
+| Reading another account's study | Runs keyed to `provider:subject`; result request re-authenticates; foreign and unknown runs both 404; `no-store` | — |
+| Unbounded paid spend | Feature gate; reservation before the model call (3 per account and 30 overall per UTC day, advisory lock), which a personal key does not bypass; ≤ 2 calls, ≤ 3,200 completion tokens each | Reserved allowance stays spent on failure; browser abort does not stop backend work; the quota counts studies, not tokens |
+| Provider keys reach the browser | Server-side keys only; the build publishes API base, Supabase URL and publishable key; settings API is write-only and unpublished in public mode | — |
+| Visitor key misuse or retention | Tab memory only, cleared on refresh or sign-out, never stored server-side; strict 16–512-character syntax; personal keys require a bearer in hosted mode | A compromised page script could read tab memory |
+| Development identity used in production | Token accepted only with loopback URL host and peer; empty test email in the production build | Anyone on a computer running the local edition can use it, by design |
+| Cross-origin abuse | Exact-origin CORS, no credentials mode, bearer headers rather than cookies | — |
+| Surface discovery | Generated docs not registered; private routes 404 | `/api/contract` still lists local route names |
+| Account rows exposed | RLS `auth.uid() = user_id`; no `anon` privileges; quota tables in a revoked schema behind `security definer` functions | Depends on Supabase configuration staying intact |
+| Private material leaves the device | Only selected excerpts reach DeepSeek; `.firstroll` ignored; allow-list build context | Selected excerpts do reach an external provider |
+| Host or container compromise | `no-new-privileges` on both containers; the API also drops all capabilities, has a 768 MB default memory limit and publishes no port; `ufw`, key-only SSH, unattended security updates | The API runs as root inside its container; the Docker group is root-equivalent |
 
-The current delivery path is `VPS Release`, which reuses that contract for the single server. Its
-build job has no production credential: it builds the site and image, smoke-tests the container,
-publishes the image to GitHub Container Registry and seals a `vps` receipt binding the site
-inventory and the image digest to the commit (`tools/release/vps.py`). After human approval, a
-source-free runner re-verifies the receipt, the archive and current `master` before writing the
-dedicated deploy key, connects to the pinned host key, installs the reviewed stack files and runs
-`deploy.sh`, which pulls by digest and switches the site only after the API reports the baked
-commit. Live verification covers the receipt, every static file, API identity, hidden documentation
-and CORS; failure restores the previous release. The Azure paths below remain documented as legacy;
-see [Threat Model](THREAT_MODEL.md) for the credential differences.
+### Release-path threats and controls
 
-The frontend is still a static artefact on Static Web Apps, not a container. `Frontend Release`
-inventories the build and records the existing live receipt and verified GitHub recovery artefact.
-After human approval, it verifies all candidate files and the unchanged rollback baseline before
-using its environment-scoped Azure deployment token. It publishes the exact files and checks the
-served receipt, public file hashes and API reachability. Failure after upload triggers reupload and
-verification of the saved previous package, without rebuilding. An initial manual bootstrap is
-required when the legacy site has no receipt; it explicitly has no automatic legacy rollback.
+The release mechanics are in [Operations](OPERATIONS.md); this table records only the security
+reasoning. GitHub and GHCR are trusted platforms; application evidence and visitor input carry no
+deployment authority.
 
-Deploy runners fetch only the reviewed `protocol.py` and `frontend.py` control modules from the
-exact CI-approved Git commit. They do not check out the application, install dependencies or execute
-scripts from the deployment artefact. Workflow and control-module changes therefore remain trusted
-repository changes requiring review; receipt hashes are not signed supply-chain attestations.
-Receipt creation time, source version and GitHub-recorded deployment time are distinct facts.
+| Threat | Implemented control | Residual risk |
+|---|---|---|
+| Pull-request code obtains production access | PR CI receives no deploy credential; a release starts only after successful push CI on `master` for that exact commit; the build job, receipt and artefact carry no production credential | A malicious change merged to `master` affects later runs; review remains essential |
+| Release runs before configuration is complete | `VPS_RELEASE_ENABLED` gate; the deploy job checks every required setting before writing the key | An enabled but misconfigured workflow fails noisily |
+| Deploy key leaks | Dedicated Ed25519 key stored only as a `production` environment secret (and on the operator's machine); written to the runner after receipt, archive and current-`master` checks; `IdentitiesOnly` | Long-lived and root-equivalent on the host until rotated |
+| Runner redirected to another host | `known_hosts` pinned to `VPS_SSH_HOST_KEY` with `StrictHostKeyChecking yes` | As trustworthy as repository administration |
+| Image or archive substituted | Receipt binds commit, run, image digest and site inventory; pull by digest; archive extracted with Python's `data` filter and checked against the receipt | The build job's `packages: write` token could publish other tags, which no receipt references |
+| Owner approves the wrong run | The job summary shows release ID, commit, image digest, site fingerprint and expiry | Human error; compare SHA and digest before approving |
+| Stale approval deploys old code | Seven-day approval window; current `master` rechecked after approval; active releases are never cancelled | Administrator force-pushes invalidate assumptions |
+| Deploy runner executes untrusted code | No application checkout; only `tools/release/protocol.py` and `vps.py` fetched from the approved commit | Workflow YAML comes from the approved commit, so workflow changes need careful review |
+| Server scripts drift | `deploy.sh`, `Caddyfile` and `docker-compose.yml` reinstalled from the approved run's artefact on every release | They are not hashed in the receipt, so artefact integrity is trusted; a root-level host compromise controls everything on it |
+| Broken release | Site switches only after `/api/health` reports the baked commit; live checks of receipt, files, identity, hidden docs and CORS; automatic rollback | Rollback needs the previous image and site; v219 had none |
+| Approval bypassed | Protected environment with a required human reviewer | Administrators can alter environment policy |
+| Host unavailable | `restart: unless-stopped`, provider uptime | Single point of failure; no failover; the Compose health check does not restart an unhealthy API |
 
-FirstRoll backend deployments use GitHub's protected `production` environment as the sole human
-approval authority. Azure access is passwordless: separate managed identities trust short-lived
-GitHub OIDC assertions for building and deploying. The workflow is feature-gated off until those
-identities and GitHub settings have been configured.
+### Not yet implemented
 
-```text
-protected master + successful CI
-→ release switch and backend-path filter
-→ exact current-master check
-→ container build and local public-boundary smoke test
-→ branch-bound OIDC exchange for the build identity
-→ immutable image push to ACR
-→ deterministic diff/risk analysis and self-digesting manifest
-→ shared release receipt plus detailed risk summary (seven-day approval; 90-day evidence retention)
-→ GitHub production environment waits for required owner review
-→ manifest, run, commit, image and current-master binding rechecked
-→ environment-bound OIDC exchange for the deploy identity
-→ previous image captured as the rollback target
-→ exact ACR digest deployed to Azure Container Apps
-→ exact revision, baked commit identity, Azure image digest, APIs, hidden docs and CORS verified
-→ failure after rollout restores the previous image and retains a failed run
-```
+- Container vulnerability scanning, SBOM generation and signed attestations (receipt hashes are not
+  signed supply-chain evidence).
+- Durable export of deployment audit events; GitHub history and host `state/` records are the trail.
+- Rate limiting or admission control on public API routes.
+- Synthetic monitoring beyond the release-time HTTP checks, and a live rollback drill.
+- Off-host backup of the server's `.env`, releases and TLS state.
 
-The backend compares changes with the deployed source SHA rather than just the latest merge; unknown
-legacy/non-ancestor versions force a conservative whole-tree review. Terraform and migration source
-changes are flagged, but neither application-release workflow applies infrastructure or migrations.
+These gaps must stay visible and must never be described as passing controls.
 
-The release workflow owns the Container App image field after bootstrap, while Terraform ignores
-only that field and continues to own configuration, probes, scaling and infrastructure. This avoids
-an infrastructure apply accidentally rolling back a newer approved image. The build identity has
-an identity-bound GitHub subject prefix containing the public immutable owner and repository IDs;
-the older name-only prefix fails closed at Azure login. It has `AcrPush` on the FirstRoll registry
-and `Reader` on the exact app. It cannot
-deploy. The deploy identity has `Contributor` only on the exact Container App; its federated subject
-names GitHub's `production` environment. The fresh deploy runner checks out no application source and
-validates the manifest before requesting an Azure token. No HMAC broker, GitHub App, ACR password or
-long-lived Azure JSON credential is part of the implemented path. GitHub and Azure platform logs are
-the current audit trail; an application-owned append-only ledger is not implemented.
+The `.pi` directory configures the developer's Pi coding harness, not a product capability: its
+subagents are absent from the web build, backend and API. Their prompts exclude `.firstroll` and
+other private material, a prompt-level control rather than a sandbox
+([FirstRoll Pi subagents](../.pi/README.md)).
 
-Recovery remains conditional on available artefacts/images and a runner/platform capable of
-finishing the recovery steps. Cancellation, timeouts and outages can require owner intervention.
-Neither mocked failure tests nor a green upload proves live recovery or all authenticated user flows.
+## 7. Web Responsiveness
 
-## Availability and Scaling
+Design rules, preserving the request, evidence and release contracts above:
 
-- The single server runs one API container continuously: no cold start, no autoscaling and no
-  second host. Each release restarts the container, so the API is unavailable for a few seconds while
-  Caddy keeps serving the static shell. The legacy Container App kept one warm replica.
-- Discovery, reception and related-film caches are process memory and reset on restart.
-- The hosted research result store is capped at 50 runs with a ten-minute TTL. It is suitable for a
-  single-process beta, not horizontal scaling or resumable work.
-- PostgreSQL quota reservation uses an advisory transaction lock per UTC day, so concurrent requests
-  cannot exceed the configured account or global boundary.
-- Local SQLite indexes and JSON caches are single-device artefacts and are never assumed to exist on
-  the Container App's ephemeral filesystem.
-- Optional providers fail independently. Their absence reduces evidence coverage rather than making
-  film identity or the whole application unavailable.
+- Synchronous catalogue, status and cache reads inside async reception and criticism handlers,
+  library upload and rebuild metadata, and SSE bearer and platform-key checks run on Starlette's
+  shared worker pool; plain synchronous routes already do. Authentication is never cached.
+- A dossier's browser requests share its lifetime: closing it, choosing another film or searching
+  again aborts its detail, reception, video and criticism fetches, and identity checks discard late
+  responses, errors and focus changes.
+- Deep Study sets its busy state and **Stop waiting** action before awaiting the token; repeated
+  clicks cannot overlap, and cancellation during authentication sends no study request.
+- The static build minifies `app.js` and `styles.css` with esbuild, keeping classic-script globals,
+  fixed filenames and revalidation; the local edition serves readable sources.
 
-## Configuration Boundaries
+**Measured evidence (12 September 2026 checkpoint, synthetic, not production latency):**
+
+- `tests/test_api_responsiveness.py`: 34 same-event-loop tests hold a blocking call until
+  `/api/health` completes; a watchdog turns a loop stall into a failure.
+- `tests/web/responsiveness.test.cjs`: 27 Node request and race tests, run by the Python suite and
+  passed against the minified build at the checkpoint; the fake transport ignores abort signals to
+  prove stale-response protection independently.
+- Asset sizes against baseline `40577ca5`:
+
+| Asset | Baseline bytes | Candidate bytes | Baseline gzip | Candidate gzip |
+|---|---:|---:|---:|---:|
+| `app.js` | 154,709 | 115,716 | 36,319 | 31,176 |
+| `styles.css` | 95,119 | 80,486 | 17,000 | 15,733 |
+
+- `tools/check_web_responsiveness.cjs` (optional browser diagnostic; starts no backend and fulfils
+  or blocks every page request, but is no OS-level sandbox). Chrome 152, 4× CPU throttle, 390 px
+  and 1440 px, twenty interactions each, synthetic 500 ms token delay: median click-to-busy fell
+  from about 502 ms to 0.4–0.8 ms; a two-frame paint proxy (not INP) from about 511 ms to 27–28 ms;
+  forty cancellations before token readiness sent zero study requests; no page errors or horizontal
+  overflow. The report is kept at `evals/results/web-responsiveness-2026-09-12.json` in tag
+  `archive/agent-programme`.
+
+The commands that reproduce these checks are in [Setup](SETUP.md#development-and-verification).
+
+**Known limits.** Browser abort cannot stop provider work already running, and quota may still be
+consumed. The worker pool is finite and untested under saturation; admission control would need its
+own design. Local clip analysis runs synchronously on the event loop, and its outputs share
+per-file-stem paths, so a bounded serial worker needs its own review. Supabase token readiness still
+waits for account-data hydration. Live search → shelf → dossier → reception profiling is
+outstanding; see [Progress](PROGRESS.md).
+
+## 8. Availability and State
+
+- One API container runs continuously (no cold start, no autoscaling); each release recreates it,
+  so the API pauses briefly while Caddy keeps serving the static site.
+- Optional providers fail independently, reducing evidence coverage without breaking identity.
+- A transaction-scoped advisory lock stops concurrent reservations exceeding either quota limit.
+- The run store suits one process only: no horizontal scaling and no resumable work.
+
+Only Supabase state is durable product data for the hosted beta. Process memory (study runs,
+catalogue, related-film and reception caches) is lost on restart, and the container-local criticism
+and video caches on every release. The complete storage inventory and lifecycle rules are in
+[Data](DATA.md#2-data-model); hosting constraints, including Supabase availability, are in
+[Operations](OPERATIONS.md#12-cost-availability-and-known-constraints).
+
+Durable study history, persistent projects and a clip-to-study bridge are not implemented.
+
+## 9. Configuration Boundaries
 
 | Setting class | Examples | Placement |
 |---|---|---|
-| Public static build values | `FIRSTROLL_API_BASE`, `FIRSTROLL_SUPABASE_URL`, `FIRSTROLL_SUPABASE_PUBLISHABLE_KEY` | `VPS Release` build job (legacy: Static Web Apps workflow) |
-| Hosted backend public configuration | `FIRSTROLL_PUBLIC_MODE`, `FIRSTROLL_CORS_ALLOWED_ORIGINS`, `SUPABASE_URL`, `FIRSTROLL_AUTH_PROVIDER`, `FIRSTROLL_QUOTA_PROVIDER` | `/opt/firstroll/.env` on the server (legacy: Azure Container App environment) |
-| Hosted backend secrets | `SUPABASE_PUBLISHABLE_KEY`, `FIRSTROLL_DATABASE_URL`, `DEEPSEEK_API_KEY`, optional `YOUTUBE_API_KEY` | `/opt/firstroll/.env` (mode 0600) on the server only (legacy: Container Apps secret boundary) |
-| Local private paths | `FIRSTROLL_LIBRARY_PATH`, `FIRSTROLL_LIBRARY_MANIFEST`, `FIRSTROLL_LIBRARY_INDEX`, `FIRSTROLL_SETTINGS_PATH` | Local backend environment |
-| Local optional credentials | DeepSeek, Douban cookie, Letterboxd OAuth and YouTube key | Local Settings or local environment |
+| Public static build values | `FIRSTROLL_API_BASE`, `FIRSTROLL_SUPABASE_URL`, `FIRSTROLL_SUPABASE_PUBLISHABLE_KEY` | `VPS Release` build job; baked into `config.js` |
+| Hosted public configuration | `FIRSTROLL_PUBLIC_MODE`, `FIRSTROLL_CORS_ALLOWED_ORIGINS`, `FIRSTROLL_DEEP_STUDY_ENABLED`, `FIRSTROLL_VIDEO_ANALYSIS_ENABLED`, `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `FIRSTROLL_AUTH_PROVIDER`, `FIRSTROLL_QUOTA_PROVIDER` | `/opt/firstroll/.env` on the server |
+| Hosted secrets | `DEEPSEEK_API_KEY`, `YOUTUBE_API_KEY`, `TMDB_BEARER_TOKEN`, optional `FIRSTROLL_DATABASE_URL` | `/opt/firstroll/.env` (mode 0600) only |
+| Release settings | `VPS_SSH_PRIVATE_KEY`; `VPS_HOST`, `VPS_SSH_HOST_KEY`, `VPS_USER`, `VPS_RELEASE_ENABLED` | GitHub `production` environment secret; repository variables |
+| Local private paths | `FIRSTROLL_LIBRARY_PATH`, `FIRSTROLL_LIBRARY_MANIFEST`, `FIRSTROLL_LIBRARY_INDEX`, `FIRSTROLL_SETTINGS_PATH` | Local environment; defaults under `.firstroll/` |
+| Local optional credentials | DeepSeek, TMDb, YouTube, Douban cookie, Letterboxd OAuth | Local Settings page or local environment |
 
-See [Local Setup](LOCAL_SETUP.md), [Public Beta Hosting](HOSTING.md), [Data Model](DATA_MODEL.md),
-[API Reference](API_REFERENCE.md) and [Architecture Decisions](DECISIONS.md) for operational detail.
+Complete variable lists and setup steps are in [Setup](SETUP.md) and [Operations](OPERATIONS.md).
