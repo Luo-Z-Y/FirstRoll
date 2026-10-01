@@ -127,29 +127,27 @@ def test_postgres_quota_rejects_invalid_identity_and_factory_is_explicit(monkeyp
         configured_quota_client()
 
 
-def test_entra_deep_study_requires_backend_owned_quota(monkeypatch) -> None:
-    class ReadyAuth:
+def test_hosted_deep_study_requires_configured_auth_and_quota(monkeypatch) -> None:
+    class Ready:
         configured = True
 
-    class LegacyQuota:
-        configured = True
-        backend_owned = False
-
-    class BackendQuota:
-        configured = True
-        backend_owned = True
+    class Missing:
+        configured = False
 
     monkeypatch.setenv("FIRSTROLL_PUBLIC_MODE", "true")
     monkeypatch.setenv("FIRSTROLL_DEEP_STUDY_ENABLED", "true")
-    monkeypatch.setenv("FIRSTROLL_AUTH_PROVIDER", "entra")
-    monkeypatch.setattr(main, "auth_verifier", ReadyAuth())
-    monkeypatch.setattr(main, "quota_client", LegacyQuota())
+    monkeypatch.setattr(main, "auth_verifier", Ready())
+    monkeypatch.setattr(main, "quota_client", Missing())
 
     assert main.hosted_deep_study_boundary_enabled() is False
 
-    monkeypatch.setattr(main, "quota_client", BackendQuota())
+    monkeypatch.setattr(main, "quota_client", Ready())
 
     assert main.hosted_deep_study_boundary_enabled() is True
+
+    monkeypatch.setenv("FIRSTROLL_DEEP_STUDY_ENABLED", "false")
+
+    assert main.hosted_deep_study_boundary_enabled() is False
 
 
 def test_transient_result_owner_is_namespaced_by_identity_provider() -> None:

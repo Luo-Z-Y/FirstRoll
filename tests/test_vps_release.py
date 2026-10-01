@@ -20,7 +20,6 @@ ROOT = Path(__file__).resolve().parents[1]
 WORKFLOWS = ROOT / ".github" / "workflows"
 WORKFLOW_PATH = WORKFLOWS / "vps-release.yml"
 WORKFLOW = WORKFLOW_PATH.read_text(encoding="utf-8")
-BACKEND = (WORKFLOWS / "backend-release.yml").read_text(encoding="utf-8")
 CI = (WORKFLOWS / "ci.yml").read_text(encoding="utf-8")
 STACK = ROOT / "infra" / "vps"
 COMPOSE = yaml.safe_load((STACK / "docker-compose.yml").read_text(encoding="utf-8"))
@@ -177,10 +176,11 @@ class TestWorkflowPolicy:
         assert "known_hosts" in identity["run"]
         assert "secrets.VPS_SSH_PRIVATE_KEY" in identity["env"]["VPS_SSH_PRIVATE_KEY"]
 
-    def test_shared_freshness_check_matches_the_backend_workflow(self):
-        ours = step(load_workflow(WORKFLOW), "deploy", "Refuse a stale revision after approval")
-        theirs = step(load_workflow(BACKEND), "deploy", "Refuse a stale revision after approval")
-        assert ours["run"] == theirs["run"]
+    def test_approval_refuses_a_moved_master(self):
+        freshness = step(load_workflow(WORKFLOW), "deploy", "Refuse a stale revision after approval")
+        assert "git/ref/heads/master" in freshness["run"]
+        assert '"$current_master_sha" != "$EXPECTED_SHA"' in freshness["run"]
+        assert "exit 1" in freshness["run"]
         assert load_workflow(WORKFLOW)["concurrency"]["cancel-in-progress"] is False
 
     def test_release_is_by_digest_and_failure_rolls_back(self):

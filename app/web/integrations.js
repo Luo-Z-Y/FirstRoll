@@ -132,9 +132,7 @@
     if (refs.accountState) {
       const provider = user?.provider === "local"
         ? "Local development account"
-        : (window.FIRSTROLL_CONFIG?.authProvider === "entra"
-          ? "Authenticated by Microsoft Entra"
-          : "Authenticated by Supabase");
+        : "Authenticated by Supabase";
       refs.accountState.textContent = user ? provider : "Signed out";
     }
     if (refs.displayName && document.activeElement !== refs.displayName) {

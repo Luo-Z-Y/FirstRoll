@@ -113,8 +113,8 @@ class QuotaIdentity:
 
     provider: str
     subject: str
-    # Temporary rollback input for the old Supabase RPC. It is never used or
-    # persisted by the backend-owned PostgreSQL implementation.
+    # The visitor's bearer, needed only by the default Supabase RPC adapter. It is
+    # never used or persisted by the backend-owned PostgreSQL adapter.
     legacy_authorisation: str | None = field(default=None, repr=False, compare=False)
 
     def validated(self) -> "QuotaIdentity":
@@ -131,10 +131,9 @@ QuotaTransport = Callable[[str, str, str, str], dict[str, Any]]
 
 
 class SupabaseQuotaClient:
-    """Legacy rollback adapter for the visitor-token-authorised Supabase RPC."""
+    """Default quota adapter: the visitor-token-authorised Supabase RPC."""
 
     max_response_bytes = 128_000
-    backend_owned = False
 
     def __init__(
         self,
@@ -173,7 +172,7 @@ class SupabaseQuotaClient:
             raise QuotaConfigurationError("Supabase Deep Study quotas are not configured.")
         if identity.provider.strip().casefold() != "supabase":
             raise QuotaConfigurationError(
-                "The legacy Supabase quota adapter cannot serve this identity provider."
+                "The Supabase quota adapter cannot serve this identity provider."
             )
         token = self._bearer_token(identity.legacy_authorisation)
         payload = self.transport(self.url, self.publishable_key, token, function_name)
@@ -242,8 +241,6 @@ class PostgresQuotaClient:
     The database receives only the already verified provider and immutable subject.
     Browser bearer tokens never cross this boundary.
     """
-
-    backend_owned = True
 
     def __init__(
         self,

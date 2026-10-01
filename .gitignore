@@ -142,7 +142,11 @@ ENV/
 env.bak/
 venv.bak/
 
-# Terraform local state, plans and operator-specific configuration
+# Shot-boundary scratch output written by local clip analysis
+/video.txt
+
+# Retired Azure Terraform state and operator configuration that may remain locally
+# (configuration recoverable from the archive/azure tag)
 .terraform/
 *.tfstate
 *.tfstate.*

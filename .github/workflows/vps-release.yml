@@ -99,7 +99,6 @@ jobs:
         env:
           FIRSTROLL_API_BASE: https://api.firstroll.app
           FIRSTROLL_BUILD_CHANNEL: live
-          FIRSTROLL_AUTH_PROVIDER: supabase
           # Public Supabase values; the browser bundle never receives a secret.
           FIRSTROLL_SUPABASE_URL: https://obnxmfcvshbkbsgxbmgg.supabase.co
           FIRSTROLL_SUPABASE_PUBLISHABLE_KEY: sb_publishable_P6VzoeBdroR-2yeit62cbg_vvTXH47Y
@@ -108,8 +107,6 @@ jobs:
       - name: Validate the bounded site directory
         run: |
           set -euo pipefail
-          # Caddy does not read the Static Web Apps routing file and it is not a public asset.
-          rm -f dist/staticwebapp.config.json
           test -f dist/index.html
           test -f dist/assets/config.js
           test -f dist/assets/app.js
