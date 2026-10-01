@@ -1,7 +1,7 @@
 # FirstRoll — Evidence-Grounded Film Study
 
-FirstRoll is a local-first film-study platform for filmmakers with a hosted public beta that is
-moving from Azure to a single rented server.
+FirstRoll is a local-first film-study platform for filmmakers with a hosted public beta running
+on a single Tencent Lighthouse server in Singapore.
 It combines open film metadata, attributed criticism, a private study library,
 evidence-constrained language-model synthesis and clip-based visual analysis. The hosted and local
 editions share the discovery and study architecture, while private books and clip analysis remain
@@ -11,36 +11,15 @@ The central rule is simple: identity records, critic reports, theory frameworks,
 hypotheses and measured film observations are different kinds of evidence. FirstRoll
 keeps those layers visible instead of presenting one fluent but unsupported answer.
 
-> **Current status:** local working prototype; the public beta is offline while it moves from the
-> expired Azure subscription to one rented server. Discover,
-> private-library retrieval, Crossref scholarship, optional Douban, Letterboxd and Guardian
-> criticism, DeepSeek synthesis and clip analysis are implemented. The hosted edition publishes
-> discovery, the native director shelf and authenticated Deep Study while keeping private-library
-> tools, clip analysis and unauthenticated model use disabled. Supabase email authentication, atomic
-> daily quotas and redacted SSE research progress are implemented. The fixed-workflow entry gate now
-> passes all 17 targets and 11 required steps. The owner has authorised a default-off local Agent
-> adapter and paired comparison. The original comparison failed completion and mean-quality targets,
-> so production remains NO-GO. The revised three-sample text run restored 15/15 completion and passed
-> quality/cost, but failed both latency-ratio targets. A no-call revision now patches only invalid
-> fields of parseable responses. Its paid run passed all machine targets but failed to write the
-> private review artifact. A successor autonomous-Agent programme now adds typed evidence-gap
-> objectives, honest independent-origin recovery, a deterministic planner baseline and Crossref as
-> an Agent provider. It remains local, default-off and unvalidated by paid or human evidence.
-> Delivery shares versioned release receipts, seven-day approval windows, 90-day recovery-evidence
-> retention, post-approval freshness checks and live verification. The current `VPS Release` path
-> publishes the static site and the API container by immutable digest to one server over a pinned SSH
-> connection after the same human `production` approval; the Azure workflows remain as inert legacy
-> paths. The Tencent Lighthouse server is purchased and bootstrapped as of 29 September 2026:
-> Docker/Compose, key-only SSH, firewall and unattended updates are verified after an approved reboot.
-> Caddy configuration validates, but no application containers are running. The dedicated deployment
-> key and pinned host settings are configured behind GitHub's existing human approval gate; both
-> legacy Azure release workflows are disabled. The owner has added the DeepSeek/YouTube keys and
-> cloud HTTPS rule; their presence and configuration are verified without exposing secrets. Paid
-> Deep Study stays off pending quota verification. The first candidate passed its build and smoke
-> tests, but was cancelled before approval after review exposed deployment failure-handling bugs.
-> Explicit failure propagation, bootstrap/previous-site recovery and same-version retry protection
-> are now regression-tested (642 tests pass). A replacement candidate, image-pull verification,
-> DNS/TLS, exact-run production approval and a live recovery drill remain.
+> **Live checkpoint — 1 October 2026:** [FirstRoll](https://firstroll.app) runs on Tencent Lighthouse
+> in Singapore. The public release receipt and [API health](https://api.firstroll.app/api/health)
+> both identify **v219 / `b678e52e`**, deployed with owner approval on 29 September. Discovery, the
+> native director shelf and Supabase accounts are published. **Hosted Deep Study and video analysis
+> remain disabled**; authenticated quota and interactive browser acceptance are still outstanding.
+> TMDb is not configured, so discovery uses Wikidata/Wikipedia. LangGraph is a local, default-off
+> experiment, not the live research path. Azure/Render are no longer the active hosting path.
+> The approved source passed 642 tests on 29 September; no new deployment or paid model call was
+> made for this documentation update. A real recovery drill remains outstanding.
 
 See [Project Progress](docs/PROGRESS.md) for completed milestones, verification results,
 known limitations and the next priorities.
@@ -204,6 +183,84 @@ implemented, film-specific formal claims remain viewing hypotheses.
 
 ## System Architecture
 
+### The current deployment, in plain English
+
+FirstRoll is **one web application on one server, plus managed account services and external APIs**.
+Two domain names do not mean two rented servers. The frontend and API remain separate browser
+origins, but share the same Tencent machine. This is not a Kubernetes or multi-server deployment.
+
+| Component | Where it runs | What it does |
+|---|---|---|
+| Domain and DNS | Spaceship | Keeps `firstroll.app` registered and points both website/API names to the VPS; it does not run the application |
+| VPS (virtual private server) | Tencent Lighthouse, Singapore; Ubuntu, 2 vCPUs / 2 GB RAM / 40 GB disk | The rented computer running the two production containers |
+| Caddy | Container on the VPS | The HTTPS front door: obtains/renews certificates, serves the website files and forwards API requests |
+| Frontend | Files served at `firstroll.app`; JavaScript executes in the visitor's browser | HTML/CSS/vanilla JavaScript interface; no production Next.js/React server |
+| FastAPI | Separate container on the same VPS, reached through `api.firstroll.app` | Python application logic, provider calls, authentication checks, evidence validation and quotas |
+| Supabase Auth | Managed service outside Tencent | Email/password accounts, sessions and password recovery |
+| Supabase PostgreSQL | Managed service outside Tencent | Profiles, preferences, saved films and the existing quota functions; row-level security restricts account rows to their owner |
+| External providers | Their own services | Film metadata, criticism, scholarship and videos; DeepSeek performs model inference when study generation is enabled |
+| GitHub Actions and GHCR | GitHub, not the VPS | Test/build releases and store Docker images; a registry is an image store, not the running backend |
+
+Docker packages the API with its runtime dependencies. **Docker Compose** starts and connects the
+API and Caddy containers on this one machine; it does not create another server or provide automatic
+multi-server scaling. API port `10000` stays on the internal container network. Public web requests
+enter through Caddy on HTTPS port `443`; its reverse proxy forwards API requests internally.
+
+### What happens when someone uses FirstRoll?
+
+1. **Open the site:** DNS supplies the server address; Caddy sends the static web files over HTTPS.
+2. **Search for a film:** browser JavaScript calls `api.firstroll.app`; FastAPI asks the catalogue
+   providers, checks film identity and returns data for the shelf and dossier. The browser does
+   not receive the server's provider keys.
+3. **Sign in or save a film:** the browser uses Supabase Auth. Profile/preferences/saved-film
+   operations go directly to Supabase through its client library; database row-level security
+   enforces ownership. Protected FastAPI requests carry a bearer token which the API verifies.
+4. **Generate a study, once enabled and verified:** the fixed workflow checks authentication and
+   the feature boundary, builds bounded evidence, reserves quota atomically, calls DeepSeek, then
+   validates the schema, citations and quality. It may make one bounded repair attempt. Progress
+   events stream to the browser; the final result is fetched through an owner-checked endpoint.
+   This is implemented capability, not a claim that hosted generation is enabled today.
+
+The current VPS configuration uses the **Supabase quota adapter by default**. A separate
+identity-neutral PostgreSQL adapter exists behind `FIRSTROLL_QUOTA_PROVIDER=postgres`, but its
+migration and dedicated connection are staged rather than an established production cut-over.
+Supplying a personal DeepSeek key does not bypass the hosted enablement or account quota boundary.
+
+### What survives a restart?
+
+| Data | Storage and lifetime |
+|---|---|
+| Accounts, preferences, saved films and quota counters | Supabase; survive a VPS/container restart, subject to the database's own retention and recovery policy |
+| Current Discover workspace | Browser `sessionStorage`, per tab and at most 24 hours; not account-synchronised |
+| Discovery caches and hosted study results | API memory; disappear on process restart. Completed study results also expire after ten minutes |
+| Visitor-supplied DeepSeek/YouTube keys | Current tab memory and relevant requests only; not saved in account tables and cleared on refresh/sign-out |
+| Operator keys, static releases and TLS state | Protected VPS configuration/files/volumes; need a separate off-host recovery plan, not a Git commit |
+| Private books, embeddings and clip analysis | Local edition on the filmmaker's computer; not uploaded by the hosted deployment |
+
+This inexpensive setup avoids deliberate idle scale-to-zero, but a restart can still incur cold
+caches and provider delays. One machine is a single point of failure, memory/CPU are finite and
+upgrades are operator-managed. Supabase account persistence is **not** durable study history.
+
+### How updates reach production
+
+A feature branch goes through a pull request and CI tests before merging into protected `master`.
+GitHub then builds both the static bundle and API image, uploads the image to **GitHub Container
+Registry (GHCR)** and produces a release receipt binding their fingerprints to one commit. An image
+digest is the immutable content identifier used for deployment, rather than a changeable tag.
+
+The release waits for the owner's approval of that **exact run**. Only then can the deploy job use
+the protected SSH key to reach the known VPS host, activate the matching files/image and verify the
+live release. Where a previous working release exists, recovery can restore its site and API image;
+that does not undo database, secret or infrastructure changes. The first v219 release has no earlier
+working VPS application target. A documentation push is not production approval.
+
+Azure Static Web Apps, Container Apps, ACR, Entra and the Terraform definitions under
+`infra/terraform` are legacy or staged paths, not today's serving infrastructure. No claim is made
+that unused Azure resources have been deleted or cannot incur charges. Next.js, pgvector,
+Kubernetes/AKS and durable hosted research runs remain future work, not technologies to list as live.
+
+### Implemented local and hosted capabilities
+
 FirstRoll has two deliberate runtime paths: a public beta hosted on one rented server and a richer
 private edition
 that runs on the filmmaker's computer. They share film identity, attributed research and the
@@ -231,7 +288,7 @@ flowchart TB
     subgraph ACCOUNTS["Identity and durable account data"]
         AUTH["Supabase Auth<br/>credentials · sessions · recovery"]
         USERDATA[("Supabase PostgreSQL + RLS<br/>profiles · preferences · saved films")]
-        QUOTA[("Backend quota PostgreSQL<br/>provider + immutable subject")]
+        QUOTA[("Supabase quota functions<br/>generic PostgreSQL adapter staged")]
     end
 
     subgraph LOCAL["Local private edition"]
@@ -290,9 +347,11 @@ flowchart TB
     class IDENTITY,CRITICISM,VIDEOS,DEEPSEEK external;
 ```
 
-The solid path through the server is the public product: Caddy serves the browser bundle, the
-Docker container runs the public-mode API, Supabase owns identity and user-scoped records, and a
-backend-only PostgreSQL connection reserves provider quotas. Hosted study results remain transient
+The diagram shows implemented capabilities, not the current enablement of every feature. Caddy
+serves the browser bundle, Docker runs the public-mode API and Supabase owns identity and account
+records. Hosted Deep Study remains off. When enabled, the selected quota adapter reserves usage;
+the default is the existing Supabase functions, not the staged backend-only PostgreSQL connection.
+Hosted study results remain transient
 and owner-scoped. The dotted path enters the private edition, where books, vectors, caches, secrets
 and clips stay on the user's machine. In either runtime, DeepSeek receives a typed, selected evidence
 packet rather than complete books or uploaded media. The dotted clip-to-packet edge remains planned.
@@ -343,8 +402,8 @@ owner-scoped request. Local development retains the convenient combined interfac
 | Hosted web and API | One Ubuntu server with Docker Compose, Caddy, Docker, FastAPI and Uvicorn (legacy: Azure Static Web Apps and Container Apps) |
 | Browser interface | HTML5, CSS3, vanilla JavaScript and Supabase JS |
 | Identity and account data | Supabase Auth plus PostgreSQL tables protected by RLS |
-| API and orchestration | Python 3.11, FastAPI, Pydantic and LangGraph 1.2 |
-| Quota enforcement | Backend-only PostgreSQL function with provider/subject counters; legacy Supabase RPC rollback path |
+| API and orchestration | Python 3.11, FastAPI and Pydantic; fixed study workflow. LangGraph 1.2 is local/default-off |
+| Quota enforcement | Existing Supabase RPC by default; identity-neutral PostgreSQL adapter staged; hosted enablement awaits authenticated verification |
 | Private retrieval | PyPDF, SQLite FTS5, Sentence Transformers, NumPy |
 | Clip analysis | OpenCV, FFmpeg, TransNetV2, TensorFlow and Torchvision |
 | External acquisition | REST/JSON, JSON-LD, MCP and OAuth 2.0 |
@@ -892,7 +951,7 @@ never returned to the browser or committed to Git.
 ## API Overview
 
 The local edition exposes FastAPI's generated `/docs`, `/redoc` and
-`/openapi.json` development aids. The public Azure API deliberately registers
+`/openapi.json` development aids. The public production API deliberately registers
 none of those routes when `FIRSTROLL_PUBLIC_MODE=true`; `/api/health` remains
 public for platform health checks. This reduces production endpoint discovery
 surface without replacing the authentication enforced by protected operations.
@@ -1038,7 +1097,7 @@ FirstRoll/
 │   ├── PROGRESS_ARCHIVE_2026-08.md
 │   └── RELEASE.md
 ├── infra/
-│   ├── terraform/             # legacy Azure resources (subscription suspended)
+│   ├── terraform/             # legacy Azure resource definitions, not current VPS hosting
 │   └── vps/                   # single-server stack: Compose, Caddy, bootstrap and deploy scripts
 ├── evals/
 │   ├── benchmark_tools/        # GuideLLM mock profile and public lm-eval tasks
@@ -1128,9 +1187,9 @@ an agent merge is never production approval. External actions are full-SHA pinne
 by Dependabot.
 
 The legacy Azure workflows (`Frontend Release` with a scoped Static Web Apps token and `Backend
-Release` with two passwordless Azure identities) remain in the repository while the disabled Azure
-subscription is retained, and must stay inert. The current `VPS Release` workflow stays inert until
-`VPS_RELEASE_ENABLED=true`; complete setup and operating instructions are in the
+Release` with two passwordless Azure identities) remain in the repository while the legacy Azure
+resources are retained, and must stay inert. The current `VPS Release` workflow is enabled with
+`VPS_RELEASE_ENABLED=true`; it still requires exact-run production approval. Complete instructions are in the
 [Release Runbook](docs/RELEASE.md) and [Public Beta Hosting](docs/HOSTING.md).
 
 The current verification baseline and its update protocol are recorded in
@@ -1144,7 +1203,7 @@ fallback behaviour; these are tracked separately from the new FirstRoll modules.
 | Milestone | Status | Outcome |
 |---|---|---|
 | Film discovery and dossier | Complete | Official TMDb primary catalogue, key-free open fallback, explicit ambiguity confirmation and identity bridges |
-| Public beta hosting | In progress | Azure deployment suspended with the expired Free Trial; single-server stack, `VPS Release` workflow and documentation prepared, awaiting the server purchase and the first approved release |
+| Public beta hosting | Live; acceptance incomplete | Tencent v219 verified over public HTTPS on 1 October; interactive sign-in/shelf acceptance, authenticated quota readiness and a real recovery drill remain |
 | Private RAG foundation | Complete | Token chunking, FTS5, local vectors, hybrid retrieval and citations |
 | Attributed criticism | Complete | Crossref, Douban, Letterboxd and Guardian retrieval with structured critic claims |
 | Evidence-grounded Deep Study | Complete | Typed theory, criticism, scholarly-abstract and video-context evidence; Pydantic output, citation validation and quality gate |

@@ -99,9 +99,12 @@ Operating rules specific to this path:
   `BACKEND_RELEASE_ENABLED` unset and disable `Frontend Release` in the Actions UI, otherwise it builds
   a candidate on every push and fails at the Azure token.
 
-Live proof of this path (first approved release and a rollback drill) is still pending; the
-structure is covered by `tests/test_vps_release.py`, and CI validates the stack files with
-`shellcheck`, `docker compose config` and `caddy validate`.
+The first exact-run owner-approved deployment, **v219 / run 36534759362**, passed all automated live
+checks on 29 September 2026. Public HTTPS rechecks on 1 October return the same release normally,
+but interactive browser acceptance remains unverified;
+a real rollback drill is still outstanding and there is no previous application target yet. The
+structure and failure paths have 54 VPS tests; CI also validates the stack with `shellcheck`,
+`docker compose config` and `caddy validate`. See [launch evidence](PROGRESS.md#29-september-2026--v219-deployed-to-tencent-with-owner-approval).
 
 ## Frontend: first standardised release
 
