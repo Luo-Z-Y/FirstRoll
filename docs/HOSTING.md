@@ -2,14 +2,15 @@
 
 **Deployment status:** **v219 is live on Tencent Lighthouse**, revision `b678e52e`, following explicit
 owner approval of release run `36534759362` on 29 September 2026. GitHub's live verification passed.
-The former Azure deployment is no longer the DNS target; clients with old cached DNS answers may
-still see its error page temporarily. Browser acceptance remains pending local DNS-cache expiry.
+The former Azure deployment is no longer the DNS target. On 1 October, ordinary public HTTPS
+requests return the expected v219 receipt and matching healthy API; the earlier local DNS problem
+did not recur in these checks. Interactive browser sign-in and shelf acceptance remain unverified.
 
 **Visitor URL:** `https://firstroll.app`
 
 **API URL:** `https://api.firstroll.app`
 
-**Last reconciled:** 29 September 2026
+**Last reconciled:** 1 October 2026
 
 **Launch checkpoint:** The dedicated deployment key and pinned SSH host are protected by the
 unchanged human production gate. Both Azure release workflows remain disabled. The approved image
@@ -33,7 +34,9 @@ Browser  ->  Caddy on the rented server  ->  FastAPI container  ->  public film 
 The hosted edition publishes discovery, the native director shelf, Supabase email-and-password
 accounts with saved films, and an authenticated Integration Centre. Private-library settings, local
 documents, clip uploads, computer-vision analysis and unauthenticated Deep Study are blocked by the
-backend. Authenticated Deep Study is protected by durable Supabase usage counters. The separate
+backend. Authenticated Deep Study is implemented with durable Supabase usage counters but remains
+disabled pending authenticated quota verification on this host. A separate generic PostgreSQL
+quota adapter is staged, not a verified production migration. The separate
 origins keep the public boundary explicit even though both are now served by one host.
 
 The frontend and API origins are deployment configuration. `FIRSTROLL_API_BASE` points to

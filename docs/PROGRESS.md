@@ -13,19 +13,19 @@ Status vocabulary:
 
 ## Current Snapshot
 
-**Last updated:** 29 September 2026 (v219 deployed with exact-run owner approval; DNS/HTTPS and
-workflow live checks pass; browser acceptance pending local DNS-cache expiry)
+**Last updated:** 1 October 2026 (public HTTPS receipt/health still match v219; deployment architecture
+reconciled with code; interactive acceptance and authenticated quota verification remain open)
 
 **Release stage:** public beta v219 is running on Tencent Lighthouse in Singapore. The owner
 approved the two-record DNS switch and exact production run `36534759362`; the workflow deployed
 commit `b678e52e14deb84cdf7d2d1653e2c44405e0d988` and passed its external receipt/file/API/CORS
-verification. Both hostnames have valid HTTPS and public DNS points to `119.28.111.192`. This
-computer's browser still receives a cached Azure answer for the root domain, so browser sign-in and
-interactive acceptance are not yet claimed. Paid Deep Study stays disabled; quota verification and
+verification. Both hostnames have valid HTTPS and public DNS points to `119.28.111.192`. Public HTTPS
+checks on 1 October return the correct receipt and API health without overriding DNS. Browser
+sign-in and interactive acceptance are still not claimed. Paid Deep Study stays disabled; quota verification and
 a live recovery drill remain. No previous working VPS release exists.
 
 **Primary development URL:** `http://127.0.0.1:8000`
-**Public beta URL:** `https://firstroll.app` (v219 live; old DNS caches may temporarily reach Azure)
+**Public beta URL:** `https://firstroll.app` (v219 live; public HTTPS rechecked 1 October)
 **Automated verification:** 642 repository tests passing locally on 29 September 2026, including
 54 single-server checks, 34 same-ASGI-loop concurrency checks and 27 Node request/race checks.
 The new VPS cases simulate activation and recovery failures without touching a server. They do not
@@ -38,7 +38,7 @@ replace first-live-release acceptance or a real recovery drill.
 | Product navigation | Complete | Discover, Analyse and Settings preserve per-tab view content and scroll; a versioned `sessionStorage` snapshot makes the Discover workspace refresh-safe; Study remains consolidated into Discover |
 | Theme support | Complete | System-aware light/dark themes with a locally persisted accessible toggle |
 | Local settings | Complete | Write-only connector credentials plus local add, remove and index controls for the private library |
-| Hosted public beta | Live — browser acceptance pending | v219 deployed on Tencent with owner approval; HTTPS and full workflow live verification pass; local root-domain DNS cache still reaches Azure |
+| Hosted public beta | Live — browser acceptance pending | v219 deployed on Tencent with owner approval; public HTTPS receipt/health match on 1 October; interactive account/shelf acceptance still outstanding |
 | Accounts and quotas | Complete | Supabase email authentication, atomic daily Deep Study quotas and a launch-independent localhost test account |
 | Authenticated research progress | Implemented | Allow-listed SSE lifecycle events, owner-scoped result retrieval and secret/evidence redaction tests; final interactive browser observation remains pending |
 | Private library catalogue | Complete | Seven existing film-study PDFs retained; managed uploads and non-destructive removal; paths and content withheld from public APIs |
@@ -97,7 +97,7 @@ Acceptance criteria:
 - [ ] First owner-approved release verified in a browser (receipt, sign-in, search, shelf, dossier).
 - [ ] Rollback drill on the server.
 
-Next boundary: complete interactive browser acceptance after DNS caches refresh, verify the
+Next boundary: complete interactive browser acceptance, verify the
 authenticated quota boundary before enabling paid Deep Study, then plan a separately approved live
 recovery drill. The v219 approval does not approve another run, a database migration or paid calls.
 
@@ -178,6 +178,24 @@ Carried from the 12 September 2026 entry:
 
 Dated entries, newest first. Entries dated 6–31 August 2026 were moved unchanged into
 [PROGRESS_ARCHIVE_2026-08.md](PROGRESS_ARCHIVE_2026-08.md) on 27 September 2026.
+
+### 1 October 2026 — Explain the deployed architecture and correct stale documentation
+
+Read-only checks of the normal public URLs returned the v219 receipt, exact `b678e52e` API SHA and
+healthy status. Discovery status confirms public mode, Supabase configured, open catalogue fallback
+and hosted Deep Study/video analysis off. These checks do not constitute a signed-in quota test,
+browser acceptance or a continuous post-deployment observation window.
+
+Reworked the README's opening status and added a beginner-oriented component guide, request paths,
+storage lifetimes, release process and single-server limitations. Corrected the stale server-purchase
+roadmap, Azure API wording and the claim that the staged generic PostgreSQL quota adapter was already
+the active path. Code selects Supabase by default; personal DeepSeek keys still require the hosted
+enablement boundary and quota reservation. Detailed architecture, hosting and Obsidian notes are
+aligned; historical Azure diagrams remain explicitly historical rather than newly validated.
+
+Documentation only: no application code, provider settings, database schema, DNS or production
+deployment changed. The existing launch documentation PR #49 is reused because its base still
+matches current protected master; a documentation merge would not authorise another deployment.
 
 ### 29 September 2026 — v219 deployed to Tencent with owner approval
 

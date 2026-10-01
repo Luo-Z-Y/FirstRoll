@@ -1,7 +1,7 @@
 # FirstRoll Architecture
 
 **Status:** Current implementation  
-**Last reconciled:** 29 September 2026
+**Last reconciled:** 1 October 2026
 
 FirstRoll is a local-first film-study system with a hosted public beta running on one Tencent
 Lighthouse server in Singapore (v219, owner-approved deployment on 29 September 2026). “Local-first”
@@ -9,6 +9,13 @@ describes where private books, credentials, derived vectors and uploaded film cl
 not mean the product is available only on one computer.
 
 ## Product Topology
+
+Read the [plain-English deployment guide](../readme.md#the-current-deployment-in-plain-english)
+first for the roles of DNS, the VPS, Caddy, Docker, Supabase and the image registry. On 1 October,
+the public release receipt and API health both still identify v219 / `b678e52e`; discovery status
+reports Supabase configured, Wikidata/Wikipedia available and hosted study/video analysis disabled.
+The diagram below includes implemented but currently disabled research capabilities. It is not a
+claim that each provider is configured or every path has passed interactive production acceptance.
 
 ```mermaid
 flowchart LR
@@ -29,7 +36,7 @@ flowchart LR
     subgraph AccountData["Account services"]
         Auth["Supabase Auth<br/>credentials · sessions · recovery"]
         UserData[("Supabase PostgreSQL<br/>profiles · preferences · saved films")]
-        Quota["PostgreSQL private schema<br/>provider/subject daily counters"]
+        Quota["Supabase quota functions by default<br/>generic PostgreSQL adapter staged"]
     end
 
     subgraph Local["Local private edition"]
@@ -75,7 +82,8 @@ from `releases/current`, and proxies `api.firstroll.app` to the versioned FastAP
 is deployed by immutable image digest. The browser learns the API origin at build time through
 `FIRSTROLL_API_BASE`; the API accepts only configured frontend origins through
 `FIRSTROLL_CORS_ALLOWED_ORIGINS`. The Azure topology (Static Web Apps, Container Apps, Terraform under
-`infra/terraform`) is retained as legacy reference while its disabled subscription still exists. The
+`infra/terraform`) is retained as legacy reference, not the active serving path. Azure resource and
+billing status have not been re-audited as part of this documentation task. The
 Spaceship DNS records remain outside both.
 
 ## Runtime Modes
@@ -87,7 +95,7 @@ Spaceship DNS records remain outside both.
 | Criticism and videos | Public adapters plus optional local credentials and persistent private caches | Public/hosted adapters; personal DeepSeek and YouTube keys may be request-scoped in one signed-in tab |
 | Private document library | Enabled | Not published; local routes return 404 |
 | Hybrid PDF retrieval | Local SQLite FTS5 and Sentence Transformers | Replaced by bounded first-party study frameworks |
-| Deep Study | Local DeepSeek key; no hosted account quota | Configured bearer authentication plus atomic provider/subject and global PostgreSQL quota reservation; legacy Supabase RPC retained for rollback |
+| Deep Study | Local DeepSeek key; no hosted account quota | Disabled at the current launch checkpoint; when enabled, bearer authentication plus atomic quota reservation through the selected adapter (Supabase by default) |
 | Research progress | Synchronous result route remains available | Authenticated POST-based SSE followed by a separate owner-scoped result request |
 | Clip analysis | Enabled when local dependencies are available | Disabled by default and returns 503 |
 | Durable account state | Loopback-only test identity with browser-local profile, preferences and saved films | Supabase Auth plus RLS-owned profile, preferences and saved-film rows; generic PostgreSQL quota counters remain staged |
@@ -128,9 +136,14 @@ not browser conditionals, enforces ownership.
 
 Quota persistence is now decoupled in code. The PostgreSQL adapter uses a backend-only connection and
 keys quota rows by provider plus immutable subject; it never forwards the browser bearer token. The
-legacy Supabase RPC remains the production rollback path until the generic migration is installed
-and a dedicated database login is configured. Entra code remains staged as an optional learning and
-future-enterprise path, but ADR-017 removes it from the production critical path.
+existing Supabase RPC remains the default selected by `configured_quota_client()` unless
+`FIRSTROLL_QUOTA_PROVIDER=postgres` explicitly selects the generic adapter. The generic migration and
+dedicated connection remain staged, not a verified production cut-over. Entra code remains an optional
+learning and future-enterprise path, but ADR-017 removes it from the production critical path.
+
+The repository includes a bring-your-own-key path, but a personal DeepSeek key does not bypass the
+hosted feature flag, verified account or quota reservation. Visitor keys are held in tab memory and
+sent only on relevant requests; account synchronisation does not persist those credentials.
 
 ## Component Responsibilities
 
