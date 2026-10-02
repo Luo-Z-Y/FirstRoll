@@ -76,7 +76,7 @@ The original GPL-3.0 licence and contributor attribution remain applicable. See
   requests now follow the dossier's lifetime too: closing it or choosing another film aborts those
   browser fetches, and delayed completions cannot overwrite the current film or attach another film's
   criticism. A loading dossier can be closed immediately.
-- Keep the current Discover workspace while moving between Discover, Analyse and Settings, including
+- Keep the current Discover workspace while moving between Discover, Analyse, Festivals and Settings, including
   each view's scroll position. A versioned per-tab `sessionStorage` snapshot restores the query,
   identity choices or hydrated shelf after refresh without repeating a completed search. It contains
   public film summaries and an optional open-dossier ID only—never credentials, reviews, studies or
@@ -180,6 +180,19 @@ The original GPL-3.0 licence and contributor attribution remain applicable. See
 
 Clip measurements do not yet enter Deep Study automatically. Until that bridge is
 implemented, film-specific formal claims remain viewing hypotheses.
+
+### Festivals
+
+- See 31 major international film festivals pinned on a world map, coloured by whether each is on
+  now, starts within 60 days or comes later in the year.
+- Filter the map and calendar by month; select a pin or calendar row for the city, typical dates,
+  focus and, where known, the official site.
+- Read the whole festival year as a twelve-month calendar with a marker for today.
+
+The festival list and its windows are static data in `app/web/festivals.js`, drawn from recent
+editions: exact dates move each year, so the view asks visitors to confirm with the festival. The
+map outline is Natural Earth 1:110m land (public domain), inlined so the view needs no map library,
+tile server or network request.
 
 ## System Architecture
 
@@ -1138,7 +1151,7 @@ Run scoped lint and frontend checks:
 ```bash
 uv run ruff check app/backend/library_index.py app/backend/evidence.py \
   app/backend/study_service.py app/backend/main.py tests
-node --check app/web/app.js
+node --check app/web/app.js app/web/festivals.js
 git diff --check
 ```
 

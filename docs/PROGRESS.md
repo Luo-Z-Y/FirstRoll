@@ -13,7 +13,7 @@ Status vocabulary:
 
 ## Current Snapshot
 
-**Last updated:** 1 October 2026 (public HTTPS receipt/health still match v219; deployment architecture
+**Last updated:** 2 October 2026 (Festivals tab added; public HTTPS receipt/health still match v219; deployment architecture
 reconciled with code; interactive acceptance and authenticated quota verification remain open)
 
 **Release stage:** public beta v219 is running on Tencent Lighthouse in Singapore. The owner
@@ -35,7 +35,8 @@ replace first-live-release acceptance or a real recovery drill.
 |---|---|---|
 | Film discovery | Complete | TMDb primary catalogue with open Wikidata/Wikipedia failover, explicit ambiguity confirmation, attributed dossier enrichment and the always-available native director shelf |
 | Public video resources | Complete | Persistent cumulative catalogue; typed tabs; bounded uploader-description and public YouTube-caption extraction |
-| Product navigation | Complete | Discover, Analyse and Settings preserve per-tab view content and scroll; a versioned `sessionStorage` snapshot makes the Discover workspace refresh-safe; Study remains consolidated into Discover |
+| Product navigation | Complete | Discover, Analyse, Festivals and Settings preserve per-tab view content and scroll; a versioned `sessionStorage` snapshot makes the Discover workspace refresh-safe; Study remains consolidated into Discover |
+| Festival atlas | Complete | Festivals tab: 31 festivals on an inline Natural Earth world map with month filter, on-now/soon status and a twelve-month calendar; static typical windows, verified in a local browser at desktop and 375 px widths |
 | Theme support | Complete | System-aware light/dark themes with a locally persisted accessible toggle |
 | Local settings | Complete | Write-only connector credentials plus local add, remove and index controls for the private library |
 | Hosted public beta | Live — browser acceptance pending | v219 deployed on Tencent with owner approval; public HTTPS receipt/health match on 1 October; interactive account/shelf acceptance still outstanding |
@@ -178,6 +179,23 @@ Carried from the 12 September 2026 entry:
 
 Dated entries, newest first. Entries dated 6–31 August 2026 were moved unchanged into
 [PROGRESS_ARCHIVE_2026-08.md](PROGRESS_ARCHIVE_2026-08.md) on 27 September 2026.
+
+### 2 October 2026 — Festival atlas tab
+
+Added a **Festivals** primary tab (`app/web/festivals.js`): a world map of 31 major international
+film festivals and a twelve-month calendar. Pins and calendar bars show whether each festival is on
+now, starts within 60 days or comes later; a month filter dims the map and narrows the calendar, and
+selecting a festival shows its city, typical window, focus and official site where known. The land
+outline is Natural Earth 1:110m (public domain, via world-atlas) projected equirectangularly and
+inlined, so the view adds no runtime dependency or network request.
+
+Acceptance evidence: 643 repository tests pass, including a new asset test for the tab, script, view
+registration and build step; checked in a local browser in light and dark themes at desktop and
+375 px widths with no horizontal scroll and no console errors.
+
+Constraints: festival dates are static typical windows rather than confirmed edition dates and need
+an annual review (Sundance moves to Boulder from 2027; FESPACO is biennial). Next: consider sourcing
+confirmed edition dates and linking festivals to films in Discover.
 
 ### 1 October 2026 — Explain the deployed architecture and correct stale documentation
 
