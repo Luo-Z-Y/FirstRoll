@@ -22,6 +22,7 @@ It is not exposed to the local network or public internet.
 
 - macOS, Windows or Linux
 - Git
+- Node.js 22+ and npm (for the frontend compiler)
 - Python 3.11 or 3.12
 - [`uv`](https://docs.astral.sh/uv/getting-started/installation/)
 - FFmpeg for video analysis
@@ -74,11 +75,20 @@ cd FirstRoll
 
 ```bash
 uv sync
+npm ci --include=dev --ignore-scripts
+npm run build:local
 ```
 
 `uv` creates a private Python environment inside the project and installs the locked
 dependencies. The first installation can take a while because the film-analysis stack
 includes large computer-vision packages.
+
+Install Node.js 22+ from the official Node.js distribution if `node --version` or
+`npm --version` is unavailable. The npm commands install locked build dependencies and
+compile TypeScript/JavaScript modules into `app/web/generated/app.js`. No second web
+server is required. Re-run `npm run build:local` after frontend edits; refresh the browser
+afterwards. A missing bundle returns an explicit 503 with these instructions.
+See [Frontend Guide](FRONTEND_GUIDE.md) for the source map and development checks.
 
 ## 4. Start the Local App
 

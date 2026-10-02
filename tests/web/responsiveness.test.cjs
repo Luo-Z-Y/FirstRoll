@@ -6,7 +6,9 @@ const vm = require("node:vm");
 
 const root = path.resolve(__dirname, "../..");
 const appPath = path.resolve(root, process.env.FIRSTROLL_TEST_APP || "app/web/app.js");
-const source = readFileSync(appPath, "utf8");
+const source = process.env.FIRSTROLL_TEST_APP
+  ? readFileSync(appPath, "utf8")
+  : require("../../tools/frontend-build.cjs").bundleApplication({ write: false }).outputFiles[0].text;
 
 function deferred() {
   let resolve;
@@ -50,6 +52,8 @@ function harness({ publicMode = false } = {}) {
     AbortController, URLSearchParams, TextDecoder, Uint8Array, CSS: { escape: String },
     console: { warn() {}, debug() {} },
     document: {
+      readyState: "loading",
+      addEventListener() {},
       body: new Element(),
       getElementById(id) {
         if (!nodes.has(id)) nodes.set(id, new Element());
@@ -72,21 +76,21 @@ function harness({ publicMode = false } = {}) {
       return request.promise;
     },
   });
-  // Unit-test the production request handlers without unrelated DOM startup/rendering.
-  // Hoisted overrides also work against the minified classic-script production build.
-  vm.runInContext(`${source}\n
-    function setup() {}
-    function persistDiscoverySession() {}
-    function clearDiscoverySession() {}
-    function renderFilmDetail(film) { refs.filmDetail.innerHTML = film.title; }
-    function renderDiscoveryResults(data) { state.discovery.results = data.results; }
-    function renderRecentSearches() {}
-    function deepStudyMarkup(study) { return study.title || 'Completed study'; }
-  `, context, { filename: appPath });
-  const api = vm.runInContext(`({ state, refs, loadFilmDetail, onFilmDetailClick,
-    cancelFilmDetailRequests, onDiscoverySearch, loadFilmVideos, loadFilmReception,
-    loadProviderCriticism, structureProviderCriticism, selectCriticismSource,
-    generateDeepStudy, cancelDeepStudyRequest, updateDeepStudyAuthState })`, context);
+  // Construct the real application with explicit presentation/storage dependencies.
+  // No hoisted production-function replacements or startup side effects are needed.
+  vm.runInContext(source, context, { filename: appPath });
+  const api = vm.runInContext(`(() => {
+    let app;
+    app = createApplication({ overrides: {
+      persistDiscoverySession() {},
+      clearDiscoverySession() {},
+      renderFilmDetail(film) { app.refs.filmDetail.innerHTML = film.title; },
+      renderDiscoveryResults(data) { app.state.discovery.results = data.results; },
+      renderRecentSearches() {},
+      deepStudyMarkup(study) { return study.title || 'Completed study'; },
+    } });
+    return app;
+  })()`, context);
   api.refs.discoverySubmit.children.set("span", new Element());
 
   function film(id) {

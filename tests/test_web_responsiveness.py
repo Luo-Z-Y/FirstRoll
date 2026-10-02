@@ -1,4 +1,4 @@
-"""Run the dependency-free JavaScript race regressions in the existing CI test gate."""
+"""Run compiled-source JavaScript regressions in the existing CI test gate."""
 
 import os
 import subprocess
@@ -13,7 +13,7 @@ def test_web_request_responsiveness() -> None:
     # The CI contract exercises tracked source, never an old local build.
     environment.pop("FIRSTROLL_TEST_APP", None)
     result = subprocess.run(
-        ["node", "--test", "tests/web/responsiveness.test.cjs"],
+        ["node", "--test", *map(str, sorted((ROOT / "tests" / "web").glob("*.test.cjs")))],
         cwd=ROOT,
         env=environment,
         capture_output=True,

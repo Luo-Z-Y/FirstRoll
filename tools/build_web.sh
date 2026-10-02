@@ -120,7 +120,8 @@ cp "$source_dir/favicon.svg" "$output_dir/assets/favicon.svg"
 
 npm ci --include=dev --ignore-scripts --no-audit --no-fund
 # Preserve classic-script globals and release filenames while reducing transfer and parse work.
-./node_modules/.bin/esbuild "$source_dir/app.js" "$source_dir/styles.css" \
+node "$project_root/tools/frontend-build.cjs" "$output_dir/assets/app.js"
+./node_modules/.bin/esbuild "$source_dir/styles.css" \
   --minify \
   --target=es2020,chrome100,firefox100,safari15.4 \
   --outdir="$output_dir/assets"

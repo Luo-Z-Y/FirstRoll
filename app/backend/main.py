@@ -309,6 +309,20 @@ def web_runtime_config(request: Request) -> Response:
     )
 
 
+@app.get("/assets/app.js", include_in_schema=False)
+def web_application_bundle() -> FileResponse:
+    """Serve compiled modules, never raw TypeScript/imports, in the combined local edition."""
+    bundle = web_directory / "generated" / "app.js"
+    if not bundle.is_file():
+        raise HTTPException(
+            status_code=503,
+            detail="Frontend assets are missing. Run npm ci and npm run build:local, then reload.",
+        )
+    return FileResponse(
+        bundle, media_type="application/javascript", headers={"Cache-Control": "no-cache"}
+    )
+
+
 app.mount("/assets", StaticFiles(directory=web_directory), name="web-assets")
 
 

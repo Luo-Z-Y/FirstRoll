@@ -5,15 +5,16 @@ ROOT = Path(__file__).resolve().parents[1]
 WEB = ROOT / "app" / "web"
 
 
-def test_director_shelf_uses_native_browser_assets_only() -> None:
+def test_director_shelf_uses_native_browser_assets_only(application_source: str) -> None:
     index = (WEB / "index.html").read_text(encoding="utf-8")
-    app = (WEB / "app.js").read_text(encoding="utf-8")
+    app = application_source
+    views = (WEB / "src" / "discovery" / "views.ts").read_text(encoding="utf-8")
     build = (ROOT / "tools" / "build_web.sh").read_text(encoding="utf-8")
 
     assert 'type="importmap"' not in index
     assert "closet3d.js" not in index
     assert "three.module" not in index
-    assert "directorShelfMarkup" in app
+    assert "directorShelfMarkup" in views
     assert "directorShelfFilmsMarkup" in app
     assert "data-director-shelf" in app
     assert "closet3d.js" not in build
@@ -24,8 +25,8 @@ def test_director_shelf_uses_native_browser_assets_only() -> None:
     assert not (WEB / "vendor" / "three").exists()
 
 
-def test_dossier_attributes_tmdb_without_mislabelling_its_overview() -> None:
-    app = (WEB / "app.js").read_text(encoding="utf-8")
+def test_dossier_attributes_tmdb_without_mislabelling_its_overview(application_source: str) -> None:
+    app = application_source
 
     assert "overviewSourceName" in app
     assert "overviewSourceLicence" in app
@@ -33,10 +34,10 @@ def test_dossier_attributes_tmdb_without_mislabelling_its_overview() -> None:
     assert "Wikipedia · CC BY-SA ↗" not in app
 
 
-def test_supabase_auth_is_bundled_and_deep_study_sends_bearer_tokens() -> None:
+def test_supabase_auth_is_bundled_and_deep_study_sends_bearer_tokens(application_source: str) -> None:
     index = (WEB / "index.html").read_text(encoding="utf-8")
     auth = (WEB / "auth.js").read_text(encoding="utf-8")
-    app = (WEB / "app.js").read_text(encoding="utf-8")
+    app = application_source
 
     assert 'id="authDialog"' in index
     assert '"/assets/auth.js?v=20260821-5"' in index
@@ -56,10 +57,10 @@ def test_supabase_auth_is_bundled_and_deep_study_sends_bearer_tokens() -> None:
     assert "deepStudyQuotaMarkup(data.quota)" in app
 
 
-def test_loopback_preview_uses_a_separate_persistent_unlimited_test_account() -> None:
+def test_loopback_preview_uses_a_separate_persistent_unlimited_test_account(application_source: str) -> None:
     index = (WEB / "index.html").read_text(encoding="utf-8")
     local_auth = (WEB / "local-auth.js").read_text(encoding="utf-8")
-    app = (WEB / "app.js").read_text(encoding="utf-8")
+    app = application_source
     main = (ROOT / "app" / "backend" / "main.py").read_text(encoding="utf-8")
     integrations = (WEB / "integrations.js").read_text(encoding="utf-8")
     build = (ROOT / "tools" / "build_web.sh").read_text(encoding="utf-8")
@@ -96,9 +97,9 @@ def test_loopback_preview_uses_a_separate_persistent_unlimited_test_account() ->
     assert "FIRSTROLL_SUPABASE_PUBLISHABLE_KEY" in build
 
 
-def test_frontend_build_identity_distinguishes_local_and_live_releases() -> None:
+def test_frontend_build_identity_distinguishes_local_and_live_releases(application_source: str) -> None:
     index = (WEB / "index.html").read_text(encoding="utf-8")
-    app = (WEB / "app.js").read_text(encoding="utf-8")
+    app = application_source
     build = (ROOT / "tools" / "build_web.sh").read_text(encoding="utf-8")
     preview = (ROOT / "tools" / "preview_hosted_web.sh").read_text(encoding="utf-8")
     deployment = (
@@ -119,10 +120,10 @@ def test_frontend_build_identity_distinguishes_local_and_live_releases() -> None
     assert "fetch-depth: 0" in deployment
 
 
-def test_account_saved_films_are_persistent_and_user_scoped() -> None:
+def test_account_saved_films_are_persistent_and_user_scoped(application_source: str) -> None:
     index = (WEB / "index.html").read_text(encoding="utf-8")
     auth = (WEB / "auth.js").read_text(encoding="utf-8")
-    app = (WEB / "app.js").read_text(encoding="utf-8")
+    app = application_source
     migration = (
         ROOT
         / "supabase"
@@ -168,19 +169,21 @@ def test_entra_external_id_account_auth_is_staged_without_breaking_supabase() ->
     assert "FIRSTROLL_ENTRA_API_SCOPE" in build
 
 
-def test_public_deep_study_consumes_authenticated_safe_sse_progress() -> None:
-    app = (WEB / "app.js").read_text(encoding="utf-8")
+def test_public_deep_study_consumes_authenticated_safe_sse_progress(application_source: str) -> None:
+    app = application_source
+    progress = (WEB / "src" / "study" / "progress.ts").read_text(encoding="utf-8")
 
     assert "/study/stream" in app
     assert "consumeResearchProgress" in app
-    assert "RESEARCH_PROGRESS_KINDS" in app
-    assert "progress.run_id !== expectedRunId" in app
-    assert "progress.sequence !== lastSequence + 1" in app
+    assert 'from "../study/progress"' in app
+    assert "RESEARCH_PROGRESS_KINDS" in progress
+    assert "progress.run_id !== expectedRunId" in progress
+    assert "progress.sequence !== lastSequence + 1" in progress
     assert 'streamResponse.headers.get("X-FirstRoll-Run-ID")' in app
     assert "/api/research/runs/" in app
-    assert 'eventName !== "progress"' in app
-    assert 'progress.kind === "run_failed"' in app
-    assert 'progress.kind === "run_completed"' in app
+    assert 'eventName !== "progress"' in progress
+    assert 'progress.kind === "run_failed"' in progress
+    assert 'progress.kind === "run_completed"' in progress
 
 
 def test_public_video_preview_uses_neutral_product_copy() -> None:
@@ -191,9 +194,9 @@ def test_public_video_preview_uses_neutral_product_copy() -> None:
     assert "your own machine" not in index
 
 
-def test_public_settings_explains_session_keys_and_hosted_douban_boundary() -> None:
+def test_public_settings_explains_session_keys_and_hosted_douban_boundary(application_source: str) -> None:
     index = (WEB / "index.html").read_text(encoding="utf-8")
-    app = (WEB / "app.js").read_text(encoding="utf-8")
+    app = application_source
     styles = (WEB / "styles.css").read_text(encoding="utf-8")
 
     assert 'id="product-settings"' in index
@@ -223,8 +226,8 @@ def test_public_settings_explains_session_keys_and_hosted_douban_boundary() -> N
     assert ".public-mode .public-settings-nav" in styles
 
 
-def test_public_criticism_fetches_reviews_without_automatic_local_structuring() -> None:
-    app = (WEB / "app.js").read_text(encoding="utf-8")
+def test_public_criticism_fetches_reviews_without_automatic_local_structuring(application_source: str) -> None:
+    app = application_source
 
     assert "if (!runtimeConfig.publicMode)" in app
     assert "Attributed reviews are ready. Deep Study can develop a separate" in app
@@ -248,12 +251,12 @@ def test_production_image_pins_and_bundles_douban_mcp() -> None:
 def test_archive_pullout_collapses_before_zoom_can_clip_its_copy() -> None:
     index = (WEB / "index.html").read_text(encoding="utf-8")
     styles = (WEB / "styles.css").read_text(encoding="utf-8")
-    app = (WEB / "app.js").read_text(encoding="utf-8")
+    views = (WEB / "src" / "discovery" / "views.ts").read_text(encoding="utf-8")
 
     assert "/assets/styles.css?v=20260821-8" in index
     assert "/assets/app.js?v=20260912-1" in index
     assert "closet3d.js" not in index
-    assert 'class="archive-pullout-shell"' in app
+    assert 'class="archive-pullout-shell"' in views
     assert "container-type: inline-size" in styles
     assert "@container (max-width: 520px)" in styles
     assert "grid-template-columns: minmax(0, 0.9fr) minmax(0, 0.85fr)" in styles
@@ -267,8 +270,8 @@ def test_archive_pullout_collapses_before_zoom_can_clip_its_copy() -> None:
     assert "max-width: 100%" in styles
 
 
-def test_recent_searches_can_be_removed_individually_or_cleared() -> None:
-    app = (WEB / "app.js").read_text(encoding="utf-8")
+def test_recent_searches_can_be_removed_individually_or_cleared(application_source: str) -> None:
+    app = application_source
     styles = (WEB / "styles.css").read_text(encoding="utf-8")
 
     assert "persistRecentSearches" in app
@@ -282,10 +285,10 @@ def test_recent_searches_can_be_removed_individually_or_cleared() -> None:
     assert ".recent-search-clear" in styles
 
 
-def test_interface_states_are_actionable_and_keyboard_navigable() -> None:
+def test_interface_states_are_actionable_and_keyboard_navigable(application_source: str) -> None:
     index = (WEB / "index.html").read_text(encoding="utf-8")
     styles = (WEB / "styles.css").read_text(encoding="utf-8")
-    app = (WEB / "app.js").read_text(encoding="utf-8")
+    app = application_source
     integrations = (WEB / "integrations.js").read_text(encoding="utf-8")
     auth = (WEB / "auth.js").read_text(encoding="utf-8")
     local_auth = (WEB / "local-auth.js").read_text(encoding="utf-8")
@@ -321,8 +324,8 @@ def test_interface_states_are_actionable_and_keyboard_navigable() -> None:
     assert "--action-text: #11120f" in styles
 
 
-def test_deep_study_keeps_progress_packet_gaps_and_citations_inspectable() -> None:
-    app = (WEB / "app.js").read_text(encoding="utf-8")
+def test_deep_study_keeps_progress_packet_gaps_and_citations_inspectable(application_source: str) -> None:
+    app = application_source
     styles = (WEB / "styles.css").read_text(encoding="utf-8")
     study_service = (ROOT / "app" / "backend" / "study_service.py").read_text(
         encoding="utf-8"
@@ -344,10 +347,10 @@ def test_deep_study_keeps_progress_packet_gaps_and_citations_inspectable() -> No
     assert 'result["packet_quality"] = assess_evidence_packet(packet)' in study_service
 
 
-def test_discovery_and_dossier_expose_a_clear_task_hierarchy() -> None:
+def test_discovery_and_dossier_expose_a_clear_task_hierarchy(application_source: str) -> None:
     index = (WEB / "index.html").read_text(encoding="utf-8")
     styles = (WEB / "styles.css").read_text(encoding="utf-8")
-    app = (WEB / "app.js").read_text(encoding="utf-8")
+    app = application_source
 
     assert 'class="discovery-hero"' in index
     assert 'id="discoveryTitle"' in index
@@ -367,8 +370,8 @@ def test_discovery_and_dossier_expose_a_clear_task_hierarchy() -> None:
     assert 'refs.filmDetail.scrollIntoView({ behavior: "smooth", block: "start" })' in app
 
 
-def test_discovery_workspace_survives_refresh_and_product_navigation() -> None:
-    app = (WEB / "app.js").read_text(encoding="utf-8")
+def test_discovery_workspace_survives_refresh_and_product_navigation(application_source: str) -> None:
+    app = application_source
     index = (WEB / "index.html").read_text(encoding="utf-8")
 
     assert "/assets/app.js?v=20260912-1" in index
@@ -394,8 +397,8 @@ def test_discovery_workspace_survives_refresh_and_product_navigation() -> None:
     assert 'window.scrollTo({ top: scrollTop, behavior: "auto" })' in app
 
 
-def test_new_discovery_search_aborts_stale_search_and_shelf_work() -> None:
-    app = (WEB / "app.js").read_text(encoding="utf-8")
+def test_new_discovery_search_aborts_stale_search_and_shelf_work(application_source: str) -> None:
+    app = application_source
 
     assert "searchRequestId: 0" in app
     assert "searchController: null" in app
@@ -417,21 +420,24 @@ def test_supabase_dialog_hides_the_unused_entra_form() -> None:
     assert 'body[data-auth-provider="entra"] form.auth-provider-entra { display: grid; }' in styles
 
 
-def test_director_shelf_renders_immediately_then_enriches_posters() -> None:
-    app = (WEB / "app.js").read_text(encoding="utf-8")
+def test_director_shelf_renders_immediately_then_enriches_posters(application_source: str) -> None:
+    app = application_source
+    views = (WEB / "src" / "discovery" / "views.ts").read_text(encoding="utf-8")
+    films = (WEB / "src" / "discovery" / "films.ts").read_text(encoding="utf-8")
     styles = (WEB / "styles.css").read_text(encoding="utf-8")
     discovery = (ROOT / "app" / "backend" / "discovery.py").read_text(encoding="utf-8")
 
-    assert "displayableFilms" in app
-    assert "displayableFilms([primary, ...directorWorks])" in app
-    assert "directorShelfMarkup(primary, directorWorks, director, loading)" in app
-    assert "directorShelfFilmsMarkup(primary, films, loading)" in app
+    assert 'from "../discovery/films"' in app
+    assert "displayableFilms([primary, ...directorWorks])" in films
+    assert "directorShelfMarkup(primary, directorWorks, director, loading)" in views
+    assert "directorShelfFilmsMarkup(primary, films, loading)" in views
     assert "data-film-shelf-status" in app
     assert "data-retry-director-shelf" in app
     assert "retryDirectorShelf" in app
     assert "showFilmShelfFallback" in app
-    partial = app[app.index("function markDirectorShelfPartial"):app.index("function retryDirectorShelf")]
-    fallback = app[app.index("function showFilmShelfFallback"):app.index("function retryDirectorShelf")]
+    shelf = (WEB / "src" / "discovery" / "shelf.js").read_text(encoding="utf-8")
+    partial = shelf[shelf.index("function markDirectorShelfPartial"):shelf.index("function showFilmShelfFallback")]
+    fallback = shelf[shelf.index("function showFilmShelfFallback"):shelf.index("function renderFilmArchive")]
     assert "directorShelfFilmsMarkup(primary, films, false)" in fallback
     assert "markDirectorShelfPartial(primaryId)" in fallback
     assert "Showing the selected film." in partial
@@ -453,7 +459,7 @@ def test_director_shelf_renders_immediately_then_enriches_posters() -> None:
     assert "FirstRollCloset" not in app
     assert "WebGL" not in app
     assert "Blender" not in app
-    assert "!/^Q\\d+$/i.test(text)" in app
+    assert "!/^Q\\d+$/i.test(text)" in films
     assert "candidate_cap = min(48, max(limit * 2, limit))" in discovery
     assert "if cast_ids and not director_only:" in discovery
     assert "self._get_shelf_entities(selected_ids)" in discovery
@@ -461,7 +467,7 @@ def test_director_shelf_renders_immediately_then_enriches_posters() -> None:
     assert ".director-film-list" in styles
     assert ".director-film-card.is-selected" in styles
     assert ".director-film-slot.is-skeleton" in styles
-    assert 'loading="eager" decoding="async"' in app
+    assert 'loading="eager" decoding="async"' in views
     assert "padding: 0 2px 34px" in styles
     assert "@container (min-width: 660px)" in styles
     assert ".film-closet" not in styles

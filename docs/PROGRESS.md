@@ -13,6 +13,53 @@ Status vocabulary:
 
 ## Current Snapshot
 
+**Completed modularisation — 2 October 2026:** PR #51 now reaches the intended architectural
+milestone. `app.js` is a **58-line composition root**, down from the original 3,843 lines.
+Per-application context, event wiring, navigation, account UI, sessions, discovery/shelf,
+dossier, videos, criticism and Deep Study have explicit module boundaries. Clip rendering is
+separate from its controller; all `src/` modules are at most 500 lines. Existing auth/settings
+adapters remain unchanged. Full controller typing is a future improvement, not claimed here.
+
+Verification: **645 repository tests passed**; **52 frontend cases** pass against both the
+source build and minified hosted bundle (18 module, 27 request/race, seven application tests).
+New cases exercise inert construction, independent state, idempotent startup, DOM-ready boot,
+cross-feature rendering, bounded session snapshots, stale shelf responses and acyclic imports.
+The race harness now injects dependencies rather than redefining hoisted handlers. Local and
+hosted builds pass; CI runs all frontend tests on the release bundle and syntax-checks nested
+JavaScript. Interactive visual acceptance remains unverified because the browser preview was
+blocked; local Docker is unavailable and the container build remains a CI check. No paid calls,
+database/DNS changes or production approval are part of this milestone. Earlier checkpoints
+below are retained as history. See [Frontend Guide](FRONTEND_GUIDE.md) for the final learning map.
+
+**Development checkpoint — 2 October 2026:** continued the same incremental refactor on
+`chore/frontend-typescript` / PR #51. Typed discovery views and film-selection helpers now
+own identity choices, selected-edition and shelf HTML; shared crew-name filtering is separate.
+`app.js` is **2,410 lines**, down from 2,597 at the previous checkpoint and 3,843 originally.
+Request ownership, timeouts, cancellation, focus and session persistence remain in the coordinator.
+
+Verification: **645 repository tests passed**, including **45 executable frontend cases**;
+all 27 request/race cases also passed against the hosted minified build. Type-checking,
+local/hosted builds and scoped lint passed. A one-off comparison against `d774547` passed
+128 HTML/selection parity checks. Eight new persistent tests cover film de-duplication,
+missing titles/posters, selected cards, loading placeholders, accessible choices and escaped text.
+No visual redesign, paid provider call, migration or production deployment was made. The main
+checkout's separate cleanup branch remains untouched. Next: dossier/video/criticism controllers.
+
+**Development checkpoint — 1 October 2026:** first incremental frontend modularisation is
+implemented, separate from the live v219 release. `app/web/app.js` is reduced from 3,843 to
+2,597 lines; shared helpers, progress parsing and pure clip-analysis algorithms are strict
+TypeScript modules. Clip state is isolated in a JavaScript controller. The coordinator,
+auth/settings and DOM controllers are not yet fully typed. See [Frontend Guide](FRONTEND_GUIDE.md).
+
+Verification: **645 repository tests pass**, including 37 executable frontend cases (the
+existing 27 race tests plus 10 new module cases). All 27 race cases also pass against the
+minified hosted bundle; strict type-checking, local/hosted builds and scoped Ruff checks pass.
+The loopback server returns HTTP 200 for the compiled asset and healthy API. Interactive
+browser inspection was blocked by the preview client. Docker could not run locally because
+the daemon was unavailable; the existing CI container-build gate must still pass. No
+production deployment, paid provider call or data migration was performed. Next: review this
+checkpoint, then extract discovery/dossier feature controllers behind typed data boundaries.
+
 **Last updated:** 1 October 2026 (public HTTPS receipt/health still match v219; deployment architecture
 reconciled with code; interactive acceptance and authenticated quota verification remain open)
 

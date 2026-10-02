@@ -194,7 +194,7 @@ origins, but share the same Tencent machine. This is not a Kubernetes or multi-s
 | Domain and DNS | Spaceship | Keeps `firstroll.app` registered and points both website/API names to the VPS; it does not run the application |
 | VPS (virtual private server) | Tencent Lighthouse, Singapore; Ubuntu, 2 vCPUs / 2 GB RAM / 40 GB disk | The rented computer running the two production containers |
 | Caddy | Container on the VPS | The HTTPS front door: obtains/renews certificates, serves the website files and forwards API requests |
-| Frontend | Files served at `firstroll.app`; JavaScript executes in the visitor's browser | HTML/CSS/vanilla JavaScript interface; no production Next.js/React server |
+| Frontend | Files served at `firstroll.app`; JavaScript executes in the visitor's browser | HTML/CSS with incremental TypeScript modules compiled to JavaScript; no production Next.js/React server. The modular refactor is not yet deployed. |
 | FastAPI | Separate container on the same VPS, reached through `api.firstroll.app` | Python application logic, provider calls, authentication checks, evidence validation and quotas |
 | Supabase Auth | Managed service outside Tencent | Email/password accounts, sessions and password recovery |
 | Supabase PostgreSQL | Managed service outside Tencent | Profiles, preferences, saved films and the existing quota functions; row-level security restricts account rows to their owner |
@@ -776,11 +776,14 @@ explicitly missing; FirstRoll does not ask DeepSeek to invent them.
 
 FirstRoll supports Python 3.11 and uses
 [uv](https://docs.astral.sh/uv/) for environment and dependency management.
+Node.js 22+ and npm are also required to compile the frontend.
 
 ```bash
 git clone https://github.com/Luo-Z-Y/FirstRoll.git
 cd FirstRoll
 uv sync
+npm ci --include=dev --ignore-scripts
+npm run build:local
 uv run firstroll
 ```
 
@@ -789,6 +792,18 @@ Open [http://127.0.0.1:8000](http://127.0.0.1:8000).
 The frontend and API are served by the same FastAPI process; no separate frontend server
 or TMDB credential is required. Full macOS, Windows and Linux instructions are in
 [Local Setup](docs/LOCAL_SETUP.md).
+
+After editing frontend source, run `npm run build:local` again and refresh the browser.
+FastAPI serves the generated bundle at the existing `/assets/app.js` URL. Do not open
+`index.html` as a standalone file or edit generated assets. See the beginner-friendly
+[Frontend Guide](docs/FRONTEND_GUIDE.md) for the module map, TypeScript basics and reading order.
+The modularisation milestone is complete: `app.js` is a 58-line composition root, down from
+3,843 lines. Navigation, accounts, sessions, discovery, dossier, video, criticism and Deep Study
+have separate controllers, with rendering separated where useful. Every module under `src/`
+is at most 500 lines. The UI, request cancellation rules and hosting remain unchanged.
+TypeScript migration remains incremental: formatting, security, progress, analysis and
+discovery-view modules are strictly type-checked; JavaScript controllers and existing
+authentication/settings adapters are not yet fully typed. This refactor is not yet deployed.
 
 Every genuine loopback-served interface, including the standard port `8000` app and the hosted-mode
 port `4173` preview, exposes a development-only account for `luo_zhiyang@outlook.com`. Any password
@@ -1139,6 +1154,8 @@ Run scoped lint and frontend checks:
 uv run ruff check app/backend/library_index.py app/backend/evidence.py \
   app/backend/study_service.py app/backend/main.py tests
 node --check app/web/app.js
+npm run typecheck
+npm run test:web
 git diff --check
 ```
 

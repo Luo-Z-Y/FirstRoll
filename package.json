@@ -5,6 +5,9 @@
     "node": ">=22.0.0"
   },
   "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build:local": "node tools/frontend-build.cjs --local",
+    "test:web": "node --test tests/web/*.test.cjs",
     "build": "sh tools/build_web.sh",
     "build:auth": "esbuild app/web/auth.js --bundle --minify --format=iife --outfile=dist/assets/auth.js"
   },
@@ -13,6 +16,7 @@
     "@supabase/supabase-js": "2.112.3"
   },
   "devDependencies": {
-    "esbuild": "0.28.2"
+    "esbuild": "0.28.2",
+    "typescript": "5.9.3"
   }
 }

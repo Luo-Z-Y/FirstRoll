@@ -19,6 +19,7 @@ img/*
 # Distribution / packaging
 .Python
 node_modules/
+app/web/generated/
 build/
 develop-eggs/
 dist/
