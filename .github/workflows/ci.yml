@@ -36,7 +36,7 @@ jobs:
       - name: Audit frontend dependency lock
         run: npm audit --audit-level=high
       - name: Check frontend JavaScript syntax
-        run: find app/web -maxdepth 1 -name '*.js' -exec node --check {} \;
+        run: find app/web -name '*.js' -not -path '*/generated/*' -exec node --check {} \;
       - name: Install and check the modular frontend
         run: |
           npm ci --include=dev --ignore-scripts --no-audit --no-fund
@@ -92,4 +92,4 @@ jobs:
       - name: Test the minified release application
         env:
           FIRSTROLL_TEST_APP: dist/assets/app.js
-        run: node --test tests/web/responsiveness.test.cjs
+        run: npm run test:web

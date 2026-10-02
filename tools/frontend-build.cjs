@@ -6,7 +6,8 @@ const root = path.resolve(__dirname, "..");
 
 // One compiler configuration for localhost, hosted releases and the request-race tests.
 // The entry exports nothing: esbuild resolves imports into a classic-script-compatible file.
-// Keep identifiers stable during this migration for the existing global-handler test harness.
+// Keep the composition-root name stable so tests can construct an independent application
+// from the exact release bundle. Feature handlers are injected, never replaced by hoisting.
 function bundleApplication(options = {}) {
   const { minify = false, ...buildOptions } = options;
   return buildSync({

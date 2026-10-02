@@ -1,3 +1,8 @@
-// Browser entry point. The coordinator is deliberately still JavaScript while features migrate.
-// Importing it wires the existing interface once; the build emits /assets/app.js for both modes.
-import "../app.js";
+// Browser boot only. Tests construct independent applications without running page startup.
+import { createApplication } from "../app.js";
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", () => createApplication().start(), { once: true });
+} else {
+  createApplication().start();
+}

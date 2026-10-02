@@ -13,6 +13,24 @@ Status vocabulary:
 
 ## Current Snapshot
 
+**Completed modularisation — 2 October 2026:** PR #51 now reaches the intended architectural
+milestone. `app.js` is a **58-line composition root**, down from the original 3,843 lines.
+Per-application context, event wiring, navigation, account UI, sessions, discovery/shelf,
+dossier, videos, criticism and Deep Study have explicit module boundaries. Clip rendering is
+separate from its controller; all `src/` modules are at most 500 lines. Existing auth/settings
+adapters remain unchanged. Full controller typing is a future improvement, not claimed here.
+
+Verification: **645 repository tests passed**; **52 frontend cases** pass against both the
+source build and minified hosted bundle (18 module, 27 request/race, seven application tests).
+New cases exercise inert construction, independent state, idempotent startup, DOM-ready boot,
+cross-feature rendering, bounded session snapshots, stale shelf responses and acyclic imports.
+The race harness now injects dependencies rather than redefining hoisted handlers. Local and
+hosted builds pass; CI runs all frontend tests on the release bundle and syntax-checks nested
+JavaScript. Interactive visual acceptance remains unverified because the browser preview was
+blocked; local Docker is unavailable and the container build remains a CI check. No paid calls,
+database/DNS changes or production approval are part of this milestone. Earlier checkpoints
+below are retained as history. See [Frontend Guide](FRONTEND_GUIDE.md) for the final learning map.
+
 **Development checkpoint — 2 October 2026:** continued the same incremental refactor on
 `chore/frontend-typescript` / PR #51. Typed discovery views and film-selection helpers now
 own identity choices, selected-edition and shelf HTML; shared crew-name filtering is separate.
