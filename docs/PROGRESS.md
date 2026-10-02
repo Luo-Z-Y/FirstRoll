@@ -36,7 +36,7 @@ replace first-live-release acceptance or a real recovery drill.
 | Film discovery | Complete | TMDb primary catalogue with open Wikidata/Wikipedia failover, explicit ambiguity confirmation, attributed dossier enrichment and the always-available native director shelf |
 | Public video resources | Complete | Persistent cumulative catalogue; typed tabs; bounded uploader-description and public YouTube-caption extraction |
 | Product navigation | Complete | Discover, Analyse, Festivals and Settings preserve per-tab view content and scroll; a versioned `sessionStorage` snapshot makes the Discover workspace refresh-safe; Study remains consolidated into Discover |
-| Festival atlas | Complete | Festivals tab: 31 festivals on an inline Natural Earth world map with month filter, on-now/soon status and a twelve-month calendar; static typical windows, verified in a local browser at desktop and 375 px widths |
+| Festival atlas | Complete | Festivals tab: 31 festivals on a zoomable inline Natural Earth world map with a toggleable month filter, on-now/soon status and a twelve-month calendar; static typical windows, verified in a local browser at desktop and 375 px widths |
 | Theme support | Complete | System-aware light/dark themes with a locally persisted accessible toggle |
 | Local settings | Complete | Write-only connector credentials plus local add, remove and index controls for the private library |
 | Hosted public beta | Live — browser acceptance pending | v219 deployed on Tencent with owner approval; public HTTPS receipt/health match on 1 October; interactive account/shelf acceptance still outstanding |
@@ -185,7 +185,9 @@ Dated entries, newest first. Entries dated 6–31 August 2026 were moved unchang
 Added a **Festivals** primary tab (`app/web/festivals.js`): a world map of 31 major international
 film festivals and a twelve-month calendar. Pins and calendar bars show whether each festival is on
 now, starts within 60 days or comes later; a month filter dims the map and narrows the calendar, and
-selecting a festival shows its city, typical window, focus and official site where known. The land
+selecting a festival shows its city, typical window, focus and official site where known. The map
+zooms up to 8× by wheel, pinch, double-click or buttons and pans by dragging, with counter-scaled
+pins; choosing the active month again clears the filter. The land
 outline is Natural Earth 1:110m (public domain, via world-atlas) projected equirectangularly and
 inlined, so the view adds no runtime dependency or network request.
 

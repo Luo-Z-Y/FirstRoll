@@ -250,7 +250,7 @@ def test_archive_pullout_collapses_before_zoom_can_clip_its_copy() -> None:
     styles = (WEB / "styles.css").read_text(encoding="utf-8")
     app = (WEB / "app.js").read_text(encoding="utf-8")
 
-    assert "/assets/styles.css?v=20261002-1" in index
+    assert "/assets/styles.css?v=20261002-2" in index
     assert "/assets/app.js?v=20261002-1" in index
     assert "closet3d.js" not in index
     assert 'class="archive-pullout-shell"' in app
@@ -476,10 +476,14 @@ def test_festival_atlas_tab_is_self_contained_and_shipped() -> None:
 
     assert 'data-product-view="festivals"' in index
     assert 'id="product-festivals"' in index
-    assert '"/assets/festivals.js?v=20261002-1"' in index
+    assert '"/assets/festivals.js?v=20261002-2"' in index
     assert 'festivals: document.getElementById("product-festivals")' in app
     assert '"$source_dir/festivals.js"' in build
     # The map is drawn from an inline public-domain outline; no map library or tile server.
     assert "Natural Earth" in festivals
     assert "http://" not in festivals
     assert "confirm this year's dates with the festival" in festivals
+    # Zoomable map; choosing the active month again clears the filter.
+    for marker in ('data-festival-zoom="in"', '"wheel"', '"dblclick"', "MAX_ZOOM", "clampView"):
+        assert marker in festivals
+    assert "month === state.month ? 0 : month" in festivals

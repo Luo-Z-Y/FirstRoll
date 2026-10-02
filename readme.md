@@ -185,8 +185,10 @@ implemented, film-specific formal claims remain viewing hypotheses.
 
 - See 31 major international film festivals pinned on a world map, coloured by whether each is on
   now, starts within 60 days or comes later in the year.
-- Filter the map and calendar by month; select a pin or calendar row for the city, typical dates,
-  focus and, where known, the official site.
+- Zoom the map with the scroll wheel, a pinch, a double-click (Shift to zoom out) or the +/−
+  buttons, and drag to pan once zoomed; pins keep their size at every zoom level.
+- Filter the map and calendar by month (choose the active month again to clear it); select a pin
+  or calendar row for the city, typical dates, focus and, where known, the official site.
 - Read the whole festival year as a twelve-month calendar with a marker for today.
 
 The festival list and its windows are static data in `app/web/festivals.js`, drawn from recent

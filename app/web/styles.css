@@ -1822,10 +1822,17 @@ html[data-theme="dark"] .critical-provider-actions button.is-active.is-loaded::a
 .festival-months button:hover { background: var(--control-fill-hover); color: var(--ink); }
 .festival-months button[aria-pressed="true"] { background: var(--inverse-bg); color: var(--inverse-text); border-color: transparent; }
 .festival-atlas { display: grid; grid-template-columns: minmax(0, 1fr) minmax(250px, 320px); gap: 16px; align-items: stretch; }
-.festival-map { margin: 0; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel-bg); overflow: hidden; }
-.festival-map svg { display: block; width: 100%; height: auto; }
-.festival-land { fill: var(--ink); fill-opacity: 0.11; stroke: var(--ink); stroke-opacity: 0.22; stroke-width: 0.6; }
-.festival-graticule { fill: none; stroke: var(--line); stroke-width: 0.5; stroke-dasharray: 2 4; }
+.festival-map { position: relative; margin: 0; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel-bg); overflow: hidden; }
+.festival-map svg { display: block; width: 100%; height: auto; touch-action: pan-y; user-select: none; -webkit-user-select: none; }
+.festival-map.is-zoomed svg { touch-action: none; cursor: grab; }
+.festival-map.is-panning svg { cursor: grabbing; }
+.festival-land { fill: var(--ink); fill-opacity: 0.11; stroke: var(--ink); stroke-opacity: 0.22; stroke-width: 0.6px; vector-effect: non-scaling-stroke; }
+.festival-graticule { fill: none; stroke: var(--line); stroke-width: 0.5px; stroke-dasharray: 2 4; vector-effect: non-scaling-stroke; }
+.festival-zoom { position: absolute; top: 10px; right: 10px; z-index: 1; display: flex; flex-direction: column; overflow: hidden; border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper-light); box-shadow: var(--control-shadow); }
+.festival-zoom button { width: 32px; height: 32px; border: 0; border-bottom: 1px solid var(--line); background: transparent; color: var(--ink); font: 600 1rem "DM Sans", sans-serif; line-height: 1; cursor: pointer; }
+.festival-zoom button:last-child { border-bottom: 0; font-size: 0.9rem; }
+.festival-zoom button:hover:not(:disabled) { background: var(--control-fill-hover); }
+.festival-zoom button:disabled { color: var(--ink-soft); opacity: 0.4; cursor: default; }
 .festival-pin { cursor: pointer; outline: none; transition: opacity 200ms var(--ease-fluid); }
 .festival-pin-dot { fill: var(--ink-soft); stroke: var(--paper-light); stroke-width: 1.5; }
 .festival-pin-halo { fill: transparent; }

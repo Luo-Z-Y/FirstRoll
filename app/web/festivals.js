@@ -52,6 +52,9 @@
   const CUMULATIVE = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334, 365];
   const MAP_TOP = 16;
   const MAP_HEIGHT = 396;
+  const MAX_ZOOM = 8;
+  const BUTTON_ZOOM = 1.6;
+  const DRAG_THRESHOLD = 4;
 
   const section = document.getElementById("product-festivals");
   if (!section) return;
@@ -62,7 +65,9 @@
     calendar: section.querySelector("[data-festival-calendar]"),
     summary: section.querySelector("[data-festival-summary]"),
   };
-  const state = { month: 0, selected: null };
+  // The map view is a viewBox window onto the 1000-wide plane; zoom is 1000 / width.
+  const state = { month: 0, selected: null, view: { x: 0, y: MAP_TOP, w: 1000, h: MAP_HEIGHT } };
+  const gesture = { pointers: new Map(), start: null, dragged: false };
 
   function dayOfYear([month, day]) {
     return CUMULATIVE[month - 1] + day;
@@ -131,17 +136,90 @@
       const dimmed = !inMonth(festival, state.month);
       const selected = state.selected === festival.id;
       const classes = ["festival-pin", `is-${current.key}`, dimmed ? "is-dimmed" : "", selected ? "is-selected" : ""].join(" ").trim();
-      return `<g class="${classes}" transform="translate(${x.toFixed(1)} ${y.toFixed(1)})" data-festival-id="${festival.id}" role="button" tabindex="${dimmed ? -1 : 0}" aria-label="${escapeHtml(`${festival.name}, ${festival.city}, ${formatWindow(festival)}`)}" aria-pressed="${selected}">
+      return `<g class="${classes}" data-x="${x.toFixed(1)}" data-y="${y.toFixed(1)}" data-festival-id="${festival.id}" role="button" tabindex="${dimmed ? -1 : 0}" aria-label="${escapeHtml(`${festival.name}, ${festival.city}, ${formatWindow(festival)}`)}" aria-pressed="${selected}">
         <circle class="festival-pin-halo" r="11"></circle>
         <circle class="festival-pin-dot" r="4.5"></circle>
         <title>${escapeHtml(`${festival.name} · ${festival.city} · ${formatWindow(festival)}`)}</title>
       </g>`;
     }).join("");
-    refs.map.innerHTML = `<svg viewBox="0 ${MAP_TOP} 1000 ${MAP_HEIGHT}" role="group" aria-label="World map of film festivals" preserveAspectRatio="xMidYMid meet">
+    refs.map.innerHTML = `<div class="festival-zoom" role="group" aria-label="Map zoom">
+        <button type="button" data-festival-zoom="in" aria-label="Zoom in">+</button>
+        <button type="button" data-festival-zoom="out" aria-label="Zoom out">−</button>
+        <button type="button" data-festival-zoom="reset" aria-label="Reset map view">⤢</button>
+      </div>
+      <svg viewBox="0 ${MAP_TOP} 1000 ${MAP_HEIGHT}" role="group" aria-label="World map of film festivals; scroll, pinch or double-click to zoom and drag to pan" preserveAspectRatio="xMidYMid meet">
       <path class="festival-graticule" d="${graticule()}"></path>
       <path class="festival-land" d="${LAND_PATH}"></path>
       ${pins}
     </svg>`;
+    applyView();
+  }
+
+  function zoomLevel() {
+    return 1000 / state.view.w;
+  }
+
+  // Keep the window inside the map plane so the world can never be panned out of sight.
+  function clampView(view) {
+    const w = Math.min(1000, Math.max(1000 / MAX_ZOOM, view.w));
+    const h = (w * MAP_HEIGHT) / 1000;
+    return {
+      w,
+      h,
+      x: Math.min(1000 - w, Math.max(0, view.x)),
+      y: Math.min(MAP_TOP + MAP_HEIGHT - h, Math.max(MAP_TOP, view.y)),
+    };
+  }
+
+  // Pins are counter-scaled so they keep their on-screen size at every zoom level.
+  function applyView() {
+    const svg = refs.map.querySelector("svg");
+    if (!svg) return;
+    const { x, y, w, h } = state.view;
+    svg.setAttribute("viewBox", `${x.toFixed(2)} ${y.toFixed(2)} ${w.toFixed(2)} ${h.toFixed(2)}`);
+    const scale = (1 / zoomLevel()).toFixed(4);
+    svg.querySelectorAll(".festival-pin").forEach((pin) => {
+      pin.setAttribute("transform", `translate(${pin.dataset.x} ${pin.dataset.y}) scale(${scale})`);
+    });
+    const zoomed = zoomLevel() > 1.001;
+    refs.map.classList.toggle("is-zoomed", zoomed);
+    refs.map.querySelector('[data-festival-zoom="in"]').disabled = zoomLevel() >= MAX_ZOOM - 0.001;
+    refs.map.querySelector('[data-festival-zoom="out"]').disabled = !zoomed;
+    refs.map.querySelector('[data-festival-zoom="reset"]').disabled = !zoomed;
+  }
+
+  // Zoom by a factor while keeping the given map-plane point fixed on screen.
+  function zoomAt(factor, point) {
+    const { x, y, w } = state.view;
+    const anchor = point || { x: x + w / 2, y: y + state.view.h / 2 };
+    const next = clampView({ w: w / factor });
+    const ratio = next.w / w;
+    state.view = clampView({
+      w: next.w,
+      x: anchor.x - (anchor.x - x) * ratio,
+      y: anchor.y - (anchor.y - y) * ratio,
+    });
+    applyView();
+  }
+
+  function mapPoint(clientX, clientY) {
+    const svg = refs.map.querySelector("svg");
+    const matrix = svg?.getScreenCTM();
+    if (!matrix) return null;
+    const point = new DOMPoint(clientX, clientY).matrixTransform(matrix.inverse());
+    return { x: point.x, y: point.y };
+  }
+
+  function unitsPerPixel() {
+    const svg = refs.map.querySelector("svg");
+    const rect = svg.getBoundingClientRect();
+    // preserveAspectRatio "meet" fits the tighter dimension.
+    return Math.max(state.view.w / rect.width, state.view.h / rect.height);
+  }
+
+  function pinchDistance() {
+    const [a, b] = Array.from(gesture.pointers.values());
+    return Math.hypot(a.x - b.x, a.y - b.y);
   }
 
   function graticule() {
@@ -225,7 +303,9 @@
   section.addEventListener("click", (event) => {
     const monthButton = event.target.closest("[data-festival-month]");
     if (monthButton) {
-      state.month = Number(monthButton.dataset.festivalMonth) || 0;
+      const month = Number(monthButton.dataset.festivalMonth) || 0;
+      // Choosing the active month again clears the filter.
+      state.month = month === state.month ? 0 : month;
       const selected = FESTIVALS.find((festival) => festival.id === state.selected);
       if (selected && !inMonth(selected, state.month)) state.selected = null;
       render();
@@ -236,9 +316,88 @@
       render();
       return;
     }
+    const zoomButton = event.target.closest("[data-festival-zoom]");
+    if (zoomButton) {
+      const action = zoomButton.dataset.festivalZoom;
+      if (action === "reset") {
+        state.view = { x: 0, y: MAP_TOP, w: 1000, h: MAP_HEIGHT };
+        applyView();
+      } else {
+        zoomAt(action === "in" ? BUTTON_ZOOM : 1 / BUTTON_ZOOM);
+      }
+      return;
+    }
     const target = event.target.closest("[data-festival-id]");
-    if (target) select(target.dataset.festivalId);
+    if (target && !gesture.dragged) select(target.dataset.festivalId);
   });
+
+  refs.map.addEventListener("wheel", (event) => {
+    if (!event.target.closest("svg")) return;
+    event.preventDefault();
+    const delta = event.deltaMode === 1 ? event.deltaY * 16 : event.deltaY;
+    zoomAt(Math.exp(-delta * 0.0025), mapPoint(event.clientX, event.clientY));
+  }, { passive: false });
+
+  refs.map.addEventListener("dblclick", (event) => {
+    if (!event.target.closest("svg") || event.target.closest("[data-festival-id]")) return;
+    event.preventDefault();
+    zoomAt(event.shiftKey ? 1 / 2 : 2, mapPoint(event.clientX, event.clientY));
+  });
+
+  refs.map.addEventListener("pointerdown", (event) => {
+    if (!event.target.closest("svg") || (event.pointerType === "mouse" && event.button !== 0)) return;
+    gesture.pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    gesture.dragged = false;
+    gesture.start = {
+      view: { ...state.view },
+      x: event.clientX,
+      y: event.clientY,
+      distance: gesture.pointers.size === 2 ? pinchDistance() : 0,
+    };
+  });
+
+  refs.map.addEventListener("pointermove", (event) => {
+    if (!gesture.pointers.has(event.pointerId) || !gesture.start) return;
+    gesture.pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    if (gesture.pointers.size === 2 && gesture.start.distance) {
+      const [a, b] = Array.from(gesture.pointers.values());
+      const centre = mapPoint((a.x + b.x) / 2, (a.y + b.y) / 2);
+      const target = gesture.start.view.w / (pinchDistance() / gesture.start.distance);
+      gesture.dragged = true;
+      zoomAt(state.view.w / target, centre);
+      return;
+    }
+    const dx = event.clientX - gesture.start.x;
+    const dy = event.clientY - gesture.start.y;
+    if (!gesture.dragged && Math.hypot(dx, dy) < DRAG_THRESHOLD) return;
+    if (zoomLevel() <= 1.001) return;
+    if (!gesture.dragged) refs.map.querySelector("svg")?.setPointerCapture(event.pointerId);
+    gesture.dragged = true;
+    refs.map.classList.add("is-panning");
+    const scale = unitsPerPixel();
+    state.view = clampView({
+      w: gesture.start.view.w,
+      x: gesture.start.view.x - dx * scale,
+      y: gesture.start.view.y - dy * scale,
+    });
+    applyView();
+  });
+
+  function endGesture(event) {
+    if (!gesture.pointers.delete(event.pointerId)) return;
+    refs.map.classList.remove("is-panning");
+    if (gesture.pointers.size) {
+      // One finger lifted from a pinch: continue as a pan from the remaining finger.
+      const [remaining] = Array.from(gesture.pointers.values());
+      gesture.start = { view: { ...state.view }, x: remaining.x, y: remaining.y, distance: 0 };
+      return;
+    }
+    gesture.start = null;
+    // Let the click that follows a drag see the flag, then clear it.
+    window.setTimeout(() => { gesture.dragged = false; }, 0);
+  }
+  refs.map.addEventListener("pointerup", endGesture);
+  refs.map.addEventListener("pointercancel", endGesture);
 
   refs.map.addEventListener("keydown", (event) => {
     if (event.key !== "Enter" && event.key !== " ") return;
