@@ -209,7 +209,7 @@ reissues only its latest query. Invalid, oversized, incompatible or older-than-t
 snapshots are discarded.
 
 Product navigation changes only the active section. It neither rebuilds nor empties Discover, and
-per-view scroll offsets are restored when moving among Discover, Analyse and Settings. This state is
+per-view scroll offsets are restored when moving among Discover, Analyse, Festivals and Settings. This state is
 session continuity, not durable account persistence: closing the tab session clears it, and no state
 is synchronised across devices.
 

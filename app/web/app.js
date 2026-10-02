@@ -18,7 +18,7 @@ const state = {
   meta: null,
   analysis: null,
   productView: "discovery",
-  viewScroll: { discovery: 0, analyse: 0, settings: 0 },
+  viewScroll: { discovery: 0, analyse: 0, festivals: 0, settings: 0 },
   discovery: {
     results: [],
     selectedFilm: null,
@@ -67,6 +67,7 @@ const refs = {
   productViews: {
     discovery: document.getElementById("product-discovery"),
     analyse: document.getElementById("product-analyse"),
+    festivals: document.getElementById("product-festivals"),
     settings: document.getElementById("product-settings"),
   },
   productNav: Array.from(document.querySelectorAll(".nav-link[data-product-view]")),

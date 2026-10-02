@@ -87,7 +87,7 @@ def test_loopback_preview_uses_a_separate_persistent_unlimited_test_account() ->
     assert 'runtimeConfig.accountUi ? \'<button class="detail-action"' in app
     assert "account studies remain today" in app
     assert 'src="/assets/integrations.js?v=20260821-7"' in index
-    assert 'src="/assets/app.js?v=20260912-1"' in index
+    assert 'src="/assets/app.js?v=20261002-1"' in index
     assert '"X-FirstRoll-DeepSeek-Key"' in integrations
     assert '"X-FirstRoll-YouTube-Key"' in integrations
     assert "localStorage" not in integrations
@@ -250,8 +250,8 @@ def test_archive_pullout_collapses_before_zoom_can_clip_its_copy() -> None:
     styles = (WEB / "styles.css").read_text(encoding="utf-8")
     app = (WEB / "app.js").read_text(encoding="utf-8")
 
-    assert "/assets/styles.css?v=20260821-8" in index
-    assert "/assets/app.js?v=20260912-1" in index
+    assert "/assets/styles.css?v=20261002-2" in index
+    assert "/assets/app.js?v=20261002-1" in index
     assert "closet3d.js" not in index
     assert 'class="archive-pullout-shell"' in app
     assert "container-type: inline-size" in styles
@@ -371,7 +371,7 @@ def test_discovery_workspace_survives_refresh_and_product_navigation() -> None:
     app = (WEB / "app.js").read_text(encoding="utf-8")
     index = (WEB / "index.html").read_text(encoding="utf-8")
 
-    assert "/assets/app.js?v=20260912-1" in index
+    assert "/assets/app.js?v=20261002-1" in index
     assert 'const DISCOVERY_SESSION_KEY = "firstroll.discovery-session"' in app
     assert 'const PRODUCT_SESSION_KEY = "firstroll.product-session"' in app
     assert "window.sessionStorage.setItem(DISCOVERY_SESSION_KEY" in app
@@ -466,3 +466,24 @@ def test_director_shelf_renders_immediately_then_enriches_posters() -> None:
     assert "@container (min-width: 660px)" in styles
     assert ".film-closet" not in styles
     assert ".closet-webgl" not in styles
+
+
+def test_festival_atlas_tab_is_self_contained_and_shipped() -> None:
+    index = (WEB / "index.html").read_text(encoding="utf-8")
+    app = (WEB / "app.js").read_text(encoding="utf-8")
+    festivals = (WEB / "festivals.js").read_text(encoding="utf-8")
+    build = (ROOT / "tools" / "build_web.sh").read_text(encoding="utf-8")
+
+    assert 'data-product-view="festivals"' in index
+    assert 'id="product-festivals"' in index
+    assert '"/assets/festivals.js?v=20261002-2"' in index
+    assert 'festivals: document.getElementById("product-festivals")' in app
+    assert '"$source_dir/festivals.js"' in build
+    # The map is drawn from an inline public-domain outline; no map library or tile server.
+    assert "Natural Earth" in festivals
+    assert "http://" not in festivals
+    assert "confirm this year's dates with the festival" in festivals
+    # Zoomable map; choosing the active month again clears the filter.
+    for marker in ('data-festival-zoom="in"', '"wheel"', '"dblclick"', "MAX_ZOOM", "clampView"):
+        assert marker in festivals
+    assert "month === state.month ? 0 : month" in festivals
