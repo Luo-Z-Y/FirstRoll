@@ -11,3 +11,6 @@ export interface FilmSummary {
   directors?: string[];
   poster_url?: string | null;
 }
+
+// The normalised search form/storage shape, separate from provider film metadata.
+export interface DiscoveryQuery { title: string; year: string; director: string }

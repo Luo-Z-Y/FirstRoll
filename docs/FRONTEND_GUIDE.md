@@ -17,11 +17,11 @@ Splitting code is useful when each file has a clear responsibility, not merely f
 | `app.js` | Composition root | See how feature factories connect |
 | `src/context.js` | Per-application state, config and DOM references | Find a button reference or request state |
 | `src/bootstrap.js` | Event registration | Follow a click into a controller |
-| `src/navigation/controller.js` | Theme and product navigation | Change navigation behaviour |
+| `src/navigation/controller.ts`, `types.ts` | Typed theme/product navigation and narrow state contract | Change navigation behaviour |
 | `src/accounts/controller.js` | Account-facing UI and saved films | Trace account state into controls |
 | `src/session/controller.js` | Bounded per-tab snapshots | Follow storage and restoration |
 | `src/discovery/controller.js` | Search, selection and shelf requests | Follow cancellation and stale-response checks |
-| `src/discovery/recent.js`, `shelf.js` | Recent queries and shelf DOM state | Follow loading, ready and fallback states |
+| `src/discovery/recent.ts`, `shelf.js` | Typed recent queries; shelf DOM state still JavaScript | Follow storage and shelf states |
 | `src/dossier/controller.js`, `view.js` | Dossier requests/events and presentation | Follow a film dossier |
 | `src/videos/controller.js`, `views.js` | Video requests/categories and cards | Follow video results |
 | `src/criticism/controller.js`, `views.js` | Provider requests/tabs and rendering | Follow critical perspectives |
@@ -37,7 +37,9 @@ Splitting code is useful when each file has a clear responsibility, not merely f
 | `src/analysis/types.ts` | RGB, frame, shot and scene shapes | Understand domain types |
 | `src/analysis/math.ts` | Pure numerical helpers | Learn independently testable functions |
 | `src/analysis/heuristics.ts` | Existing colour/texture/shot/scene heuristics | Understand local analysis calculations |
-| `src/analysis/controller.js`, `view.js` | Private clip state/upload/export, then rendering | Follow the Analyse feature |
+| `src/analysis/controller.ts`, `view.ts` | Typed private clip state/upload/export and rendering | Follow the Analyse feature |
+| `src/analysis/dom.ts`, `response.ts` | DOM contract and runtime response validation | See the difference between types and validation |
+| `src/shared/ui.ts` | Typed focus, progress markup and API-base helpers | Follow accessible focus scheduling |
 | `auth.js`, `local-auth.js`, `integrations.js` | Existing account/settings adapters | Follow sign-in or settings |
 
 For TypeScript basics, read `format.ts` → its tests → `types.ts` → `progress.ts`.
@@ -109,13 +111,35 @@ discovery state object. This is encapsulation, not an additional framework.
 
 ### What TypeScript does not guarantee
 
-`strict: true` currently applies to `src/**/*.ts`, **not** the remaining JavaScript
-controllers. `app.d.ts` describes only the public startup contract, not controller internals.
+`strict: true` applies to `src/**/*.ts`, including the analysis, navigation and recent-search
+controllers, **not** the remaining JavaScript controllers. `app.d.ts` describes only startup.
 A typed function called from unchecked JavaScript can still receive bad data.
 Provider JSON is untrusted regardless of its declared interface. The progress module keeps
 its allow-lists, run-ID checks, sequence checks and terminal-event checks at runtime.
 TypeScript does not replace those checks, API authentication, tests or safe HTML escaping.
 The existing clip heuristics are still proxies, not verified object recognition.
+
+### The second migration: state, DOM and network boundaries
+
+The analysis feature now uses TypeScript end to end within its controller and view.
+`ClipState.meta: VideoMeta | null` expresses the period before a file is ready. Code must
+check for metadata before reading it. `AnalysisRefs` distinguishes an input, video, canvas,
+button and textarea; using `currentTime` on the file input is a compiler error.
+
+`parseAnalysisResponse(value: unknown, ...)` validates nested scenes, shots, metrics, RGB
+triples and labels before creating an `AnalysisResult`. It accepts the backend's genuine
+`Unknown` shot scale and optional legacy top-level shots/outputs. It rejects invalid numbers,
+missing nested arrays and malformed metadata. It does not prove that detector observations
+are scientifically accurate. Extra unconsumed fields are not part of the presentation model.
+
+Filenames and object labels are escaped in HTML; correct string types alone do not prevent
+injection. Missing canvas contexts are handled safely instead of assuming every browser can draw.
+Navigation uses closed theme/product-view choices, with runtime guards for storage and DOM values.
+Recent searches decode JSON as `unknown`; the normalised query has title/year/director strings.
+
+The JavaScript composition root still passes dependencies into these typed features. Its entire
+dependency graph is not compiler-verified yet. Narrow contracts improve each migrated module
+without concealing that remaining boundary behind `any` or disabling strict checks.
 
 ## Source versus generated output
 
@@ -174,10 +198,14 @@ Never put provider API keys into browser configuration.
   remain safe.
 - Python tests cover the local compiled-asset route, its missing-build error and the Docker
   build-context contract. Existing source-smoke checks point at the relocated modules.
-- Seven application cases cover inert construction/independent state, idempotent startup,
+- Ten application cases cover inert construction/independent state, idempotent startup,
   DOM-ready boot, cross-feature rendering, bounded snapshots, stale shelf selection and
-  acyclic/size-bounded modules.
-- All **52 frontend cases** pass against both compiled source and the minified hosted bundle.
+  acyclic/size-bounded modules, navigation/storage fallback, recent searches and scheduled focus.
+- Six analysis cases cover runtime parsing, invalid nested data, upload/render/export, failure,
+  safe HTML and keyboard view guards. The controller cases also run on the release bundle.
+- One compile-only test checks deliberately invalid TypeScript usages. An unused
+  `@ts-expect-error` in these test fixtures fails the test, detecting weakened contracts.
+- All **62 frontend cases** pass against both compiled source and the minified hosted bundle.
   The **645-test repository suite** passes, including the frontend test wrapper.
 - CI installs locked dependencies, checks/builds TypeScript and nested JavaScript, runs all
   frontend tests on the hosted bundle and builds Docker.
@@ -192,8 +220,9 @@ human production approval gate.
 
 The application now has explicit feature boundaries, a small composition root and executable
 integration coverage. No further monolithic-controller extraction is required for this milestone.
-Future work can type one controller at a time, starting with DOM references and request state,
-then account/settings adapters. Consider React/Next.js only as a separate decision with a need.
+Analysis, navigation, recent searches and shared UI helpers are now typed. Next are shared
+application state/wiring, session/discovery, dossier/video/criticism, Deep Study orchestration
+and account/settings adapters. Consider React/Next.js only as a separate decision with a need.
 
 This milestone does not claim all frontend code is typed.
 Preserving a working application is more useful than renaming a large file to `.ts` and

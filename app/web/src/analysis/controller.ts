@@ -2,14 +2,19 @@ import { createAnalysisView } from "./view";
 import { formatTime, formatBytes } from "../shared/format";
 import { avg, rgbLabel } from "./math";
 import { extractFrameFeatures, detectShots, detectScenes, summarizeScenes } from "./heuristics";
+import { parseAnalysisResponse } from "./response";
+import { readApiError } from "../api/errors";
+import type { AnalysisRefs, AnalysisViewKey } from "./dom";
+import { isAnalysisViewKey } from "./dom";
+import type { AnalysisResult, ClipState, FlatShot, FrameSample, VideoMeta } from "./types";
 
-// Transitional JavaScript controller. Clip state is private to this feature.
+// Strictly typed controller. Clip state is private to this feature.
 // Only DOM references are injected; discovery request state cannot be changed here.
-export function createAnalysisController(refs) {
-  const state = { file: null, url: null, meta: null, analysis: null };
+export function createAnalysisController(refs: AnalysisRefs) {
+  const state: ClipState = { file: null, url: null, meta: null, analysis: null };
   const { renderAll, clearAnalysisViews, renderOverviewMetadataOnly } = createAnalysisView(refs);
 
-  function setActiveView(viewKey) {
+  function setActiveView(viewKey: AnalysisViewKey) {
     refs.tabs.forEach((tab) => {
       const active = tab.dataset.view === viewKey;
       tab.classList.toggle("active", active);
@@ -21,9 +26,9 @@ export function createAnalysisController(refs) {
     });
   }
 
-  function onAnalysisTabKeydown(event) {
+  function onAnalysisTabKeydown(event: KeyboardEvent) {
     if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
-    const current = refs.tabs.indexOf(event.currentTarget);
+    const current = refs.tabs.findIndex((tab) => tab === event.currentTarget);
     if (current < 0) return;
     event.preventDefault();
     const nextIndex = event.key === "Home"
@@ -33,12 +38,14 @@ export function createAnalysisController(refs) {
         : (current + (event.key === "ArrowRight" ? 1 : -1) + refs.tabs.length)
           % refs.tabs.length;
     const next = refs.tabs[nextIndex];
+    if (!isAnalysisViewKey(next.dataset.view)) return;
     setActiveView(next.dataset.view);
     next.focus();
   }
 
-  function onFileSelected(event) {
-    const file = event.target.files?.[0];
+  function onFileSelected(event: Event) {
+    if (event.target !== refs.videoFile) return;
+    const file = refs.videoFile.files?.[0];
     if (!file) return;
 
     if (state.url) {
@@ -72,7 +79,7 @@ export function createAnalysisController(refs) {
     };
   }
 
-  function buildVideoMeta(file, videoEl) {
+  function buildVideoMeta(file: File, videoEl: HTMLVideoElement): VideoMeta {
     const durationSec = Number(videoEl.duration || 0);
     const fpsEstimated = estimateFps(durationSec);
     return {
@@ -87,7 +94,7 @@ export function createAnalysisController(refs) {
     };
   }
 
-  function estimateFps(durationSec) {
+  function estimateFps(durationSec: number): number {
     if (durationSec < 30) return 30;
     if (durationSec < 600) return 24;
     return 23.976;
@@ -106,7 +113,7 @@ export function createAnalysisController(refs) {
 
     try {
       const apiResult = await analyzeViaBackend(backendUrl, state.file, sensitivity);
-      const normalized = normalizeApiResult(apiResult, interval, sensitivity);
+      const normalized = parseAnalysisResponse(apiResult, interval, sensitivity);
       state.meta = normalized.meta;
       state.analysis = normalized;
 
@@ -124,7 +131,7 @@ export function createAnalysisController(refs) {
     }
   }
 
-  async function analyzeViaBackend(url, file, sceneSensitivity) {
+  async function analyzeViaBackend(url: string, file: File, sceneSensitivity: number): Promise<unknown> {
     if (!url) {
       throw new Error("Backend URL is required.");
     }
@@ -140,35 +147,14 @@ export function createAnalysisController(refs) {
     const res = await fetch(url, { method: "POST", body: form });
     setProgress(78);
     if (!res.ok) {
-      let detail = `HTTP ${res.status}`;
-      try {
-        const body = await res.json();
-        detail = body.detail || detail;
-      } catch (_) {
-        // ignore json parse errors
-      }
-      throw new Error(detail);
+      throw new Error(await readApiError(res));
     }
-    const data = await res.json();
+    const data: unknown = await res.json();
     setProgress(92);
     return data;
   }
 
-  function normalizeApiResult(data, interval, sensitivity) {
-    if (!data || !data.meta || !data.global || !Array.isArray(data.scenes)) {
-      throw new Error("Invalid backend response shape.");
-    }
-    return {
-      meta: data.meta,
-      global: data.global,
-      scenes: data.scenes,
-      shots: Array.isArray(data.shots) ? data.shots : [],
-      outputs: data.outputs || {},
-      config: { interval, sensitivity, source: "backend" },
-    };
-  }
-
-  function setFeatureButtonsEnabled(enabled) {
+  function setFeatureButtonsEnabled(enabled: boolean) {
     refs.openShotDataBtn.disabled = !enabled;
     refs.openColorBtn.disabled = !enabled;
     refs.openObjectsBtn.disabled = !enabled;
@@ -178,7 +164,8 @@ export function createAnalysisController(refs) {
     refs.generateLlmDraftBtn.disabled = !enabled;
   }
 
-  async function analyzeVideo(video, intervalSec, sensitivity, onProgress) {
+  async function analyzeVideo(video: HTMLVideoElement, intervalSec: number, sensitivity: number,
+    onProgress: (percent: number, message: string) => void) {
     const duration = Number(video.duration || 0);
     if (!duration || Number.isNaN(duration)) {
       throw new Error("Invalid video duration.");
@@ -213,9 +200,14 @@ export function createAnalysisController(refs) {
     };
   }
 
-  async function sampleFrames(video, intervalSec, onProgress) {
+  async function sampleFrames(video: HTMLVideoElement, intervalSec: number,
+    onProgress: (percent: number, message: string) => void): Promise<FrameSample[]> {
     const canvas = refs.analysisCanvas;
     const ctx = canvas.getContext("2d", { willReadFrequently: true });
+    if (!ctx) throw new Error("Canvas rendering is unavailable.");
+    if (!Number.isFinite(intervalSec) || intervalSec <= 0) {
+      throw new Error("Sampling interval must be a positive number.");
+    }
 
     const duration = Number(video.duration || 0);
     const times = [];
@@ -243,8 +235,8 @@ export function createAnalysisController(refs) {
     return out;
   }
 
-  function getFlatShots(analysis) {
-    const rows = [];
+  function getFlatShots(analysis: AnalysisResult): FlatShot[] {
+    const rows: FlatShot[] = [];
     analysis.scenes.forEach((scene) => {
       scene.shots.forEach((shot) => {
         rows.push({
@@ -291,17 +283,17 @@ export function createAnalysisController(refs) {
     setActiveView("objects");
   }
 
-  function setStatus(text, kind = "") {
+  function setStatus(text: string, kind: "" | "error" = "") {
     refs.statusText.textContent = text;
     refs.statusText.classList.toggle("is-error", kind === "error");
   }
 
-  function setProgress(percent) {
+  function setProgress(percent: number) {
     refs.progressBar.style.width = `${Math.max(0, Math.min(100, percent))}%`;
   }
 
-  function seekTo(video, timeSec) {
-    return new Promise((resolve, reject) => {
+  function seekTo(video: HTMLVideoElement, timeSec: number): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
       const onSeeked = () => {
         cleanup();
         resolve();
@@ -333,7 +325,7 @@ export function createAnalysisController(refs) {
     return Math.random().toString(36).slice(2, 10);
   }
 
-  function downloadTextFile(filename, content, mimeType = "text/plain;charset=utf-8") {
+  function downloadTextFile(filename: string, content: string, mimeType = "text/plain;charset=utf-8") {
     const blob = new Blob([content], { type: mimeType });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -345,13 +337,13 @@ export function createAnalysisController(refs) {
     URL.revokeObjectURL(url);
   }
 
-  function csvEscape(value) {
+  function csvEscape(value: string | number | null | undefined) {
     const text = String(value ?? "");
     if (/[\",\\n]/.test(text)) return `"${text.replace(/\"/g, "\"\"")}"`;
     return text;
   }
 
-  function toCsv(rows, header) {
+  function toCsv(rows: (string | number)[][], header: string[]) {
     const lines = [header.join(",")];
     rows.forEach((row) => {
       lines.push(row.map((v) => csvEscape(v)).join(","));
@@ -450,7 +442,7 @@ export function createAnalysisController(refs) {
     );
   }
 
-  function safeStem(filename) {
+  function safeStem(filename: string) {
     const i = filename.lastIndexOf(".");
     const stem = i > 0 ? filename.slice(0, i) : filename;
     return stem.replace(/[^a-zA-Z0-9-_]+/g, "_");

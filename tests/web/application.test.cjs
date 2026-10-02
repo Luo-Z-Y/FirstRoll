@@ -19,6 +19,8 @@ class Element {
     this.dataset = {};
     this.listeners = new Map();
     this.attributes = new Map();
+    this.closestMatches = new Map();
+    this.submissions = 0;
     this.classList = { add() {}, remove() {}, toggle() {} };
   }
   addEventListener(name, handler) {
@@ -26,6 +28,8 @@ class Element {
   }
   setAttribute(name, value) { this.attributes.set(name, value); }
   querySelector() { return null; }
+  closest(selector) { return this.closestMatches.get(selector) || null; }
+  requestSubmit() { this.submissions += 1; }
   focus() {}
 }
 
@@ -59,7 +63,7 @@ function harness() {
     setTimeout: () => 1, clearTimeout() {},
   };
   const context = vm.createContext({
-    document, window, AbortController, URL, URLSearchParams, TextEncoder, TextDecoder,
+    document, window, Element, AbortController, URL, URLSearchParams, TextEncoder, TextDecoder,
     Uint8Array, console: { warn() {}, debug() {} },
     CustomEvent: class { constructor(name, options) { this.type = name; this.detail = options.detail; } },
     fetch(url, options = {}) {
@@ -103,6 +107,74 @@ test("DOM-ready entry starts the application without a test-specific boot flag",
   h.events.find(event => event.name === "DOMContentLoaded").handler();
   assert.equal(h.pending.length, 1);
   assert.equal(h.nodes.get("filmDetail").listeners.get("click").length, 1);
+});
+
+test("typed navigation rejects unknown views and keeps theme fallback when storage fails", () => {
+  const h = harness(), app = h.create();
+  const scrolls = [];
+  h.window.requestAnimationFrame = callback => callback();
+  h.window.scrollTo = value => scrolls.push(value);
+  h.window.scrollY = 180;
+  app.setProductView("settings");
+  assert.equal(app.state.productView, "settings");
+  assert.equal(app.state.viewScroll.discovery, 180);
+  assert.equal(JSON.parse(h.storage.get("firstroll.product-session")).view, "settings");
+  for (const invalid of ["__proto__", "invented", null, {}]) app.setProductView(invalid);
+  assert.equal(app.state.productView, "settings");
+  assert.equal(scrolls.length, 1);
+  h.localStorage.set("firstroll.theme", "invented");
+  assert.equal(app.readThemePreference(), "system");
+  h.window.localStorage.getItem = () => { throw new Error("Storage disabled"); };
+  h.window.localStorage.setItem = () => { throw new Error("Storage disabled"); };
+  app.setThemePreference("dark");
+  assert.equal(h.document.documentElement.dataset.theme, "dark");
+  assert.equal(app.readThemePreference(), "system");
+});
+
+test("typed recent searches validate stored entries, cap/deduplicate and handle delegated actions", () => {
+  const h = harness(), app = h.create();
+  h.localStorage.set("firstroll.recent-searches", JSON.stringify([null, {}, { title: 4 },
+    { title: " Film ", year: 2000, director: " Director " }]));
+  const loaded = app.readRecentSearches();
+  assert.equal(loaded.length, 1);
+  assert.equal(loaded[0].year, "2000");
+  app.saveRecentSearch({ title: "Film", year: "2000", director: "Director" });
+  assert.equal(app.state.discovery.recentSearches.length, 1);
+  for (let i = 0; i < 7; i++) app.saveRecentSearch({ title: `Film ${i}`, year: "", director: "" });
+  assert.equal(app.state.discovery.recentSearches.length, 5);
+  const target = new Element();
+  target.dataset.recentSearch = "0";
+  target.closestMatches.set("[data-recent-search]", target);
+  app.onRecentSearchClick({ target });
+  assert.equal(app.refs.filmTitle.value, "Film 6");
+  assert.equal(app.refs.discoveryForm.submissions, 1);
+  target.closestMatches.clear();
+  target.dataset.removeRecentSearch = "0";
+  target.closestMatches.set("[data-remove-recent-search]", target);
+  app.onRecentSearchClick({ target });
+  assert.equal(app.state.discovery.recentSearches.length, 4);
+  target.closestMatches.clear();
+  target.closestMatches.set("[data-clear-recent-searches]", target);
+  app.onRecentSearchClick({ target });
+  assert.equal(app.state.discovery.recentSearches.length, 0);
+  assert.ok(!h.localStorage.has("firstroll.recent-searches"));
+  app.onRecentSearchClick({ target: null });
+});
+
+test("typed shared focus helper skips disconnected elements and escapes progress text", () => {
+  const h = harness(), app = h.create();
+  const callbacks = [], focused = [];
+  h.window.queueMicrotask = callback => callbacks.push(callback);
+  const element = { isConnected: true, focus: options => focused.push(options) };
+  app.focusElement(element, { preventScroll: true });
+  assert.equal(focused.length, 0);
+  callbacks.shift()();
+  assert.equal(focused[0].preventScroll, true);
+  app.focusElement(element);
+  element.isConnected = false;
+  callbacks.shift()();
+  assert.equal(focused.length, 1);
+  assert.ok(app.fetchProgressMarkup("<script>").includes("&lt;script&gt;"));
 });
 
 test("dossier rendering connects criticism, video and account modules without fetching", () => {

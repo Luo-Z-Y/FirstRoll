@@ -1,20 +1,31 @@
 import { escapeHtml } from "../shared/html";
+import type { DiscoveryQuery } from "./types";
 
 // Recent-query storage and controls.
-// JavaScript controller: migrated module boundaries, not yet a fully typed domain model.
 const RECENT_SEARCHES_KEY = "firstroll.recent-searches";
 
 const MAX_RECENT_SEARCHES = 5;
 
-export function createRecent(context, services) {
+export interface RecentContext {
+  state: { discovery: { recentSearches: DiscoveryQuery[] } };
+  refs: {
+    recentSearches: HTMLElement;
+    filmTitle: HTMLInputElement; filmYear: HTMLInputElement; filmDirector: HTMLInputElement;
+    discoveryForm: HTMLFormElement;
+  };
+}
+
+export function createRecent(context: RecentContext, _services?: unknown) {
   const { state, refs } = context;
 
-  function readRecentSearches() {
+  function readRecentSearches(): DiscoveryQuery[] {
     try {
-      const searches = JSON.parse(window.localStorage.getItem(RECENT_SEARCHES_KEY) || "[]");
+      const searches: unknown = JSON.parse(window.localStorage.getItem(RECENT_SEARCHES_KEY) || "[]");
       if (!Array.isArray(searches)) return [];
       return searches
-        .filter((search) => search && typeof search.title === "string" && search.title.trim())
+        .filter((search: unknown): search is { title: string; year?: unknown; director?: unknown } =>
+          search !== null && typeof search === "object" && !Array.isArray(search)
+          && "title" in search && typeof search.title === "string" && Boolean(search.title.trim()))
         .slice(0, MAX_RECENT_SEARCHES)
         .map((search) => ({
           title: search.title.trim(),
@@ -26,7 +37,7 @@ export function createRecent(context, services) {
     }
   }
 
-  function saveRecentSearch(search) {
+  function saveRecentSearch(search: DiscoveryQuery) {
     const recentSearches = readRecentSearches();
     const identity = [search.title, search.year, search.director]
       .map((value) => String(value || "").trim().toLocaleLowerCase())
@@ -42,7 +53,7 @@ export function createRecent(context, services) {
     renderRecentSearches(nextSearches);
   }
 
-  function persistRecentSearches(searches) {
+  function persistRecentSearches(searches: readonly DiscoveryQuery[]) {
     try {
       if (searches.length) {
         window.localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(searches));
@@ -54,7 +65,7 @@ export function createRecent(context, services) {
     }
   }
 
-  function renderRecentSearches(searches = readRecentSearches()) {
+  function renderRecentSearches(searches: readonly DiscoveryQuery[] = readRecentSearches()) {
     refs.recentSearches.classList.toggle("hidden", searches.length === 0);
     refs.recentSearches.innerHTML = searches.length ? `
       <span>Recent</span>
@@ -69,8 +80,9 @@ export function createRecent(context, services) {
       <button class="recent-search-clear" type="button" data-clear-recent-searches>Clear all</button>` : "";
   }
 
-  function onRecentSearchClick(event) {
-    const removeButton = event.target.closest("[data-remove-recent-search]");
+  function onRecentSearchClick(event: MouseEvent) {
+    if (!(event.target instanceof Element)) return;
+    const removeButton = event.target.closest<HTMLElement>("[data-remove-recent-search]");
     if (removeButton) {
       const index = Number(removeButton.dataset.removeRecentSearch);
       const nextSearches = state.discovery.recentSearches.filter((_, itemIndex) => itemIndex !== index);
@@ -85,7 +97,7 @@ export function createRecent(context, services) {
       renderRecentSearches([]);
       return;
     }
-    const button = event.target.closest("[data-recent-search]");
+    const button = event.target.closest<HTMLElement>("[data-recent-search]");
     if (!button) return;
     const search = state.discovery.recentSearches[Number(button.dataset.recentSearch)];
     if (!search) return;

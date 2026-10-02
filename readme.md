@@ -400,7 +400,7 @@ owner-scoped request. Local development retains the convenient combined interfac
 | Layer | Primary stack |
 |---|---|
 | Hosted web and API | One Ubuntu server with Docker Compose, Caddy, Docker, FastAPI and Uvicorn (legacy: Azure Static Web Apps and Container Apps) |
-| Browser interface | HTML5, CSS3, vanilla JavaScript and Supabase JS |
+| Browser interface | HTML5, CSS3, incremental strict TypeScript compiled to JavaScript, and Supabase JS |
 | Identity and account data | Supabase Auth plus PostgreSQL tables protected by RLS |
 | API and orchestration | Python 3.11, FastAPI and Pydantic; fixed study workflow. LangGraph 1.2 is local/default-off |
 | Quota enforcement | Existing Supabase RPC by default; identity-neutral PostgreSQL adapter staged; hosted enablement awaits authenticated verification |
@@ -801,9 +801,11 @@ The modularisation milestone is complete: `app.js` is a 58-line composition root
 3,843 lines. Navigation, accounts, sessions, discovery, dossier, video, criticism and Deep Study
 have separate controllers, with rendering separated where useful. Every module under `src/`
 is at most 500 lines. The UI, request cancellation rules and hosting remain unchanged.
-TypeScript migration remains incremental: formatting, security, progress, analysis and
-discovery-view modules are strictly type-checked; JavaScript controllers and existing
-authentication/settings adapters are not yet fully typed. This refactor is not yet deployed.
+TypeScript migration remains incremental. Formatting, security, progress, analysis algorithms
+and discovery views are typed; the analysis controller/view, navigation/theme controller,
+recent searches and shared focus helpers now also pass strict checks. Analysis responses enter
+as `unknown` and are validated before rendering/export. Other controllers, application wiring
+and authentication/settings adapters remain JavaScript. This migration is not yet deployed.
 
 Every genuine loopback-served interface, including the standard port `8000` app and the hosted-mode
 port `4173` preview, exposes a development-only account for `luo_zhiyang@outlook.com`. Any password
