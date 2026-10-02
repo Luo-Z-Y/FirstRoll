@@ -21,9 +21,13 @@ markup. Cross-feature callbacks use an explicitly assembled service registry rat
 circular imports. Construction is inert and startup is idempotent.
 
 Strict TypeScript modules own HTML/URL safety, formatting, API error display, progress parsing,
-film selection/views and pure clip heuristics. JavaScript feature controllers remain unchecked;
-`app.d.ts` describes only the public startup contract. Clip state stays private to its controller,
-with analysis rendering in a separate view. Auth and integrations retain their existing entry
+film selection/views and pure clip heuristics. Analysis controller/rendering, navigation,
+recent searches and shared UI helpers now also use strict TypeScript with narrow DOM/state
+contracts. Other JavaScript controllers remain unchecked; `app.d.ts` describes only startup.
+Clip state stays private. Backend analysis JSON enters as `unknown` and is validated into the
+presentation model before use; filenames/labels are escaped and unavailable canvas contexts
+are handled safely. Existing backend `Unknown` shot scales remain supported.
+Auth and integrations retain their existing entry
 points. This is not a React/Next.js migration or a claim that the whole UI is type-safe.
 
 `tools/frontend-build.cjs` is the shared compiler configuration: localhost generates
@@ -40,8 +44,11 @@ Feature controllers mutate the shared per-application discovery state; pure Type
 do not fetch or persist data. Selection IDs, event-delegation attributes, poster enrichment and
 shelf fallback behaviour are preserved. These types do not replace runtime validation.
 Tests construct the real application with explicit handler overrides, never URL/config flags.
-All 52 frontend cases run against source builds and the minified hosted bundle; architecture
+All 62 frontend cases run against source builds and the minified hosted bundle; architecture
 checks prohibit circular imports and keep the composition root/features within size limits.
+Compile-only negative tests also ensure typed DOM/state/result contracts reject invalid usage.
+The root/context/bootstrap and remaining JavaScript modules are an explicit migration boundary,
+not silently covered by declaration files. API routes, paid-provider controls and hosting are unchanged.
 
 Read the [plain-English deployment guide](../readme.md#the-current-deployment-in-plain-english)
 first for the roles of DNS, the VPS, Caddy, Docker, Supabase and the image registry. On 1 October,

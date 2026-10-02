@@ -1,12 +1,14 @@
-// Navigation, theme and build identity.
-// JavaScript controller: migrated module boundaries, not yet a fully typed domain model.
+import { isProductView, isThemePreference } from "./types";
+import type { NavigationContext, NavigationServices, ProductViewOptions, ThemePreference } from "./types";
+
+// Navigation, theme and build identity with validated storage/DOM-derived choices.
 const THEME_STORAGE_KEY = "firstroll.theme";
 
-export function createNavigation(context, services) {
+export function createNavigation(context: NavigationContext, services: NavigationServices) {
   const { state, refs, runtimeConfig, systemThemeMedia } = context;
 
   // Lazy delegates allow cross-feature callbacks without circular module imports.
-  const persistProductSession = (...args) => services.session.persistProductSession(...args);
+  const persistProductSession = () => services.session.persistProductSession();
 
   function renderBuildIdentity() {
     if (!refs.buildIdentity || !runtimeConfig.buildId) return;
@@ -37,17 +39,17 @@ export function createNavigation(context, services) {
     setThemePreference(nextTheme);
   }
 
-  function readThemePreference() {
+  function readThemePreference(): ThemePreference {
     try {
       const stored = window.localStorage.getItem(THEME_STORAGE_KEY);
-      return ["system", "light", "dark"].includes(stored) ? stored : "system";
+      return isThemePreference(stored) ? stored : "system";
     } catch (_) {
       return "system";
     }
   }
 
-  function setThemePreference(preference) {
-    const selected = ["system", "light", "dark"].includes(preference)
+  function setThemePreference(preference: unknown) {
+    const selected = isThemePreference(preference)
       ? preference
       : "system";
     const resolved = selected === "system"
@@ -73,8 +75,8 @@ export function createNavigation(context, services) {
     refs.themeToggle.setAttribute("aria-pressed", String(dark));
   }
 
-  function setProductView(viewKey, options = {}) {
-    if (!refs.productViews[viewKey]) return;
+  function setProductView(viewKey: unknown, options: ProductViewOptions = {}) {
+    if (!isProductView(viewKey) || !refs.productViews[viewKey]) return;
     if (options.captureCurrent !== false && refs.productViews[state.productView]) {
       state.viewScroll[state.productView] = Math.max(0, Number(window.scrollY) || 0);
     }

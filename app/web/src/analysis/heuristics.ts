@@ -1,5 +1,5 @@
 import { rgbDistance, l1Dist, avg, std, averageRgb, pct, rgbToHue } from "./math";
-import type { RGB, FrameFeatures, FrameSample, Shot, ShotScale, Scene } from "./types";
+import type { RGB, FrameFeatures, FrameSample, Shot, ShotScale, Scene, SceneSummary } from "./types";
 
 // Behaviour-preserving extraction. Colour/texture labels are proxies, not object recognition.
 export function extractFrameFeatures(data: Uint8ClampedArray, width: number, height: number): FrameFeatures {
@@ -175,7 +175,7 @@ export function detectScenes(shots: Shot[], durationSec: number, sensitivity: nu
   return scenes;
 }
 
-export function summarizeScenes(scenes: Scene[], shots: Shot[]) {
+export function summarizeScenes(scenes: Scene[], shots: Shot[]): SceneSummary[] {
   return scenes.map((scene) => {
     const sceneShots = shots.filter((shot) => scene.shotIds.includes(shot.shotId));
     const durationSec = scene.endSec - scene.startSec;

@@ -13,6 +13,21 @@ Status vocabulary:
 
 ## Current Snapshot
 
+**Strict TypeScript follow-up — 2 October 2026:** analysis controller/view, navigation/theme,
+recent searches and shared UI helpers have moved from JavaScript to strict TypeScript.
+Added explicit clip/metadata/result/DOM contracts, closed navigation choices and runtime
+validation of unknown analysis JSON. Genuine backend `Unknown` shot scales and prop counts
+are retained. Invalid nested records fail before rendering/export; filename/object-label HTML
+is escaped, missing canvas contexts and unrelated DOM events are handled safely.
+There is no framework, API, hosting or auth-contract change. Remaining controller/root/context
+JavaScript is still a declared boundary, not claimed fully migrated.
+
+Verification: 645 repository tests and 62 frontend cases pass. Ten additional frontend cases
+cover analysis parsing and integration, navigation/storage/DOM guards and compile-only negative
+type contracts. No explicit `any`, `@ts-ignore` or disabled strict mode is used in the migrated
+source. README, architecture and learning notes are aligned. Production remains unchanged;
+publishing this development checkpoint does not approve a deployment.
+
 **Completed modularisation — 2 October 2026:** PR #51 now reaches the intended architectural
 milestone. `app.js` is a **58-line composition root**, down from the original 3,843 lines.
 Per-application context, event wiring, navigation, account UI, sessions, discovery/shelf,

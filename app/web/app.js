@@ -1,10 +1,10 @@
 // Composition root: constructs independent feature modules, then wires their dependencies.
 import { createContext } from "./src/context";
 import { createAnalysisController } from "./src/analysis/controller";
-import { createNavigation } from "./src/navigation/controller.js";
+import { createNavigation } from "./src/navigation/controller";
 import { createAccounts } from "./src/accounts/controller.js";
 import { createSession } from "./src/session/controller.js";
-import { createRecent } from "./src/discovery/recent.js";
+import { createRecent } from "./src/discovery/recent";
 import { createDiscovery } from "./src/discovery/controller.js";
 import { createShelf } from "./src/discovery/shelf.js";
 import { createDossier } from "./src/dossier/controller.js";
@@ -15,7 +15,7 @@ import { createCriticism } from "./src/criticism/controller.js";
 import { createCriticismViews } from "./src/criticism/views.js";
 import { createStudy } from "./src/study/controller.js";
 import { createStudyViews } from "./src/study/views.js";
-import { createUi } from "./src/shared/ui.js";
+import { createUi } from "./src/shared/ui";
 import { createBootstrap } from "./src/bootstrap.js";
 
 // Overrides are dependency injection for tests/embedded instances, never read from URL/config.

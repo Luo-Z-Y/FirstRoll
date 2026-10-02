@@ -9,5 +9,8 @@ import pytest
 def application_source() -> str:
     """Follow the modular source tree rather than assuming one monolithic app.js."""
     web = Path(__file__).resolve().parents[1] / "app" / "web"
-    files = [web / "app.js", *sorted((web / "src").rglob("*.js"))]
+    files = [
+        web / "app.js",
+        *sorted(path for path in (web / "src").rglob("*") if path.suffix in {".js", ".ts"}),
+    ]
     return "\n".join(path.read_text(encoding="utf-8") for path in files)

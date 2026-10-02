@@ -1,9 +1,12 @@
 import { formatTime } from "../shared/format";
 import { rgbToCss, rgbLabel } from "./math";
+import { escapeHtml } from "../shared/html";
+import type { AnalysisViewRefs } from "./dom";
+import type { AnalysisResult, RGB, VideoMeta } from "./types";
 
 // Clip presentation is separate from upload/export state and backend requests.
-export function createAnalysisView(refs) {
-  function renderAll(meta, analysis) {
+export function createAnalysisView(refs: AnalysisViewRefs) {
+  function renderAll(meta: VideoMeta, analysis: AnalysisResult) {
     renderOverview(meta, analysis);
     renderShotData(analysis);
     renderColorAnalysis(analysis);
@@ -20,7 +23,7 @@ export function createAnalysisView(refs) {
     });
   }
 
-  function renderOverviewMetadataOnly(meta) {
+  function renderOverviewMetadataOnly(meta: VideoMeta) {
     const html = `
       <div class="meta-grid">
         ${metaItem("Filename", meta.filename)}
@@ -36,7 +39,7 @@ export function createAnalysisView(refs) {
     refs.contents.overview.innerHTML = html;
   }
 
-  function renderOverview(meta, analysis) {
+  function renderOverview(meta: VideoMeta, analysis: AnalysisResult) {
     const sceneBlocks = analysis.scenes
       .map((scene) => {
         const pctWidth = Math.max(1.5, (scene.durationSec / meta.durationSec) * 100);
@@ -72,7 +75,7 @@ export function createAnalysisView(refs) {
     refs.contents.overview.innerHTML = html;
   }
 
-  function renderShotData(analysis) {
+  function renderShotData(analysis: AnalysisResult) {
     const rows = analysis.scenes
       .map((scene) => {
         const scales = scene.shotScaleComposition;
@@ -123,7 +126,7 @@ export function createAnalysisView(refs) {
     refs.contents.shotdata.innerHTML = html;
   }
 
-  function renderColorAnalysis(analysis) {
+  function renderColorAnalysis(analysis: AnalysisResult) {
     refs.placeholders.color.classList.add("hidden");
     refs.contents.color.classList.remove("hidden");
 
@@ -150,13 +153,16 @@ export function createAnalysisView(refs) {
 
     analysis.scenes.forEach((scene) => {
       const canvas = document.getElementById(`wheel-${scene.sceneId}`);
-      drawColorWheel(canvas, scene.dominantHue, scene.dominantRgb);
+      if (canvas instanceof HTMLCanvasElement) {
+        drawColorWheel(canvas, scene.dominantHue, scene.dominantRgb);
+      }
     });
   }
 
-  function drawColorWheel(canvas, hueHighlight, rgbHighlight) {
+  function drawColorWheel(canvas: HTMLCanvasElement, hueHighlight: number, rgbHighlight: RGB) {
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
+    if (!ctx) return;
     const { width, height } = canvas;
     const cx = width / 2;
     const cy = height / 2;
@@ -204,11 +210,11 @@ export function createAnalysisView(refs) {
     ctx.stroke();
   }
 
-  function renderObjectAnalysis(analysis) {
+  function renderObjectAnalysis(analysis: AnalysisResult) {
     const cards = analysis.scenes
       .map((scene) => {
         const chips = scene.props
-          .map((p) => `<span class="chip">${p.label} · ${Math.round(p.score * 100)}%</span>`)
+          .map((p) => `<span class="chip">${escapeHtml(p.label)} · ${Math.round(p.score * 100)}%</span>`)
           .join("");
 
         return `
@@ -236,12 +242,12 @@ export function createAnalysisView(refs) {
     refs.llmDraftText.value = "";
   }
 
-  function metaItem(name, value) {
-    return `<div class="meta-item"><span class="name">${name}</span><span class="value">${value}</span></div>`;
+  function metaItem(name: string, value: string) {
+    return `<div class="meta-item"><span class="name">${escapeHtml(name)}</span><span class="value">${escapeHtml(value)}</span></div>`;
   }
 
-  function kpi(label, value) {
-    return `<article class="kpi-card"><p class="kpi-label">${label}</p><p class="kpi-value">${value}</p></article>`;
+  function kpi(label: string, value: string) {
+    return `<article class="kpi-card"><p class="kpi-label">${escapeHtml(label)}</p><p class="kpi-value">${escapeHtml(value)}</p></article>`;
   }
 
 
