@@ -20,6 +20,9 @@ const errors = loadModule("api/errors.ts");
 const math = loadModule("analysis/math.ts");
 const analysis = loadModule("analysis/heuristics.ts");
 const { createAnalysisController } = loadModule("analysis/controller.js");
+const films = loadModule("discovery/films.ts");
+const views = loadModule("discovery/views.ts");
+const crew = loadModule("shared/crew.ts");
 
 test("provider text is escaped and unsafe links are rejected", () => {
   assert.equal(html.escapeHtml('<img src="x" onerror=\'x\'>&'), "&lt;img src=&quot;x&quot; onerror=&#039;x&#039;&gt;&amp;");
@@ -138,4 +141,88 @@ test("analysis controllers own independent UI references and do not expose clip 
   assert.equal(controller.state, undefined);
   // No clip: no DOM or network work should be attempted.
   await controller.onAnalyze();
+});
+
+test("film selection uses stable IDs, keeps the first record and never mutates input", () => {
+  const original = Object.freeze({ id: "f1", title: "Original" });
+  const input = Object.freeze([original, null, undefined, { id: "", title: "Missing ID" }, { id: "f1", title: "Duplicate" }, { id: "f2", title: "Other" }]);
+  assert.deepEqual(films.uniqueFilms(input), [original, input[5]]);
+  assert.equal(films.uniqueFilms(input)[0], original);
+  assert.deepEqual(films.uniqueFilms(input, [original]), [input[5]]);
+  assert.equal(input.length, 6);
+});
+
+test("displayable films use original/alternative titles and omit raw catalogue IDs", () => {
+  const input = [
+    { id: "1", title: "Q123", original_title: " 花樣年華 " },
+    { id: "2", title: "", alternative_titles: ["Q456", "  Alternate title  "] },
+    { id: "3", title: "Q789", original_title: "Q000" },
+    { id: "4", title: "Actual film" },
+  ];
+  assert.deepEqual(films.displayableFilms(input).map(film => film.title), ["花樣年華", "Alternate title", "Actual film"]);
+  assert.equal(input[0].title, "Q123");
+});
+
+test("director shelf is capped at twelve distinct films with the selected film first", () => {
+  const primary = Object.freeze({ id: "selected", title: "Selected film" });
+  const others = Array.from({ length: 20 }, (_, index) => ({ id: String(index), title: `Film ${index}` }));
+  const shelf = films.directorShelfFilms(primary, [primary, ...others, others[0]]);
+  assert.equal(shelf.length, 12);
+  assert.equal(shelf[0].id, primary.id);
+  assert.equal(new Set(shelf.map(film => film.id)).size, 12);
+});
+
+test("crew formatting filters scraped markup, raw IDs and duplicates", () => {
+  assert.deepEqual(crew.displayCrewNames([" Wong Kar-wai ", "Wong Kar-wai", "Q123", "<script>", "font-size: 12px", "1234", null, "王家衛"]), ["Wong Kar-wai", "王家衛"]);
+  assert.equal(crew.displayCrew({ name: "Not an array" }), "Not supplied");
+  assert.equal(crew.firstCrewName([], "Unknown director"), "Unknown director");
+});
+
+test("identity choices preserve indexed controls, accessible labels and original titles", () => {
+  const markup = views.filmIdentityChoicesMarkup([
+    { id: "1", title: 'Film <one> "quoted"', original_title: "花樣年華", year: 2000, directors: ["Wong Kar-wai"] },
+    { id: "2", original_title: "Other film", release_years: [2026, 2025] },
+  ]);
+  assert.ok(markup.includes('data-confirm-film-index="0"'));
+  assert.ok(markup.includes('data-confirm-film-index="1"'));
+  assert.ok(markup.includes('aria-label="Choose Film &lt;one&gt; &quot;quoted&quot;, 2000, Wong Kar-wai"'));
+  assert.ok(markup.includes("<em>花樣年華</em>"));
+  assert.ok(markup.includes("2025 · Director not supplied"));
+  assert.ok(!markup.includes("Film <one>"));
+});
+
+test("shelf separates selected articles from selectable buttons and rejects unsafe posters", () => {
+  const primary = { id: "1", title: "First", year: 2000 };
+  const markup = views.directorShelfFilmsMarkup(primary, [primary, { id: '2"', title: "<Other>", poster_url: "javascript:alert(1)" }], false);
+  assert.equal((markup.match(/aria-current="true"/g) || []).length, 1);
+  assert.ok(!markup.includes('data-select-film-id="1"'));
+  assert.ok(markup.includes('data-select-film-id="2&quot;"'));
+  assert.ok(markup.includes("&lt;Other&gt;"));
+  assert.ok(markup.includes("director-film-fallback"));
+  assert.ok(!markup.includes("javascript:"));
+  assert.ok(!markup.includes("is-skeleton"));
+});
+
+test("loading shelf retains selected film, five placeholders and retry/status hooks", () => {
+  const primary = { id: "1", title: "First", poster_url: "https://example.com/poster.jpg" };
+  const markup = views.directorShelfMarkup(primary, [], "Director", true);
+  assert.equal((markup.match(/is-skeleton/g) || []).length, 5);
+  assert.ok(markup.includes('data-primary-film-id="1"'));
+  assert.ok(markup.includes('data-film-shelf-count>1 film'));
+  assert.ok(markup.includes('role="status" aria-live="polite"'));
+  assert.ok(markup.includes("data-retry-director-shelf"));
+  assert.ok(markup.includes('loading="eager"'));
+});
+
+test("archive view preserves case, dossier control and escaped summary without side effects", () => {
+  const primary = Object.freeze({ id: "1", title: "Selected <film>", original_title: "Original", year: 2000, runtime_minutes: 98, directors: Object.freeze(["Director"]) });
+  const markup = views.filmArchiveMarkup(primary, [], false);
+  assert.ok(markup.includes('class="archive-pullout-shell"'));
+  assert.ok(markup.includes('class="criterion-object"'));
+  assert.ok(markup.includes('data-film-id="1"'));
+  assert.ok(markup.includes("2000 · 1h 38m"));
+  assert.ok(markup.includes("Selected &lt;film&gt;"));
+  assert.ok(markup.includes("Only the selected film") === false);
+  assert.ok(markup.includes("1 verified film."));
+  assert.equal(primary.title, "Selected <film>");
 });

@@ -1,13 +1,14 @@
 # Understanding the FirstRoll Frontend
 
-This guide describes the first incremental refactor on 1 October 2026. It changes how we
+This guide describes the incremental refactor through 2 October 2026. It changes how we
 organise and build the source, not the product's layout. The public v219 deployment has
 not been changed by this work.
 
 ## Start here
 
-The original `app/web/app.js` was 3,843 lines. It is now 2,597 lines: still a transitional
-coordinator, but clip analysis and several shared responsibilities have their own files.
+The original `app/web/app.js` was 3,843 lines. It is now 2,410 lines (2,597 after the first
+checkpoint): still a transitional coordinator, but clip analysis, discovery views and shared
+responsibilities have their own files.
 Splitting code is useful when each file has a clear responsibility, not merely fewer lines.
 
 | File under `app/web/` | Responsibility | Read when you want to… |
@@ -15,6 +16,10 @@ Splitting code is useful when each file has a clear responsibility, not merely f
 | `index.html` | Page structure and existing script URLs | Find a button or panel |
 | `src/main.ts` | Build entry point | See where compilation starts |
 | `app.js` | DOM references, navigation, discovery state and request ownership | Follow a search or dossier request |
+| `src/discovery/types.ts` | Film summary shape used for display | Understand required IDs and optional metadata |
+| `src/discovery/films.ts` | De-duplication, displayable titles and the twelve-film cap | Follow how records become shelf items |
+| `src/discovery/views.ts` | Film choices, selected edition and shelf HTML | Change discovery markup without touching requests |
+| `src/shared/crew.ts` | Crew-name filtering and display | Understand why raw IDs/scraped markup are hidden |
 | `src/shared/format.ts` | Pure time, size and film-year formatting | Learn a small TypeScript function |
 | `src/shared/html.ts` | HTML escaping and URL/embed allow-lists | Understand safe rendering of provider data |
 | `src/api/errors.ts` | API error messages and HTTP fallback | Understand failed responses |
@@ -27,6 +32,21 @@ Splitting code is useful when each file has a clear responsibility, not merely f
 
 Suggested reading order: `format.ts` → its tests → `types.ts` → `progress.ts` → `main.ts`
 → `app.js`'s `setup()` and one handler. Do not try to memorise the entire coordinator.
+
+## Follow the discovery boundary
+
+`renderFilmArchive()` still updates selection/session state in `app.js`, then asks
+`filmArchiveMarkup()` for HTML. That pure view calls `directorShelfFilms()` to select the
+first twelve distinct displayable records, then renders the shelf. No view reads global
+state, fetches records, changes focus or writes storage. Existing `data-*` attributes keep
+event delegation working; request IDs, timeouts, cancellation and poster enrichment remain
+in the coordinator.
+
+`FilmSummary.id` is required because selection and de-duplication use identity, not title.
+Posters, years and original titles are optional because real catalogue records can be
+incomplete. `readonly` array parameters mean helpers cannot rearrange the caller's list.
+The generic `uniqueFilms<T>` keeps extra fields on the caller's record type instead of
+discarding them. These types describe expected inputs; existing runtime checks still apply.
 
 ## What TypeScript adds
 
@@ -110,8 +130,10 @@ Never put provider API keys into browser configuration.
 
 ## How we guard behaviour
 
-- Ten module tests cover escaping, embed allow-lists, formatting, error fallback, chunked
-  UTF-8 progress, invalid/cross-run events, analysis maths and independent controller state.
+- Eighteen module tests cover escaping, embed allow-lists, formatting, error fallback, chunked
+  UTF-8 progress, invalid/cross-run events, analysis maths and independent controller state,
+  plus duplicate/missing film data, the twelve-film limit, crew filtering, accessible
+  choices, selected versus clickable cards, loading placeholders and archive markup.
 - The original 27 executable request/race cases run against compiled source and the
   minified release bundle. Stale responses, cancellations and authorisation races must
   remain safe.
@@ -125,11 +147,10 @@ Replace it with injected controllers before switching the whole entry to an isol
 
 ## Remaining work, in order
 
-1. Extract discovery/shelf rendering behind a typed film model, retaining runtime checks.
-2. Split dossier/video/criticism controllers while preserving request ownership and abort rules.
-3. Move Deep Study orchestration into a typed controller with the existing safety tests.
-4. Type DOM references, account and settings adapters; shrink `app.js` to startup wiring.
-5. Consider React/Next.js only as a separate architecture decision with a concrete need.
+1. Split dossier/video/criticism controllers while preserving request ownership and abort rules.
+2. Move Deep Study orchestration into a typed controller with the existing safety tests.
+3. Type DOM references, account and settings adapters; shrink `app.js` to startup wiring.
+4. Consider React/Next.js only as a separate architecture decision with a concrete need.
 
 This milestone does not claim all frontend code is typed or every feature is fully modular.
 Preserving a working application is more useful than renaming a large file to `.ts` and

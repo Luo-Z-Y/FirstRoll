@@ -1,7 +1,7 @@
 # FirstRoll Architecture
 
 **Status:** Current implementation  
-**Last reconciled:** 1 October 2026
+**Last reconciled:** 2 October 2026
 
 FirstRoll is a local-first film-study system with a hosted public beta running on one Tencent
 Lighthouse server in Singapore (v219, owner-approved deployment on 29 September 2026). “Local-first”
@@ -25,6 +25,13 @@ explicit asset route serves the former before its generic static mount. Docker c
 in a Node builder stage; TypeScript/npm are not needed in the Python runtime. No API routes,
 authentication rules, quotas or production approval boundaries are relaxed. See
 [Frontend Guide](FRONTEND_GUIDE.md) for development commands and remaining migration stages.
+
+The 2 October follow-up introduces a typed `FilmSummary` display boundary and pure
+`discovery/films.ts` / `discovery/views.ts` modules. The latter produce the identity chooser,
+selected-edition case and director shelf; shared crew-name filtering lives in `shared/crew.ts`.
+Only the coordinator mutates discovery/session state or starts/cancels requests. Selection IDs,
+event-delegation attributes, poster enrichment and shelf fallback behaviour are preserved.
+These static types do not replace runtime provider/session validation.
 
 Read the [plain-English deployment guide](../readme.md#the-current-deployment-in-plain-english)
 first for the roles of DNS, the VPS, Caddy, Docker, Supabase and the image registry. On 1 October,

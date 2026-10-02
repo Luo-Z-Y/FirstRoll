@@ -13,6 +13,20 @@ Status vocabulary:
 
 ## Current Snapshot
 
+**Development checkpoint — 2 October 2026:** continued the same incremental refactor on
+`chore/frontend-typescript` / PR #51. Typed discovery views and film-selection helpers now
+own identity choices, selected-edition and shelf HTML; shared crew-name filtering is separate.
+`app.js` is **2,410 lines**, down from 2,597 at the previous checkpoint and 3,843 originally.
+Request ownership, timeouts, cancellation, focus and session persistence remain in the coordinator.
+
+Verification: **645 repository tests passed**, including **45 executable frontend cases**;
+all 27 request/race cases also passed against the hosted minified build. Type-checking,
+local/hosted builds and scoped lint passed. A one-off comparison against `d774547` passed
+128 HTML/selection parity checks. Eight new persistent tests cover film de-duplication,
+missing titles/posters, selected cards, loading placeholders, accessible choices and escaped text.
+No visual redesign, paid provider call, migration or production deployment was made. The main
+checkout's separate cleanup branch remains untouched. Next: dossier/video/criticism controllers.
+
 **Development checkpoint — 1 October 2026:** first incremental frontend modularisation is
 implemented, separate from the live v219 release. `app/web/app.js` is reduced from 3,843 to
 2,597 lines; shared helpers, progress parsing and pure clip-analysis algorithms are strict

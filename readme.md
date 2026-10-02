@@ -798,7 +798,9 @@ FastAPI serves the generated bundle at the existing `/assets/app.js` URL. Do not
 `index.html` as a standalone file or edit generated assets. See the beginner-friendly
 [Frontend Guide](docs/FRONTEND_GUIDE.md) for the module map, TypeScript basics and reading order.
 This is an incremental migration: the main coordinator and DOM controllers remain JavaScript;
-new formatting, security, progress and analysis modules are strictly type-checked.
+new formatting, security, progress, analysis and discovery-view modules are strictly type-checked.
+As of 2 October, `app.js` is 2,410 lines, down from 3,843. Discovery HTML and catalogue
+selection helpers are separate from request/session ownership; the UI and hosting remain unchanged.
 
 Every genuine loopback-served interface, including the standard port `8000` app and the hosted-mode
 port `4173` preview, exposes a development-only account for `luo_zhiyang@outlook.com`. Any password

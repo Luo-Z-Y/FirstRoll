@@ -8,12 +8,13 @@ WEB = ROOT / "app" / "web"
 def test_director_shelf_uses_native_browser_assets_only() -> None:
     index = (WEB / "index.html").read_text(encoding="utf-8")
     app = (WEB / "app.js").read_text(encoding="utf-8")
+    views = (WEB / "src" / "discovery" / "views.ts").read_text(encoding="utf-8")
     build = (ROOT / "tools" / "build_web.sh").read_text(encoding="utf-8")
 
     assert 'type="importmap"' not in index
     assert "closet3d.js" not in index
     assert "three.module" not in index
-    assert "directorShelfMarkup" in app
+    assert "directorShelfMarkup" in views
     assert "directorShelfFilmsMarkup" in app
     assert "data-director-shelf" in app
     assert "closet3d.js" not in build
@@ -250,12 +251,12 @@ def test_production_image_pins_and_bundles_douban_mcp() -> None:
 def test_archive_pullout_collapses_before_zoom_can_clip_its_copy() -> None:
     index = (WEB / "index.html").read_text(encoding="utf-8")
     styles = (WEB / "styles.css").read_text(encoding="utf-8")
-    app = (WEB / "app.js").read_text(encoding="utf-8")
+    views = (WEB / "src" / "discovery" / "views.ts").read_text(encoding="utf-8")
 
     assert "/assets/styles.css?v=20260821-8" in index
     assert "/assets/app.js?v=20260912-1" in index
     assert "closet3d.js" not in index
-    assert 'class="archive-pullout-shell"' in app
+    assert 'class="archive-pullout-shell"' in views
     assert "container-type: inline-size" in styles
     assert "@container (max-width: 520px)" in styles
     assert "grid-template-columns: minmax(0, 0.9fr) minmax(0, 0.85fr)" in styles
@@ -421,13 +422,15 @@ def test_supabase_dialog_hides_the_unused_entra_form() -> None:
 
 def test_director_shelf_renders_immediately_then_enriches_posters() -> None:
     app = (WEB / "app.js").read_text(encoding="utf-8")
+    views = (WEB / "src" / "discovery" / "views.ts").read_text(encoding="utf-8")
+    films = (WEB / "src" / "discovery" / "films.ts").read_text(encoding="utf-8")
     styles = (WEB / "styles.css").read_text(encoding="utf-8")
     discovery = (ROOT / "app" / "backend" / "discovery.py").read_text(encoding="utf-8")
 
-    assert "displayableFilms" in app
-    assert "displayableFilms([primary, ...directorWorks])" in app
-    assert "directorShelfMarkup(primary, directorWorks, director, loading)" in app
-    assert "directorShelfFilmsMarkup(primary, films, loading)" in app
+    assert 'from "./src/discovery/films"' in app
+    assert "displayableFilms([primary, ...directorWorks])" in films
+    assert "directorShelfMarkup(primary, directorWorks, director, loading)" in views
+    assert "directorShelfFilmsMarkup(primary, films, loading)" in views
     assert "data-film-shelf-status" in app
     assert "data-retry-director-shelf" in app
     assert "retryDirectorShelf" in app
@@ -455,7 +458,7 @@ def test_director_shelf_renders_immediately_then_enriches_posters() -> None:
     assert "FirstRollCloset" not in app
     assert "WebGL" not in app
     assert "Blender" not in app
-    assert "!/^Q\\d+$/i.test(text)" in app
+    assert "!/^Q\\d+$/i.test(text)" in films
     assert "candidate_cap = min(48, max(limit * 2, limit))" in discovery
     assert "if cast_ids and not director_only:" in discovery
     assert "self._get_shelf_entities(selected_ids)" in discovery
@@ -463,7 +466,7 @@ def test_director_shelf_renders_immediately_then_enriches_posters() -> None:
     assert ".director-film-list" in styles
     assert ".director-film-card.is-selected" in styles
     assert ".director-film-slot.is-skeleton" in styles
-    assert 'loading="eager" decoding="async"' in app
+    assert 'loading="eager" decoding="async"' in views
     assert "padding: 0 2px 34px" in styles
     assert "@container (min-width: 660px)" in styles
     assert ".film-closet" not in styles
