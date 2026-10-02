@@ -8,6 +8,7 @@
   --red-dark: #79271f;
   --action-text: #fff7ed;
   --olive: #777b49;
+  --gold: #b08a1f;
   --night: #11120f;
   --night-panel: #1a1c18;
   --night-panel-2: #22241f;
@@ -45,6 +46,7 @@ html[data-theme="dark"] {
   --red-dark: #f09580;
   --action-text: #11120f;
   --olive: #a1a76c;
+  --gold: #d9b44a;
   --line: rgba(242, 237, 227, 0.16);
   --shadow: 0 26px 70px rgba(0, 0, 0, 0.34);
   --grid-line: rgba(244, 237, 223, 0.035);
@@ -1839,6 +1841,7 @@ html[data-theme="dark"] .critical-provider-actions button.is-active.is-loaded::a
 .festival-pin.is-soon .festival-pin-dot { fill: var(--olive); }
 .festival-pin.is-now .festival-pin-dot { fill: var(--red); }
 .festival-pin.is-now .festival-pin-halo { fill: var(--red); opacity: 0.22; }
+.festival-pin.is-awards .festival-pin-dot { fill: var(--gold); stroke: var(--ink); }
 .festival-pin:hover .festival-pin-dot, .festival-pin:focus-visible .festival-pin-dot { transform: scale(1.35); }
 .festival-pin:focus-visible .festival-pin-halo { fill: none; stroke: var(--ink); stroke-width: 1.5; }
 .festival-pin.is-selected .festival-pin-dot { transform: scale(1.5); stroke: var(--ink); }
@@ -1859,6 +1862,7 @@ html[data-theme="dark"] .critical-provider-actions button.is-active.is-loaded::a
 .festival-legend span { width: 9px; height: 9px; border-radius: 50%; background: var(--ink-soft); }
 .festival-legend .is-now { background: var(--red); }
 .festival-legend .is-soon { background: var(--olive); }
+.festival-legend .is-awards { background: var(--gold); box-shadow: 0 0 0 1.5px var(--ink); }
 .festival-year { margin-top: 44px; }
 .festival-calendar { display: flex; flex-direction: column; border-top: 1px solid var(--line); }
 .festival-calendar-row {
@@ -1878,6 +1882,7 @@ button.festival-calendar-row:hover, .festival-calendar-row.is-selected { backgro
 .festival-bar { position: absolute; top: 4px; height: 10px; min-width: 4px; border-radius: 3px; background: var(--ink-soft); }
 .festival-bar.is-soon { background: var(--olive); }
 .festival-bar.is-now { background: var(--red); }
+.festival-bar.is-awards { background: repeating-linear-gradient(135deg, var(--gold) 0 3px, transparent 3px 5px); box-shadow: inset 0 0 0 1px var(--gold); }
 .festival-today { position: absolute; top: -9px; bottom: -9px; border-left: 2px solid var(--red); opacity: 0.55; }
 
 @media (max-width: 900px) {

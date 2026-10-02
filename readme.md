@@ -183,7 +183,8 @@ implemented, film-specific formal claims remain viewing hypotheses.
 
 ### Festivals
 
-- See 31 major international film festivals pinned on a world map, coloured by whether each is on
+- See 32 major international film festivals, including the Singapore International Film Festival,
+  and the Academy Awards (a gold awards-ceremony pin) on a world map, coloured by whether each is on
   now, starts within 60 days or comes later in the year.
 - Zoom the map with the scroll wheel, a pinch, a double-click (Shift to zoom out) or the +/−
   buttons, and drag to pan once zoomed; pins keep their size at every zoom level.
