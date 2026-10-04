@@ -11,15 +11,18 @@ The central rule is simple: identity records, critic reports, theory frameworks,
 hypotheses and measured film observations are different kinds of evidence. FirstRoll
 keeps those layers visible instead of presenting one fluent but unsupported answer.
 
-> **Live checkpoint — 1 October 2026:** [FirstRoll](https://firstroll.app) runs on Tencent Lighthouse
+> **Live checkpoint — 4 October 2026:** [FirstRoll](https://firstroll.app) runs on Tencent Lighthouse
 > in Singapore. The public release receipt and [API health](https://api.firstroll.app/api/health)
-> both identify **v219 / `b678e52e`**, deployed with owner approval on 29 September. Discovery, the
+> both identify **v230 / `ec9975c8`**, deployed in owner-authorised run `37208179152`. Discovery, the
 > native director shelf and Supabase accounts are published. **Hosted Deep Study and video analysis
-> remain disabled**; authenticated quota and interactive browser acceptance are still outstanding.
+> remain disabled**; live authenticated quota/account acceptance is still outstanding.
 > TMDb is not configured, so discovery uses Wikidata/Wikipedia. LangGraph is a local, default-off
 > experiment, not the live research path. Azure/Render are no longer the active hosting path.
-> The approved source passed 642 tests on 29 September; no new deployment or paid model call was
-> made for this documentation update. A real recovery drill remains outstanding.
+> The approved source passed 653 repository tests and 73 frontend cases. Public browser checks
+> covered search, the twelve-film director shelf, dossier, Settings and the sign-in dialogue.
+> Static-file hashes, API revision, CORS and hidden API docs passed live verification. The previous
+> v219 site/image is retained for rollback; a real recovery drill remains outstanding. No paid
+> model call or database migration was made.
 
 See [Project Progress](docs/PROGRESS.md) for completed milestones, verification results,
 known limitations and the next priorities.
@@ -194,7 +197,7 @@ origins, but share the same Tencent machine. This is not a Kubernetes or multi-s
 | Domain and DNS | Spaceship | Keeps `firstroll.app` registered and points both website/API names to the VPS; it does not run the application |
 | VPS (virtual private server) | Tencent Lighthouse, Singapore; Ubuntu, 2 vCPUs / 2 GB RAM / 40 GB disk | The rented computer running the two production containers |
 | Caddy | Container on the VPS | The HTTPS front door: obtains/renews certificates, serves the website files and forwards API requests |
-| Frontend | Files served at `firstroll.app`; JavaScript executes in the visitor's browser | HTML/CSS with fully migrated strict TypeScript application modules compiled to JavaScript; no Next.js/React server. The migration is not yet deployed. |
+| Frontend | Files served at `firstroll.app`; JavaScript executes in the visitor's browser | HTML/CSS with fully migrated strict TypeScript application modules compiled to JavaScript; no Next.js/React server. Deployed as v230 on 4 October. |
 | FastAPI | Separate container on the same VPS, reached through `api.firstroll.app` | Python application logic, provider calls, authentication checks, evidence validation and quotas |
 | Supabase Auth | Managed service outside Tencent | Email/password accounts, sessions and password recovery |
 | Supabase PostgreSQL | Managed service outside Tencent | Profiles, preferences, saved films and the existing quota functions; row-level security restricts account rows to their owner |
@@ -251,8 +254,8 @@ digest is the immutable content identifier used for deployment, rather than a ch
 The release waits for the owner's approval of that **exact run**. Only then can the deploy job use
 the protected SSH key to reach the known VPS host, activate the matching files/image and verify the
 live release. Where a previous working release exists, recovery can restore its site and API image;
-that does not undo database, secret or infrastructure changes. The first v219 release has no earlier
-working VPS application target. A documentation push is not production approval.
+that does not undo database, secret or infrastructure changes. The current v230 release retains
+v219 as its application rollback target. A documentation push is not production approval.
 
 Azure Static Web Apps, Container Apps, ACR, Entra and the Terraform definitions under
 `infra/terraform` are legacy or staged paths, not today's serving infrastructure. No claim is made
@@ -807,7 +810,7 @@ API and account JSON is validated at the boundary before entering presentation s
 do not replace backend authentication, quotas, HTML escaping or evidence validation.
 One build produces the application and all adapter bundles for local, Docker and hosted use.
 Browser URLs still end in `.js`; those files are compiled output, not source to edit.
-The startup-only declaration shim is removed. This migration is not yet deployed.
+The startup-only declaration shim is removed. This migration is live as v230 / `ec9975c8`.
 
 Every genuine loopback-served interface, including the standard port `8000` app and the hosted-mode
 port `4173` preview, exposes a development-only account for `luo_zhiyang@outlook.com`. Any password
@@ -1223,7 +1226,7 @@ fallback behaviour; these are tracked separately from the new FirstRoll modules.
 | Milestone | Status | Outcome |
 |---|---|---|
 | Film discovery and dossier | Complete | Official TMDb primary catalogue, key-free open fallback, explicit ambiguity confirmation and identity bridges |
-| Public beta hosting | Live; acceptance incomplete | Tencent v219 verified over public HTTPS on 1 October; interactive sign-in/shelf acceptance, authenticated quota readiness and a real recovery drill remain |
+| Public beta hosting | Live; acceptance incomplete | Tencent v230 verified on 4 October, including public search/shelf/dossier/settings; live authenticated account/quota acceptance and a real recovery drill remain |
 | Private RAG foundation | Complete | Token chunking, FTS5, local vectors, hybrid retrieval and citations |
 | Attributed criticism | Complete | Crossref, Douban, Letterboxd and Guardian retrieval with structured critic claims |
 | Evidence-grounded Deep Study | Complete | Typed theory, criticism, scholarly-abstract and video-context evidence; Pydantic output, citation validation and quality gate |
