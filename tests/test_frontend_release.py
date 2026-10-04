@@ -207,7 +207,7 @@ def test_rollback_checks_static_identity_even_during_an_independent_api_outage(m
     [
         (b"tools/release/protocol.py", "high"),
         (b".github/workflows/ci.yml", "high"),
-        (b"app/web/app.js", "medium"),
+        (b"app/web/app.ts", "medium"),
     ],
 )
 def test_frontend_release_control_changes_raise_risk(monkeypatch, path, risk):

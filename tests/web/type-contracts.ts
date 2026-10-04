@@ -35,3 +35,24 @@ parsed.scenes[0].props[0].score.toFixed(2);
 parsed.scenes[0].props[0].score.toUpperCase();
 // @ts-expect-error An RGB tuple contains exactly three numbers.
 parsed.scenes[0].dominantRgb = [1, 2];
+
+import { createApplication } from "../../app/web/app";
+import type { AppState } from "../../app/web/src/state";
+import type { AuthAdapter } from "../../app/web/src/accounts/types";
+import { film, studyResult } from "../../app/web/src/api/models";
+declare const appState: AppState;
+declare const auth: AuthAdapter;
+// @ts-expect-error Film identity cannot be numeric.
+appState.discovery.selectedFilm = { id: 123 };
+// @ts-expect-error Request handles must be abortable, not arbitrary objects.
+appState.discovery.studyController = {};
+// @ts-expect-error Wiring overrides must match the real handler signature.
+createApplication({ overrides: { loadFilmDetail: (id: number) => id } });
+// @ts-expect-error Account mutations require typed input and an available capability.
+auth.updatePreferences({ theme: "blue" });
+const decodedFilm = film({ id: "test" });
+// @ts-expect-error Runtime-validated identity is text.
+decodedFilm.id.toFixed(2);
+const decodedStudy = studyResult({ study: { title: "Test" } });
+// @ts-expect-error Evidence sections are optional; absence must be handled.
+decodedStudy.study.sections.map(section => section.hypothesis);

@@ -54,7 +54,7 @@ RUN python -m pip install --upgrade pip \
     && python -m pip install -r requirements-hosted.txt
 
 COPY app ./app
-COPY --from=frontend-builder /web/app/web/generated/app.js ./app/web/generated/app.js
+COPY --from=frontend-builder /web/app/web/generated/ ./app/web/generated/
 
 EXPOSE 10000
 

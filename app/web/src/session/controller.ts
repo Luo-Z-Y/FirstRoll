@@ -1,8 +1,17 @@
-import { safeHttpUrl } from "../shared/html";
+import { record } from "../api/decode";
+import type { Film } from "../api/models";
+import { film as decodeFilm } from "../api/models";
+import type { AppContext } from "../context";
+import type { DiscoveryQuery } from "../discovery/types";
+import { isProductView } from "../navigation/types";
+import type { Services } from "../services";
 import { normaliseFilmYear } from "../shared/format";
+import { safeHttpUrl } from "../shared/html";
+import type { Archive } from "../state";
+
+interface DiscoverySnapshot { query: DiscoveryQuery; results: Film[]; archive: Archive | null; mode: string; stage: string; shelfState: string; detailFilmId: string | null }
 
 // Versioned, bounded per-tab snapshots. No provider secrets belong in stored state.
-// JavaScript controller: migrated module boundaries, not yet a fully typed domain model.
 const DISCOVERY_SESSION_KEY = "firstroll.discovery-session";
 
 const PRODUCT_SESSION_KEY = "firstroll.product-session";
@@ -17,26 +26,26 @@ const DISCOVERY_SESSION_STAGES = new Set(["loading", "choices", "empty", "archiv
 
 const SHELF_SESSION_STATES = new Set(["idle", "loading", "ready", "partial"]);
 
-export function createSession(context, services) {
+export function createSession(context: AppContext, services: () => Services) {
   const { state, refs } = context;
 
   // Lazy delegates allow cross-feature callbacks without circular module imports.
-  const setProductView = (...args) => services.navigation.setProductView(...args);
-  const loadRelatedFilms = (...args) => services.discovery.loadRelatedFilms(...args);
-  const renderDiscoveryResults = (...args) => services.shelf.renderDiscoveryResults(...args);
-  const setArchiveHeading = (...args) => services.shelf.setArchiveHeading(...args);
-  const markDirectorShelfPartial = (...args) => services.shelf.markDirectorShelfPartial(...args);
-  const renderFilmArchive = (...args) => services.shelf.renderFilmArchive(...args);
-  const loadFilmDetail = (...args) => services.dossier.loadFilmDetail(...args);
-  const fetchProgressMarkup = (...args) => services.ui.fetchProgressMarkup(...args);
+  const setProductView: Services["navigation"]["setProductView"] = (...args) => services().navigation.setProductView(...args);
+  const loadRelatedFilms: Services["discovery"]["loadRelatedFilms"] = (...args) => services().discovery.loadRelatedFilms(...args);
+  const renderDiscoveryResults: Services["shelf"]["renderDiscoveryResults"] = (...args) => services().shelf.renderDiscoveryResults(...args);
+  const setArchiveHeading: Services["shelf"]["setArchiveHeading"] = (...args) => services().shelf.setArchiveHeading(...args);
+  const markDirectorShelfPartial: Services["shelf"]["markDirectorShelfPartial"] = (...args) => services().shelf.markDirectorShelfPartial(...args);
+  const renderFilmArchive: Services["shelf"]["renderFilmArchive"] = (...args) => services().shelf.renderFilmArchive(...args);
+  const loadFilmDetail: Services["dossier"]["loadFilmDetail"] = (...args) => services().dossier.loadFilmDetail(...args);
+  const fetchProgressMarkup: Services["ui"]["fetchProgressMarkup"] = (...args) => services().ui.fetchProgressMarkup(...args);
 
-  function persistCurrentSession() {
+  function persistCurrentSession(): void {
     state.viewScroll[state.productView] = Math.max(0, Number(window.scrollY) || 0);
     persistProductSession();
     persistDiscoverySession();
   }
 
-  function persistProductSession() {
+  function persistProductSession(): void {
     try {
       window.sessionStorage.setItem(PRODUCT_SESSION_KEY, JSON.stringify({
         version: SESSION_SCHEMA_VERSION,
@@ -48,26 +57,30 @@ export function createSession(context, services) {
     }
   }
 
-  function restoreProductSession() {
-    let stored = null;
+  function restoreProductSession(): void {
+    let stored: Record<string, unknown> | null = null;
     try {
-      stored = JSON.parse(window.sessionStorage.getItem(PRODUCT_SESSION_KEY) || "null");
+      stored = record(JSON.parse(window.sessionStorage.getItem(PRODUCT_SESSION_KEY) || "null"));
     } catch (_) {
       stored = null;
     }
     if (stored?.version === SESSION_SCHEMA_VERSION && stored.scroll) {
+      const scroll = typeof stored.scroll === "object" && !Array.isArray(stored.scroll)
+        ? record(stored.scroll) : {};
       Object.keys(state.viewScroll).forEach((view) => {
-        const value = Number(stored.scroll[view]);
+        if (!isProductView(view)) return;
+        const value = Number(scroll[view]);
         state.viewScroll[view] = Number.isFinite(value) && value >= 0 ? value : 0;
       });
     }
-    const view = stored?.version === SESSION_SCHEMA_VERSION && refs.productViews[stored.view]
+    const view = stored?.version === SESSION_SCHEMA_VERSION && isProductView(stored.view)
       ? stored.view
       : "discovery";
     setProductView(view, { captureCurrent: false, persist: false });
   }
 
-  function normaliseDiscoveryQuery(query = {}) {
+  function normaliseDiscoveryQuery(value: unknown = {}): DiscoveryQuery {
+    const query = value && typeof value === "object" && !Array.isArray(value) ? record(value) : {};
     return {
       title: String(query.title || query.q || "").trim().slice(0, 160),
       year: String(query.year || "").trim().slice(0, 4),
@@ -75,8 +88,9 @@ export function createSession(context, services) {
     };
   }
 
-  function isStoredFilm(film) {
-    if (!film || typeof film !== "object" || Array.isArray(film)) return false;
+  function isStoredFilm(value: unknown): boolean {
+    if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+    const film = record(value);
     if (typeof film.id !== "string" || !film.id.trim()) return false;
     const alternativeTitles = Array.isArray(film.alternative_titles)
       ? film.alternative_titles
@@ -85,8 +99,10 @@ export function createSession(context, services) {
       .some((value) => typeof value === "string" && value.trim());
   }
 
-  function discoverySessionFilm(film) {
-    if (!isStoredFilm(film)) return null;
+  function discoverySessionFilm(value: unknown): Film | null {
+    if (!isStoredFilm(value)) return null;
+    let film: Film;
+    try { film = decodeFilm(value); } catch (_) { return null; }
     const alternativeTitles = Array.isArray(film.alternative_titles)
       ? film.alternative_titles
         .filter((value) => typeof value === "string" && value.trim())
@@ -121,7 +137,7 @@ export function createSession(context, services) {
     };
   }
 
-  function clearDiscoverySession() {
+  function clearDiscoverySession(): void {
     try {
       window.sessionStorage.removeItem(DISCOVERY_SESSION_KEY);
     } catch (_) {
@@ -129,11 +145,11 @@ export function createSession(context, services) {
     }
   }
 
-  function sessionByteLength(value) {
+  function sessionByteLength(value: string): number {
     return new TextEncoder().encode(value).byteLength;
   }
 
-  function persistDiscoverySession() {
+  function persistDiscoverySession(): void {
     const query = normaliseDiscoveryQuery(state.discovery.lastQuery || {});
     if (!query.title || !DISCOVERY_SESSION_STAGES.has(state.discovery.resultStage)) {
       clearDiscoverySession();
@@ -142,13 +158,13 @@ export function createSession(context, services) {
     const primary = discoverySessionFilm(state.discovery.archive?.primary);
     const archive = primary ? {
       primary,
-      directorWorks: (state.discovery.archive.directorWorks || [])
+      directorWorks: (state.discovery.archive?.directorWorks || [])
         .map(discoverySessionFilm)
-        .filter(Boolean)
+        .filter((film): film is Film => film !== null)
         .slice(0, 12),
-      relevant: (state.discovery.archive.relevant || [])
+      relevant: (state.discovery.archive?.relevant || [])
         .map(discoverySessionFilm)
-        .filter(Boolean)
+        .filter((film): film is Film => film !== null)
         .slice(0, 10),
     } : null;
     const snapshot = {
@@ -160,7 +176,7 @@ export function createSession(context, services) {
       shelfState: state.discovery.shelfState,
       results: state.discovery.results
         .map(discoverySessionFilm)
-        .filter(Boolean)
+        .filter((film): film is Film => film !== null)
         .slice(0, 20),
       archive,
       detailFilmId: state.discovery.detailFilmId,
@@ -177,7 +193,7 @@ export function createSession(context, services) {
     }
   }
 
-  function readDiscoverySession() {
+  function readDiscoverySession(): DiscoverySnapshot | null {
     try {
       const serialised = window.sessionStorage.getItem(DISCOVERY_SESSION_KEY);
       if (!serialised) return null;
@@ -185,29 +201,30 @@ export function createSession(context, services) {
         clearDiscoverySession();
         return null;
       }
-      const snapshot = JSON.parse(serialised);
+      const snapshot = record(JSON.parse(serialised));
       const age = Date.now() - Number(snapshot?.savedAt || 0);
       const query = normaliseDiscoveryQuery(snapshot?.query || {});
       const results = Array.isArray(snapshot?.results)
-        ? snapshot.results.map(discoverySessionFilm).filter(Boolean).slice(0, 20)
+        ? snapshot.results.map(discoverySessionFilm).filter((film): film is Film => film !== null).slice(0, 20)
         : [];
-      const rawArchive = snapshot?.archive;
+      const rawArchive = snapshot.archive ? record(snapshot.archive) : null;
       const primary = discoverySessionFilm(rawArchive?.primary);
       const archive = primary ? {
         primary,
-        directorWorks: Array.isArray(rawArchive.directorWorks)
-          ? rawArchive.directorWorks.map(discoverySessionFilm).filter(Boolean).slice(0, 12)
+        directorWorks: Array.isArray(rawArchive?.directorWorks)
+          ? rawArchive?.directorWorks.map(discoverySessionFilm).filter((film): film is Film => film !== null).slice(0, 12)
           : [],
-        relevant: Array.isArray(rawArchive.relevant)
-          ? rawArchive.relevant.map(discoverySessionFilm).filter(Boolean).slice(0, 10)
+        relevant: Array.isArray(rawArchive?.relevant)
+          ? rawArchive?.relevant.map(discoverySessionFilm).filter((film): film is Film => film !== null).slice(0, 10)
           : [],
       } : null;
       if (
         snapshot?.version !== SESSION_SCHEMA_VERSION
+        || !Number.isFinite(age)
         || age < -60_000
         || age > DISCOVERY_SESSION_MAX_AGE_MS
         || !query.title
-        || !DISCOVERY_SESSION_STAGES.has(snapshot.stage)
+        || typeof snapshot.stage !== "string" || !DISCOVERY_SESSION_STAGES.has(snapshot.stage)
         || (snapshot.stage === "archive" && !archive)
       ) {
         clearDiscoverySession();
@@ -219,7 +236,7 @@ export function createSession(context, services) {
         archive,
         mode: String(snapshot.mode || "unknown"),
         stage: snapshot.stage,
-        shelfState: SHELF_SESSION_STATES.has(snapshot.shelfState)
+        shelfState: typeof snapshot.shelfState === "string" && SHELF_SESSION_STATES.has(snapshot.shelfState)
           ? snapshot.shelfState
           : "idle",
         detailFilmId: typeof snapshot.detailFilmId === "string"
@@ -232,7 +249,7 @@ export function createSession(context, services) {
     }
   }
 
-  function restoreDiscoverySession() {
+  function restoreDiscoverySession(): boolean {
     const snapshot = readDiscoverySession();
     if (!snapshot) return false;
     refs.filmTitle.value = snapshot.query.title;

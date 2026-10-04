@@ -1,34 +1,39 @@
-import { uniqueFilms } from "../discovery/films";
+import { errorInfo, json } from "../api/decode";
 import { readApiError } from "../api/errors";
+import type { Film, RelatedResult } from "../api/models";
+import { relatedResult, searchResult, statusResult } from "../api/models";
+import type { AppContext } from "../context";
+import { uniqueFilms } from "../discovery/films";
+import type { Services } from "../services";
+import { eventElement } from "../shared/dom";
 
 // Search and shelf requests; owns stale-response and cancellation guards.
-// JavaScript controller: migrated module boundaries, not yet a fully typed domain model.
-export function createDiscovery(context, services) {
+export function createDiscovery(context: AppContext, services: () => Services) {
   const { state, refs } = context;
 
   // Lazy delegates allow cross-feature callbacks without circular module imports.
-  const normaliseDiscoveryQuery = (...args) => services.session.normaliseDiscoveryQuery(...args);
-  const clearDiscoverySession = (...args) => services.session.clearDiscoverySession(...args);
-  const persistDiscoverySession = (...args) => services.session.persistDiscoverySession(...args);
-  const saveRecentSearch = (...args) => services.recent.saveRecentSearch(...args);
-  const renderDiscoveryResults = (...args) => services.shelf.renderDiscoveryResults(...args);
-  const setArchiveHeading = (...args) => services.shelf.setArchiveHeading(...args);
-  const setDirectorShelfLoading = (...args) => services.shelf.setDirectorShelfLoading(...args);
-  const hydrateDirectorShelf = (...args) => services.shelf.hydrateDirectorShelf(...args);
-  const showFilmShelfFallback = (...args) => services.shelf.showFilmShelfFallback(...args);
-  const renderFilmArchive = (...args) => services.shelf.renderFilmArchive(...args);
-  const cancelFilmDetailRequests = (...args) => services.dossier.cancelFilmDetailRequests(...args);
-  const loadFilmDetail = (...args) => services.dossier.loadFilmDetail(...args);
-  const discoveryApiBase = (...args) => services.ui.discoveryApiBase(...args);
-  const fetchProgressMarkup = (...args) => services.ui.fetchProgressMarkup(...args);
-  const focusElement = (...args) => services.ui.focusElement(...args);
-  const focusInterfaceState = (...args) => services.ui.focusInterfaceState(...args);
+  const normaliseDiscoveryQuery: Services["session"]["normaliseDiscoveryQuery"] = (...args) => services().session.normaliseDiscoveryQuery(...args);
+  const clearDiscoverySession: Services["session"]["clearDiscoverySession"] = (...args) => services().session.clearDiscoverySession(...args);
+  const persistDiscoverySession: Services["session"]["persistDiscoverySession"] = (...args) => services().session.persistDiscoverySession(...args);
+  const saveRecentSearch: Services["recent"]["saveRecentSearch"] = (...args) => services().recent.saveRecentSearch(...args);
+  const renderDiscoveryResults: Services["shelf"]["renderDiscoveryResults"] = (...args) => services().shelf.renderDiscoveryResults(...args);
+  const setArchiveHeading: Services["shelf"]["setArchiveHeading"] = (...args) => services().shelf.setArchiveHeading(...args);
+  const setDirectorShelfLoading: Services["shelf"]["setDirectorShelfLoading"] = (...args) => services().shelf.setDirectorShelfLoading(...args);
+  const hydrateDirectorShelf: Services["shelf"]["hydrateDirectorShelf"] = (...args) => services().shelf.hydrateDirectorShelf(...args);
+  const showFilmShelfFallback: Services["shelf"]["showFilmShelfFallback"] = (...args) => services().shelf.showFilmShelfFallback(...args);
+  const renderFilmArchive: Services["shelf"]["renderFilmArchive"] = (...args) => services().shelf.renderFilmArchive(...args);
+  const cancelFilmDetailRequests: Services["dossier"]["cancelFilmDetailRequests"] = (...args) => services().dossier.cancelFilmDetailRequests(...args);
+  const loadFilmDetail: Services["dossier"]["loadFilmDetail"] = (...args) => services().dossier.loadFilmDetail(...args);
+  const discoveryApiBase: Services["ui"]["discoveryApiBase"] = (...args) => services().ui.discoveryApiBase(...args);
+  const fetchProgressMarkup: Services["ui"]["fetchProgressMarkup"] = (...args) => services().ui.fetchProgressMarkup(...args);
+  const focusElement: Services["ui"]["focusElement"] = (...args) => services().ui.focusElement(...args);
+  const focusInterfaceState: Services["ui"]["focusInterfaceState"] = (...args) => services().ui.focusInterfaceState(...args);
 
-  async function loadDiscoveryStatus() {
+  async function loadDiscoveryStatus(): Promise<void> {
     try {
       const res = await fetch(`${discoveryApiBase()}/api/discovery/status`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
+      const data = await json(res, statusResult);
       state.discovery.mode = data.mode || "unknown";
       const warmup = data.local_library?.index?.warmup;
       if (warmup?.state === "warming") {
@@ -48,7 +53,7 @@ export function createDiscovery(context, services) {
     }
   }
 
-  async function onDiscoverySearch(event) {
+  async function onDiscoverySearch(event: Event): Promise<void> {
     event.preventDefault();
     const title = refs.filmTitle.value.trim();
     if (!title) {
@@ -83,7 +88,8 @@ export function createDiscovery(context, services) {
 
     refs.discoverySubmit.setAttribute("aria-busy", "true");
     refs.discoveryResultsSection.setAttribute("aria-busy", "true");
-    refs.discoverySubmit.querySelector("span").textContent = "Searching…";
+    const submitLabel = refs.discoverySubmit.querySelector<HTMLElement>("span");
+    if (submitLabel) submitLabel.textContent = "Searching…";
     refs.discoveryResultsSection.classList.remove("hidden");
     refs.filmDetail.classList.add("hidden");
     refs.discoveryResults.innerHTML = fetchProgressMarkup("Matching title, year and filmmaker identity…");
@@ -96,13 +102,13 @@ export function createDiscovery(context, services) {
         { signal: controller.signal },
       );
       if (!res.ok) throw new Error(await readApiError(res));
-      const data = await res.json();
+      const data = await json(res, searchResult);
       if (requestId !== state.discovery.searchRequestId) return;
       state.discovery.mode = data.mode || "unknown";
       state.discovery.lastQuery = normaliseDiscoveryQuery(data.query || query);
       renderDiscoveryResults(data);
     } catch (err) {
-      if (err?.name === "AbortError" || requestId !== state.discovery.searchRequestId) return;
+      if (errorInfo(err).name === "AbortError" || requestId !== state.discovery.searchRequestId) return;
       console.warn("Discovery request did not complete", err);
       state.discovery.resultStage = "error";
       clearDiscoverySession();
@@ -119,18 +125,18 @@ export function createDiscovery(context, services) {
         state.discovery.searchController = null;
         refs.discoverySubmit.removeAttribute("aria-busy");
         refs.discoveryResultsSection.setAttribute("aria-busy", "false");
-        refs.discoverySubmit.querySelector("span").textContent = "Search films";
+        if (submitLabel) submitLabel.textContent = "Search films";
       }
     }
   }
 
-  function cancelShelfRequests() {
+  function cancelShelfRequests(): void {
     state.discovery.shelfRequestId += 1;
     state.discovery.shelfRequestControllers.forEach((controller) => controller.abort());
     state.discovery.shelfRequestControllers.clear();
   }
 
-  function confirmDiscoveryFilm(index) {
+  function confirmDiscoveryFilm(index: number): void {
     const primary = state.discovery.results[index];
     if (!primary) return;
     cancelFilmDetailRequests();
@@ -144,7 +150,7 @@ export function createDiscovery(context, services) {
     void loadRelatedFilms(primary, nearby);
   }
 
-  async function loadRelatedFilms(primary, nearby) {
+  async function loadRelatedFilms(primary: Film, nearby: Film[]): Promise<void> {
     const requestId = state.discovery.shelfRequestId + 1;
     state.discovery.shelfRequestId = requestId;
     setDirectorShelfLoading(primary.id);
@@ -165,7 +171,7 @@ export function createDiscovery(context, services) {
     }
   }
 
-  async function enrichDirectorFilmography(primary, nearby, requestId) {
+  async function enrichDirectorFilmography(primary: Film, nearby: Film[], requestId: number): Promise<void> {
     try {
       const data = await fetchRelatedFilms(primary.id, false);
       if (
@@ -203,14 +209,14 @@ export function createDiscovery(context, services) {
     }
   }
 
-  function applyDirectorShelf(primary, nearby, data) {
+  function applyDirectorShelf(primary: Film, nearby: Film[], data: RelatedResult): void {
     if (state.discovery.archiveSelectionId !== primary.id) return;
     const directorWorks = uniqueFilms(data.same_director || [], [primary]);
     state.discovery.archive = { primary, directorWorks, relevant: nearby };
     hydrateDirectorShelf(primary.id, directorWorks);
   }
 
-  async function fetchRelatedFilms(filmId, fast = true) {
+  async function fetchRelatedFilms(filmId: string, fast = true): Promise<RelatedResult> {
     const cacheKey = `${filmId}:${fast ? "fast" : "enriched"}`;
     const cached = state.discovery.relatedFilmCache.get(cacheKey);
     if (cached) return cached;
@@ -219,7 +225,7 @@ export function createDiscovery(context, services) {
     const timeout = window.setTimeout(() => controller.abort(), fast ? 25000 : 90000);
     const progress = fast
       ? window.setTimeout(() => {
-        const status = refs.discoveryResults.querySelector("[data-film-shelf-status]");
+        const status = refs.discoveryResults.querySelector<HTMLElement>("[data-film-shelf-status]");
         if (status) status.textContent = "Still checking the verified director filmography…";
       }, 7000)
       : null;
@@ -229,66 +235,68 @@ export function createDiscovery(context, services) {
         { signal: controller.signal },
       );
       if (!res.ok) throw new Error(await readApiError(res));
-      const data = await res.json();
+      const data = await json(res, relatedResult);
       if (data.state === "unavailable") {
         throw new Error("The verified director filmography did not respond.");
       }
       state.discovery.relatedFilmCache.set(cacheKey, data);
       return data;
     } catch (error) {
-      throw error?.name === "AbortError"
+      throw errorInfo(error).name === "AbortError"
         ? new Error("The director filmography request timed out.")
         : error;
     } finally {
       state.discovery.shelfRequestControllers.delete(controller);
       window.clearTimeout(timeout);
-      window.clearTimeout(progress);
+      if (progress !== null) window.clearTimeout(progress);
     }
   }
 
-  function retryDirectorShelf() {
+  function retryDirectorShelf(): void {
     const archive = state.discovery.archive;
     if (!archive?.primary) return;
     cancelShelfRequests();
     void loadRelatedFilms(archive.primary, archive.relevant || []);
   }
 
-  async function onFilmResultClick(event) {
-    if (event.target.closest("[data-retry-discovery]")) {
+  async function onFilmResultClick(event: MouseEvent): Promise<void> {
+    const target = eventElement(event);
+    if (!target) return;
+    if (target.closest<HTMLButtonElement>("[data-retry-discovery]")) {
       refs.discoveryForm.requestSubmit();
       return;
     }
-    if (event.target.closest("[data-relax-discovery-filters]")) {
+    if (target.closest<HTMLButtonElement>("[data-relax-discovery-filters]")) {
       refs.filmYear.value = "";
       refs.filmDirector.value = "";
       refs.discoveryForm.requestSubmit();
       return;
     }
-    if (event.target.closest("[data-edit-discovery-query]")) {
+    if (target.closest<HTMLButtonElement>("[data-edit-discovery-query]")) {
       refs.filmTitle.focus();
       refs.filmTitle.select();
       return;
     }
-    const identityChoice = event.target.closest("[data-confirm-film-index]");
+    const identityChoice = target.closest<HTMLButtonElement>("[data-confirm-film-index]");
     if (identityChoice) {
       confirmDiscoveryFilm(Number(identityChoice.dataset.confirmFilmIndex));
       return;
     }
-    if (event.target.closest("[data-retry-director-shelf]")) {
+    if (target.closest<HTMLButtonElement>("[data-retry-director-shelf]")) {
       retryDirectorShelf();
       return;
     }
-    const selection = event.target.closest("[data-select-film-id]");
+    const selection = target.closest<HTMLButtonElement>("[data-select-film-id]");
     if (selection) {
       selectArchiveFilm(selection.dataset.selectFilmId);
       return;
     }
-    const button = event.target.closest("[data-film-id]");
+    const button = target.closest<HTMLButtonElement>("[data-film-id]");
     if (!button) return;
     await loadFilmDetail(button.dataset.filmId);
   }
 
-  function selectArchiveFilm(filmId) {
+  function selectArchiveFilm(filmId?: string): void {
     const archive = state.discovery.archive;
     if (!archive || archive.primary.id === filmId) return;
     const available = uniqueFilms([

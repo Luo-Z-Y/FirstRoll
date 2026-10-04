@@ -23,7 +23,16 @@ function bundleApplication(options = {}) {
   });
 }
 
-module.exports = { bundleApplication };
+const adapterNames = ["auth", "entra-auth", "local-auth", "integrations", "config", "theme-init", "auth-loader"];
+function bundleAdapters(outdir, { minify = false } = {}) {
+  return buildSync({
+    absWorkingDir: root,
+    entryPoints: adapterNames.map(name => `app/web/${name}.ts`),
+    outdir, bundle: true, format: "iife", minify,
+    target: ["es2020", "chrome100", "firefox100", "safari15.4"],
+  });
+}
+module.exports = { bundleApplication, bundleAdapters };
 
 if (require.main === module) {
   execFileSync(process.execPath, [require.resolve("typescript/bin/tsc"), "--noEmit"], {
@@ -33,4 +42,5 @@ if (require.main === module) {
   const outfile = local ? "app/web/generated/app.js" : process.argv[2];
   if (!outfile) throw new Error("Supply an output path or --local.");
   bundleApplication({ outfile: path.resolve(root, outfile), minify: !local });
+  bundleAdapters(path.dirname(path.resolve(root, outfile)), { minify: !local });
 }

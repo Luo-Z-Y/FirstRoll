@@ -1,7 +1,10 @@
+import type { AccountInfo } from "@azure/msal-browser";
 import {
   InteractionRequiredAuthError,
   PublicClientApplication,
 } from "@azure/msal-browser";
+import { errorInfo } from "./src/api/decode";
+import { requiredElement } from "./src/shared/dom";
 
 const config = Object.freeze({
   provider: String(window.FIRSTROLL_CONFIG?.authProvider || ""),
@@ -10,18 +13,18 @@ const config = Object.freeze({
   apiScope: String(window.FIRSTROLL_CONFIG?.entraApiScope || ""),
 });
 
-let client = null;
-let account = null;
+let client: PublicClientApplication | null = null;
+let account: AccountInfo | null = null;
 
 const refs = {
-  open: document.getElementById("authOpen"),
-  dialog: document.getElementById("authDialog"),
-  close: document.getElementById("authClose"),
-  form: document.getElementById("entraAuthForm"),
-  submit: document.getElementById("entraAuthSubmit"),
-  message: document.getElementById("authMessage"),
-  identity: document.getElementById("authIdentity"),
-  signOut: document.getElementById("authSignOut"),
+  open: requiredElement<HTMLElement>("authOpen"),
+  dialog: requiredElement<HTMLDialogElement>("authDialog"),
+  close: requiredElement<HTMLElement>("authClose"),
+  form: requiredElement<HTMLFormElement>("entraAuthForm"),
+  submit: requiredElement<HTMLButtonElement>("entraAuthSubmit"),
+  message: requiredElement<HTMLElement>("authMessage"),
+  identity: requiredElement<HTMLElement>("authIdentity"),
+  signOut: requiredElement<HTMLButtonElement>("authSignOut"),
 };
 
 function configured() {
@@ -104,7 +107,7 @@ async function accessToken() {
   }
 }
 
-async function authorisationHeaders() {
+async function authorisationHeaders(): Promise<Record<string, string>> {
   const token = await accessToken();
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
@@ -154,7 +157,7 @@ refs.form?.addEventListener("submit", async (event) => {
   try {
     await signIn();
   } catch (error) {
-    refs.message.textContent = error?.message || "The account page could not be opened.";
+    refs.message.textContent = errorInfo(error).message || "The account page could not be opened.";
     refs.submit.disabled = false;
   }
 });

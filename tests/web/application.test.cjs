@@ -227,8 +227,21 @@ test("module graph stays acyclic and the application entry stays small", () => {
     visited.add(name);
   }
   for (const name of Object.keys(graph)) visit(name);
-  assert.ok(readFileSync(path.join(root, "app/web/app.js"), "utf8").split("\n").length <= 100);
+  assert.ok(readFileSync(path.join(root, "app/web/app.ts"), "utf8").split("\n").length <= 100);
   for (const name of Object.keys(graph).filter(name => name.startsWith("app/web/src/"))) {
     assert.ok(readFileSync(path.join(root, name), "utf8").split("\n").length <= 500, `${name} needs a smaller boundary`);
   }
+});
+
+test("malformed stored navigation and timestamps cannot break startup or restore stale films", () => {
+  const h = harness(), app = h.create();
+  h.storage.set("firstroll.product-session", JSON.stringify({ version: 1, view: "settings", scroll: "invalid" }));
+  assert.doesNotThrow(() => app.restoreProductSession());
+  assert.equal(app.state.viewScroll.settings, 0);
+  h.storage.set("firstroll.discovery-session", JSON.stringify({
+    version: 1, savedAt: "invalid", query: { title: "Film", year: "", director: "" },
+    stage: "choices", results: [{ id: "A", title: "Film" }],
+  }));
+  assert.equal(app.readDiscoverySession(), null);
+  assert.equal(h.storage.has("firstroll.discovery-session"), false);
 });

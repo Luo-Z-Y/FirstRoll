@@ -1,39 +1,45 @@
-import { escapeHtml } from "../shared/html";
+import { errorInfo, json, shape } from "../api/decode";
 import { readApiError } from "../api/errors";
+import type { Film } from "../api/models";
+import { film as decodeFilm, receptionResult } from "../api/models";
+import type { AppContext } from "../context";
+import type { Services } from "../services";
+import { eventElement } from "../shared/dom";
+import { escapeHtml } from "../shared/html";
 
 // Dossier lifecycle and delegated actions.
-// JavaScript controller: migrated module boundaries, not yet a fully typed domain model.
-export function createDossier(context, services) {
+export function createDossier(context: AppContext, services: () => Services) {
   const { state, refs } = context;
 
   // Lazy delegates allow cross-feature callbacks without circular module imports.
-  const setProductView = (...args) => services.navigation.setProductView(...args);
-  const toggleSavedFilm = (...args) => services.accounts.toggleSavedFilm(...args);
-  const persistDiscoverySession = (...args) => services.session.persistDiscoverySession(...args);
-  const renderFilmDetail = (...args) => services.dossierView.renderFilmDetail(...args);
-  const formatRating = (...args) => services.dossierView.formatRating(...args);
-  const formatCompactCount = (...args) => services.dossierView.formatCompactCount(...args);
-  const loadFilmVideos = (...args) => services.videos.loadFilmVideos(...args);
-  const selectVideoCategory = (...args) => services.videos.selectVideoCategory(...args);
-  const selectCriticismSource = (...args) => services.criticism.selectCriticismSource(...args);
-  const loadProviderCriticism = (...args) => services.criticism.loadProviderCriticism(...args);
-  const structureProviderCriticism = (...args) => services.criticism.structureProviderCriticism(...args);
-  const firstLoadedCriticismRoute = (...args) => services.criticismViews.firstLoadedCriticismRoute(...args);
-  const cancelDeepStudyRequest = (...args) => services.study.cancelDeepStudyRequest(...args);
-  const generateDeepStudy = (...args) => services.study.generateDeepStudy(...args);
-  const discoveryApiBase = (...args) => services.ui.discoveryApiBase(...args);
-  const fetchProgressMarkup = (...args) => services.ui.fetchProgressMarkup(...args);
-  const focusElement = (...args) => services.ui.focusElement(...args);
-  const focusInterfaceState = (...args) => services.ui.focusInterfaceState(...args);
+  const setProductView: Services["navigation"]["setProductView"] = (...args) => services().navigation.setProductView(...args);
+  const toggleSavedFilm: Services["accounts"]["toggleSavedFilm"] = (...args) => services().accounts.toggleSavedFilm(...args);
+  const persistDiscoverySession: Services["session"]["persistDiscoverySession"] = (...args) => services().session.persistDiscoverySession(...args);
+  const renderFilmDetail: Services["dossierView"]["renderFilmDetail"] = (...args) => services().dossierView.renderFilmDetail(...args);
+  const formatRating: Services["dossierView"]["formatRating"] = (...args) => services().dossierView.formatRating(...args);
+  const formatCompactCount: Services["dossierView"]["formatCompactCount"] = (...args) => services().dossierView.formatCompactCount(...args);
+  const loadFilmVideos: Services["videos"]["loadFilmVideos"] = (...args) => services().videos.loadFilmVideos(...args);
+  const selectVideoCategory: Services["videos"]["selectVideoCategory"] = (...args) => services().videos.selectVideoCategory(...args);
+  const selectCriticismSource: Services["criticism"]["selectCriticismSource"] = (...args) => services().criticism.selectCriticismSource(...args);
+  const loadProviderCriticism: Services["criticism"]["loadProviderCriticism"] = (...args) => services().criticism.loadProviderCriticism(...args);
+  const structureProviderCriticism: Services["criticism"]["structureProviderCriticism"] = (...args) => services().criticism.structureProviderCriticism(...args);
+  const firstLoadedCriticismRoute: Services["criticismViews"]["firstLoadedCriticismRoute"] = (...args) => services().criticismViews.firstLoadedCriticismRoute(...args);
+  const cancelDeepStudyRequest: Services["study"]["cancelDeepStudyRequest"] = (...args) => services().study.cancelDeepStudyRequest(...args);
+  const generateDeepStudy: Services["study"]["generateDeepStudy"] = (...args) => services().study.generateDeepStudy(...args);
+  const discoveryApiBase: Services["ui"]["discoveryApiBase"] = (...args) => services().ui.discoveryApiBase(...args);
+  const fetchProgressMarkup: Services["ui"]["fetchProgressMarkup"] = (...args) => services().ui.fetchProgressMarkup(...args);
+  const focusElement: Services["ui"]["focusElement"] = (...args) => services().ui.focusElement(...args);
+  const focusInterfaceState: Services["ui"]["focusInterfaceState"] = (...args) => services().ui.focusInterfaceState(...args);
 
-  function cancelFilmDetailRequests() {
+  function cancelFilmDetailRequests(): void {
     cancelDeepStudyRequest();
     state.discovery.detailController?.abort();
     state.discovery.detailController = null;
     refs.filmDetail.setAttribute("aria-busy", "false");
   }
 
-  async function loadFilmDetail(filmId, options = {}) {
+  async function loadFilmDetail(filmId: string | undefined, options: { scroll?: boolean } = {}): Promise<void> {
+    if (!filmId) return;
     cancelFilmDetailRequests();
     const controller = new AbortController();
     state.discovery.detailController = controller;
@@ -55,7 +61,8 @@ export function createDossier(context, services) {
         { signal: controller.signal },
       );
       if (!res.ok) throw new Error(await readApiError(res));
-      const data = await res.json();
+      const data = await json(res, shape({ film: decodeFilm }));
+      if (!data.film) throw new Error("The film response is missing.");
       if (!currentRequest()) return;
       state.discovery.selectedFilm = data.film;
       state.discovery.activeCriticismProvider = firstLoadedCriticismRoute(
@@ -68,11 +75,11 @@ export function createDossier(context, services) {
         window.requestAnimationFrame(() => {
           if (!currentRequest()) return;
           refs.filmDetail.scrollIntoView({ behavior: "smooth", block: "start" });
-          refs.filmDetail.querySelector("[data-dossier-heading]")?.focus({ preventScroll: true });
+          refs.filmDetail.querySelector<HTMLElement>("[data-dossier-heading]")?.focus({ preventScroll: true });
         });
       }
     } catch (err) {
-      if (err?.name === "AbortError" || !currentRequest()) return;
+      if (errorInfo(err).name === "AbortError" || !currentRequest()) return;
       console.warn("Film dossier request did not complete", err);
       state.discovery.selectedFilm = null;
       state.discovery.detailFilmId = filmId;
@@ -91,9 +98,9 @@ export function createDossier(context, services) {
     }
   }
 
-  async function loadFilmReception(film) {
-    const section = refs.filmDetail.querySelector("[data-film-reception]");
-    const output = refs.filmDetail.querySelector("[data-reception-scores]");
+  async function loadFilmReception(film: Film): Promise<void> {
+    const section = refs.filmDetail.querySelector<HTMLElement>("[data-film-reception]");
+    const output = refs.filmDetail.querySelector<HTMLElement>("[data-reception-scores]");
     if (!section || !output || !film?.id) return;
     try {
       const response = await fetch(
@@ -101,12 +108,12 @@ export function createDossier(context, services) {
         { signal: state.discovery.detailController?.signal },
       );
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const reception = await response.json();
+      const reception = await json(response, receptionResult);
       if (state.discovery.selectedFilm !== film) return;
       const scores = Array.isArray(reception.scores) ? reception.scores : [];
       if (!scores.length) {
         output.innerHTML = "";
-        if (!section.querySelector(".reception-awards article")) section.classList.add("hidden");
+        if (!section.querySelector<HTMLElement>(".reception-awards article")) section.classList.add("hidden");
         return;
       }
       section.classList.remove("hidden");
@@ -119,12 +126,14 @@ export function createDossier(context, services) {
     } catch (_) {
       if (state.discovery.selectedFilm !== film) return;
       output.innerHTML = "";
-      if (!section.querySelector(".reception-awards article")) section.classList.add("hidden");
+      if (!section.querySelector<HTMLElement>(".reception-awards article")) section.classList.add("hidden");
     }
   }
 
-  async function onFilmDetailClick(event) {
-    if (event.target.closest("[data-detail-close]")) {
+  async function onFilmDetailClick(event: MouseEvent): Promise<void> {
+    const target = eventElement(event);
+    if (!target) return;
+    if (target.closest<HTMLButtonElement>("[data-detail-close]")) {
       cancelFilmDetailRequests();
       state.discovery.selectedFilm = null;
       state.discovery.detailFilmId = null;
@@ -133,23 +142,23 @@ export function createDossier(context, services) {
       persistDiscoverySession();
       return;
     }
-    const detailRetry = event.target.closest("[data-retry-film-detail]");
+    const detailRetry = target.closest<HTMLButtonElement>("[data-retry-film-detail]");
     if (detailRetry) {
       await loadFilmDetail(detailRetry.dataset.retryFilmDetail);
       return;
     }
-    const citation = event.target.closest("[data-study-citation-target]");
+    const citation = target.closest<HTMLButtonElement>("[data-study-citation-target]");
     if (citation) {
       event.preventDefault();
-      const target = document.getElementById(citation.dataset.studyCitationTarget);
+      const target = document.getElementById(citation.dataset.studyCitationTarget || "");
       if (target) {
-        if (target.tagName === "DETAILS") target.open = true;
+        if (target.tagName === "DETAILS") target.setAttribute("open", "");
         target.scrollIntoView({ behavior: "smooth", block: "center" });
         focusElement(target, { preventScroll: true });
       }
       return;
     }
-    if (event.target.closest("[data-analyse-film]")) {
+    if (target.closest<HTMLButtonElement>("[data-analyse-film]")) {
       const film = state.discovery.selectedFilm;
       refs.analyseContext.textContent = film
         ? `Selected: ${film.title}`
@@ -159,57 +168,57 @@ export function createDossier(context, services) {
       refs.videoFile.focus();
       return;
     }
-    const saveButton = event.target.closest("[data-save-film]");
+    const saveButton = target.closest<HTMLButtonElement>("[data-save-film]");
     if (saveButton) {
       await toggleSavedFilm(saveButton);
       return;
     }
-    if (event.target.closest("[data-cancel-study]")) {
+    if (target.closest<HTMLButtonElement>("[data-cancel-study]")) {
       cancelDeepStudyRequest({ announce: true });
       return;
     }
-    const studyRetry = event.target.closest("[data-retry-study]");
+    const studyRetry = target.closest<HTMLButtonElement>("[data-retry-study]");
     if (studyRetry) {
-      const studyButton = refs.filmDetail.querySelector("[data-generate-study]");
+      const studyButton = refs.filmDetail.querySelector<HTMLButtonElement>("[data-generate-study]");
       if (studyButton) await generateDeepStudy(studyButton);
       return;
     }
-    const studyButton = event.target.closest("[data-generate-study]");
+    const studyButton = target.closest<HTMLButtonElement>("[data-generate-study]");
     if (studyButton) {
       await generateDeepStudy(studyButton);
       return;
     }
-    const videoRetry = event.target.closest("[data-retry-film-videos]");
+    const videoRetry = target.closest<HTMLButtonElement>("[data-retry-film-videos]");
     if (videoRetry) {
-      const videoButton = refs.filmDetail.querySelector("[data-load-film-videos]");
+      const videoButton = refs.filmDetail.querySelector<HTMLButtonElement>("[data-load-film-videos]");
       if (videoButton) await loadFilmVideos(videoButton);
       return;
     }
-    const videoButton = event.target.closest("[data-load-film-videos]");
+    const videoButton = target.closest<HTMLButtonElement>("[data-load-film-videos]");
     if (videoButton) {
       await loadFilmVideos(videoButton);
       return;
     }
-    const videoCategoryButton = event.target.closest("[data-video-category]");
+    const videoCategoryButton = target.closest<HTMLButtonElement>("[data-video-category]");
     if (videoCategoryButton) {
       selectVideoCategory(videoCategoryButton);
       return;
     }
-    const criticismSourceButton = event.target.closest("[data-criticism-source]");
+    const criticismSourceButton = target.closest<HTMLButtonElement>("[data-criticism-source]");
     if (criticismSourceButton) {
       await selectCriticismSource(criticismSourceButton);
       return;
     }
-    const criticismRetry = event.target.closest("[data-retry-criticism]");
+    const criticismRetry = target.closest<HTMLButtonElement>("[data-retry-criticism]");
     if (criticismRetry) {
       const provider = criticismRetry.dataset.retryCriticism;
-      const providerButton = refs.filmDetail.querySelector(
-        `[data-criticism-source="${CSS.escape(provider)}"]`,
+      const providerButton = refs.filmDetail.querySelector<HTMLButtonElement>(
+        `[data-criticism-source="${CSS.escape(provider || "")}"]`,
       );
       if (providerButton) await loadProviderCriticism(providerButton, provider);
       return;
     }
-    const criticismRefreshButton = event.target.closest("[data-refresh-criticism]");
+    const criticismRefreshButton = target.closest<HTMLButtonElement>("[data-refresh-criticism]");
     if (criticismRefreshButton) {
       await loadProviderCriticism(
         criticismRefreshButton,
@@ -217,19 +226,21 @@ export function createDossier(context, services) {
       );
       return;
     }
-    const structureButton = event.target.closest("[data-structure-criticism]");
+    const structureButton = target.closest<HTMLButtonElement>("[data-structure-criticism]");
     if (structureButton) {
       await structureProviderCriticism(structureButton.dataset.structureCriticism, structureButton);
     }
   }
 
-  function onFilmDetailKeydown(event) {
-    const tab = event.target.closest('[role="tab"]');
-    const tablist = tab?.closest('[role="tablist"]');
+  function onFilmDetailKeydown(event: KeyboardEvent): void {
+    const target = eventElement(event);
+    if (!target) return;
+    const tab = target.closest<HTMLButtonElement>('[role="tab"]');
+    const tablist = tab?.closest<HTMLElement>('[role="tablist"]');
     if (!tab || !tablist || !["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) {
       return;
     }
-    const tabs = Array.from(tablist.querySelectorAll('[role="tab"]:not(:disabled)'));
+    const tabs = Array.from(tablist.querySelectorAll<HTMLElement>('[role="tab"]:not(:disabled)'));
     const current = tabs.indexOf(tab);
     if (current < 0 || !tabs.length) return;
     event.preventDefault();

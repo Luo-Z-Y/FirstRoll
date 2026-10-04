@@ -309,10 +309,20 @@ def web_runtime_config(request: Request) -> Response:
     )
 
 
-@app.get("/assets/app.js", include_in_schema=False)
-def web_application_bundle() -> FileResponse:
+@app.get("/assets/{bundle_name}.js", include_in_schema=False)
+def web_application_bundle(bundle_name: str) -> FileResponse:
     """Serve compiled modules, never raw TypeScript/imports, in the combined local edition."""
-    bundle = web_directory / "generated" / "app.js"
+    if bundle_name not in {
+        "app",
+        "auth",
+        "entra-auth",
+        "local-auth",
+        "integrations",
+        "theme-init",
+        "auth-loader",
+    }:
+        raise HTTPException(status_code=404, detail="Unknown frontend bundle.")
+    bundle = web_directory / "generated" / f"{bundle_name}.js"
     if not bundle.is_file():
         raise HTTPException(
             status_code=503,

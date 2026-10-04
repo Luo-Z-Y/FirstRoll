@@ -1,37 +1,25 @@
+import type { Session, SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@supabase/supabase-js";
+import { authMode as decodeAuthMode, preferences as decodePreferences, profile as decodeProfile, savedFilms as decodeSavedFilms, displayName as userDisplayName } from "./src/accounts/decode";
+import type { AuthMode, Preferences, Profile, SavedFilm } from "./src/accounts/types";
+import { errorInfo } from "./src/api/decode";
+import type { Film } from "./src/api/models";
+import { isThemePreference } from "./src/navigation/types";
+import { createAuthRefs } from "./src/accounts/dom";
 
 const config = Object.freeze({
   url: String(window.FIRSTROLL_CONFIG?.supabaseUrl || "").replace(/\/$/, ""),
   publishableKey: String(window.FIRSTROLL_CONFIG?.supabasePublishableKey || ""),
 });
 
-let client = null;
-let session = null;
-let authMode = "sign-in";
-let savedFilms = [];
-let profile = null;
-let preferences = null;
+let client: SupabaseClient | null = null;
+let session: Session | null = null;
+let authMode: AuthMode = "sign-in";
+let savedFilms: SavedFilm[] = [];
+let profile: Profile | null = null;
+let preferences: Preferences | null = null;
 
-const refs = {
-  open: document.getElementById("authOpen"),
-  dialog: document.getElementById("authDialog"),
-  close: document.getElementById("authClose"),
-  form: document.getElementById("authForm"),
-  modeButtons: Array.from(document.querySelectorAll("[data-auth-mode]")),
-  nameWrap: document.getElementById("authNameWrap"),
-  name: document.getElementById("authName"),
-  emailWrap: document.getElementById("authEmailWrap"),
-  email: document.getElementById("authEmail"),
-  password: document.getElementById("authPassword"),
-  passwordLabel: document.getElementById("authPasswordLabel"),
-  submit: document.getElementById("authSubmit"),
-  reset: document.getElementById("authReset"),
-  heading: document.getElementById("authHeading"),
-  description: document.getElementById("authDescription"),
-  message: document.getElementById("authMessage"),
-  identity: document.getElementById("authIdentity"),
-  signOut: document.getElementById("authSignOut"),
-};
+const refs = createAuthRefs();
 
 function configured() {
   return Boolean(config.url && config.publishableKey);
@@ -75,7 +63,7 @@ function render(emitAuthChange = true) {
   if (refs.identity) {
     refs.identity.hidden = !user;
     refs.identity.textContent = profile?.display_name
-      || user?.user_metadata?.display_name
+      || userDisplayName(user)
       || user?.email
       || "Signed in";
   }
@@ -87,12 +75,12 @@ function render(emitAuthChange = true) {
   }
 }
 
-function setMessage(message) {
+function setMessage(message: string) {
   if (refs.message) refs.message.textContent = message;
 }
 
-function setMode(mode) {
-  authMode = mode;
+function setMode(mode: unknown) {
+  authMode = decodeAuthMode(mode);
   const signingUp = mode === "sign-up";
   const recovering = mode === "recovery";
   refs.modeButtons.forEach((button) => {
@@ -129,7 +117,7 @@ function setMode(mode) {
   setMessage("");
 }
 
-function openDialog(mode = "sign-in") {
+function openDialog(mode: AuthMode = "sign-in") {
   if (!configured()) return false;
   setMode(mode);
   refs.dialog?.showModal();
@@ -137,7 +125,7 @@ function openDialog(mode = "sign-in") {
   return true;
 }
 
-async function signUp(email, password, displayName) {
+async function signUp(email: string, password: string, displayName: string) {
   await ready;
   if (!client) throw new Error("Account creation is not configured on this deployment.");
   const redirect = `${window.location.origin}${window.location.pathname}`;
@@ -153,7 +141,7 @@ async function signUp(email, password, displayName) {
   return data;
 }
 
-async function signIn(email, password) {
+async function signIn(email: string, password: string) {
   await ready;
   if (!client) throw new Error("Sign-in is not configured on this deployment.");
   const { data, error } = await client.auth.signInWithPassword({ email, password });
@@ -161,7 +149,7 @@ async function signIn(email, password) {
   return data;
 }
 
-async function requestPasswordReset(email) {
+async function requestPasswordReset(email: string) {
   await ready;
   if (!client) throw new Error("Password recovery is not configured on this deployment.");
   const redirectTo = `${window.location.origin}${window.location.pathname}`;
@@ -169,7 +157,7 @@ async function requestPasswordReset(email) {
   if (error) throw error;
 }
 
-async function updatePassword(password) {
+async function updatePassword(password: string) {
   await ready;
   if (!client) throw new Error("Password recovery is not configured on this deployment.");
   const { error } = await client.auth.updateUser({ password });
@@ -198,16 +186,16 @@ async function refreshAccountSettings() {
   ]);
   if (profileResult.error) throw profileResult.error;
   if (preferencesResult.error) throw preferencesResult.error;
-  profile = profileResult.data || {
-    display_name: user.user_metadata?.display_name || null,
+  profile = profileResult.data ? decodeProfile(profileResult.data) : {
+    display_name: userDisplayName(user) || null,
   };
-  preferences = preferencesResult.data || { theme: "system", shelf_motion: true };
+  preferences = preferencesResult.data ? decodePreferences(preferencesResult.data) : { theme: "system", shelf_motion: true };
   render(false);
   emitAccountSettingsChanged();
   return { profile: currentProfile(), preferences: currentPreferences() };
 }
 
-async function updateDisplayName(displayName) {
+async function updateDisplayName(displayName: string) {
   await ready;
   const user = currentUser();
   if (!client || !user) throw new Error("Sign in before changing your display name.");
@@ -221,7 +209,7 @@ async function updateDisplayName(displayName) {
     .select("display_name,created_at,updated_at")
     .single();
   if (error) throw error;
-  profile = data;
+  profile = decodeProfile(data);
   const metadata = { ...(user.user_metadata || {}), display_name: cleaned };
   const { error: metadataError } = await client.auth.updateUser({ data: metadata });
   if (metadataError) throw metadataError;
@@ -230,14 +218,14 @@ async function updateDisplayName(displayName) {
   return currentProfile();
 }
 
-async function updatePreferences(changes) {
+async function updatePreferences(changes: Partial<Preferences>) {
   await ready;
   const user = currentUser();
   if (!client || !user) throw new Error("Sign in before changing system settings.");
-  const payload = { user_id: user.id };
+  const payload: Partial<Preferences> & { user_id: string } = { user_id: user.id };
   if (Object.prototype.hasOwnProperty.call(changes || {}, "theme")) {
     const theme = String(changes.theme || "");
-    if (!["system", "light", "dark"].includes(theme)) {
+    if (!isThemePreference(theme)) {
       throw new Error("Choose System, Light or Dark appearance.");
     }
     payload.theme = theme;
@@ -251,7 +239,7 @@ async function updatePreferences(changes) {
     .select("theme,shelf_motion,created_at,updated_at")
     .single();
   if (error) throw error;
-  preferences = data;
+  preferences = decodePreferences(data);
   emitAccountSettingsChanged();
   return currentPreferences();
 }
@@ -272,7 +260,7 @@ async function accessToken() {
   return session?.access_token || null;
 }
 
-async function authorisationHeaders() {
+async function authorisationHeaders(): Promise<Record<string, string>> {
   const token = await accessToken();
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
@@ -289,12 +277,12 @@ async function refreshSavedFilms() {
     .select("film_id,title,original_title,release_year,director,poster_url,created_at")
     .order("created_at", { ascending: false });
   if (error) throw error;
-  savedFilms = Array.isArray(data) ? data : [];
+  savedFilms = data ? decodeSavedFilms(data) : [];
   emitAccountDataChanged();
   return savedFilms.map((film) => ({ ...film }));
 }
 
-function normaliseSavedFilm(film, userId) {
+function normaliseSavedFilm(film: Film, userId: string) {
   const releaseYear = Number(film?.matched_year || film?.year);
   const posterUrl = String(film?.poster_url || "");
   return {
@@ -314,7 +302,7 @@ function normaliseSavedFilm(film, userId) {
   };
 }
 
-async function saveFilm(film) {
+async function saveFilm(film: Film) {
   await ready;
   const user = currentUser();
   if (!client || !user) throw new Error("Sign in before saving a film.");
@@ -327,7 +315,7 @@ async function saveFilm(film) {
   return refreshSavedFilms();
 }
 
-async function removeSavedFilm(filmId) {
+async function removeSavedFilm(filmId: string) {
   await ready;
   const user = currentUser();
   if (!client || !user) throw new Error("Sign in before changing saved films.");
@@ -340,7 +328,7 @@ async function removeSavedFilm(filmId) {
   return refreshSavedFilms();
 }
 
-function isFilmSaved(filmId) {
+function isFilmSaved(filmId: string) {
   return savedFilms.some((film) => film.film_id === String(filmId));
 }
 
@@ -421,7 +409,7 @@ refs.reset?.addEventListener("click", async () => {
     await requestPasswordReset(email);
     setMessage("Check your email for the FirstRoll password reset link.");
   } catch (error) {
-    setMessage(error?.message || "The password reset link could not be sent.");
+    setMessage(errorInfo(error).message || "The password reset link could not be sent.");
   } finally {
     refs.reset.disabled = false;
   }
@@ -461,7 +449,7 @@ refs.form?.addEventListener("submit", async (event) => {
       refs.dialog?.close();
     }
   } catch (error) {
-    setMessage(error?.message || "The account request could not be completed.");
+    setMessage(errorInfo(error).message || "The account request could not be completed.");
   } finally {
     refs.submit.disabled = false;
   }
