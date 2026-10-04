@@ -1,20 +1,23 @@
+import { errorInfo, json, shape } from "../api/decode";
 import { readApiError } from "../api/errors";
+import { videoBundle } from "../api/models";
+import type { AppContext } from "../context";
+import type { Services } from "../services";
 
 // Video fetching and category selection with dossier ownership guards.
-// JavaScript controller: migrated module boundaries, not yet a fully typed domain model.
-export function createVideos(context, services) {
+export function createVideos(context: AppContext, services: () => Services) {
   const { state, refs } = context;
 
   // Lazy delegates allow cross-feature callbacks without circular module imports.
-  const videoButtonProgressLabel = (...args) => services.videoViews.videoButtonProgressLabel(...args);
-  const filmVideosMarkup = (...args) => services.videoViews.filmVideosMarkup(...args);
-  const discoveryApiBase = (...args) => services.ui.discoveryApiBase(...args);
-  const fetchProgressMarkup = (...args) => services.ui.fetchProgressMarkup(...args);
-  const focusInterfaceState = (...args) => services.ui.focusInterfaceState(...args);
+  const videoButtonProgressLabel: Services["videoViews"]["videoButtonProgressLabel"] = (...args) => services().videoViews.videoButtonProgressLabel(...args);
+  const filmVideosMarkup: Services["videoViews"]["filmVideosMarkup"] = (...args) => services().videoViews.filmVideosMarkup(...args);
+  const discoveryApiBase: Services["ui"]["discoveryApiBase"] = (...args) => services().ui.discoveryApiBase(...args);
+  const fetchProgressMarkup: Services["ui"]["fetchProgressMarkup"] = (...args) => services().ui.fetchProgressMarkup(...args);
+  const focusInterfaceState: Services["ui"]["focusInterfaceState"] = (...args) => services().ui.focusInterfaceState(...args);
 
-  async function loadFilmVideos(button) {
+  async function loadFilmVideos(button: HTMLButtonElement): Promise<void> {
     const film = state.discovery.selectedFilm;
-    const output = refs.filmDetail.querySelector("[data-film-videos-output]");
+    const output = refs.filmDetail.querySelector<HTMLElement>("[data-film-videos-output]");
     if (!film || !output) return;
     const originalLabel = button.textContent;
     button.disabled = true;
@@ -34,7 +37,8 @@ export function createVideos(context, services) {
         },
       );
       if (!response.ok) throw new Error(await readApiError(response));
-      const data = await response.json();
+      const data = await json(response, shape({ video_sources: videoBundle }));
+      if (!data.video_sources) throw new Error("The video response is missing.");
       if (state.discovery.selectedFilm !== film) return;
       film.video_sources = film.video_sources || {};
       film.video_sources.bundle = data.video_sources;
@@ -42,7 +46,7 @@ export function createVideos(context, services) {
       focusInterfaceState(output);
       button.textContent = "Find more videos";
     } catch (error) {
-      if (error?.name === "AbortError" || state.discovery.selectedFilm !== film) return;
+      if (errorInfo(error).name === "AbortError" || state.discovery.selectedFilm !== film) return;
       console.warn("Video source request did not complete", error);
       output.innerHTML = `<div class="interface-state is-error is-compact" role="alert" tabindex="-1" data-interface-state>
         <span>Viewing context</span>
@@ -60,18 +64,18 @@ export function createVideos(context, services) {
     }
   }
 
-  function selectVideoCategory(button) {
-    const output = button.closest("[data-film-videos-output]");
+  function selectVideoCategory(button: HTMLButtonElement): void {
+    const output = button.closest<HTMLElement>("[data-film-videos-output]");
     if (!output) return;
     const selected = button.dataset.videoCategory || "all";
-    output.querySelectorAll("[data-video-category]").forEach((tab) => {
+    output.querySelectorAll<HTMLElement>("[data-video-category]").forEach((tab) => {
       const active = tab === button;
       tab.classList.toggle("is-active", active);
       tab.setAttribute("aria-selected", String(active));
       tab.setAttribute("tabindex", active ? "0" : "-1");
     });
-    output.querySelector("[data-video-category-panel]")?.setAttribute("aria-labelledby", button.id);
-    output.querySelectorAll("[data-video-category-card]").forEach((card) => {
+    output.querySelector<HTMLElement>("[data-video-category-panel]")?.setAttribute("aria-labelledby", button.id);
+    output.querySelectorAll<HTMLElement>("[data-video-category-card]").forEach((card) => {
       card.hidden = selected !== "all" && card.dataset.videoCategoryCard !== selected;
     });
   }

@@ -1,20 +1,22 @@
-import { displayCrew } from "../shared/crew";
+import type { Film, SearchResult } from "../api/models";
+import type { AppContext } from "../context";
 import { directorShelfFilms } from "../discovery/films";
-import { filmIdentityChoicesMarkup, filmArchiveMarkup, directorShelfFilmsMarkup } from "../discovery/views";
+import { directorShelfFilmsMarkup, filmArchiveMarkup, filmIdentityChoicesMarkup } from "../discovery/views";
+import type { Services } from "../services";
+import { displayCrew } from "../shared/crew";
 import { filmYearLabel } from "../shared/format";
 
 // Discovery results and shelf DOM updates. Network requests are delegated.
-// JavaScript controller: migrated module boundaries, not yet a fully typed domain model.
-export function createShelf(context, services) {
+export function createShelf(context: AppContext, services: () => Services) {
   const { state, refs } = context;
 
   // Lazy delegates allow cross-feature callbacks without circular module imports.
-  const normaliseDiscoveryQuery = (...args) => services.session.normaliseDiscoveryQuery(...args);
-  const persistDiscoverySession = (...args) => services.session.persistDiscoverySession(...args);
-  const confirmDiscoveryFilm = (...args) => services.discovery.confirmDiscoveryFilm(...args);
-  const focusInterfaceState = (...args) => services.ui.focusInterfaceState(...args);
+  const normaliseDiscoveryQuery: Services["session"]["normaliseDiscoveryQuery"] = (...args) => services().session.normaliseDiscoveryQuery(...args);
+  const persistDiscoverySession: Services["session"]["persistDiscoverySession"] = (...args) => services().session.persistDiscoverySession(...args);
+  const confirmDiscoveryFilm: Services["discovery"]["confirmDiscoveryFilm"] = (...args) => services().discovery.confirmDiscoveryFilm(...args);
+  const focusInterfaceState: Services["ui"]["focusInterfaceState"] = (...args) => services().ui.focusInterfaceState(...args);
 
-  function renderDiscoveryResults(data) {
+  function renderDiscoveryResults(data: SearchResult): void {
     const films = Array.isArray(data.results) ? data.results : [];
     const query = normaliseDiscoveryQuery(data.query || state.discovery.lastQuery || {});
     state.discovery.results = films;
@@ -55,7 +57,7 @@ export function createShelf(context, services) {
     confirmDiscoveryFilm(0);
   }
 
-  function setArchiveHeading(primary) {
+  function setArchiveHeading(primary: Film): void {
     refs.resultsTitle.textContent = "Pulled from the shelf";
     refs.resultsMeta.textContent = [
       primary.title,
@@ -64,35 +66,35 @@ export function createShelf(context, services) {
     ].filter(Boolean).join(" / ");
   }
 
-  function setDirectorShelfLoading(primaryId) {
-    const shelf = refs.discoveryResults.querySelector("[data-director-shelf]");
+  function setDirectorShelfLoading(primaryId: string): void {
+    const shelf = refs.discoveryResults.querySelector<HTMLElement>("[data-director-shelf]");
     if (!shelf || shelf.dataset.primaryFilmId !== primaryId) return;
     const archive = state.discovery.archive;
     const primary = archive?.primary;
     const films = primary ? directorShelfFilms(primary, archive.directorWorks || []) : [];
-    const stage = shelf.querySelector("[data-film-shelf]");
+    const stage = shelf.querySelector<HTMLElement>("[data-film-shelf]");
     if (stage && primary) stage.innerHTML = directorShelfFilmsMarkup(primary, films, true);
     shelf.classList.add("is-loading");
     shelf.classList.remove("has-partial-data");
-    const status = shelf.querySelector("[data-film-shelf-status]");
-    const retry = shelf.querySelector("[data-retry-director-shelf]");
+    const status = shelf.querySelector<HTMLElement>("[data-film-shelf-status]");
+    const retry = shelf.querySelector<HTMLElement>("[data-retry-director-shelf]");
     if (status) status.textContent = "Finding other verified films by this director…";
     retry?.classList.add("hidden");
     state.discovery.shelfState = "loading";
     persistDiscoverySession();
   }
 
-  function hydrateDirectorShelf(primaryId, directorWorks) {
+  function hydrateDirectorShelf(primaryId: string, directorWorks: Film[]): void {
     if (state.discovery.archiveSelectionId !== primaryId) return;
-    const shelf = refs.discoveryResults.querySelector("[data-director-shelf]");
+    const shelf = refs.discoveryResults.querySelector<HTMLElement>("[data-director-shelf]");
     if (!shelf || shelf.dataset.primaryFilmId !== primaryId) return;
     const primary = state.discovery.archive?.primary;
     if (!primary) return;
     const films = directorShelfFilms(primary, directorWorks);
-    const stage = shelf.querySelector("[data-film-shelf]");
-    const count = shelf.querySelector("[data-film-shelf-count]");
-    const status = shelf.querySelector("[data-film-shelf-status]");
-    const retry = shelf.querySelector("[data-retry-director-shelf]");
+    const stage = shelf.querySelector<HTMLElement>("[data-film-shelf]");
+    const count = shelf.querySelector<HTMLElement>("[data-film-shelf-count]");
+    const status = shelf.querySelector<HTMLElement>("[data-film-shelf-status]");
+    const retry = shelf.querySelector<HTMLElement>("[data-retry-director-shelf]");
     if (stage) stage.innerHTML = directorShelfFilmsMarkup(primary, films, false);
     if (count) count.textContent = `${films.length} ${films.length === 1 ? "film" : "films"}`;
     if (status) {
@@ -106,28 +108,28 @@ export function createShelf(context, services) {
     persistDiscoverySession();
   }
 
-  function markDirectorShelfPartial(primaryId) {
-    const shelf = refs.discoveryResults.querySelector("[data-director-shelf]");
+  function markDirectorShelfPartial(primaryId: string): void {
+    const shelf = refs.discoveryResults.querySelector<HTMLElement>("[data-director-shelf]");
     if (!shelf || shelf.dataset.primaryFilmId !== primaryId) return;
     shelf.classList.remove("is-loading");
     shelf.classList.add("has-partial-data");
-    const status = shelf.querySelector("[data-film-shelf-status]");
-    const retry = shelf.querySelector("[data-retry-director-shelf]");
+    const status = shelf.querySelector<HTMLElement>("[data-film-shelf-status]");
+    const retry = shelf.querySelector<HTMLElement>("[data-retry-director-shelf]");
     if (status) {
       status.textContent = "Showing the selected film. Try loading the director’s other films again.";
     }
     retry?.classList.remove("hidden");
   }
 
-  function showFilmShelfFallback(primaryId, error) {
+  function showFilmShelfFallback(primaryId: string, error: unknown): void {
     console.warn("Director filmography request did not complete", error);
-    const shelf = refs.discoveryResults.querySelector("[data-director-shelf]");
+    const shelf = refs.discoveryResults.querySelector<HTMLElement>("[data-director-shelf]");
     if (!shelf || shelf.dataset.primaryFilmId !== primaryId) return;
     const archive = state.discovery.archive;
     const primary = archive?.primary;
     const films = primary ? directorShelfFilms(primary, archive.directorWorks || []) : [];
-    const stage = shelf.querySelector("[data-film-shelf]");
-    const count = shelf.querySelector("[data-film-shelf-count]");
+    const stage = shelf.querySelector<HTMLElement>("[data-film-shelf]");
+    const count = shelf.querySelector<HTMLElement>("[data-film-shelf-count]");
     if (stage && primary) stage.innerHTML = directorShelfFilmsMarkup(primary, films, false);
     if (count) count.textContent = `${films.length} ${films.length === 1 ? "film" : "films"}`;
     markDirectorShelfPartial(primaryId);
@@ -135,7 +137,7 @@ export function createShelf(context, services) {
     persistDiscoverySession();
   }
 
-  function renderFilmArchive(primary, directorWorks, relevant, loading) {
+  function renderFilmArchive(primary: Film, directorWorks: Film[], relevant: Film[], loading: boolean): void {
     state.discovery.archiveSelectionId = primary.id;
     state.discovery.archive = { primary, directorWorks, relevant };
     state.discovery.resultStage = "archive";

@@ -1,11 +1,11 @@
 # Understanding the FirstRoll Frontend
 
-The modularisation milestone is complete as of 2 October 2026. It changes how we organise
+The TypeScript migration is complete as of 4 October 2026. It changes how we organise
 and build the source, not the product's layout. The public deployment is unchanged.
 
 ## Start here
 
-The original `app/web/app.js` was 3,843 lines. It is now **58 lines**: a composition root,
+The original `app/web/app.js` was 3,843 lines. Its replacement, `app.ts`, is **64 lines**: a composition root,
 meaning the place that creates the feature modules and connects them. Every module under
 `src/` is at most 500 lines.
 Splitting code is useful when each file has a clear responsibility, not merely fewer lines.
@@ -14,18 +14,18 @@ Splitting code is useful when each file has a clear responsibility, not merely f
 |---|---|---|
 | `index.html` | Page structure and existing script URLs | Find a button or panel |
 | `src/main.ts` | DOM-ready startup | See when the application starts |
-| `app.js` | Composition root | See how feature factories connect |
-| `src/context.js` | Per-application state, config and DOM references | Find a button reference or request state |
-| `src/bootstrap.js` | Event registration | Follow a click into a controller |
+| `app.ts` | Composition root | See how feature factories connect |
+| `src/context.ts` | Per-application state, config and DOM references | Find a button reference or request state |
+| `src/bootstrap.ts` | Event registration | Follow a click into a controller |
 | `src/navigation/controller.ts`, `types.ts` | Typed theme/product navigation and narrow state contract | Change navigation behaviour |
-| `src/accounts/controller.js` | Account-facing UI and saved films | Trace account state into controls |
-| `src/session/controller.js` | Bounded per-tab snapshots | Follow storage and restoration |
-| `src/discovery/controller.js` | Search, selection and shelf requests | Follow cancellation and stale-response checks |
-| `src/discovery/recent.ts`, `shelf.js` | Typed recent queries; shelf DOM state still JavaScript | Follow storage and shelf states |
-| `src/dossier/controller.js`, `view.js` | Dossier requests/events and presentation | Follow a film dossier |
-| `src/videos/controller.js`, `views.js` | Video requests/categories and cards | Follow video results |
-| `src/criticism/controller.js`, `views.js` | Provider requests/tabs and rendering | Follow critical perspectives |
-| `src/study/controller.js`, `views.js` | Study lifecycle and output | Follow authorisation, streaming and evidence |
+| `src/accounts/controller.ts` | Account-facing UI and saved films | Trace account state into controls |
+| `src/session/controller.ts` | Bounded per-tab snapshots | Follow storage and restoration |
+| `src/discovery/controller.ts` | Search, selection and shelf requests | Follow cancellation and stale-response checks |
+| `src/discovery/recent.ts`, `shelf.ts` | Typed recent queries and shelf DOM state | Follow storage and shelf states |
+| `src/dossier/controller.ts`, `view.ts` | Dossier requests/events and presentation | Follow a film dossier |
+| `src/videos/controller.ts`, `views.ts` | Video requests/categories and cards | Follow video results |
+| `src/criticism/controller.ts`, `views.ts` | Provider requests/tabs and rendering | Follow critical perspectives |
+| `src/study/controller.ts`, `views.ts` | Study lifecycle and output | Follow authorisation, streaming and evidence |
 | `src/discovery/types.ts` | Film summary shape used for display | Understand required IDs and optional metadata |
 | `src/discovery/films.ts` | De-duplication, displayable titles and the twelve-film cap | Follow how records become shelf items |
 | `src/discovery/views.ts` | Film choices, selected edition and shelf HTML | Change discovery markup without touching requests |
@@ -40,10 +40,11 @@ Splitting code is useful when each file has a clear responsibility, not merely f
 | `src/analysis/controller.ts`, `view.ts` | Typed private clip state/upload/export and rendering | Follow the Analyse feature |
 | `src/analysis/dom.ts`, `response.ts` | DOM contract and runtime response validation | See the difference between types and validation |
 | `src/shared/ui.ts` | Typed focus, progress markup and API-base helpers | Follow accessible focus scheduling |
-| `auth.js`, `local-auth.js`, `integrations.js` | Existing account/settings adapters | Follow sign-in or settings |
+| `auth.ts`, `entra-auth.ts`, `local-auth.ts`, `integrations.ts` | Typed account/settings adapters | Follow sign-in or settings |
+| `theme-init.ts`, `auth-loader.ts` | Early theme restoration and account-provider selection | Follow startup before the app |
 
 For TypeScript basics, read `format.ts` → its tests → `types.ts` → `progress.ts`.
-For the app, read `main.ts` → `app.js` → `context.js` → `bootstrap.js` → one handler.
+For the app, read `main.ts` → `app.ts` → `context.ts` → `bootstrap.ts` → one handler.
 
 ## How the pieces connect
 
@@ -53,11 +54,12 @@ feature listeners; `start()` performs setup once. Two applications get separate 
 Features within one app intentionally share discovery state, preserving request IDs, abort
 controllers and selected-film guards. Clip state remains private to its own controller.
 
-The `services` object holds the assembled features. Controllers declare callbacks such as:
+The `services` object holds the assembled features, described by `services.ts`. Factories receive
+a function returning that registry, so it need not exist until a handler is called. Controllers declare callbacks such as:
 
-```js
-const persistDiscoverySession = (...args) =>
-  services.session.persistDiscoverySession(...args);
+```ts
+const persistDiscoverySession: Services["session"]["persistDiscoverySession"] = (...args) =>
+  services().session.persistDiscoverySession(...args);
 ```
 
 This **lazy delegate** looks up the session handler when called, after construction finishes.
@@ -68,14 +70,14 @@ production passes none, and URL parameters/runtime config never control them.
 
 ## Follow the discovery boundary
 
-`bootstrap.js` connects the search form to `discovery/controller.js`, which owns fetching,
-cancellation and stale-response checks. In `discovery/shelf.js`, `renderFilmArchive()`
+`bootstrap.ts` connects the search form to `discovery/controller.ts`, which owns fetching,
+cancellation and stale-response checks. In `discovery/shelf.ts`, `renderFilmArchive()`
 updates archive state and delegates session persistence, then asks
 `filmArchiveMarkup()` for HTML. That pure view calls `directorShelfFilms()` to select the
 first twelve distinct displayable records, then renders the shelf. No view reads global
 state, fetches records, changes focus or writes storage. Existing `data-*` attributes keep
 event delegation working; request IDs, timeouts, cancellation and poster enrichment remain
-in the discovery controller. `session/controller.js` saves a bounded film projection,
+in the discovery controller. `session/controller.ts` saves a bounded film projection,
 not complete reviews or dossiers.
 
 `FilmSummary.id` is required because selection and de-duplication use identity, not title.
@@ -111,9 +113,9 @@ discovery state object. This is encapsulation, not an additional framework.
 
 ### What TypeScript does not guarantee
 
-`strict: true` applies to `src/**/*.ts`, including the analysis, navigation and recent-search
-controllers, **not** the remaining JavaScript controllers. `app.d.ts` describes only startup.
-A typed function called from unchecked JavaScript can still receive bad data.
+`strict: true` applies to **all `app/web/**/*.ts`**, including application wiring and account
+adapters. There are no hand-written application `.js` files left and no startup declaration
+shim. Browser APIs, provider JSON and persisted data can still contain unexpected values.
 Provider JSON is untrusted regardless of its declared interface. The progress module keeps
 its allow-lists, run-ID checks, sequence checks and terminal-event checks at runtime.
 TypeScript does not replace those checks, API authentication, tests or safe HTML escaping.
@@ -137,14 +139,31 @@ injection. Missing canvas contexts are handled safely instead of assuming every 
 Navigation uses closed theme/product-view choices, with runtime guards for storage and DOM values.
 Recent searches decode JSON as `unknown`; the normalised query has title/year/director strings.
 
-The JavaScript composition root still passes dependencies into these typed features. Its entire
-dependency graph is not compiler-verified yet. Narrow contracts improve each migrated module
-without concealing that remaining boundary behind `any` or disabling strict checks.
+### Completing the migration — shared state, wiring and accounts
+
+- `state.ts` names application state: film records, archive, request handles, progress and caches.
+- `services.ts` uses `ReturnType<typeof createStudy>` to describe exactly what a factory returns.
+  That means changing a handler signature also checks its callers, rather than leaving a stale
+  handwritten declaration beside untyped code.
+- `api/decode.ts` provides small runtime decoders. `api/models.ts` composes them into the
+  presentation fields used by films, reviews, videos, quotas and studies. A missing optional
+  poster is fine; an object where a title should be a string is not.
+- `accounts/types.ts` describes the account adapter. Some providers do not support saved films
+  or password changes, so those methods are optional and callers must check availability.
+- `accounts/decode.ts` validates profile/preferences/saved-film reads, including Supabase data.
+  Personal provider keys remain in memory; no credential-storage design is changed.
+- `globals.d.ts` describes our browser globals and custom events. Unlike the removed
+  `app.d.ts`, it describes actual external browser boundaries, not an unchecked implementation.
+
+Types and runtime validation have different jobs. A decoder checks incoming bytes; the compiler
+then checks how our code uses the resulting object. The decoder helpers contain localised casts
+after structural checks; controllers do not cast arbitrary JSON directly to film/study records.
+These schemas intentionally cover consumed presentation fields, not every backend field.
 
 ## Source versus generated output
 
 ```text
-src/main.ts → imports app.js → imports feature modules
+src/main.ts → imports app.ts → imports feature modules
                          ↓ shared compiler (esbuild)
 Local:  app/web/generated/app.js → FastAPI /assets/app.js
 Hosted: dist/assets/app.js      → Caddy /assets/app.js
@@ -152,8 +171,10 @@ Hosted: dist/assets/app.js      → Caddy /assets/app.js
 
 `tsc` checks types without emitting files. esbuild then strips types and bundles imports.
 The output has no unresolved module imports, so the existing classic script tag and public
-filename remain valid. Hosted output is minified; localhost output is readable. Auth has
-its own existing bundle. Neither source changes nor local builds deploy production.
+filename remain valid. Hosted output is minified; localhost output is readable. Auth, Entra,
+local-account, settings and the two early startup scripts have their own compiled IIFE bundles, produced
+by the same build command. The default config template is TypeScript; hosted/runtime configuration
+is generated JavaScript data. Neither source changes nor local builds deploy production.
 
 Generated directories are ignored by Git. Always edit source, never a generated bundle.
 Docker also builds from source, so a stale developer bundle cannot enter the image.
@@ -198,32 +219,34 @@ Never put provider API keys into browser configuration.
   remain safe.
 - Python tests cover the local compiled-asset route, its missing-build error and the Docker
   build-context contract. Existing source-smoke checks point at the relocated modules.
-- Ten application cases cover inert construction/independent state, idempotent startup,
+- Eleven application cases cover inert construction/independent state, idempotent startup,
   DOM-ready boot, cross-feature rendering, bounded snapshots, stale shelf selection and
   acyclic/size-bounded modules, navigation/storage fallback, recent searches and scheduled focus.
 - Six analysis cases cover runtime parsing, invalid nested data, upload/render/export, failure,
   safe HTML and keyboard view guards. The controller cases also run on the release bundle.
 - One compile-only test checks deliberately invalid TypeScript usages. An unused
   `@ts-expect-error` in these test fixtures fails the test, detecting weakened contracts.
-- All **62 frontend cases** pass against both compiled source and the minified hosted bundle.
-  The **645-test repository suite** passes, including the frontend test wrapper.
-- CI installs locked dependencies, checks/builds TypeScript and nested JavaScript, runs all
+- Ten contract cases cover decoders, storage, real adapter code with a mocked SDK, RAM-only
+  provider keys, account-provider selection and early theme initialisation.
+- All **73 frontend cases** pass. Application/race cases also use the minified hosted bundle;
+  adapter/decoder cases execute bundled modules with mocked SDK/network/DOM dependencies.
+  Repository tests include the frontend test wrapper and compiled routes for every adapter.
+- CI installs locked dependencies, checks/builds all TypeScript entry points, runs all
   frontend tests on the hosted bundle and builds Docker.
 
 The race harness now constructs the real application with injected handlers rather than
 redefining hoisted functions. The compiler preserves the composition-root name for VM tests.
-Interactive visual acceptance was blocked by the preview client; local Docker was unavailable.
-Mocked-DOM integration tests do not constitute visual acceptance. Deployment requires the
-human production approval gate.
+A localhost browser smoke check on 4 October verified page startup, Settings, the sign-in
+dialogue and Analyse/Discover navigation. This is not exhaustive visual acceptance or live
+authenticated/provider testing. Local Docker execution is not claimed. Deployment requires
+the human production approval gate.
 
-## Milestone complete; optional next improvements
+## Migration complete; optional next improvements
 
-The application now has explicit feature boundaries, a small composition root and executable
-integration coverage. No further monolithic-controller extraction is required for this milestone.
-Analysis, navigation, recent searches and shared UI helpers are now typed. Next are shared
-application state/wiring, session/discovery, dossier/video/criticism, Deep Study orchestration
-and account/settings adapters. Consider React/Next.js only as a separate decision with a need.
+All hand-written application modules are TypeScript and the browser still runs compiled
+JavaScript. There are no remaining controller/adaptor renames to perform. The build scripts
+and test harnesses remain Node.js CommonJS tooling; they are not browser application modules.
 
-This milestone does not claim all frontend code is typed.
-Preserving a working application is more useful than renaming a large file to `.ts` and
-suppressing its errors.
+Next improvements are separate projects: broader real-browser visual tests, generating API
+contracts from the backend and, only if useful, a React/Next.js migration. None is required
+to call this TypeScript migration complete. Deployment still requires human approval.

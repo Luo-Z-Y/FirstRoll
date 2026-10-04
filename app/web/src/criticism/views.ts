@@ -1,7 +1,9 @@
+import type { Claim, CriticismBundle, Review } from "../api/models";
+import type { AppContext } from "../context";
+import type { Services } from "../services";
 import { escapeHtml, safeHttpUrl } from "../shared/html";
 
 // Criticism source mapping and presentation.
-// JavaScript controller: migrated module boundaries, not yet a fully typed domain model.
 const CRITICISM_SOURCES = [
   { route: "crossref", label: "Research" },
   { route: "douban", label: "Douban" },
@@ -10,10 +12,10 @@ const CRITICISM_SOURCES = [
   { route: "letterboxd", label: "Letterboxd API" },
 ];
 
-export function createCriticismViews(context, services) {
+export function createCriticismViews(context: AppContext, services: () => Services) {
   const { runtimeConfig } = context;
 
-  function criticalResearchMarkup(bundle) {
+  function criticalResearchMarkup(bundle: CriticismBundle): string {
     const claims = Array.isArray(bundle?.claims) ? bundle.claims : [];
     const reviews = Array.isArray(bundle?.reviews) ? bundle.reviews : [];
     const reviewMap = Object.fromEntries(reviews.map((review) => [review.source_id, review]));
@@ -30,12 +32,12 @@ export function createCriticismViews(context, services) {
       </div>
       ${reviews.length ? rawReviewMarkup(reviews, bundle.provider, pending) : `<p class="module-empty">No attributed review text was fetched.</p>`}
       ${pending ? `<p class="critical-stage-status" data-structure-status="${escapeHtml(route)}">${canStructure ? "Reviews are cached locally. Structured claims are pending." : "Attributed reviews are ready. Deep Study can develop a separate evidence-grounded analysis."}</p>` : ""}
-      ${claims.length ? `<div class="critical-grid">${claims.map((claim) => criticalClaimMarkup(claim, reviewMap[claim.source_id], bundle.provider)).join("")}</div>` : ""}
+      ${claims.length ? `<div class="critical-grid">${claims.map((claim) => criticalClaimMarkup(claim, reviewMap[claim.source_id || ""], bundle.provider)).join("")}</div>` : ""}
       ${!pending && !claims.length ? `<p class="module-empty">DeepSeek found no substantive claims in the supplied review text.</p>` : ""}
       <p class="critical-boundary">${escapeHtml(bundle.notice || "Secondary criticism; not verified film observation.")}</p>`;
   }
 
-  function criticismProviderRoute(provider) {
+  function criticismProviderRoute(provider?: string): string {
     const value = String(provider || "").toLowerCase();
     if (value === "douban") return "douban";
     if (value === "letterboxd") return "letterboxd";
@@ -45,24 +47,24 @@ export function createCriticismViews(context, services) {
     return "";
   }
 
-  function criticismSource(route) {
+  function criticismSource(route: string | undefined): {route: string; label: string} | null {
     return CRITICISM_SOURCES.find((source) => source.route === route) || null;
   }
 
-  function criticismBundleForRoute(bundles, route) {
+  function criticismBundleForRoute(bundles: Record<string, CriticismBundle>, route: string | null | undefined): CriticismBundle | null {
     if (!route) return null;
     return Object.values(bundles || {}).find(
       (bundle) => bundle && criticismProviderRoute(bundle.provider) === route,
     ) || null;
   }
 
-  function firstLoadedCriticismRoute(bundles) {
+  function firstLoadedCriticismRoute(bundles: Record<string, CriticismBundle>): string | null {
     return CRITICISM_SOURCES.find(
       (source) => criticismBundleForRoute(bundles, source.route),
     )?.route || null;
   }
 
-  function criticismSourceTabsMarkup(bundles, activeProvider, availability) {
+  function criticismSourceTabsMarkup(bundles: Record<string, CriticismBundle>, activeProvider: string | null, availability: Record<string, boolean>): string {
     const visibleSources = CRITICISM_SOURCES.filter(
       (source) => Boolean(criticismBundleForRoute(bundles, source.route))
         || availability[source.route] === true,
@@ -78,7 +80,7 @@ export function createCriticismViews(context, services) {
     </div>`;
   }
 
-  function rawReviewMarkup(reviews, provider, open) {
+  function rawReviewMarkup(reviews: Review[], provider: string | undefined, open: boolean): string {
     return `<details class="critical-raw-reviews" ${open ? "open" : ""}>
       <summary>${escapeHtml(reviews.length)} attributed source${reviews.length === 1 ? "" : "s"} fetched</summary>
       <div class="critical-raw-grid">${reviews.map((review) => {
@@ -90,7 +92,7 @@ export function createCriticismViews(context, services) {
     </details>`;
   }
 
-  function criticalClaimMarkup(claim, review, provider) {
+  function criticalClaimMarkup(claim: Claim, review: Review | undefined, provider: string | undefined): string {
     const sourceUrl = safeHttpUrl(review?.url);
     const tags = Array.isArray(claim.lens_tags) ? claim.lens_tags.map((tag) => tag.replaceAll("_", " ")).join(" · ") : "critical perspective";
     const missing = Array.isArray(claim.missing_fields) ? claim.missing_fields.map((field) => field.replaceAll("_", " ")).join(" · ") : "";

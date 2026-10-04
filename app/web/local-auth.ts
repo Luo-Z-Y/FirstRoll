@@ -1,3 +1,10 @@
+import { boolean, authMode as decodeAuthMode, preferences as decodePreferences, profile as decodeProfile, savedFilms as decodeSavedFilms, readStorage as readLocalStorage } from "./src/accounts/decode";
+import type { AccountUser, AuthMode, Preferences, Profile, SavedFilm } from "./src/accounts/types";
+import { errorInfo } from "./src/api/decode";
+import type { Film } from "./src/api/models";
+import { isThemePreference } from "./src/navigation/types";
+import { createAuthRefs } from "./src/accounts/dom";
+
 (() => {
   "use strict";
 
@@ -8,43 +15,15 @@
   const userId = "firstroll-local-luo-zhiyang";
   const storagePrefix = "firstroll.local-test";
 
-  let authMode = "sign-in";
-  let session = null;
-  let profile = null;
-  let preferences = null;
-  let savedFilms = [];
+  let authMode: AuthMode = "sign-in";
+  let session: { access_token: string; user: AccountUser } | null = null;
+  let profile: Profile | null = null;
+  let preferences: Preferences | null = null;
+  let savedFilms: SavedFilm[] = [];
 
-  const refs = {
-    open: document.getElementById("authOpen"),
-    dialog: document.getElementById("authDialog"),
-    close: document.getElementById("authClose"),
-    form: document.getElementById("authForm"),
-    modeButtons: Array.from(document.querySelectorAll("[data-auth-mode]")),
-    nameWrap: document.getElementById("authNameWrap"),
-    name: document.getElementById("authName"),
-    emailWrap: document.getElementById("authEmailWrap"),
-    email: document.getElementById("authEmail"),
-    password: document.getElementById("authPassword"),
-    passwordLabel: document.getElementById("authPasswordLabel"),
-    submit: document.getElementById("authSubmit"),
-    reset: document.getElementById("authReset"),
-    heading: document.getElementById("authHeading"),
-    description: document.getElementById("authDescription"),
-    message: document.getElementById("authMessage"),
-    identity: document.getElementById("authIdentity"),
-    signOut: document.getElementById("authSignOut"),
-  };
+  const refs = createAuthRefs();
 
-  function readStorage(key, fallback) {
-    try {
-      const value = window.localStorage.getItem(`${storagePrefix}.${key}`);
-      return value === null ? fallback : JSON.parse(value);
-    } catch (_) {
-      return fallback;
-    }
-  }
-
-  function writeStorage(key, value) {
+  function writeStorage(key: string, value: unknown) {
     try {
       window.localStorage.setItem(`${storagePrefix}.${key}`, JSON.stringify(value));
     } catch (_) {}
@@ -98,12 +77,12 @@
     }
   }
 
-  function setMessage(message) {
+  function setMessage(message: string) {
     if (refs.message) refs.message.textContent = message;
   }
 
-  function setMode(mode) {
-    authMode = mode === "sign-up" ? "sign-up" : mode;
+  function setMode(mode: unknown) {
+    authMode = decodeAuthMode(mode);
     const signingUp = authMode === "sign-up";
     const recovering = authMode === "recovery";
     refs.modeButtons.forEach((button) => {
@@ -132,7 +111,7 @@
     setMessage("");
   }
 
-  function openDialog(mode = "sign-in") {
+  function openDialog(mode: AuthMode = "sign-in") {
     setMode(mode);
     if (refs.email && mode !== "recovery") refs.email.value = email;
     refs.dialog?.showModal();
@@ -140,7 +119,7 @@
     return true;
   }
 
-  function ensureTestEmail(value) {
+  function ensureTestEmail(value: string) {
     if (String(value || "").trim().toLocaleLowerCase("en-GB") !== email) {
       throw new Error(`This localhost preview accepts only ${email}.`);
     }
@@ -156,7 +135,7 @@
     };
   }
 
-  async function signIn(value) {
+  async function signIn(value: string, _password?: string) {
     ensureTestEmail(value);
     session = { access_token: token, user: buildUser() };
     writeStorage("signed-in", true);
@@ -164,13 +143,13 @@
     return { session, user: session.user };
   }
 
-  async function signUp(value, _password, displayName) {
+  async function signUp(value: string, _password: string, displayName: string) {
     ensureTestEmail(value);
     if (String(displayName || "").trim()) await updateDisplayName(displayName);
     return signIn(value);
   }
 
-  async function updatePassword(password) {
+  async function updatePassword(password: string) {
     if (!currentUser()) throw new Error("Sign in before changing your test password.");
     if (String(password || "").length < 8) {
       throw new Error("Use at least eight characters for the local test password.");
@@ -182,19 +161,19 @@
       profile = null;
       preferences = null;
     } else {
-      profile = readStorage("profile", { display_name: "Luo Zhiyang" });
-      preferences = readStorage("preferences", { theme: "system", shelf_motion: true });
-      session.user = buildUser();
+      profile = readLocalStorage(`${storagePrefix}.profile`, { display_name: "Luo Zhiyang" }, decodeProfile);
+      preferences = readLocalStorage(`${storagePrefix}.preferences`, { theme: "system", shelf_motion: true }, decodePreferences);
+      if (session) session.user = buildUser();
     }
     render(false);
     emitAccountSettingsChanged();
     return { profile: currentProfile(), preferences: currentPreferences() };
   }
 
-  async function updateDisplayName(displayName) {
+  async function updateDisplayName(displayName: string) {
     const cleaned = String(displayName || "").trim();
     if (!currentUser() && !session) {
-      profile = readStorage("profile", { display_name: "Luo Zhiyang" });
+      profile = readLocalStorage(`${storagePrefix}.profile`, { display_name: "Luo Zhiyang" }, decodeProfile);
     }
     if (!cleaned || cleaned.length > 80) {
       throw new Error("Display name must be between 1 and 80 characters.");
@@ -207,12 +186,12 @@
     return currentProfile();
   }
 
-  async function updatePreferences(changes) {
+  async function updatePreferences(changes: Partial<Preferences>) {
     if (!currentUser()) throw new Error("Sign in before changing system settings.");
-    const next = { ...(preferences || { theme: "system", shelf_motion: true }) };
+    const next: Preferences = { ...(preferences || { theme: "system", shelf_motion: true }) };
     if (Object.prototype.hasOwnProperty.call(changes || {}, "theme")) {
       const theme = String(changes.theme || "");
-      if (!["system", "light", "dark"].includes(theme)) {
+      if (!isThemePreference(theme)) {
         throw new Error("Choose System, Light or Dark appearance.");
       }
       next.theme = theme;
@@ -241,18 +220,18 @@
     return session?.access_token || null;
   }
 
-  async function authorisationHeaders() {
+  async function authorisationHeaders(): Promise<Record<string, string>> {
     const access = await accessToken();
     return access ? { Authorization: `Bearer ${access}` } : {};
   }
 
   async function refreshSavedFilms() {
-    savedFilms = currentUser() ? readStorage("saved-films", []) : [];
+    savedFilms = currentUser() ? readLocalStorage(`${storagePrefix}.saved-films`, [], decodeSavedFilms) : [];
     emitAccountDataChanged();
     return savedFilms.map((film) => ({ ...film }));
   }
 
-  function normaliseSavedFilm(film) {
+  function normaliseSavedFilm(film: Film) {
     const releaseYear = Number(film?.matched_year || film?.year);
     return {
       user_id: userId,
@@ -266,7 +245,7 @@
     };
   }
 
-  async function saveFilm(film) {
+  async function saveFilm(film: Film) {
     if (!currentUser()) throw new Error("Sign in before saving a film.");
     const saved = normaliseSavedFilm(film);
     if (!saved.film_id) throw new Error("This film does not have a stable identity.");
@@ -276,7 +255,7 @@
     return savedFilms.map((item) => ({ ...item }));
   }
 
-  async function removeSavedFilm(filmId) {
+  async function removeSavedFilm(filmId: string) {
     if (!currentUser()) throw new Error("Sign in before changing saved films.");
     savedFilms = savedFilms.filter((film) => film.film_id !== String(filmId));
     writeStorage("saved-films", savedFilms);
@@ -284,14 +263,14 @@
     return savedFilms.map((item) => ({ ...item }));
   }
 
-  function isFilmSaved(filmId) {
+  function isFilmSaved(filmId: string) {
     return savedFilms.some((film) => film.film_id === String(filmId));
   }
 
   async function initialise() {
-    profile = readStorage("profile", { display_name: "Luo Zhiyang" });
-    preferences = readStorage("preferences", { theme: "system", shelf_motion: true });
-    if (readStorage("signed-in", false) === true) {
+    profile = readLocalStorage(`${storagePrefix}.profile`, { display_name: "Luo Zhiyang" }, decodeProfile);
+    preferences = readLocalStorage(`${storagePrefix}.preferences`, { theme: "system", shelf_motion: true }, decodePreferences);
+    if (readLocalStorage(`${storagePrefix}.signed-in`, false, boolean) === true) {
       session = { access_token: token, user: buildUser() };
     }
     await refreshSavedFilms();
@@ -343,7 +322,7 @@
       refs.form.reset();
       refs.dialog?.close();
     } catch (error) {
-      setMessage(error?.message || "The local account could not be opened.");
+      setMessage(errorInfo(error).message || "The local account could not be opened.");
     } finally {
       refs.submit.disabled = false;
     }

@@ -1,47 +1,56 @@
+import { displayName as userDisplayName } from "./src/accounts/decode";
+import type { IntegrationProvider } from "./src/accounts/types";
+import { boolean as decodeBoolean, errorInfo, json, shape, text } from "./src/api/decode";
+import { readApiError } from "./src/api/errors";
+import { quota as decodeQuota } from "./src/api/models";
+import { isThemePreference } from "./src/navigation/types";
+import { requiredElement } from "./src/shared/dom";
+
 (() => {
   const credentials = {
     deepseek: "",
     youtube: "",
   };
-  const platformState = {
+  const platformState: Record<IntegrationProvider | "douban", boolean | null> = {
+    douban: null,
     deepseek: null,
     youtube: null,
   };
 
   const refs = {
-    view: document.getElementById("product-settings"),
-    signedOut: document.getElementById("integrationSignedOut"),
-    dashboard: document.getElementById("integrationDashboard"),
-    signIn: document.getElementById("integrationSignIn"),
-    signOut: document.getElementById("integrationSignOut"),
-    refresh: document.getElementById("integrationRefresh"),
-    accountEmail: document.getElementById("integrationAccountEmail"),
-    accountName: document.getElementById("integrationAccountName"),
-    accountState: document.getElementById("integrationAccountState"),
-    sectionTabs: Array.from(document.querySelectorAll("[data-settings-section]")),
-    sectionPanels: Array.from(document.querySelectorAll("[data-settings-panel]")),
-    profileForm: document.getElementById("accountProfileForm"),
-    displayName: document.getElementById("accountDisplayName"),
-    profileStatus: document.getElementById("accountProfileStatus"),
-    passwordForm: document.getElementById("accountPasswordForm"),
-    newPassword: document.getElementById("accountNewPassword"),
-    confirmPassword: document.getElementById("accountConfirmPassword"),
-    passwordStatus: document.getElementById("accountPasswordStatus"),
-    themeChoices: Array.from(document.querySelectorAll('input[name="accountTheme"]')),
-    systemStatus: document.getElementById("systemSettingsStatus"),
-    quota: document.getElementById("integrationQuota"),
-    quotaMeta: document.getElementById("integrationQuotaMeta"),
-    status: document.getElementById("integrationStatus"),
-    deepseekForm: document.getElementById("deepseekSessionForm"),
-    deepseekInput: document.getElementById("deepseekSessionKey"),
-    deepseekState: document.getElementById("deepseekSessionState"),
-    deepseekAllowanceCopy: document.getElementById("deepseekAllowanceCopy"),
-    deepseekClear: document.getElementById("deepseekSessionClear"),
-    youtubeForm: document.getElementById("youtubeSessionForm"),
-    youtubeInput: document.getElementById("youtubeSessionKey"),
-    youtubeState: document.getElementById("youtubeSessionState"),
-    youtubeClear: document.getElementById("youtubeSessionClear"),
-    doubanState: document.getElementById("doubanPlatformState"),
+    view: requiredElement<HTMLElement>("product-settings"),
+    signedOut: requiredElement<HTMLElement>("integrationSignedOut"),
+    dashboard: requiredElement<HTMLElement>("integrationDashboard"),
+    signIn: requiredElement<HTMLElement>("integrationSignIn"),
+    signOut: requiredElement<HTMLElement>("integrationSignOut"),
+    refresh: requiredElement<HTMLElement>("integrationRefresh"),
+    accountEmail: requiredElement<HTMLElement>("integrationAccountEmail"),
+    accountName: requiredElement<HTMLElement>("integrationAccountName"),
+    accountState: requiredElement<HTMLElement>("integrationAccountState"),
+    sectionTabs: Array.from(document.querySelectorAll<HTMLElement>("[data-settings-section]")),
+    sectionPanels: Array.from(document.querySelectorAll<HTMLElement>("[data-settings-panel]")),
+    profileForm: requiredElement<HTMLFormElement>("accountProfileForm"),
+    displayName: requiredElement<HTMLInputElement>("accountDisplayName"),
+    profileStatus: requiredElement<HTMLElement>("accountProfileStatus"),
+    passwordForm: requiredElement<HTMLFormElement>("accountPasswordForm"),
+    newPassword: requiredElement<HTMLInputElement>("accountNewPassword"),
+    confirmPassword: requiredElement<HTMLInputElement>("accountConfirmPassword"),
+    passwordStatus: requiredElement<HTMLElement>("accountPasswordStatus"),
+    themeChoices: Array.from(document.querySelectorAll<HTMLInputElement>('input[name="accountTheme"]')),
+    systemStatus: requiredElement<HTMLElement>("systemSettingsStatus"),
+    quota: requiredElement<HTMLElement>("integrationQuota"),
+    quotaMeta: requiredElement<HTMLElement>("integrationQuotaMeta"),
+    status: requiredElement<HTMLElement>("integrationStatus"),
+    deepseekForm: requiredElement<HTMLFormElement>("deepseekSessionForm"),
+    deepseekInput: requiredElement<HTMLInputElement>("deepseekSessionKey"),
+    deepseekState: requiredElement<HTMLElement>("deepseekSessionState"),
+    deepseekAllowanceCopy: requiredElement<HTMLElement>("deepseekAllowanceCopy"),
+    deepseekClear: requiredElement<HTMLElement>("deepseekSessionClear"),
+    youtubeForm: requiredElement<HTMLFormElement>("youtubeSessionForm"),
+    youtubeInput: requiredElement<HTMLInputElement>("youtubeSessionKey"),
+    youtubeState: requiredElement<HTMLElement>("youtubeSessionState"),
+    youtubeClear: requiredElement<HTMLElement>("youtubeSessionClear"),
+    doubanState: requiredElement<HTMLElement>("doubanPlatformState"),
   };
 
   function apiBase() {
@@ -54,7 +63,7 @@
     return window.FirstRollAuth?.currentUser?.() || null;
   }
 
-  function credentialState(provider) {
+  function credentialState(provider: IntegrationProvider) {
     const connected = Boolean(credentials[provider]);
     const state = provider === "deepseek" ? refs.deepseekState : refs.youtubeState;
     const clear = provider === "deepseek" ? refs.deepseekClear : refs.youtubeClear;
@@ -91,7 +100,7 @@
     document.dispatchEvent(new CustomEvent("firstroll:integration-changed"));
   }
 
-  function setCredential(provider, value) {
+  function setCredential(provider: IntegrationProvider, value: string) {
     const cleaned = String(value || "").trim();
     if (cleaned.length < 16 || cleaned.length > 512 || !/^[A-Za-z0-9._-]+$/.test(cleaned)) {
       throw new Error("Enter a valid provider API key.");
@@ -103,7 +112,7 @@
     }));
   }
 
-  function requestHeaders(provider) {
+  function requestHeaders(provider: IntegrationProvider): Record<string, string> {
     if (provider === "deepseek" && credentials.deepseek) {
       return { "X-FirstRoll-DeepSeek-Key": credentials.deepseek };
     }
@@ -113,7 +122,7 @@
     return {};
   }
 
-  function configured(provider) {
+  function configured(provider: IntegrationProvider) {
     return Boolean(credentials[provider]);
   }
 
@@ -126,7 +135,7 @@
     if (refs.accountEmail) refs.accountEmail.textContent = user?.email || "Signed-in account";
     if (refs.accountName) {
       refs.accountName.textContent = profile?.display_name
-        || user?.user_metadata?.display_name
+        || userDisplayName(user)
         || "FirstRoll member";
     }
     if (refs.accountState) {
@@ -138,7 +147,7 @@
       refs.accountState.textContent = user ? provider : "Signed out";
     }
     if (refs.displayName && document.activeElement !== refs.displayName) {
-      refs.displayName.value = profile?.display_name || user?.user_metadata?.display_name || "";
+      refs.displayName.value = profile?.display_name || userDisplayName(user) || "";
     }
     const theme = preferences?.theme || window.FirstRollUI?.themePreference?.() || "system";
     refs.themeChoices.forEach((choice) => {
@@ -148,7 +157,7 @@
     return user;
   }
 
-  function selectSettingsSection(section) {
+  function selectSettingsSection(section: string | undefined) {
     const selected = section === "system" ? "system" : "account";
     refs.sectionTabs.forEach((tab) => {
       const active = tab.dataset.settingsSection === selected;
@@ -161,7 +170,7 @@
     });
   }
 
-  function quotaResetLabel(value) {
+  function quotaResetLabel(value: string | undefined) {
     if (!value) return "00:00 UTC";
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return "00:00 UTC";
@@ -171,15 +180,6 @@
       timeZone: "UTC",
       timeZoneName: "short",
     });
-  }
-
-  async function readApiError(response) {
-    try {
-      const payload = await response.json();
-      return payload.detail || `Request failed with HTTP ${response.status}.`;
-    } catch (_) {
-      return `Request failed with HTTP ${response.status}.`;
-    }
   }
 
   async function load() {
@@ -196,7 +196,11 @@
         headers: authorisation,
       });
       if (!response.ok) throw new Error(await readApiError(response));
-      const payload = await response.json();
+      const payload = await json(response, shape({
+        deep_study: shape({ quota: decodeQuota, platform_enabled: decodeBoolean }),
+        youtube: shape({ platform_enabled: decodeBoolean }), douban: shape({ platform_enabled: decodeBoolean }),
+        user: shape({ email: text }),
+      }));
       const quota = payload.deep_study?.quota;
       if (refs.deepseekAllowanceCopy) {
         refs.deepseekAllowanceCopy.textContent = quota?.unlimited
@@ -217,14 +221,14 @@
         refs.quota.textContent = quota?.unlimited
           ? "Unlimited studies on this local test account"
           : quota
-            ? `${quota.user.remaining} of ${quota.user.limit} account studies remain today`
+            ? `${quota.user?.remaining} of ${quota.user?.limit} account studies remain today`
           : "Allowance unavailable";
       }
       if (refs.quotaMeta) {
         refs.quotaMeta.textContent = quota?.unlimited
           ? "Loopback-only development allowance · persistent data stays in this browser"
           : quota
-            ? `${quota.global.remaining} available across the public demo · resets ${quotaResetLabel(quota.reset_at)}`
+            ? `${quota.global?.remaining} available across the public demo · resets ${quotaResetLabel(quota.reset_at)}`
           : "The quota service did not return a status.";
       }
       if (refs.status) refs.status.textContent = "Account settings are ready.";
@@ -236,7 +240,7 @@
     }
   }
 
-  function saveFromForm(event, provider, input) {
+  function saveFromForm(event: Event, provider: IntegrationProvider, input: HTMLInputElement | null) {
     event.preventDefault();
     if (!input) return;
     const status = provider === "deepseek" ? refs.deepseekState : refs.youtubeState;
@@ -245,15 +249,15 @@
       input.value = "";
     } catch (error) {
       if (status) {
-        status.textContent = error.message;
+        status.textContent = errorInfo(error).message || "The request could not be completed.";
         status.classList.remove("is-connected");
       }
     }
   }
 
-  async function saveProfile(event) {
+  async function saveProfile(event: Event) {
     event.preventDefault();
-    const button = refs.profileForm?.querySelector('button[type="submit"]');
+    const button = refs.profileForm?.querySelector<HTMLButtonElement>('button[type="submit"]');
     const displayName = refs.displayName?.value.trim() || "";
     if (!displayName) {
       if (refs.profileStatus) refs.profileStatus.textContent = "Enter a display name.";
@@ -263,21 +267,22 @@
     if (button) button.disabled = true;
     if (refs.profileStatus) refs.profileStatus.textContent = "Saving display name…";
     try {
-      await window.FirstRollAuth?.updateDisplayName?.(displayName);
+      if (!window.FirstRollAuth?.updateDisplayName) throw new Error("Display names are managed by your account provider.");
+      await window.FirstRollAuth.updateDisplayName(displayName);
       renderSignedInState();
       if (refs.profileStatus) refs.profileStatus.textContent = "Display name saved.";
     } catch (error) {
       if (refs.profileStatus) {
-        refs.profileStatus.textContent = error?.message || "Display name could not be saved.";
+        refs.profileStatus.textContent = errorInfo(error).message || "Display name could not be saved.";
       }
     } finally {
       if (button) button.disabled = false;
     }
   }
 
-  async function changePassword(event) {
+  async function changePassword(event: Event) {
     event.preventDefault();
-    const button = refs.passwordForm?.querySelector('button[type="submit"]');
+    const button = refs.passwordForm?.querySelector<HTMLButtonElement>('button[type="submit"]');
     const password = refs.newPassword?.value || "";
     const confirmation = refs.confirmPassword?.value || "";
     if (password.length < 8) {
@@ -293,31 +298,33 @@
     if (button) button.disabled = true;
     if (refs.passwordStatus) refs.passwordStatus.textContent = "Updating password…";
     try {
-      await window.FirstRollAuth?.updatePassword?.(password);
+      if (!window.FirstRollAuth?.updatePassword) throw new Error("Passwords are managed by your account provider.");
+      await window.FirstRollAuth.updatePassword(password);
       refs.passwordForm?.reset();
       if (refs.passwordStatus) refs.passwordStatus.textContent = "Password updated.";
     } catch (error) {
       if (refs.passwordStatus) {
-        refs.passwordStatus.textContent = error?.message || "Password could not be updated.";
+        refs.passwordStatus.textContent = errorInfo(error).message || "Password could not be updated.";
       }
     } finally {
       if (button) button.disabled = false;
     }
   }
 
-  async function changeTheme(event) {
+  async function changeTheme(event: Event) {
     const choice = event.currentTarget;
-    if (!choice?.checked) return;
+    if (!(choice instanceof HTMLInputElement) || !choice.checked || !isThemePreference(choice.value)) return;
     refs.themeChoices.forEach((input) => { input.disabled = true; });
     if (refs.systemStatus) refs.systemStatus.textContent = "Saving appearance…";
     try {
-      const preferences = await window.FirstRollAuth?.updatePreferences?.({ theme: choice.value });
+      if (!window.FirstRollAuth?.updatePreferences) throw new Error("Saved preferences are not supported by your account provider.");
+      const preferences = await window.FirstRollAuth.updatePreferences({ theme: choice.value });
       window.FirstRollUI?.setThemePreference?.(preferences?.theme || choice.value);
       if (refs.systemStatus) refs.systemStatus.textContent = "Appearance saved.";
     } catch (error) {
       renderSignedInState();
       if (refs.systemStatus) {
-        refs.systemStatus.textContent = error?.message || "Appearance could not be saved.";
+        refs.systemStatus.textContent = errorInfo(error).message || "Appearance could not be saved.";
       }
     } finally {
       refs.themeChoices.forEach((input) => { input.disabled = false; });

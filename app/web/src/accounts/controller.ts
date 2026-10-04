@@ -1,30 +1,34 @@
+import { errorInfo } from "../api/decode";
+import type { AppContext } from "../context";
+import type { Services } from "../services";
+import { eventElement } from "../shared/dom";
 import { escapeHtml, safeHttpUrl } from "../shared/html";
+import type { SavedFilm } from "./types";
 
 // Account UI integration; authentication remains in the existing provider adapter.
-// JavaScript controller: migrated module boundaries, not yet a fully typed domain model.
-export function createAccounts(context, services) {
+export function createAccounts(context: AppContext, services: () => Services) {
   const { state, refs, runtimeConfig } = context;
 
   // Lazy delegates allow cross-feature callbacks without circular module imports.
-  const videoProviderStatusMarkup = (...args) => services.videoViews.videoProviderStatusMarkup(...args);
-  const focusInterfaceState = (...args) => services.ui.focusInterfaceState(...args);
+  const videoProviderStatusMarkup: Services["videoViews"]["videoProviderStatusMarkup"] = (...args) => services().videoViews.videoProviderStatusMarkup(...args);
+  const focusInterfaceState: Services["ui"]["focusInterfaceState"] = (...args) => services().ui.focusInterfaceState(...args);
 
-  function updateAccountFilmState() {
+  function updateAccountFilmState(): void {
     updateDeepStudyAuthState();
     updateSavedFilmButton();
     renderSavedFilms(window.FirstRollAuth?.savedFilms?.() || []);
   }
 
-  function updateDeepStudyAuthState() {
-    const button = refs.filmDetail.querySelector("[data-generate-study]");
+  function updateDeepStudyAuthState(): void {
+    const button = refs.filmDetail.querySelector<HTMLElement>("[data-generate-study]");
     if (!button || !runtimeConfig.accountUi || state.discovery.studyController) return;
     button.textContent = window.FirstRollAuth?.currentUser()
       ? "Generate study"
       : "Sign in to Deep Study";
   }
 
-  function updateSavedFilmButton() {
-    const button = refs.filmDetail.querySelector("[data-save-film]");
+  function updateSavedFilmButton(): void {
+    const button = refs.filmDetail.querySelector<HTMLElement>("[data-save-film]");
     const film = state.discovery.selectedFilm;
     if (!button || !film) return;
     const signedIn = Boolean(window.FirstRollAuth?.currentUser?.());
@@ -35,7 +39,7 @@ export function createAccounts(context, services) {
       : "Sign in to save";
   }
 
-  function renderSavedFilms(films) {
+  function renderSavedFilms(films: SavedFilm[]): void {
     if (!refs.accountSavedFilms || !refs.accountLibraryCount) return;
     const items = Array.isArray(films) ? films : [];
     refs.accountLibraryCount.textContent = `${items.length} ${items.length === 1 ? "film" : "films"}`;
@@ -59,8 +63,10 @@ export function createAccounts(context, services) {
     }).join("");
   }
 
-  async function onSavedFilmsClick(event) {
-    const retry = event.target.closest("[data-retry-saved-films]");
+  async function onSavedFilmsClick(event: MouseEvent): Promise<void> {
+    const target = eventElement(event);
+    if (!target) return;
+    const retry = target.closest<HTMLButtonElement>("[data-retry-saved-films]");
     if (retry) {
       retry.disabled = true;
       try {
@@ -72,8 +78,8 @@ export function createAccounts(context, services) {
       }
       return;
     }
-    const button = event.target.closest("[data-remove-saved-film]");
-    if (!button) return;
+    const button = target.closest<HTMLButtonElement>("[data-remove-saved-film]");
+    if (!button || !button.dataset.removeSavedFilm) return;
     button.disabled = true;
     try {
       await window.FirstRollAuth?.removeSavedFilm?.(button.dataset.removeSavedFilm);
@@ -91,15 +97,15 @@ export function createAccounts(context, services) {
     }
   }
 
-  function updateIntegrationDependentState() {
+  function updateIntegrationDependentState(): void {
     const film = state.discovery.selectedFilm;
-    const output = refs.filmDetail.querySelector("[data-film-videos-output]");
+    const output = refs.filmDetail.querySelector<HTMLElement>("[data-film-videos-output]");
     if (film && output && !film.video_sources?.bundle) {
       output.innerHTML = videoProviderStatusMarkup(film.video_sources?.providers);
     }
   }
 
-  async function toggleSavedFilm(button) {
+  async function toggleSavedFilm(button: HTMLButtonElement): Promise<void> {
     const film = state.discovery.selectedFilm;
     if (!film) return;
     if (!window.FirstRollAuth?.currentUser?.()) {
@@ -108,6 +114,9 @@ export function createAccounts(context, services) {
     }
     button.disabled = true;
     try {
+      if (!window.FirstRollAuth.saveFilm || !window.FirstRollAuth.removeSavedFilm || !window.FirstRollAuth.isFilmSaved) {
+        throw new Error("Saved films are not supported by this account provider.");
+      }
       if (window.FirstRollAuth.isFilmSaved(film.id)) {
         await window.FirstRollAuth.removeSavedFilm(film.id);
       } else {
@@ -115,7 +124,7 @@ export function createAccounts(context, services) {
       }
       updateSavedFilmButton();
     } catch (error) {
-      button.textContent = error?.message || "Could not update saved films";
+      button.textContent = errorInfo(error).message || "Could not update saved films";
     } finally {
       button.disabled = false;
     }

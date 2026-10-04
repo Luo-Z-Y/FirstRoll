@@ -1,8 +1,11 @@
+import { errorInfo } from "../api/decode";
+import type { AttributedSource, Claim, Quota, SectionQuality, Selection, Study, StudySection, StudySource } from "../api/models";
+import type { AppContext } from "../context";
+import type { Services } from "../services";
 import { escapeHtml, safeHttpUrl } from "../shared/html";
 
 // Study, evidence, quota and error presentation.
-// JavaScript controller: migrated module boundaries, not yet a fully typed domain model.
-const PACKET_ISSUE_LABELS = Object.freeze({
+const PACKET_ISSUE_LABELS: Readonly<Record<string, string>> = Object.freeze({
   attributed_omission_unexplained: "Some attributed omissions do not have a recognised reason.",
   citation_ids_invalid: "One or more evidence identifiers are not citation-ready.",
   duplicate_evidence_present: "The selected packet still contains duplicate evidence.",
@@ -17,7 +20,7 @@ const PACKET_ISSUE_LABELS = Object.freeze({
   unknown_evidence_language: "Some selected evidence has an unknown language label.",
 });
 
-const SELECTION_REASON_LABELS = Object.freeze({
+const SELECTION_REASON_LABELS: Readonly<Record<string, string>> = Object.freeze({
   below_minimum_content: "too little substantive text",
   duplicate: "duplicate or near-duplicate",
   source_quota: "source/domain diversity limit",
@@ -25,7 +28,7 @@ const SELECTION_REASON_LABELS = Object.freeze({
   total_budget_exhausted: "layer character budget",
 });
 
-const STUDY_STAGE_LABELS = Object.freeze({
+const STUDY_STAGE_LABELS: Readonly<Record<string, string>> = Object.freeze({
   film_context: "Film context",
   criticism_cache: "Criticism cache",
   video_cache: "Video cache",
@@ -40,17 +43,17 @@ const STUDY_STAGE_LABELS = Object.freeze({
   end_to_end: "End to end",
 });
 
-export function createStudyViews(context, services) {
+export function createStudyViews(context: AppContext, services: () => Services) {
   const { state } = context;
 
-  function deepStudyFailureMarkup(error) {
-    const message = String(error?.message || "").toLocaleLowerCase();
+  function deepStudyFailureMarkup(error: unknown): string {
+    const message = String(errorInfo(error).message || "").toLocaleLowerCase();
     let title = "Deep Study could not complete.";
     let guidance = "Your film, evidence and focus are unchanged. Retry once; if the problem repeats, narrow the focus or try again later.";
-    if (error?.status === 429 || message.includes("allowance") || message.includes("quota")) {
+    if (errorInfo(error).status === 429 || message.includes("allowance") || message.includes("quota")) {
       title = "The study allowance is unavailable right now.";
       guidance = "No result was stored. Keep this focus and try again after the allowance resets or use an approved personal provider key.";
-    } else if (error?.status === 401 || message.includes("sign in")) {
+    } else if (errorInfo(error).status === 401 || message.includes("sign in")) {
       title = "Sign in is required for this study.";
       guidance = "Sign in again, then retry the same focus. The current film dossier remains open.";
     } else if (message.includes("valid study") || message.includes("invalid study")) {
@@ -68,7 +71,7 @@ export function createStudyViews(context, services) {
     </div>`;
   }
 
-  function deepStudyQuotaMarkup(quota) {
+  function deepStudyQuotaMarkup(quota: Quota | undefined): string {
     const user = quota?.user;
     const global = quota?.global;
     if (!user || !global) return "";
@@ -86,7 +89,7 @@ export function createStudyViews(context, services) {
     return `<p class="study-quota"><strong>${escapeHtml(user.remaining)} of ${escapeHtml(user.limit)}</strong> account studies remain today · ${escapeHtml(global.remaining)} available across the public demo · resets ${escapeHtml(reset)}</p>`;
   }
 
-  function packetLayerMarkup(label, selection, selected) {
+  function packetLayerMarkup(label: string, selection: Selection, selected: number): string {
     const candidates = Number(selection?.candidate_items ?? selected);
     const omitted = Number(selection?.omitted_items || 0);
     const characters = Number(selection?.selected_characters || 0);
@@ -97,7 +100,7 @@ export function createStudyViews(context, services) {
     </article>`;
   }
 
-  function packetTransparencyMarkup(study) {
+  function packetTransparencyMarkup(study: Study): string {
     const packet = study.evidence_packet || {};
     const retrieval = packet.retrieval || {};
     const theory = retrieval.theory_selection || {};
@@ -110,7 +113,7 @@ export function createStudyViews(context, services) {
     const attributedSources = Array.isArray(study.attributed_sources)
       ? study.attributed_sources
       : [];
-    const omissions = [theory, critical, attributed].reduce((totals, selection) => {
+    const omissions = [theory, critical, attributed].reduce<Record<string, number>>((totals, selection) => {
       Object.entries(selection?.omission_reasons || {}).forEach(([reason, value]) => {
         if (SELECTION_REASON_LABELS[reason] && Number.isInteger(value) && value > 0) {
           totals[reason] = (totals[reason] || 0) + value;
@@ -137,8 +140,8 @@ export function createStudyViews(context, services) {
     const stages = Array.isArray(observability.stages) ? observability.stages : [];
     const counts = observability.counts || {};
     const timingRows = stages
-      .filter((stage) => STUDY_STAGE_LABELS[stage.name] && stage.status !== "not_run")
-      .map((stage) => `<li><span>${escapeHtml(STUDY_STAGE_LABELS[stage.name])}</span><b>${escapeHtml(Number(stage.duration_ms || 0).toFixed(1))} ms</b><small>${escapeHtml(stage.status)}</small></li>`)
+      .filter((stage) => STUDY_STAGE_LABELS[stage.name || ""] && stage.status !== "not_run")
+      .map((stage) => `<li><span>${escapeHtml(STUDY_STAGE_LABELS[stage.name || ""])}</span><b>${escapeHtml(Number(stage.duration_ms || 0).toFixed(1))} ms</b><small>${escapeHtml(stage.status)}</small></li>`)
       .join("");
     return `<section class="packet-transparency" aria-labelledby="packetTransparencyTitle">
       <header>
@@ -162,7 +165,7 @@ export function createStudyViews(context, services) {
     </section>`;
   }
 
-  function deepStudyMarkup(study) {
+  function deepStudyMarkup(study: Study): string {
     const sections = Array.isArray(study.sections) ? study.sections : [];
     const sources = Array.isArray(study.sources) ? study.sources : [];
     const criticalClaims = Array.isArray(study.critical_claims) ? study.critical_claims : [];
@@ -193,11 +196,11 @@ export function createStudyViews(context, services) {
       ${studySourceKeyMarkup(sources, attributedSources, criticalClaims)}`;
   }
 
-  function studyEvidenceTarget(value) {
+  function studyEvidenceTarget(value: string | undefined): string {
     return `study-evidence-${String(value || "unknown").replace(/[^A-Za-z0-9_-]+/g, "-")}`;
   }
 
-  function studySourceKeyMarkup(sources, attributedSources, criticalClaims) {
+  function studySourceKeyMarkup(sources: StudySource[], attributedSources: AttributedSource[], criticalClaims: Claim[]): string {
     return `<div class="study-source-key"><strong>Evidence used</strong>
       ${sources.map((source) => `<details id="${escapeHtml(studyEvidenceTarget(source.id))}" tabindex="-1" data-study-evidence><summary><b>${escapeHtml(source.id)}</b> ${escapeHtml(source.title)} · ${escapeHtml(source.locator || `p. ${source.page || "?"}`)}</summary><p>${escapeHtml(source.excerpt || "")}</p></details>`).join("")}
       ${attributedSources.map(attributedEvidenceMarkup).join("")}
@@ -205,13 +208,13 @@ export function createStudyViews(context, services) {
     </div>`;
   }
 
-  function attributedEvidenceMarkup(source) {
+  function attributedEvidenceMarkup(source: AttributedSource): string {
     const sourceUrl = safeHttpUrl(source.source_url);
     const link = sourceUrl ? ` <a href="${escapeHtml(sourceUrl)}" target="_blank" rel="noopener noreferrer">Source ↗</a>` : "";
     return `<details id="${escapeHtml(studyEvidenceTarget(source.evidence_id))}" tabindex="-1" data-study-evidence><summary><b>${escapeHtml(source.evidence_id || "E?")}</b> ${escapeHtml(source.title || "Attributed source")} · ${escapeHtml(source.locator || source.evidence_type || "text")}</summary><p>${escapeHtml(source.content || "")}</p>${link}</details>`;
   }
 
-  function studyEssayParagraphMarkup(section, sourceMap, attributedSourceMap, quality) {
+  function studyEssayParagraphMarkup(section: StudySection, sourceMap: Record<string, StudySource>, attributedSourceMap: Record<string, AttributedSource>, quality: SectionQuality | undefined): string {
     const ids = Array.isArray(section.source_ids) ? section.source_ids : [];
     const citations = ids.map((id) => {
       const source = sourceMap[id];
@@ -237,7 +240,7 @@ export function createStudyViews(context, services) {
       section.mechanism,
       section.alternative_reading,
     ].filter(Boolean).join(" ");
-    return `<div class="study-essay-paragraph"><p>${escapeHtml(prose || "No study paragraph was returned.")}<span class="essay-citations">${citations}${criticCitations}${attributedCitations}</span></p>${qualityIssues.length ? `<small>Editorial note: ${qualityIssues.map((item) => item.replaceAll("_", " ")).join(" · ")}</small>` : ""}</div>`;
+    return `<div class="study-essay-paragraph"><p>${escapeHtml(prose || "No study paragraph was returned.")}<span class="essay-citations">${citations}${criticCitations}${attributedCitations}</span></p>${qualityIssues.length ? `<small>Editorial note: ${escapeHtml(qualityIssues.map((item) => item.replaceAll("_", " ")).join(" · "))}</small>` : ""}</div>`;
   }
 
   return {

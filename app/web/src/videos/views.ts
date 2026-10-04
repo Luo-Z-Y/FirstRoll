@@ -1,12 +1,14 @@
-import { escapeHtml, safeHttpUrl, safeVideoEmbedUrl } from "../shared/html";
+import type { Providers, Video, VideoBundle } from "../api/models";
+import type { AppContext } from "../context";
+import type { Services } from "../services";
 import { formatTime } from "../shared/format";
+import { escapeHtml, safeHttpUrl, safeVideoEmbedUrl } from "../shared/html";
 
 // Video presentation.
-// JavaScript controller: migrated module boundaries, not yet a fully typed domain model.
-export function createVideoViews(context, services) {
+export function createVideoViews(context: AppContext, services: () => Services) {
   const { state } = context;
 
-  function videoProviderStatusMarkup(providers = {}) {
+  function videoProviderStatusMarkup(providers: Providers = {}): string {
     if (window.FirstRollIntegrations?.configured?.("youtube")) {
       return '<p class="module-empty">Personal YouTube search is ready for this browser tab.</p>';
     }
@@ -21,13 +23,13 @@ export function createVideoViews(context, services) {
     return '<p class="module-empty">Public video providers are not configured on this server yet.</p>';
   }
 
-  function videoButtonProgressLabel(expanding) {
+  function videoButtonProgressLabel(expanding: boolean): string {
     return expanding
       ? "Searching for additional matches and merging them into the local catalogue…"
       : "Matching public videos to the verified film identity…";
   }
 
-  function filmVideosMarkup(bundle) {
+  function filmVideosMarkup(bundle: VideoBundle): string {
     const videos = Array.isArray(bundle?.videos) ? bundle.videos : [];
     if (!videos.length) return `<div class="interface-state is-compact" role="status" tabindex="-1" data-interface-state>
       <span>Viewing context</span>
@@ -43,14 +45,14 @@ export function createVideoViews(context, services) {
     <p class="video-source-boundary">${escapeHtml(bundle.notice || "Third-party videos are attributed but their claims are not verified by FirstRoll.")}</p>`;
   }
 
-  function videoCategoryTabsMarkup(categories) {
+  function videoCategoryTabsMarkup(categories: string[]): string {
     const tabs = ["all", ...categories];
     return `<div class="critical-provider-actions video-category-tabs" role="tablist" aria-label="Video categories">
       ${tabs.map((category, index) => `<button id="video-category-tab-${index}" type="button" role="tab" class="${index === 0 ? "is-active" : ""}" aria-selected="${index === 0}" aria-controls="dossier-video-panel" tabindex="${index === 0 ? "0" : "-1"}" data-video-category="${escapeHtml(category)}">${escapeHtml(category === "all" ? "All" : videoCategoryLabel(category))}</button>`).join("")}
     </div>`;
   }
 
-  function filmVideoCardMarkup(video) {
+  function filmVideoCardMarkup(video: Video): string {
     const embedUrl = safeVideoEmbedUrl(video.embed_url);
     const sourceUrl = safeHttpUrl(video.url);
     if (!embedUrl || !sourceUrl) return "";
@@ -79,8 +81,8 @@ export function createVideoViews(context, services) {
     </article>`;
   }
 
-  function videoCategoryLabel(value) {
-    const labels = {
+  function videoCategoryLabel(value?: string): string {
+    const labels: Record<string, string> = {
       full_film: "Full film",
       interview: "Interview",
       video_essay: "Review",
@@ -90,7 +92,7 @@ export function createVideoViews(context, services) {
       behind_the_scenes: "Behind the scenes",
       other: "Other",
     };
-    return labels[value] || labels.other;
+    return labels[value || "other"] || labels.other;
   }
 
   return {

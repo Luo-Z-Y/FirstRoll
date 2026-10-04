@@ -1,35 +1,38 @@
+import { errorInfo, json } from "../api/decode";
 import { readApiError } from "../api/errors";
-import { researchProgressMarkup, consumeResearchProgress } from "../study/progress";
+import { studyResult } from "../api/models";
+import type { AppContext } from "../context";
+import type { Services } from "../services";
+import { consumeResearchProgress, researchProgressMarkup } from "../study/progress";
 
 // Deep Study request lifecycle, authorisation, cancellation and progress.
-// JavaScript controller: migrated module boundaries, not yet a fully typed domain model.
-export function createStudy(context, services) {
+export function createStudy(context: AppContext, services: () => Services) {
   const { state, refs, runtimeConfig } = context;
 
   // Lazy delegates allow cross-feature callbacks without circular module imports.
-  const deepStudyFailureMarkup = (...args) => services.studyViews.deepStudyFailureMarkup(...args);
-  const deepStudyQuotaMarkup = (...args) => services.studyViews.deepStudyQuotaMarkup(...args);
-  const deepStudyMarkup = (...args) => services.studyViews.deepStudyMarkup(...args);
-  const discoveryApiBase = (...args) => services.ui.discoveryApiBase(...args);
-  const focusElement = (...args) => services.ui.focusElement(...args);
-  const focusInterfaceState = (...args) => services.ui.focusInterfaceState(...args);
+  const deepStudyFailureMarkup: Services["studyViews"]["deepStudyFailureMarkup"] = (...args) => services().studyViews.deepStudyFailureMarkup(...args);
+  const deepStudyQuotaMarkup: Services["studyViews"]["deepStudyQuotaMarkup"] = (...args) => services().studyViews.deepStudyQuotaMarkup(...args);
+  const deepStudyMarkup: Services["studyViews"]["deepStudyMarkup"] = (...args) => services().studyViews.deepStudyMarkup(...args);
+  const discoveryApiBase: Services["ui"]["discoveryApiBase"] = (...args) => services().ui.discoveryApiBase(...args);
+  const focusElement: Services["ui"]["focusElement"] = (...args) => services().ui.focusElement(...args);
+  const focusInterfaceState: Services["ui"]["focusInterfaceState"] = (...args) => services().ui.focusInterfaceState(...args);
 
-  function studyResponseError(response, detail) {
-    const error = new Error(detail || `Deep Study returned HTTP ${response.status}.`);
+  function studyResponseError(response: Response, detail: string): Error & {status: number; retryAfter: string} {
+    const error = Object.assign(new Error(detail || `Deep Study returned HTTP ${response.status}.`), { status: response.status, retryAfter: "" });
     error.status = response.status;
     error.retryAfter = response.headers.get("Retry-After") || "";
     return error;
   }
 
-  function cancelDeepStudyRequest(options = {}) {
+  function cancelDeepStudyRequest(options: { announce?: boolean } = {}): boolean {
     const controller = state.discovery.studyController;
     if (!controller) return false;
     controller.abort();
     state.discovery.studyController = null;
     state.discovery.studyRequestId += 1;
-    const output = refs.filmDetail.querySelector("[data-study-output]");
-    const generateButton = refs.filmDetail.querySelector("[data-generate-study]");
-    const cancelButton = refs.filmDetail.querySelector("[data-cancel-study]");
+    const output = refs.filmDetail.querySelector<HTMLElement>("[data-study-output]");
+    const generateButton = refs.filmDetail.querySelector<HTMLButtonElement>("[data-generate-study]");
+    const cancelButton = refs.filmDetail.querySelector<HTMLElement>("[data-cancel-study]");
     if (generateButton) {
       generateButton.disabled = false;
       generateButton.textContent = "Generate study";
@@ -50,11 +53,11 @@ export function createStudy(context, services) {
     return true;
   }
 
-  async function generateDeepStudy(button) {
+  async function generateDeepStudy(button: HTMLButtonElement): Promise<void> {
     const film = state.discovery.selectedFilm;
-    const output = refs.filmDetail.querySelector("[data-study-output]");
-    const cancelButton = refs.filmDetail.querySelector("[data-cancel-study]");
-    const question = refs.filmDetail.querySelector("[data-study-question]")?.value.trim() || null;
+    const output = refs.filmDetail.querySelector<HTMLElement>("[data-study-output]");
+    const cancelButton = refs.filmDetail.querySelector<HTMLElement>("[data-cancel-study]");
+    const question = refs.filmDetail.querySelector<HTMLTextAreaElement>("[data-study-question]")?.value.trim() || null;
     if (!film || !output || state.discovery.studyController) return;
     const requestId = state.discovery.studyRequestId + 1;
     const controller = new AbortController();
@@ -94,7 +97,7 @@ export function createStudy(context, services) {
         return;
       }
       const integration = window.FirstRollIntegrations?.requestHeaders?.("deepseek") || {};
-      let data;
+      let data: ReturnType<typeof studyResult>;
       if (runtimeConfig.publicMode) {
         const streamResponse = await fetch(
           `${discoveryApiBase()}/api/discovery/films/${encodeURIComponent(film.id)}/study/stream`,
@@ -123,7 +126,7 @@ export function createStudy(context, services) {
         if (!resultResponse.ok) {
           throw studyResponseError(resultResponse, await readApiError(resultResponse));
         }
-        data = await resultResponse.json();
+        data = await json(resultResponse, studyResult);
       } else {
         const response = await fetch(
           `${discoveryApiBase()}/api/discovery/films/${encodeURIComponent(film.id)}/study`,
@@ -135,7 +138,7 @@ export function createStudy(context, services) {
           },
         );
         if (!response.ok) throw studyResponseError(response, await readApiError(response));
-        data = await response.json();
+        data = await json(response, studyResult);
       }
       if (!currentRequest()) return;
       const study = data.study || {};
@@ -152,9 +155,9 @@ export function createStudy(context, services) {
         });
       }
       output.innerHTML = `${researchProgressMarkup(state.discovery.studyProgress, { completed: true })}${deepStudyQuotaMarkup(data.quota)}${deepStudyMarkup(study)}`;
-      focusElement(output.querySelector("[data-study-result]"));
+      focusElement(output.querySelector<HTMLElement>("[data-study-result]"));
     } catch (error) {
-      if (error?.name === "AbortError" || !currentRequest()) return;
+      if (errorInfo(error).name === "AbortError" || !currentRequest()) return;
       console.warn("Deep Study request did not complete", error);
       output.innerHTML = `${researchProgressMarkup(state.discovery.studyProgress)}${deepStudyFailureMarkup(error)}`;
       focusInterfaceState(output);

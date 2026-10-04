@@ -114,8 +114,6 @@ mkdir -p "$output_dir/assets"
 
 cp "$source_dir/index.html" "$output_dir/index.html"
 cp "$source_dir/staticwebapp.config.json" "$output_dir/staticwebapp.config.json"
-cp "$source_dir/integrations.js" "$output_dir/assets/integrations.js"
-cp "$source_dir/local-auth.js" "$output_dir/assets/local-auth.js"
 cp "$source_dir/favicon.svg" "$output_dir/assets/favicon.svg"
 
 npm ci --include=dev --ignore-scripts --no-audit --no-fund
@@ -125,16 +123,6 @@ node "$project_root/tools/frontend-build.cjs" "$output_dir/assets/app.js"
   --minify \
   --target=es2020,chrome100,firefox100,safari15.4 \
   --outdir="$output_dir/assets"
-./node_modules/.bin/esbuild "$source_dir/auth.js" \
-  --bundle \
-  --minify \
-  --format=iife \
-  --outfile="$output_dir/assets/auth.js"
-./node_modules/.bin/esbuild "$source_dir/entra-auth.js" \
-  --bundle \
-  --minify \
-  --format=iife \
-  --outfile="$output_dir/assets/entra-auth.js"
 
 cat > "$output_dir/assets/config.js" <<EOF
 window.FIRSTROLL_CONFIG = Object.freeze({

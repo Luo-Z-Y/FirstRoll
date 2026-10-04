@@ -36,11 +36,11 @@ def test_dossier_attributes_tmdb_without_mislabelling_its_overview(application_s
 
 def test_supabase_auth_is_bundled_and_deep_study_sends_bearer_tokens(application_source: str) -> None:
     index = (WEB / "index.html").read_text(encoding="utf-8")
-    auth = (WEB / "auth.js").read_text(encoding="utf-8")
+    auth = (WEB / "auth.ts").read_text(encoding="utf-8")
     app = application_source
 
     assert 'id="authDialog"' in index
-    assert '"/assets/auth.js?v=20260821-5"' in index
+    assert '"/assets/auth.js?v=20260821-5"' in (WEB / "auth-loader.ts").read_text(encoding="utf-8")
     assert 'from "@supabase/supabase-js"' in auth
     assert 'flowType: "pkce"' in auth
     assert "signInWithPassword" in auth
@@ -59,18 +59,18 @@ def test_supabase_auth_is_bundled_and_deep_study_sends_bearer_tokens(application
 
 def test_loopback_preview_uses_a_separate_persistent_unlimited_test_account(application_source: str) -> None:
     index = (WEB / "index.html").read_text(encoding="utf-8")
-    local_auth = (WEB / "local-auth.js").read_text(encoding="utf-8")
+    local_auth = (WEB / "local-auth.ts").read_text(encoding="utf-8")
     app = application_source
     main = (ROOT / "app" / "backend" / "main.py").read_text(encoding="utf-8")
-    integrations = (WEB / "integrations.js").read_text(encoding="utf-8")
+    integrations = (WEB / "integrations.ts").read_text(encoding="utf-8")
     build = (ROOT / "tools" / "build_web.sh").read_text(encoding="utf-8")
 
-    assert "localTestAccountEmail" in index
-    assert '"/assets/local-auth.js?v=20260821-3"' in index
-    assert '["localhost", "127.0.0.1", "::1"]' in index
-    assert "if (localTestReady || (window.FIRSTROLL_CONFIG?.publicMode" in index
+    assert "localTestAccountEmail" in (WEB / "auth-loader.ts").read_text(encoding="utf-8")
+    assert '"/assets/local-auth.js?v=20260821-3"' in (WEB / "auth-loader.ts").read_text(encoding="utf-8")
+    assert '["localhost", "127.0.0.1", "::1"]' in (WEB / "auth-loader.ts").read_text(encoding="utf-8")
+    assert "if (localTestReady || (window.FIRSTROLL_CONFIG?.publicMode" in (WEB / "auth-loader.ts").read_text(encoding="utf-8")
     assert 'localTestAccountEmail: ""' in build
-    assert 'cp "$source_dir/local-auth.js"' in build
+    assert '"local-auth"' in (ROOT / "tools/frontend-build.cjs").read_text()
     assert "firstroll.local-test" in local_auth
     assert "firstroll-local-test-account" in local_auth
     assert "window.localStorage" in local_auth
@@ -92,7 +92,7 @@ def test_loopback_preview_uses_a_separate_persistent_unlimited_test_account(appl
     assert '"X-FirstRoll-DeepSeek-Key"' in integrations
     assert '"X-FirstRoll-YouTube-Key"' in integrations
     assert "localStorage" not in integrations
-    assert 'cp "$source_dir/integrations.js"' in build
+    assert '"integrations"' in (ROOT / "tools/frontend-build.cjs").read_text()
     assert "FIRSTROLL_SUPABASE_URL" in build
     assert "FIRSTROLL_SUPABASE_PUBLISHABLE_KEY" in build
 
@@ -122,7 +122,7 @@ def test_frontend_build_identity_distinguishes_local_and_live_releases(applicati
 
 def test_account_saved_films_are_persistent_and_user_scoped(application_source: str) -> None:
     index = (WEB / "index.html").read_text(encoding="utf-8")
-    auth = (WEB / "auth.js").read_text(encoding="utf-8")
+    auth = (WEB / "auth.ts").read_text(encoding="utf-8")
     app = application_source
     migration = (
         ROOT
@@ -151,7 +151,7 @@ def test_account_saved_films_are_persistent_and_user_scoped(application_source: 
 
 def test_entra_external_id_account_auth_is_staged_without_breaking_supabase() -> None:
     index = (WEB / "index.html").read_text(encoding="utf-8")
-    auth = (WEB / "entra-auth.js").read_text(encoding="utf-8")
+    auth = (WEB / "entra-auth.ts").read_text(encoding="utf-8")
     build = (ROOT / "tools" / "build_web.sh").read_text(encoding="utf-8")
 
     assert 'from "@azure/msal-browser"' in auth
@@ -162,8 +162,8 @@ def test_entra_external_id_account_auth_is_staged_without_breaking_supabase() ->
     assert 'cacheLocation: "localStorage"' in auth
     assert 'id="entraAuthForm"' in index
     assert "Sign in or create an account" in index
-    assert 'authProvider === "entra"' in index
-    assert '"$source_dir/entra-auth.js"' in build
+    assert 'authProvider === "entra"' in (WEB / "auth-loader.ts").read_text(encoding="utf-8")
+    assert '"entra-auth"' in (ROOT / "tools/frontend-build.cjs").read_text()
     assert "FIRSTROLL_ENTRA_AUTHORITY" in build
     assert "FIRSTROLL_ENTRA_SPA_CLIENT_ID" in build
     assert "FIRSTROLL_ENTRA_API_SCOPE" in build
@@ -206,11 +206,11 @@ def test_public_settings_explains_session_keys_and_hosted_douban_boundary(applic
     assert 'id="accountProfileForm"' in index
     assert 'id="accountPasswordForm"' in index
     assert 'name="accountTheme"' in index
-    assert "updateDisplayName" in (WEB / "auth.js").read_text(encoding="utf-8")
-    assert "updatePassword" in (WEB / "auth.js").read_text(encoding="utf-8")
-    assert "updatePreferences" in (WEB / "auth.js").read_text(encoding="utf-8")
-    assert "firstroll_profiles" in (WEB / "auth.js").read_text(encoding="utf-8")
-    assert "firstroll_preferences" in (WEB / "auth.js").read_text(encoding="utf-8")
+    assert "updateDisplayName" in (WEB / "auth.ts").read_text(encoding="utf-8")
+    assert "updatePassword" in (WEB / "auth.ts").read_text(encoding="utf-8")
+    assert "updatePreferences" in (WEB / "auth.ts").read_text(encoding="utf-8")
+    assert "firstroll_profiles" in (WEB / "auth.ts").read_text(encoding="utf-8")
+    assert "firstroll_preferences" in (WEB / "auth.ts").read_text(encoding="utf-8")
     assert "cleared on refresh or sign-out" in index
     assert "that study uses your DeepSeek account and provider balance" in index
     assert "FirstRoll’s three-study daily safety limit still applies" in index
@@ -289,9 +289,9 @@ def test_interface_states_are_actionable_and_keyboard_navigable(application_sour
     index = (WEB / "index.html").read_text(encoding="utf-8")
     styles = (WEB / "styles.css").read_text(encoding="utf-8")
     app = application_source
-    integrations = (WEB / "integrations.js").read_text(encoding="utf-8")
-    auth = (WEB / "auth.js").read_text(encoding="utf-8")
-    local_auth = (WEB / "local-auth.js").read_text(encoding="utf-8")
+    integrations = (WEB / "integrations.ts").read_text(encoding="utf-8")
+    auth = (WEB / "auth.ts").read_text(encoding="utf-8")
+    local_auth = (WEB / "local-auth.ts").read_text(encoding="utf-8")
 
     assert 'aria-labelledby="resultsTitle" aria-busy="false"' in index
     assert 'id="filmDetail" class="film-detail hidden" aria-busy="false"' in index
@@ -407,7 +407,7 @@ def test_new_discovery_search_aborts_stale_search_and_shelf_work(application_sou
     assert "cancelShelfRequests();" in app
     assert "{ signal: controller.signal }" in app
     assert "requestId !== state.discovery.searchRequestId" in app
-    assert 'err?.name === "AbortError"' in app
+    assert 'errorInfo(err).name === "AbortError"' in app
     assert "state.discovery.shelfRequestControllers.add(controller)" in app
     assert "state.discovery.shelfRequestControllers.delete(controller)" in app
     assert "refs.discoverySubmit.disabled = true" not in app
@@ -435,7 +435,7 @@ def test_director_shelf_renders_immediately_then_enriches_posters(application_so
     assert "data-retry-director-shelf" in app
     assert "retryDirectorShelf" in app
     assert "showFilmShelfFallback" in app
-    shelf = (WEB / "src" / "discovery" / "shelf.js").read_text(encoding="utf-8")
+    shelf = (WEB / "src" / "discovery" / "shelf.ts").read_text(encoding="utf-8")
     partial = shelf[shelf.index("function markDirectorShelfPartial"):shelf.index("function showFilmShelfFallback")]
     fallback = shelf[shelf.index("function showFilmShelfFallback"):shelf.index("function renderFilmArchive")]
     assert "directorShelfFilmsMarkup(primary, films, false)" in fallback

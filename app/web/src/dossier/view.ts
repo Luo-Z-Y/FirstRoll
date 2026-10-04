@@ -1,23 +1,25 @@
+import type { Award, Film, Review, Source } from "../api/models";
+import type { AppContext } from "../context";
+import type { Services } from "../services";
 import { displayCrew } from "../shared/crew";
-import { escapeHtml, safeHttpUrl } from "../shared/html";
 import { filmYearLabel } from "../shared/format";
+import { escapeHtml, safeHttpUrl } from "../shared/html";
 
 // Dossier presentation; receives data and shared state without initiating requests.
-// JavaScript controller: migrated module boundaries, not yet a fully typed domain model.
-export function createDossierView(context, services) {
+export function createDossierView(context: AppContext, services: () => Services) {
   const { state, refs, runtimeConfig } = context;
 
   // Lazy delegates allow cross-feature callbacks without circular module imports.
-  const updateDeepStudyAuthState = (...args) => services.accounts.updateDeepStudyAuthState(...args);
-  const updateSavedFilmButton = (...args) => services.accounts.updateSavedFilmButton(...args);
-  const videoProviderStatusMarkup = (...args) => services.videoViews.videoProviderStatusMarkup(...args);
-  const filmVideosMarkup = (...args) => services.videoViews.filmVideosMarkup(...args);
-  const criticalResearchMarkup = (...args) => services.criticismViews.criticalResearchMarkup(...args);
-  const criticismBundleForRoute = (...args) => services.criticismViews.criticismBundleForRoute(...args);
-  const firstLoadedCriticismRoute = (...args) => services.criticismViews.firstLoadedCriticismRoute(...args);
-  const criticismSourceTabsMarkup = (...args) => services.criticismViews.criticismSourceTabsMarkup(...args);
+  const updateDeepStudyAuthState: Services["accounts"]["updateDeepStudyAuthState"] = (...args) => services().accounts.updateDeepStudyAuthState(...args);
+  const updateSavedFilmButton: Services["accounts"]["updateSavedFilmButton"] = (...args) => services().accounts.updateSavedFilmButton(...args);
+  const videoProviderStatusMarkup: Services["videoViews"]["videoProviderStatusMarkup"] = (...args) => services().videoViews.videoProviderStatusMarkup(...args);
+  const filmVideosMarkup: Services["videoViews"]["filmVideosMarkup"] = (...args) => services().videoViews.filmVideosMarkup(...args);
+  const criticalResearchMarkup: Services["criticismViews"]["criticalResearchMarkup"] = (...args) => services().criticismViews.criticalResearchMarkup(...args);
+  const criticismBundleForRoute: Services["criticismViews"]["criticismBundleForRoute"] = (...args) => services().criticismViews.criticismBundleForRoute(...args);
+  const firstLoadedCriticismRoute: Services["criticismViews"]["firstLoadedCriticismRoute"] = (...args) => services().criticismViews.firstLoadedCriticismRoute(...args);
+  const criticismSourceTabsMarkup: Services["criticismViews"]["criticismSourceTabsMarkup"] = (...args) => services().criticismViews.criticismSourceTabsMarkup(...args);
 
-  function renderFilmDetail(film) {
+  function renderFilmDetail(film: Film): void {
     const directors = displayCrew(film.credits?.directors || film.directors || []);
     const writers = displayCrew(film.credits?.writers || []);
     const producers = displayCrew(film.credits?.producers || []);
@@ -164,7 +166,7 @@ export function createDossierView(context, services) {
     updateSavedFilmButton();
   }
 
-  function detailOverviewMarkup(value) {
+  function detailOverviewMarkup(value: unknown): string {
     const overview = String(value || "No synopsis is available from this source.").trim();
     const limit = 460;
     if (overview.length <= limit) {
@@ -184,11 +186,11 @@ export function createDossierView(context, services) {
     </div>`;
   }
 
-  function detailFact(label, value) {
+  function detailFact(label: string, value: unknown): string {
     return `<div class="detail-fact"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`;
   }
 
-  function filmReceptionMarkup(awards) {
+  function filmReceptionMarkup(awards: Award[]): string {
     const items = Array.isArray(awards) ? awards.slice(0, 3) : [];
     return `<section class="detail-reception" data-film-reception>
       <div class="reception-scores" data-reception-scores aria-live="polite">
@@ -201,7 +203,7 @@ export function createDossierView(context, services) {
     </section>`;
   }
 
-  function awardMarkup(award) {
+  function awardMarkup(award: Award): string {
     const url = safeHttpUrl(award.url);
     const name = escapeHtml(award.name || "Film award");
     const title = url
@@ -210,22 +212,22 @@ export function createDossierView(context, services) {
     return `<article>${title}<p>${escapeHtml(award.description || "")}</p></article>`;
   }
 
-  function formatRating(value) {
+  function formatRating(value: unknown): string {
     const number = Number(value);
     return Number.isInteger(number) ? String(number) : number.toFixed(1);
   }
 
-  function formatCompactCount(value) {
+  function formatCompactCount(value: number): string {
     return new Intl.NumberFormat("en-GB", { notation: "compact", maximumFractionDigits: 1 }).format(value);
   }
 
-  function crewSourcesMarkup(sources) {
+  function crewSourcesMarkup(sources: Source[] | undefined): string {
     const usable = (Array.isArray(sources) ? sources : []).filter((source) => safeHttpUrl(source?.url));
     if (!usable.length) return "";
     return `<div class="crew-provenance"><span>Crew sources</span><p>${usable.map((source) => `<a href="${escapeHtml(safeHttpUrl(source.url))}" target="_blank" rel="noopener noreferrer">${escapeHtml(source.name || "Source")} ↗</a>`).join(" · ")}</p></div>`;
   }
 
-  function reviewCard(review) {
+  function reviewCard(review: Review): string {
     const url = safeHttpUrl(review.url);
     return `
       <article class="review-card">

@@ -1,7 +1,7 @@
 # FirstRoll Architecture
 
 **Status:** Current implementation  
-**Last reconciled:** 2 October 2026
+**Last reconciled:** 4 October 2026
 
 FirstRoll is a local-first film-study system with a hosted public beta running on one Tencent
 Lighthouse server in Singapore (v219, owner-approved deployment on 29 September 2026). “Local-first”
@@ -10,31 +10,36 @@ not mean the product is available only on one computer.
 
 ## Product Topology
 
-### Frontend source boundaries (modularisation complete, not yet deployed)
+### Frontend source boundaries (TypeScript migration complete, not yet deployed)
 
 The browser still receives static HTML, CSS and JavaScript. `app/web/src/main.ts` starts
-the 58-line `app/web/app.js` composition root. `context.js` creates per-application DOM refs
-and state; `bootstrap.js` registers events. Feature factories own navigation, account-facing UI,
+the 64-line `app/web/app.ts` composition root. `context.ts` creates per-application DOM refs
+and state; `bootstrap.ts` registers events. Feature factories own navigation, account-facing UI,
 session persistence, discovery/shelf, dossier, videos, criticism and Deep Study. Controllers
 retain their request IDs, cancellation guards and timeout behaviour; separate views produce
 markup. Cross-feature callbacks use an explicitly assembled service registry rather than
 circular imports. Construction is inert and startup is idempotent.
 
-Strict TypeScript modules own HTML/URL safety, formatting, API error display, progress parsing,
-film selection/views and pure clip heuristics. Analysis controller/rendering, navigation,
-recent searches and shared UI helpers now also use strict TypeScript with narrow DOM/state
-contracts. Other JavaScript controllers remain unchecked; `app.d.ts` describes only startup.
-Clip state stays private. Backend analysis JSON enters as `unknown` and is validated into the
-presentation model before use; filenames/labels are escaped and unavailable canvas contexts
-are handled safely. Existing backend `Unknown` shot scales remain supported.
-Auth and integrations retain their existing entry
-points. This is not a React/Next.js migration or a claim that the whole UI is type-safe.
+Every hand-written application module is now strict TypeScript, including composition,
+state/DOM references, all feature controllers/views and Supabase, Entra, local-account and
+settings adapters. `state.ts`, `services.ts` and `accounts/types.ts` describe their contracts;
+the startup-only `app.d.ts` shim is removed. Lazy `() => services` callbacks avoid runtime
+import cycles while preserving compiler-checked handler signatures. Clip state stays private.
+API JSON enters through runtime decoders in `api/`; account records and local storage use
+`accounts/decode.ts`. Optional/null catalogue fields are supported, known malformed fields
+are rejected, and unconsumed server fields are omitted. This validates presentation shapes,
+not source truth or authorisation. HTML escaping and streaming run/sequence checks remain.
+This is not a React/Next.js migration or a visual redesign.
 
 `tools/frontend-build.cjs` is the shared compiler configuration: localhost generates
-`app/web/generated/app.js`, while hosted releases generate `dist/assets/app.js`. FastAPI's
-explicit asset route serves the former before its generic static mount. Docker compiles it
-in a Node builder stage; TypeScript/npm are not needed in the Python runtime. No API routes,
-authentication rules, quotas or production approval boundaries are relaxed. See
+`app/web/generated/*.js`, while hosted releases generate `dist/assets/*.js`. The same compiler
+bundles app, auth, entra-auth, local-auth, integrations, theme-init, auth-loader and the
+default config template. The HTML contains no inline application scripts.
+FastAPI's allow-listed asset route serves compiled scripts before its generic static mount;
+its earlier runtime-config route remains dynamic. Docker compiles these in a Node builder
+stage and copies the complete generated set into the Python runtime, without TypeScript/npm.
+No business API routes, authentication rules, quotas or production approval boundaries
+are relaxed. See
 [Frontend Guide](FRONTEND_GUIDE.md) for development commands, module ownership and typing limits.
 
 The 2 October follow-up introduces a typed `FilmSummary` display boundary and pure
@@ -44,11 +49,13 @@ Feature controllers mutate the shared per-application discovery state; pure Type
 do not fetch or persist data. Selection IDs, event-delegation attributes, poster enrichment and
 shelf fallback behaviour are preserved. These types do not replace runtime validation.
 Tests construct the real application with explicit handler overrides, never URL/config flags.
-All 62 frontend cases run against source builds and the minified hosted bundle; architecture
+All 73 frontend cases pass; application/race tests run against source and minified hosted
+bundles, with additional adapter and decoder tests using mocked services. Architecture
 checks prohibit circular imports and keep the composition root/features within size limits.
 Compile-only negative tests also ensure typed DOM/state/result contracts reject invalid usage.
-The root/context/bootstrap and remaining JavaScript modules are an explicit migration boundary,
-not silently covered by declaration files. API routes, paid-provider controls and hosting are unchanged.
+Compile-only coverage includes application wiring and account contracts. Unsupported account
+capabilities report an error instead of a false success; malformed stored navigation/expiry
+values fall back safely. Backend business routes, paid-provider controls and hosting are unchanged.
 
 Read the [plain-English deployment guide](../readme.md#the-current-deployment-in-plain-english)
 first for the roles of DNS, the VPS, Caddy, Docker, Supabase and the image registry. On 1 October,

@@ -9,7 +9,7 @@
     "build:local": "node tools/frontend-build.cjs --local",
     "test:web": "node --test tests/web/*.test.cjs",
     "build": "sh tools/build_web.sh",
-    "build:auth": "esbuild app/web/auth.js --bundle --minify --format=iife --outfile=dist/assets/auth.js"
+    "build:auth": "npm run typecheck && esbuild app/web/auth.ts --bundle --minify --format=iife --outfile=dist/assets/auth.js"
   },
   "dependencies": {
     "@azure/msal-browser": "5.19.0",

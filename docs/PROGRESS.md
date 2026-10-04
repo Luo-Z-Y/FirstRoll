@@ -13,6 +13,26 @@ Status vocabulary:
 
 ## Current Snapshot
 
+**Complete frontend TypeScript migration — 4 October 2026:** all hand-written browser
+application modules now pass strict checks, including the composition root, context/bootstrap,
+remaining controllers/views, session restoration and Supabase/Entra/local auth/settings.
+`app.ts` is 64 lines; feature modules remain below 500 lines. Removed the declaration-only
+startup shim; typed state and lazy service wiring cover the whole application graph.
+Added runtime decoding for consumed API/account fields and corrupt-storage fallbacks.
+Account capabilities are explicit; unsupported settings operations no longer claim success.
+Local, Docker and hosted builds compile all adapters at the existing JavaScript URLs.
+The early theme script and account-provider loader are also typed, not left inline in HTML.
+
+Verification: 653 repository tests and 73 frontend cases pass, including source and minified
+application builds and new decoder, account-adapter, storage, in-memory key and negative
+type-contract checks.
+No paid provider requests or production deployment are part of this change. Publication and
+final CI evidence are recorded with delivery; production remains owner-gated. A real localhost
+browser smoke check verified page startup, Settings, the sign-in dialogue and Analyse/Discover
+navigation. Live authenticated/provider operations and local Docker execution are not claimed.
+
+### Historical migration checkpoints
+
 **Strict TypeScript follow-up — 2 October 2026:** analysis controller/view, navigation/theme,
 recent searches and shared UI helpers have moved from JavaScript to strict TypeScript.
 Added explicit clip/metadata/result/DOM contracts, closed navigation choices and runtime

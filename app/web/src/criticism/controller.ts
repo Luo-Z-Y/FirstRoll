@@ -1,24 +1,27 @@
-import { escapeHtml } from "../shared/html";
+import { errorInfo, json, shape } from "../api/decode";
 import { readApiError } from "../api/errors";
+import { criticismBundle } from "../api/models";
+import type { AppContext } from "../context";
+import type { Services } from "../services";
+import { escapeHtml } from "../shared/html";
 
 // Criticism retrieval/structuring and active-provider controls.
-// JavaScript controller: migrated module boundaries, not yet a fully typed domain model.
-export function createCriticism(context, services) {
+export function createCriticism(context: AppContext, services: () => Services) {
   const { state, refs, runtimeConfig } = context;
 
   // Lazy delegates allow cross-feature callbacks without circular module imports.
-  const criticalResearchMarkup = (...args) => services.criticismViews.criticalResearchMarkup(...args);
-  const criticismSource = (...args) => services.criticismViews.criticismSource(...args);
-  const criticismBundleForRoute = (...args) => services.criticismViews.criticismBundleForRoute(...args);
-  const discoveryApiBase = (...args) => services.ui.discoveryApiBase(...args);
-  const fetchProgressMarkup = (...args) => services.ui.fetchProgressMarkup(...args);
-  const focusElement = (...args) => services.ui.focusElement(...args);
-  const focusInterfaceState = (...args) => services.ui.focusInterfaceState(...args);
+  const criticalResearchMarkup: Services["criticismViews"]["criticalResearchMarkup"] = (...args) => services().criticismViews.criticalResearchMarkup(...args);
+  const criticismSource: Services["criticismViews"]["criticismSource"] = (...args) => services().criticismViews.criticismSource(...args);
+  const criticismBundleForRoute: Services["criticismViews"]["criticismBundleForRoute"] = (...args) => services().criticismViews.criticismBundleForRoute(...args);
+  const discoveryApiBase: Services["ui"]["discoveryApiBase"] = (...args) => services().ui.discoveryApiBase(...args);
+  const fetchProgressMarkup: Services["ui"]["fetchProgressMarkup"] = (...args) => services().ui.fetchProgressMarkup(...args);
+  const focusElement: Services["ui"]["focusElement"] = (...args) => services().ui.focusElement(...args);
+  const focusInterfaceState: Services["ui"]["focusInterfaceState"] = (...args) => services().ui.focusInterfaceState(...args);
 
-  async function selectCriticismSource(button) {
+  async function selectCriticismSource(button: HTMLButtonElement): Promise<void> {
     const provider = button.dataset.criticismSource;
     const film = state.discovery.selectedFilm;
-    const output = refs.filmDetail.querySelector("[data-critical-output]");
+    const output = refs.filmDetail.querySelector<HTMLElement>("[data-critical-output]");
     if (!film || !output || !provider) return;
     state.discovery.activeCriticismProvider = provider;
     updateCriticismSourceTabs(provider);
@@ -31,9 +34,9 @@ export function createCriticism(context, services) {
     await loadProviderCriticism(button, provider);
   }
 
-  async function loadProviderCriticism(button, providerOverride = null) {
+  async function loadProviderCriticism(button: HTMLButtonElement, providerOverride: string | null | undefined = null): Promise<void> {
     const film = state.discovery.selectedFilm;
-    const output = refs.filmDetail.querySelector("[data-critical-output]");
+    const output = refs.filmDetail.querySelector<HTMLElement>("[data-critical-output]");
     if (!film || !output) return;
     const provider = providerOverride || button.dataset.criticismSource;
     const source = criticismSource(provider);
@@ -51,7 +54,8 @@ export function createCriticism(context, services) {
         { method: "POST", signal: state.discovery.detailController?.signal },
       );
       if (!response.ok) throw new Error(await readApiError(response));
-      const data = await response.json();
+      const data = await json(response, shape({ critical_research: criticismBundle }));
+      if (!data.critical_research) throw new Error("The criticism response is missing.");
       if (state.discovery.selectedFilm !== film) return;
       const bundle = data.critical_research;
       const research = film.critical_research ||= {};
@@ -63,12 +67,12 @@ export function createCriticism(context, services) {
       updateCriticismSourceTabs(state.discovery.activeCriticismProvider);
       if (!runtimeConfig.publicMode) {
         const structureButton = state.discovery.activeCriticismProvider === provider
-          ? output.querySelector(`[data-structure-criticism="${provider}"]`)
+          ? output.querySelector<HTMLButtonElement>(`[data-structure-criticism="${provider}"]`)
           : null;
         await structureProviderCriticism(provider, structureButton);
       }
     } catch (error) {
-      if (error?.name === "AbortError" || state.discovery.selectedFilm !== film) return;
+      if (errorInfo(error).name === "AbortError" || state.discovery.selectedFilm !== film) return;
       console.warn("Criticism source request did not complete", error);
       if (state.discovery.activeCriticismProvider === provider) {
         output.innerHTML = `<div class="interface-state is-error is-compact" role="alert" tabindex="-1" data-interface-state>
@@ -90,11 +94,11 @@ export function createCriticism(context, services) {
     }
   }
 
-  async function structureProviderCriticism(provider, button = null) {
+  async function structureProviderCriticism(provider: string | undefined, button: HTMLButtonElement | null = null): Promise<void> {
     const film = state.discovery.selectedFilm;
-    const output = refs.filmDetail.querySelector("[data-critical-output]");
+    const output = refs.filmDetail.querySelector<HTMLElement>("[data-critical-output]");
     if (!film || !output || !provider) return;
-    const status = output.querySelector(`[data-structure-status="${provider}"]`);
+    const status = output.querySelector<HTMLElement>(`[data-structure-status="${provider}"]`);
     if (button) {
       button.disabled = true;
       button.textContent = "Structuring…";
@@ -105,7 +109,7 @@ export function createCriticism(context, services) {
     }
     if (state.discovery.activeCriticismProvider === provider) {
       output.setAttribute("aria-busy", "true");
-      output.querySelector("[data-active-fetch-progress]")?.remove();
+      output.querySelector<HTMLElement>("[data-active-fetch-progress]")?.remove();
       output.insertAdjacentHTML("afterbegin", fetchProgressMarkup("DeepSeek is structuring the fetched reviews…"));
     }
     try {
@@ -114,7 +118,8 @@ export function createCriticism(context, services) {
         { method: "POST", signal: state.discovery.detailController?.signal },
       );
       if (!response.ok) throw new Error(await readApiError(response));
-      const data = await response.json();
+      const data = await json(response, shape({ critical_research: criticismBundle }));
+      if (!data.critical_research) throw new Error("The criticism response is missing.");
       if (state.discovery.selectedFilm !== film) return;
       const bundle = data.critical_research;
       const research = film.critical_research ||= {};
@@ -124,11 +129,11 @@ export function createCriticism(context, services) {
         output.innerHTML = criticalResearchMarkup(bundle);
       }
     } catch (error) {
-      if (error?.name === "AbortError" || state.discovery.selectedFilm !== film) return;
+      if (errorInfo(error).name === "AbortError" || state.discovery.selectedFilm !== film) return;
       console.warn("Criticism structuring did not complete", error);
       if (state.discovery.activeCriticismProvider !== provider) return;
-      output.querySelector("[data-active-fetch-progress]")?.remove();
-      const currentStatus = output.querySelector(`[data-structure-status="${provider}"]`);
+      output.querySelector<HTMLElement>("[data-active-fetch-progress]")?.remove();
+      const currentStatus = output.querySelector<HTMLElement>(`[data-structure-status="${provider}"]`);
       if (currentStatus) {
         currentStatus.className = "critical-stage-status is-error";
         currentStatus.setAttribute("role", "alert");
@@ -150,10 +155,10 @@ export function createCriticism(context, services) {
     }
   }
 
-  function updateCriticismSourceTabs(activeProvider) {
+  function updateCriticismSourceTabs(activeProvider: string | null): void {
     const film = state.discovery.selectedFilm;
     const bundles = film?.critical_research?.bundles || {};
-    refs.filmDetail.querySelectorAll("[data-criticism-source]").forEach((button) => {
+    refs.filmDetail.querySelectorAll<HTMLElement>("[data-criticism-source]").forEach((button) => {
       const active = button.dataset.criticismSource === activeProvider;
       const loaded = Boolean(criticismBundleForRoute(bundles, button.dataset.criticismSource));
       button.classList.toggle("is-active", active);
@@ -161,10 +166,10 @@ export function createCriticism(context, services) {
       button.setAttribute("aria-selected", String(active));
       button.setAttribute("tabindex", active ? "0" : "-1");
     });
-    const activeTab = refs.filmDetail.querySelector(
-      `[data-criticism-source="${CSS.escape(activeProvider)}"]`,
+    const activeTab = refs.filmDetail.querySelector<HTMLElement>(
+      `[data-criticism-source="${CSS.escape(activeProvider || "")}"]`,
     );
-    const panel = refs.filmDetail.querySelector("#dossier-criticism-panel");
+    const panel = refs.filmDetail.querySelector<HTMLElement>("#dossier-criticism-panel");
     if (activeTab && panel) {
       panel.setAttribute("aria-labelledby", activeTab.id);
       panel.removeAttribute("aria-label");
