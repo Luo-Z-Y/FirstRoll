@@ -13,6 +13,25 @@ Status vocabulary:
 
 ## Current Snapshot
 
+**Festival PR integration — 4 October 2026:** reconciled PR #52 with current master in an isolated
+worktree. The older PR modified deleted `app.js`; its navigation is now part of typed context/view
+validation, and the atlas is split into strict TypeScript data/model/land/controller modules plus
+one compiled entry. Local/Docker/hosted builds share the compiler; the local API allow-list includes
+the compiled asset. No raw JavaScript source or old coordinator was restored. Typical-window
+status labels no longer imply that an edition is confirmed to be running; month-filter focus is
+restored after rendering.
+
+Verification: **655 repository tests and 80 frontend cases pass**, including minified hosted
+bundles, catalogue integrity, month overlap/toggle, selection, bounded zoom/reset, leap-day handling
+and persisted Festivals navigation. Strict typing, local/hosted builds, scoped Ruff and diff checks
+pass. The loopback API and compiled festival asset return HTTP 200. Fresh interactive inspection
+was blocked by the in-app browser client; the original PR's older visual evidence is historical,
+not a claim of new acceptance. README, architecture, guide and Obsidian notes are aligned.
+
+Delivery is through the existing PR #52; the original checkout and untracked user files are
+untouched. Merging is not deployment approval: **production stays v230 / ec9975c8** until a new
+exact release is authorised. No server, credential, database or feature-flag changes were made.
+
 **v230 deployed to Tencent — 4 October 2026:** the owner explicitly authorised exact release
 `37208179152`, revision `ec9975c8559925ed7654f939113446402226ea9b`, and cancellation of obsolete
 waiting run `36839340540`. The obsolete run was cancelled; the current candidate and deployment
@@ -146,7 +165,8 @@ replace first-live-release acceptance or a real recovery drill.
 |---|---|---|
 | Film discovery | Complete | TMDb primary catalogue with open Wikidata/Wikipedia failover, explicit ambiguity confirmation, attributed dossier enrichment and the always-available native director shelf |
 | Public video resources | Complete | Persistent cumulative catalogue; typed tabs; bounded uploader-description and public YouTube-caption extraction |
-| Product navigation | Complete | Discover, Analyse and Settings preserve per-tab view content and scroll; a versioned `sessionStorage` snapshot makes the Discover workspace refresh-safe; Study remains consolidated into Discover |
+| Product navigation | Complete | Discover, Analyse, Festivals and Settings preserve per-tab view content and scroll; a versioned `sessionStorage` snapshot makes the Discover workspace refresh-safe; Study remains consolidated into Discover |
+| Festival atlas | Implemented; not deployed in v230 | 32 festivals (including SGIFF) and the Oscars; zoomable inline map, toggleable month filter, approximate window status and calendar; strict TypeScript integration passes automated checks; fresh browser acceptance blocked |
 | Theme support | Complete | System-aware light/dark themes with a locally persisted accessible toggle |
 | Local settings | Complete | Write-only connector credentials plus local add, remove and index controls for the private library |
 | Hosted public beta | Live — browser acceptance pending | v219 deployed on Tencent with owner approval; public HTTPS receipt/health match on 1 October; interactive account/shelf acceptance still outstanding |
@@ -289,6 +309,28 @@ Carried from the 12 September 2026 entry:
 
 Dated entries, newest first. Entries dated 6–31 August 2026 were moved unchanged into
 [PROGRESS_ARCHIVE_2026-08.md](PROGRESS_ARCHIVE_2026-08.md) on 27 September 2026.
+
+### 2 October 2026 — Festival atlas tab
+
+Historical branch implementation (subsequently migrated to TypeScript on 4 October).
+Added a **Festivals** primary tab (originally `app/web/festivals.js`): a world map of 32 major international
+film festivals and the Oscars and a twelve-month calendar. Pins and calendar bars show whether each festival is on
+now, starts within 60 days or comes later; a month filter dims the map and narrows the calendar, and
+selecting a festival shows its city, typical window, focus and official site where known. The map
+zooms up to 8× by wheel, pinch, double-click or buttons and pans by dragging, with counter-scaled
+pins; choosing the active month again clears the filter. The list includes the Singapore International
+Film Festival and the Academy Awards, shown as a gold awards-ceremony pin whose calendar bar is the
+early-to-mid-March span in which the single-evening ceremony usually falls. The land
+outline is Natural Earth 1:110m (public domain, via world-atlas) projected equirectangularly and
+inlined, so the view adds no runtime dependency or network request.
+
+Acceptance evidence: 643 repository tests pass, including a new asset test for the tab, script, view
+registration and build step; checked in a local browser in light and dark themes at desktop and
+375 px widths with no horizontal scroll and no console errors.
+
+Constraints: festival dates are static typical windows rather than confirmed edition dates and need
+an annual review (Sundance moves to Boulder from 2027; FESPACO is biennial). Next: consider sourcing
+confirmed edition dates and linking festivals to films in Discover.
 
 ### 1 October 2026 — Explain the deployed architecture and correct stale documentation
 

@@ -1,0 +1,43 @@
+export interface Festival {
+  id: string; name: string; city: string; country: string;
+  lat: number; lon: number; start: [number, number]; end: [number, number];
+  focus: string; url?: string; kind?: "awards";
+}
+  // month is 1-based; a window that crosses New Year is not needed by the current list.
+  // kind "awards" marks an awards ceremony rather than a festival; its window is the span in which
+  // the single-evening ceremony usually falls.
+  export const FESTIVALS: Festival[] = [
+    { id: "sundance", name: "Sundance Film Festival", city: "Boulder, Colorado", country: "United States", lat: 40.01, lon: -105.27, start: [1, 22], end: [2, 1], focus: "American and international independent cinema; moves from Park City to Boulder from 2027", url: "https://www.sundance.org" },
+    { id: "iffr", name: "International Film Festival Rotterdam", city: "Rotterdam", country: "Netherlands", lat: 51.92, lon: 4.48, start: [1, 29], end: [2, 9], focus: "Independent, innovative and experimental cinema", url: "https://iffr.com" },
+    { id: "clermont", name: "Clermont-Ferrand Short Film Festival", city: "Clermont-Ferrand", country: "France", lat: 45.78, lon: 3.08, start: [1, 30], end: [2, 7], focus: "The largest festival dedicated to short film", url: "https://clermont-filmfest.org" },
+    { id: "berlinale", name: "Berlin International Film Festival", city: "Berlin", country: "Germany", lat: 52.52, lon: 13.4, start: [2, 12], end: [2, 22], focus: "Competition for the Golden Bear; politically engaged world cinema", url: "https://www.berlinale.de" },
+    { id: "fespaco", name: "FESPACO", city: "Ouagadougou", country: "Burkina Faso", lat: 12.37, lon: -1.52, start: [2, 22], end: [3, 1], focus: "Pan-African cinema; held in odd-numbered years", url: "https://fespaco.bf" },
+    { id: "oscars", kind: "awards", name: "Academy Awards (Oscars)", city: "Los Angeles", country: "United States", lat: 34.1, lon: -118.34, start: [3, 1], end: [3, 15], focus: "The Academy of Motion Picture Arts and Sciences' annual awards, presented in one evening at the Dolby Theatre; the culmination of the awards season that festivals launch", url: "https://www.oscars.org" },
+    { id: "sxsw", name: "SXSW Film & TV Festival", city: "Austin, Texas", country: "United States", lat: 30.27, lon: -97.74, start: [3, 12], end: [3, 20], focus: "Genre, documentary and first features alongside music and technology" },
+    { id: "cphdox", name: "CPH:DOX", city: "Copenhagen", country: "Denmark", lat: 55.68, lon: 12.57, start: [3, 18], end: [3, 29], focus: "Documentary and non-fiction", url: "https://cphdox.dk" },
+    { id: "hkiff", name: "Hong Kong International Film Festival", city: "Hong Kong", country: "China", lat: 22.32, lon: 114.17, start: [4, 1], end: [4, 12], focus: "Asian cinema and restored classics", url: "https://www.hkiff.org.hk" },
+    { id: "cannes", name: "Festival de Cannes", city: "Cannes", country: "France", lat: 43.55, lon: 7.02, start: [5, 12], end: [5, 23], focus: "Competition for the Palme d'Or; Marché du Film", url: "https://www.festival-cannes.com" },
+    { id: "sydney", name: "Sydney Film Festival", city: "Sydney", country: "Australia", lat: -33.87, lon: 151.21, start: [6, 4], end: [6, 15], focus: "Australian and international features and documentary", url: "https://www.sff.org.au" },
+    { id: "tribeca", name: "Tribeca Festival", city: "New York", country: "United States", lat: 40.72, lon: -74.01, start: [6, 4], end: [6, 15], focus: "Independent film, documentary and immersive work", url: "https://tribecafilm.com" },
+    { id: "annecy", name: "Annecy International Animation Film Festival", city: "Annecy", country: "France", lat: 45.9, lon: 6.13, start: [6, 8], end: [6, 14], focus: "Animation features, shorts and the MIFA market", url: "https://www.annecyfestival.com" },
+    { id: "siff", name: "Shanghai International Film Festival", city: "Shanghai", country: "China", lat: 31.23, lon: 121.47, start: [6, 13], end: [6, 22], focus: "Golden Goblet competition; Chinese and Asian premieres", url: "https://www.siff.com" },
+    { id: "kviff", name: "Karlovy Vary International Film Festival", city: "Karlovy Vary", country: "Czechia", lat: 50.23, lon: 12.87, start: [7, 3], end: [7, 11], focus: "Crystal Globe competition; Central and Eastern European cinema", url: "https://www.kviff.com" },
+    { id: "durban", name: "Durban International Film Festival", city: "Durban", country: "South Africa", lat: -29.86, lon: 31.02, start: [7, 17], end: [7, 27], focus: "South African and African cinema" },
+    { id: "first", name: "FIRST International Film Festival", city: "Xining", country: "China", lat: 36.62, lon: 101.78, start: [7, 24], end: [8, 2], focus: "Debut and second features by young Chinese-language filmmakers" },
+    { id: "locarno", name: "Locarno Film Festival", city: "Locarno", country: "Switzerland", lat: 46.17, lon: 8.8, start: [8, 5], end: [8, 15], focus: "Golden Leopard; open-air Piazza Grande screenings", url: "https://www.locarnofestival.ch" },
+    { id: "venice", name: "Venice International Film Festival", city: "Venice Lido", country: "Italy", lat: 45.41, lon: 12.37, start: [8, 27], end: [9, 6], focus: "The oldest film festival; competition for the Golden Lion", url: "https://www.labiennale.org" },
+    { id: "telluride", name: "Telluride Film Festival", city: "Telluride, Colorado", country: "United States", lat: 37.94, lon: -107.81, start: [8, 29], end: [9, 1], focus: "Unannounced programme over the Labor Day weekend", url: "https://www.telluridefilmfestival.org" },
+    { id: "tiff", name: "Toronto International Film Festival", city: "Toronto", country: "Canada", lat: 43.65, lon: -79.38, start: [9, 4], end: [9, 14], focus: "Audience-voted People's Choice Award; awards-season launchpad", url: "https://www.tiff.net" },
+    { id: "sansebastian", name: "San Sebastián International Film Festival", city: "San Sebastián", country: "Spain", lat: 43.32, lon: -1.98, start: [9, 18], end: [9, 26], focus: "Golden Shell; Spanish and Latin American cinema", url: "https://www.sansebastianfestival.com" },
+    { id: "nyff", name: "New York Film Festival", city: "New York", country: "United States", lat: 40.77, lon: -73.98, start: [9, 26], end: [10, 13], focus: "Curated, non-competitive selection at Lincoln Center", url: "https://www.filmlinc.org" },
+    { id: "busan", name: "Busan International Film Festival", city: "Busan", country: "South Korea", lat: 35.18, lon: 129.08, start: [10, 1], end: [10, 10], focus: "Asia's leading festival; Asian Contents & Film Market", url: "https://www.biff.kr" },
+    { id: "sitges", name: "Sitges Film Festival", city: "Sitges", country: "Spain", lat: 41.24, lon: 1.81, start: [10, 8], end: [10, 18], focus: "Fantastic and genre cinema", url: "https://sitgesfilmfestival.com" },
+    { id: "lff", name: "BFI London Film Festival", city: "London", country: "United Kingdom", lat: 51.51, lon: -0.13, start: [10, 8], end: [10, 19], focus: "The UK's largest public festival", url: "https://www.bfi.org.uk" },
+    { id: "tokyo", name: "Tokyo International Film Festival", city: "Tokyo", country: "Japan", lat: 35.68, lon: 139.76, start: [10, 27], end: [11, 5], focus: "Japanese and Asian premieres; Tokyo Grand Prix", url: "https://www.tiff-jp.net" },
+    { id: "mardelplata", name: "Mar del Plata International Film Festival", city: "Mar del Plata", country: "Argentina", lat: -38.0, lon: -57.55, start: [11, 6], end: [11, 16], focus: "Latin America's only competitive A-category festival" },
+    { id: "idfa", name: "International Documentary Film Festival Amsterdam", city: "Amsterdam", country: "Netherlands", lat: 52.37, lon: 4.9, start: [11, 13], end: [11, 23], focus: "The world's largest documentary festival", url: "https://www.idfa.nl" },
+    { id: "cairo", name: "Cairo International Film Festival", city: "Cairo", country: "Egypt", lat: 30.04, lon: 31.24, start: [11, 13], end: [11, 22], focus: "Arab and international cinema" },
+    { id: "goldenhorse", name: "Golden Horse Film Festival", city: "Taipei", country: "Taiwan", lat: 25.03, lon: 121.57, start: [11, 6], end: [11, 23], focus: "Golden Horse Awards for Chinese-language cinema", url: "https://www.goldenhorse.org.tw" },
+    { id: "sgiff", name: "Singapore International Film Festival", city: "Singapore", country: "Singapore", lat: 1.29, lon: 103.85, start: [11, 26], end: [12, 7], focus: "Singapore's longest-running film festival; Southeast Asian cinema and the Silver Screen Awards", url: "https://sgiff.com" },
+    { id: "redsea", name: "Red Sea International Film Festival", city: "Jeddah", country: "Saudi Arabia", lat: 21.49, lon: 39.19, start: [12, 4], end: [12, 13], focus: "Arab, Asian and African cinema", url: "https://redseafilmfest.com" },
+  ];

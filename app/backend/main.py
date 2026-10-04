@@ -320,6 +320,7 @@ def web_application_bundle(bundle_name: str) -> FileResponse:
         "integrations",
         "theme-init",
         "auth-loader",
+        "festivals",
     }:
         raise HTTPException(status_code=404, detail="Unknown frontend bundle.")
     bundle = web_directory / "generated" / f"{bundle_name}.js"

@@ -79,7 +79,7 @@ The original GPL-3.0 licence and contributor attribution remain applicable. See
   requests now follow the dossier's lifetime too: closing it or choosing another film aborts those
   browser fetches, and delayed completions cannot overwrite the current film or attach another film's
   criticism. A loading dossier can be closed immediately.
-- Keep the current Discover workspace while moving between Discover, Analyse and Settings, including
+- Keep the current Discover workspace while moving between Discover, Analyse, Festivals and Settings, including
   each view's scroll position. A versioned per-tab `sessionStorage` snapshot restores the query,
   identity choices or hydrated shelf after refresh without repeating a completed search. It contains
   public film summaries and an optional open-dossier ID only—never credentials, reviews, studies or
@@ -183,6 +183,26 @@ The original GPL-3.0 licence and contributor attribution remain applicable. See
 
 Clip measurements do not yet enter Deep Study automatically. Until that bridge is
 implemented, film-specific formal claims remain viewing hypotheses.
+
+### Festivals
+
+Implemented in source; not included in the currently deployed v230 release.
+
+- See 32 major international film festivals, including the Singapore International Film Festival,
+  and the Academy Awards (a gold awards-ceremony pin) on a world map, coloured by whether today
+  falls within its typical window, within 60 days of that window or further away.
+- Zoom the map with the scroll wheel, a pinch, a double-click (Shift to zoom out) or the +/−
+  buttons, and drag to pan once zoomed; pins keep their size at every zoom level.
+- Filter the map and calendar by month (choose the active month again to clear it); select a pin
+  or calendar row for the city, typical dates, focus and, where known, the official site.
+- Read the whole festival year as a twelve-month calendar with a marker for today.
+
+The festival list and its windows are typed static data in `app/web/src/festivals/data.ts`, drawn from recent
+editions: exact dates move each year, so the view asks visitors to confirm with the festival. The
+map outline is Natural Earth 1:110m land (public domain), inlined so the view needs no map library,
+tile server or network request. `festivals.ts` mounts the typed controller; the shared compiler
+builds `/assets/festivals.js` for localhost, Docker and hosted releases. Month filters and selection
+stay in the current page; the active Festivals tab and scroll offset use the existing session store.
 
 ## System Architecture
 

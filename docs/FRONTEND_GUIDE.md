@@ -43,6 +43,8 @@ Splitting code is useful when each file has a clear responsibility, not merely f
 | `src/shared/ui.ts` | Typed focus, progress markup and API-base helpers | Follow accessible focus scheduling |
 | `auth.ts`, `entra-auth.ts`, `local-auth.ts`, `integrations.ts` | Typed account/settings adapters | Follow sign-in or settings |
 | `theme-init.ts`, `auth-loader.ts` | Early theme restoration and account-provider selection | Follow startup before the app |
+| `festivals.ts`, `src/festivals/controller.ts` | Self-contained atlas entry, map gestures, filtering and calendar rendering | Follow the Festivals tab |
+| `src/festivals/data.ts`, `model.ts`, `land.ts` | Typed catalogue, pure date/projection helpers and public-domain geometry | Update typical windows or understand map coordinates |
 
 For TypeScript basics, read `format.ts` → its tests → `types.ts` → `progress.ts`.
 For the app, read `main.ts` → `app.ts` → `context.ts` → `bootstrap.ts` → one handler.
