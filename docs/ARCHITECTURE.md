@@ -4,13 +4,13 @@
 **Last reconciled:** 4 October 2026
 
 FirstRoll is a local-first film-study system with a hosted public beta running on one Tencent
-Lighthouse server in Singapore (v219, owner-approved deployment on 29 September 2026). “Local-first”
+Lighthouse server in Singapore (v230 / `ec9975c8`, owner-authorised deployment on 4 October 2026). “Local-first”
 describes where private books, credentials, derived vectors and uploaded film clips are kept; it does
 not mean the product is available only on one computer.
 
 ## Product Topology
 
-### Frontend source boundaries (TypeScript migration complete, not yet deployed)
+### Frontend source boundaries (TypeScript migration deployed as v230)
 
 The browser still receives static HTML, CSS and JavaScript. `app/web/src/main.ts` starts
 the 64-line `app/web/app.ts` composition root. `context.ts` creates per-application DOM refs
@@ -58,8 +58,8 @@ capabilities report an error instead of a false success; malformed stored naviga
 values fall back safely. Backend business routes, paid-provider controls and hosting are unchanged.
 
 Read the [plain-English deployment guide](../readme.md#the-current-deployment-in-plain-english)
-first for the roles of DNS, the VPS, Caddy, Docker, Supabase and the image registry. On 1 October,
-the public release receipt and API health both still identify v219 / `b678e52e`; discovery status
+first for the roles of DNS, the VPS, Caddy, Docker, Supabase and the image registry. On 4 October,
+the public release receipt and API health both identify v230 / `ec9975c8`; discovery status
 reports Supabase configured, Wikidata/Wikipedia available and hosted study/video analysis disabled.
 The diagram below includes implemented but currently disabled research capabilities. It is not a
 claim that each provider is configured or every path has passed interactive production acceptance.

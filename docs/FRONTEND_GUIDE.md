@@ -1,7 +1,8 @@
 # Understanding the FirstRoll Frontend
 
 The TypeScript migration is complete as of 4 October 2026. It changes how we organise
-and build the source, not the product's layout. The public deployment is unchanged.
+and build the source, not the product's layout. It is live as v230 / `ec9975c8`, deployed
+through owner-authorised release run `37208179152` on 4 October. See `PROGRESS.md` for evidence.
 
 ## Start here
 

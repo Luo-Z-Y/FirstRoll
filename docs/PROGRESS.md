@@ -13,6 +13,35 @@ Status vocabulary:
 
 ## Current Snapshot
 
+**v230 deployed to Tencent — 4 October 2026:** the owner explicitly authorised exact release
+`37208179152`, revision `ec9975c8559925ed7654f939113446402226ea9b`, and cancellation of obsolete
+waiting run `36839340540`. The obsolete run was cancelled; the current candidate and deployment
+jobs succeeded. The GitHub approval API found no pending request: its approval history already
+recorded the gate as `skipped` under the repository owner's account. The agent did not bypass or
+change environment protections; the API approval attempt made no change.
+
+Release evidence:
+
+- 653 repository tests, 73 frontend cases against local/source and minified hosted builds;
+  exact-head and merged-master CI passed, including the Docker build.
+- Receipt `vps-ec9975c8-37208179152-1`, receipt SHA-256
+  `80168c9954bfd68b71e531df86a95a95d77b8ee3c6f2b899d7ac312f21b51533`;
+  immutable image SHA-256 `ad4b4f620269e56631b8a9c8c5157cbd4968d0ba7b6e52c3d4dff17ee99c7dff`.
+- Candidate archive/receipt binding validated independently. GitHub and independent live checks
+  passed static-file hashes, matching API identity, CORS, contract/status and hidden API docs.
+- Real signed-out production browser: v230 badge, correct *In the Mood for Love* (2000)
+  identity, twelve-film director shelf, dossier with Douban/Letterboxd ratings, Settings boundary
+  and opening/closing the email/password sign-in dialogue.
+- VPS status confirms the API healthy and v219 / `b678e52e` retained as the previous site/image.
+  No rollback was needed; a destructive recovery drill was not performed.
+
+No database migration, secret/feature-flag change or paid model call was made. Live authenticated
+sign-in, saved-film/password updates and quota acceptance remain untested; mocked adapter tests
+are not a substitute. Hosted Deep Study and video analysis remain disabled. These smoke checks
+do not establish every external provider's availability or a performance/error-rate baseline.
+
+### Migration implementation checkpoint (before deployment)
+
 **Complete frontend TypeScript migration — 4 October 2026:** all hand-written browser
 application modules now pass strict checks, including the composition root, context/bootstrap,
 remaining controllers/views, session restoration and Supabase/Entra/local auth/settings.
@@ -26,8 +55,8 @@ The early theme script and account-provider loader are also typed, not left inli
 Verification: 653 repository tests and 73 frontend cases pass, including source and minified
 application builds and new decoder, account-adapter, storage, in-memory key and negative
 type-contract checks.
-No paid provider requests or production deployment are part of this change. Publication and
-final CI evidence are recorded with delivery; production remains owner-gated. A real localhost
+No paid provider requests or production deployment were part of the implementation phase;
+the subsequent exact-run deployment is recorded above. Production remains owner-gated. A real localhost
 browser smoke check verified page startup, Settings, the sign-in dialogue and Analyse/Discover
 navigation. Live authenticated/provider operations and local Docker execution are not claimed.
 
