@@ -1,16 +1,17 @@
 # FirstRoll Public Beta Hosting
 
-**Deployment status:** **v230 is live on Tencent Lighthouse**, revision `ec9975c8`, following explicit
-owner authorisation of release run `37208179152` on 4 October 2026. Candidate and deployment jobs,
+**Deployment status:** **v232 is live on Tencent Lighthouse**, revision `cf43ba57`, following explicit
+owner authorisation of release run `37213215944` on 5 October 2026. Candidate and deployment jobs,
 GitHub's live verification and an independent full live verification passed. The former Azure
-deployment is no longer the DNS target. Public browser search, twelve-film director shelf,
-dossier, Settings and sign-in dialogue passed smoke checks; live account submission is untested.
+deployment is no longer the DNS target. Live festival navigation, November filtering, SGIFF details
+and zoom/reset passed browser smoke checks. Search, shelf, dossier, Settings and sign-in dialogue
+passed on prior v230; live account submission is untested.
 
 **Visitor URL:** `https://firstroll.app`
 
 **API URL:** `https://api.firstroll.app`
 
-**Last reconciled:** 4 October 2026
+**Last reconciled:** 5 October 2026
 
 **Current checkpoint:** The dedicated deployment key and pinned SSH host are protected by the
 unchanged human production gate. Both Azure release workflows remain disabled. The approved image
@@ -18,10 +19,10 @@ was pulled anonymously by digest; Caddy and the API are running. Health reports 
 revision, generated API docs return 404 and unauthenticated account access returns 401. Paid Deep
 Study and video analysis remain disabled. DeepSeek/YouTube key presence is verified, but no paid
 model call or authenticated quota test was performed. TMDb is absent; open catalogue fallback is
-active. The previous v219 site and immutable API image are retained for application rollback;
+active. The previous v230 site and immutable API image are retained for application rollback;
 this does not roll back databases, secrets or infrastructure, and no recovery drill is claimed.
-The exact release passed 653 repository tests and 73 frontend cases. See the
-[launch evidence](PROGRESS.md#29-september-2026--v219-deployed-to-tencent-with-owner-approval).
+The exact release passed 655 repository tests and 80 frontend cases. See the
+[current release evidence](PROGRESS.md#current-snapshot).
 
 FirstRoll is not merely a local application. Its public beta serves the static browser bundle and the
 Docker API from separate origins, while private-library and clip-analysis capabilities remain local

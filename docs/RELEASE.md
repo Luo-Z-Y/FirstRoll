@@ -99,12 +99,13 @@ Operating rules specific to this path:
   `BACKEND_RELEASE_ENABLED` unset and disable `Frontend Release` in the Actions UI, otherwise it builds
   a candidate on every push and fails at the Azure token.
 
-The first exact-run owner-approved deployment, **v219 / run 36534759362**, passed all automated live
-checks on 29 September 2026. Public HTTPS rechecks on 1 October return the same release normally,
-but interactive browser acceptance remains unverified;
-a real rollback drill is still outstanding and there is no previous application target yet. The
-structure and failure paths have 54 VPS tests; CI also validates the stack with `shellcheck`,
-`docker compose config` and `caddy validate`. See [launch evidence](PROGRESS.md#29-september-2026--v219-deployed-to-tencent-with-owner-approval).
+The current exact-run owner-approved deployment is **v232 / run 37213215944**, revision `cf43ba57`,
+verified on 5 October 2026. GitHub and independent live file/API checks passed, as did browser
+festival navigation, month filtering, SGIFF details and zoom/reset. The previous **v230 / ec9975c8**
+site and immutable API image are retained for application rollback; no recovery drill was performed.
+Authenticated account/quota acceptance and a performance/error-rate baseline remain outstanding.
+CI also validates the stack with `shellcheck`, `docker compose config` and `caddy validate`.
+See [current release evidence](PROGRESS.md#current-snapshot).
 
 ## Frontend: first standardised release
 

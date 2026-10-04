@@ -13,6 +13,29 @@ Status vocabulary:
 
 ## Current Snapshot
 
+**v232 festival atlas deployed — 5 October 2026 (Singapore):** after the owner explicitly requested
+approval of exact run `37213215944`, the agent approved its existing protected production gate.
+The run succeeded for `cf43ba57c4cc397443ac870559a023c596c5dd60` (PR #52). No gate was bypassed.
+
+- Exact merged-master CI and candidate checks passed; the integrated source passed **655 repository
+  tests and 80 frontend cases**, including hosted bundles.
+- Receipt `vps-cf43ba57-37213215944-1`, SHA-256
+  `212dec21a570e13f4f683e5919a78fd0e03fcce1246040de072a0b85d17733fe`;
+  immutable API image SHA-256 `eb0f9f92e000336f64cffdc48755932e8b8c0be8ef9c6a09d6aa2c752875e556`.
+- Pipeline and independent live verification passed: static-file fingerprints, exact API identity,
+  API contract/status, CORS and hidden documentation routes. Browser badge reports **v232 LIVE**.
+- Live desktop browser checks passed Festivals navigation, November's six calendar entries,
+  selecting SGIFF and its official-site link, zoom and reset. The map and detail layout rendered.
+  Dates remain typical windows, not confirmed edition dates; no new mobile/pinch claim is made.
+- VPS status reports the API healthy and **v230 / ec9975c8** retained as the previous site/image.
+  No rollback, database migration, secret/feature-flag change or paid model call was needed.
+
+Hosted Deep Study/video analysis remain disabled. Authenticated account/quota acceptance, a real
+recovery drill and sustained performance/error-rate monitoring remain outstanding. README, hosting,
+release runbook, architecture status and Obsidian notes are reconciled to this deployment.
+
+### Historical integration and deployment checkpoints
+
 **Festival PR integration — 4 October 2026:** reconciled PR #52 with current master in an isolated
 worktree. The older PR modified deleted `app.js`; its navigation is now part of typed context/view
 validation, and the atlas is split into strict TypeScript data/model/land/controller modules plus
@@ -143,19 +166,18 @@ the daemon was unavailable; the existing CI container-build gate must still pass
 production deployment, paid provider call or data migration was performed. Next: review this
 checkpoint, then extract discovery/dossier feature controllers behind typed data boundaries.
 
-**Last updated:** 1 October 2026 (public HTTPS receipt/health still match v219; deployment architecture
-reconciled with code; interactive acceptance and authenticated quota verification remain open)
+**Last updated:** 5 October 2026 (v232 receipt/health and festival browser checks verified;
+authenticated account/quota acceptance and a real recovery drill remain open)
 
-**Release stage:** public beta v219 is running on Tencent Lighthouse in Singapore. The owner
-approved the two-record DNS switch and exact production run `36534759362`; the workflow deployed
-commit `b678e52e14deb84cdf7d2d1653e2c44405e0d988` and passed its external receipt/file/API/CORS
-verification. Both hostnames have valid HTTPS and public DNS points to `119.28.111.192`. Public HTTPS
-checks on 1 October return the correct receipt and API health without overriding DNS. Browser
-sign-in and interactive acceptance are still not claimed. Paid Deep Study stays disabled; quota verification and
-a live recovery drill remain. No previous working VPS release exists.
+**Release stage:** public beta v232 runs on Tencent Lighthouse in Singapore. The owner approved
+exact production run `37213215944`; commit `cf43ba57c4cc397443ac870559a023c596c5dd60` passed
+external receipt/file/API/CORS verification. Both hostnames have valid HTTPS. Festival desktop
+checks passed; prior v230 search/shelf/dossier/Settings checks passed. Authenticated account/quota
+acceptance remains unverified. Hosted Deep Study and video analysis stay disabled. The previous
+v230 site/image is retained; no recovery drill was performed.
 
 **Primary development URL:** `http://127.0.0.1:8000`
-**Public beta URL:** `https://firstroll.app` (v219 live; public HTTPS rechecked 1 October)
+**Public beta URL:** `https://firstroll.app` (v232 live; public HTTPS verified 5 October)
 **Automated verification:** 642 repository tests passing locally on 29 September 2026, including
 54 single-server checks, 34 same-ASGI-loop concurrency checks and 27 Node request/race checks.
 The new VPS cases simulate activation and recovery failures without touching a server. They do not
@@ -166,10 +188,10 @@ replace first-live-release acceptance or a real recovery drill.
 | Film discovery | Complete | TMDb primary catalogue with open Wikidata/Wikipedia failover, explicit ambiguity confirmation, attributed dossier enrichment and the always-available native director shelf |
 | Public video resources | Complete | Persistent cumulative catalogue; typed tabs; bounded uploader-description and public YouTube-caption extraction |
 | Product navigation | Complete | Discover, Analyse, Festivals and Settings preserve per-tab view content and scroll; a versioned `sessionStorage` snapshot makes the Discover workspace refresh-safe; Study remains consolidated into Discover |
-| Festival atlas | Implemented; not deployed in v230 | 32 festivals (including SGIFF) and the Oscars; zoomable inline map, toggleable month filter, approximate window status and calendar; strict TypeScript integration passes automated checks; fresh browser acceptance blocked |
+| Festival atlas | Live in v232 | 32 festivals (including SGIFF) and the Oscars; zoomable inline map, toggleable month filter, approximate window status and calendar; automated checks and live desktop filtering/details/zoom/reset checks passed on 5 October |
 | Theme support | Complete | System-aware light/dark themes with a locally persisted accessible toggle |
 | Local settings | Complete | Write-only connector credentials plus local add, remove and index controls for the private library |
-| Hosted public beta | Live — browser acceptance pending | v219 deployed on Tencent with owner approval; public HTTPS receipt/health match on 1 October; interactive account/shelf acceptance still outstanding |
+| Hosted public beta | Live — authenticated acceptance pending | v232 deployed on Tencent with exact-run owner approval; public receipt/health and festival desktop checks passed on 5 October; authenticated account/quota acceptance remains |
 | Accounts and quotas | Complete | Supabase email authentication, atomic daily Deep Study quotas and a launch-independent localhost test account |
 | Authenticated research progress | Implemented | Allow-listed SSE lifecycle events, owner-scoped result retrieval and secret/evidence redaction tests; final interactive browser observation remains pending |
 | Private library catalogue | Complete | Seven existing film-study PDFs retained; managed uploads and non-destructive removal; paths and content withheld from public APIs |
@@ -189,7 +211,7 @@ replace first-live-release acceptance or a real recovery drill.
 | Evidence-layered UI | Complete | Inspectable progress, packet and citations; quality status, validated `S*`/`C*`/`E*` citations, retrieval rationale and expandable excerpts; WCAG-audited keyboard flow |
 | Fixed-workflow evaluation baseline | Complete | Frozen, fingerprinted fixed/Agent/A01/A02 metrics; the entry gate passes all 17 targets and 11 required steps; GuideLLM/lm-eval tooling is mock-qualified only |
 | Autonomous research Agent | Blocked | Local, default-off. A01R class-aware acquisition and A02R patch-reliability harnesses are implemented with native tool calls; every paid comparison so far failed at least one gate, production remains NO-GO and no evaluation budget has been released since 31 August |
-| Release delivery | Live release verified — recovery drill pending | Protected master, exact-run owner approval, sealed v219 receipt, digest deployment over pinned SSH and successful external live checks; legacy Azure workflows remain disabled |
+| Release delivery | Live release verified — recovery drill pending | Protected master, exact-run owner approval, sealed v232 receipt, digest deployment over pinned SSH and successful external live checks; v230 retained for rollback; legacy Azure workflows remain disabled |
 | Web responsiveness | In progress | Blocking API work offloaded to the worker pool, dossier-lifetime fetch cancellation, pre-authentication Deep Study cancel controls and minified assets, measured synthetically; live profiling of search → shelf → dossier → reception is still required |
 | Clip analysis | Complete | Scene/shot metrics, shot scale, colour, objects and JSON/CSV export (local edition only) |
 | Clip evidence in Deep Study | Planned (deferred) | Deferred until the text Agent programme is accepted; study generation does not consume measured clip observations or timecodes |

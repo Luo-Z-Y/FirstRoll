@@ -1,16 +1,16 @@
 # FirstRoll Architecture
 
 **Status:** Current implementation  
-**Last reconciled:** 4 October 2026
+**Last reconciled:** 5 October 2026
 
 FirstRoll is a local-first film-study system with a hosted public beta running on one Tencent
-Lighthouse server in Singapore (v230 / `ec9975c8`, owner-authorised deployment on 4 October 2026). “Local-first”
+Lighthouse server in Singapore (v232 / `cf43ba57`, owner-authorised deployment on 5 October 2026). “Local-first”
 describes where private books, credentials, derived vectors and uploaded film clips are kept; it does
 not mean the product is available only on one computer.
 
 ## Product Topology
 
-### Festival atlas integration (source, not deployed in v230)
+### Festival atlas integration (live in v232)
 
 `app/web/festivals.ts` is a separate compiled browser entry. Its `src/festivals/` modules separate
 the typed festival catalogue, public-domain land outline, pure date/projection helpers and DOM
@@ -68,8 +68,8 @@ capabilities report an error instead of a false success; malformed stored naviga
 values fall back safely. Backend business routes, paid-provider controls and hosting are unchanged.
 
 Read the [plain-English deployment guide](../readme.md#the-current-deployment-in-plain-english)
-first for the roles of DNS, the VPS, Caddy, Docker, Supabase and the image registry. On 4 October,
-the public release receipt and API health both identify v230 / `ec9975c8`; discovery status
+first for the roles of DNS, the VPS, Caddy, Docker, Supabase and the image registry. On 5 October,
+the public release receipt and API health both identify v232 / `cf43ba57`; discovery status
 reports Supabase configured, Wikidata/Wikipedia available and hosted study/video analysis disabled.
 The diagram below includes implemented but currently disabled research capabilities. It is not a
 claim that each provider is configured or every path has passed interactive production acceptance.
