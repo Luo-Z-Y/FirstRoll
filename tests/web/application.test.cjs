@@ -131,6 +131,21 @@ test("typed navigation rejects unknown views and keeps theme fallback when stora
   assert.equal(app.readThemePreference(), "system");
 });
 
+test("festival navigation persists and restores the new typed view and scroll", () => {
+  const h = harness(), app = h.create();
+  app.setProductView("festivals");
+  assert.equal(app.state.productView, "festivals");
+  assert.equal(JSON.parse(h.storage.get("firstroll.product-session")).view, "festivals");
+  h.window.scrollY = 260;
+  app.setProductView("discovery");
+  assert.equal(app.state.viewScroll.festivals, 260);
+  app.setProductView("festivals");
+  const second = h.create();
+  second.restoreProductSession();
+  assert.equal(second.state.productView, "festivals");
+  assert.equal(second.state.viewScroll.festivals, 260);
+});
+
 test("typed recent searches validate stored entries, cap/deduplicate and handle delegated actions", () => {
   const h = harness(), app = h.create();
   h.localStorage.set("firstroll.recent-searches", JSON.stringify([null, {}, { title: 4 },

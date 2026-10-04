@@ -10,6 +10,16 @@ not mean the product is available only on one computer.
 
 ## Product Topology
 
+### Festival atlas integration (source, not deployed in v230)
+
+`app/web/festivals.ts` is a separate compiled browser entry. Its `src/festivals/` modules separate
+the typed festival catalogue, public-domain land outline, pure date/projection helpers and DOM
+controller. The shared compiler ships the entry for local, Docker and hosted builds; FastAPI's
+asset allow-list serves its generated bundle. Navigation and session validation recognise the
+`festivals` view without reintroducing the removed JavaScript application root. The atlas uses
+no API, credential, map library or tile server. Calendar windows are typical, not confirmed dates;
+status labels are explicitly approximate. No auth, quota, deployment gate or database changes.
+
 ### Frontend source boundaries (TypeScript migration deployed as v230)
 
 The browser still receives static HTML, CSS and JavaScript. `app/web/src/main.ts` starts
@@ -256,7 +266,7 @@ reissues only its latest query. Invalid, oversized, incompatible or older-than-t
 snapshots are discarded.
 
 Product navigation changes only the active section. It neither rebuilds nor empties Discover, and
-per-view scroll offsets are restored when moving among Discover, Analyse and Settings. This state is
+per-view scroll offsets are restored when moving among Discover, Analyse, Festivals and Settings. This state is
 session continuity, not durable account persistence: closing the tab session clears it, and no state
 is synchronised across devices.
 

@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/assets/styles.css?v=20260821-8" />
+  <link rel="stylesheet" href="/assets/styles.css?v=20261002-3" />
 </head>
 <body data-api-base="">
   <div class="app-shell">
@@ -25,6 +25,7 @@
       <nav class="primary-nav" aria-label="Primary navigation">
         <button class="nav-link active" type="button" data-product-view="discovery">Discover</button>
         <button class="nav-link" type="button" data-product-view="analyse">Analyse</button>
+        <button class="nav-link" type="button" data-product-view="festivals">Festivals</button>
         <button class="nav-link public-settings-nav" type="button" data-product-view="settings">Settings</button>
       </nav>
 
@@ -201,6 +202,37 @@
             </section>
           </section>
         </div>
+      </section>
+
+      <section id="product-festivals" class="product-view" aria-labelledby="festivalsTitle">
+        <div class="analyse-intro">
+          <div>
+            <p class="eyebrow">Festival atlas</p>
+            <h1 id="festivalsTitle">Where cinema gathers.<br /><em>Month by month.</em></h1>
+          </div>
+          <p>
+            Major international film festivals on one map and one calendar. Windows are typical
+            annual dates from recent editions; confirm each year's dates with the festival.
+          </p>
+        </div>
+        <div class="festival-months" role="group" aria-label="Filter festivals by month" data-festival-months></div>
+        <div class="festival-atlas">
+          <figure class="festival-map" data-festival-map></figure>
+          <aside class="festival-detail" aria-live="polite" data-festival-detail></aside>
+        </div>
+        <ul class="festival-legend" aria-label="Map key">
+          <li><span class="is-now"></span>Within typical window</li>
+          <li><span class="is-soon"></span>Typical window within 60 days</li>
+          <li><span class="is-later"></span>Later typical window</li>
+          <li><span class="is-awards"></span>Awards ceremony</li>
+        </ul>
+        <section class="festival-year" aria-labelledby="festivalYearTitle">
+          <div class="section-heading">
+            <h2 id="festivalYearTitle">The festival year</h2>
+            <p class="section-meta" role="status" data-festival-summary></p>
+          </div>
+          <div class="festival-calendar" data-festival-calendar></div>
+        </section>
       </section>
 
       <section id="product-settings" class="product-view integrations-view" aria-labelledby="integrationsTitle">
@@ -428,6 +460,7 @@
   <script src="/assets/config.js"></script>
   <script src="/assets/auth-loader.js"></script>
   <script src="/assets/integrations.js?v=20260821-7"></script>
-  <script src="/assets/app.js?v=20260912-1"></script>
+  <script src="/assets/app.js?v=20261002-1"></script>
+  <script src="/assets/festivals.js?v=20261002-3"></script>
 </body>
 </html>
