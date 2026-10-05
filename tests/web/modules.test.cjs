@@ -54,6 +54,18 @@ test("time, file-size and film-year labels retain their existing behaviour", () 
   assert.equal(format.normaliseFilmYear(1870), null);
 });
 
+test("film duration rounds before splitting hours and minutes", () => {
+  assert.equal(format.formatFilmDuration(119.6), "2h");
+  assert.equal(format.formatFilmDuration(59.6), "1h");
+  assert.equal(format.formatFilmDuration(119.4), "1h 59m");
+  assert.equal(format.formatFilmDuration(0.4), "0 min");
+  assert.equal(format.formatFilmDuration("98"), "1h 38m");
+  assert.equal(format.formatFilmDuration(-1), "");
+  assert.equal(format.formatFilmDuration(0), "");
+  assert.equal(format.formatFilmDuration(NaN), "");
+  assert.equal(format.formatFilmDuration(Infinity), "");
+});
+
 test("API errors retain safe HTTP-status fallback for malformed responses", async () => {
   assert.equal(await errors.readApiError(Response.json({ detail: "Try again" }, { status: 429 })), "Try again");
   assert.equal(await errors.readApiError(Response.json({ detail: { message: "Unavailable" } }, { status: 503 })), "Unavailable");
@@ -69,10 +81,12 @@ function packet(value) { return `event: progress\ndata: ${JSON.stringify(value)}
 function response(text) {
   const bytes = new TextEncoder().encode(text);
   // Byte-by-byte chunks also split the multibyte ellipsis and SSE delimiters.
-  return new Response(new ReadableStream({ start(controller) {
-    for (const byte of bytes) controller.enqueue(new Uint8Array([byte]));
-    controller.close();
-  } }));
+  return new Response(new ReadableStream({
+    start(controller) {
+      for (const byte of bytes) controller.enqueue(new Uint8Array([byte]));
+      controller.close();
+    }
+  }));
 }
 
 test("progress parser ignores unrelated events and rejects untrusted fields/counts", () => {
@@ -101,7 +115,7 @@ test("progress fails safely on cross-run, sequence-gap, early EOF and failed-run
     [packet(event()), /before completion/],
     [packet(event({ kind: "run_failed", message: "Research unavailable" })), /Research unavailable/],
   ]) {
-    await assert.rejects(progress.consumeResearchProgress(response(text), "run-1", () => {}), expected);
+    await assert.rejects(progress.consumeResearchProgress(response(text), "run-1", () => { }), expected);
   }
 });
 
