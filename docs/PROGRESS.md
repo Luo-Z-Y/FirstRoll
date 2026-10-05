@@ -16,47 +16,81 @@ Status vocabulary:
 
 ## Current Snapshot
 
-### 5 October 2026 — Codebase organisation checkpoint
+**Last updated:** 5 October 2026. Agent/Azure retirement, codebase organisation
+and the film-duration rounding fix are merged into master. Mobile festival polish
+is prepared in PR #57. Previous mobile browser acceptance passed; physical-touch
+testing remains pending. Merging does not confirm production deployment.
 
-Frontend development tooling is grouped under `tools/frontend/`: `build.cjs`, `build.sh`,
-`preview.sh` and the optional historical `check-responsiveness.cjs` diagnostic. Repository-root
-resolution, Docker's nested build-context allow-list, workflow invocations, tests and current
-documentation have been updated together. Existing `npm run build` and `build:local` commands
-remain stable. `npm run preview` now compiles before launching the hosted-style loopback UI;
-pytest defaults to `tests/` instead of scanning unrelated workspace directories.
+### Codebase organisation checkpoint
 
-[Codebase guide](CODEBASE.md) maps folders, features, tests and daily commands, and identifies
-backend router extraction as a separate future change. No Python service imports, HTTP routes,
-feature flags, database schema or production approval policy changed. Private/untracked files,
-model assets and the independent mobile and monochrome worktrees are preserved.
+Frontend development tooling is grouped under `tools/frontend/`: `build.cjs`,
+`build.sh`, `preview.sh` and the optional historical `check-responsiveness.cjs`
+diagnostic. Repository-root resolution, Docker's nested build-context allow-list,
+workflow invocations, tests and documentation have been updated together.
 
-Verification: 304 Python tests, 80 frontend cases against source and minified hosted bundles,
-strict TypeScript, local/hosted builds, new-test Ruff checks, shell syntax and whitespace checks
-pass. Three new tests cover preview root/port/flag handling and the nested Docker/compiler
-contract. The frontend count reflects current merged master, not the unmerged mobile PR.
-The optional browser benchmark was not executed; it still requires its documented historical
-baseline and browser toolchain. Remote CI must validate the container build before merge.
-Production remains v232; reorganising source does not deploy it.
+Existing `npm run build` and `build:local` commands remain stable.
+`npm run preview` compiles before launching the hosted-style loopback UI.
+Pytest defaults to `tests/` instead of scanning unrelated workspace directories.
 
-**Last updated:** 5 October 2026 (PR #50 reconciled with current master; Agent/Azure removal is
-branch-only; deployed TypeScript and festival features are preserved)
+The [Codebase guide](CODEBASE.md) maps folders, features, tests and daily commands.
+Backend router extraction remains a separate future change. This reorganisation
+does not change Python service imports, HTTP routes, feature flags, database
+schema or production approval policy. Private and untracked files are excluded.
 
-**Release stage:** VPS public beta v232 (`cf43ba57`), deployed by owner-approved run `37213215944`
-on 5 October 2026. Pipeline and independent file/API/contract/CORS/hidden-doc checks passed, as did
-live desktop festival navigation, November filtering, SGIFF details and zoom/reset. Prior v230
-browser checks covered search, shelf, dossier, Settings and the sign-in dialogue. Authenticated
-account/quota acceptance remains unverified; paid Deep Study and video analysis stay disabled.
-v230 is retained for application rollback; no recovery drill was performed. This PR refresh
-does not deploy, change secrets or authorise another release. Hosting procedures: [Operations](OPERATIONS.md) and
-[infra/vps/README.md](../infra/vps/README.md).
+### Verification evidence
+
+These results describe separate verification checkpoints, not a completed
+verification of the newly combined PR branch:
+
+- Original tooling checkpoint: 304 Python tests and 80 frontend tests passed
+  against source and minified hosted bundles. Strict TypeScript, local and hosted
+  builds, focused Ruff checks, shell syntax and whitespace checks passed.
+- Tooling PR tested with the duration fix on master: 304 Python tests and
+  81 frontend tests passed, including source and minified hosted bundles.
+- Mobile PR tested with the duration fix on master: 301 Python tests and
+  84 frontend tests passed, including source and minified hosted bundles.
+- Earlier mobile browser checks passed at 320, 390 and 430 CSS pixels and
+  1280 pixels on desktop. These do not establish physical-device pinch/pan
+  behaviour.
+- Fresh CI must pass after combining the mobile and tooling changes.
+  Record its results separately rather than treating earlier runs as proof
+  of the combined branch.
+
+The optional historical browser benchmark was not rerun. It requires its
+documented baseline and browser toolchain. A previous broad Ruff scan reported
+23 findings in unchanged legacy `app/backend/algorithms` files.
+
+The reduced Python test count follows the removal of Agent/Azure-only tests,
+not the removal of live festival or account tests. VPS tests simulate activation
+and recovery failures; they do not replace browser acceptance or a real
+recovery drill.
+
+### Production checkpoint
+
+**Last verified release:** VPS public beta v232 (`cf43ba57`), deployed through
+owner-approved run `37213215944` on 5 October 2026.
+
+Pipeline and independent checks passed for file fingerprints, API identity,
+API contracts, CORS and hidden documentation routes. Live desktop checks covered
+festival navigation, November filtering, SGIFF details and zoom/reset.
+Earlier v230 browser checks covered search, shelf, dossier, Settings and the
+sign-in dialogue.
+
+Authenticated account/quota acceptance remains unverified. At that verified
+checkpoint, paid Deep Study and video analysis were disabled, and v230 was
+retained for application rollback. No recovery drill was performed.
+
+A merge or documentation update does not establish a newer live release.
+Deployment requires approval of the exact release run, followed by successful
+deployment and live verification. This PR does not change secrets or authorise
+production deployment.
 
 **Primary development URL:** `http://127.0.0.1:8000`
-**Public beta URL:** `https://firstroll.app` (v232 live; public HTTPS checked 5 October)
-**Automated verification:** 301 repository tests, 80 frontend tests (local and minified hosted
-application), strict typing, local/hosted builds and Ruff pass for the refreshed PR on 5 October.
-The smaller Python suite removes Agent/Azure-only tests, not the live festival/account tests. The VPS tests simulate activation
-and recovery failures without touching a server; they do not replace browser acceptance or a real
-recovery drill.
+
+**Public beta URL:** `https://firstroll.app`
+
+Hosting and recovery procedures:
+[Operations](OPERATIONS.md) and [VPS stack](../infra/vps/README.md).
 
 | Area | Status | Current evidence |
 |---|---|---|
@@ -93,6 +127,43 @@ recovery drill.
 | Clip evidence in Deep Study | Planned (deferred) | Study generation does not consume measured clip observations or timecodes |
 | Creator primary sources | Partial | Relevant video descriptions and available public captions enter Deep Study; verified speaker attribution remains planned |
 | Persistent projects | Planned | Film, clip, study and note sessions are not retained as reusable projects; a completed study lives for ten minutes in API process memory |
+
+## 5 October 2026 — Mobile festival atlas polish and narrow-header repair
+
+Follow-up: the localhost obstruction is resolved. Port 4182 held an older API-only process;
+restarting it with `FIRSTROLL_SERVE_HOSTED_FRONTEND=true` served the actual interface. Browser
+checks passed at **320, 390 and 430 CSS px and 1280 px desktop**, measured from the browser
+rather than assuming its zoom-adjusted viewport override matched CSS pixels. November filtering
+returns six festivals; calendar selection focuses/reveals SGIFF details, map-pin selection
+works, and zoom/reset preserve screen-sized pins. Light/dark modes were checked.
+
+The 320 px check exposed header overflow: intrinsic minimum widths pushed the navigation and
+theme control outside the screen. Mobile grid/flex tracks now explicitly shrink, navigation
+buttons remain 44 px tall, and the version badge sits below the logo at widths up to 380 px.
+After the fix, document scroll width equals client width at all four tested sizes, with no
+clipped header children. A source/hosted CSS regression check protects cascade ordering and
+shrinkable tracks. These are browser checks, not physical-device pinch/pan evidence.
+Production remains v232; the repair is part of PR #57 and does not authorise deployment.
+
+- PR #50 merged at its verified head after both CI runs passed and GitHub reported no conflicts,
+  no unresolved conversations and zero commits behind master. Merged-master CI `37248750628`
+  passed. This retires experimental Agent/Azure code while retaining the typed atlas and fixed
+  Deep Study workflow. The cleanup release must not be approved separately by automation.
+- At widths up to 640 px, month controls scroll horizontally with 44 px touch height; zoom
+  controls sit above the map rather than covering it. The intro is more compact and long names
+  wrap. The calendar becomes a readable date-labelled list instead of a squashed annual chart.
+- Pins now use actual CSS-pixel dimensions with 24 px hit circles, recalculated on zoom and
+  resize. Zero-sized hidden views use a finite fallback. Closely located festivals can still
+  overlap at world scale: zoom or use the calendar for precise selection.
+- Mobile calendar selection focuses and reveals the detail card. Pin selection and desktop
+  calendar selection do not force scrolling. Tests cover these boundaries and pin sizing.
+- 301 Python tests and 82 frontend cases pass, including the minified application; strict typing,
+  both builds and whitespace checks pass. An initial minified-test invocation named `web.js`
+  incorrectly; rerunning against the actual `dist/assets/app.js` passed.
+- Initial browser acceptance was blocked by the preview setup; the follow-up above resolves it.
+  Real-device pinch/pan is still unverified.
+- Production stays v232. No secrets, account settings, database, feature flags or DNS changed.
+  Prepare one combined release after acceptance, then obtain approval for its exact run.
 
 ## Next Milestone
 

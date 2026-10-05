@@ -46,6 +46,14 @@ Splitting code is useful when each file has a clear responsibility, not merely f
 | `festivals.ts`, `src/festivals/controller.ts` | Self-contained atlas entry, map gestures, filtering and calendar rendering | Follow the Festivals tab |
 | `src/festivals/data.ts`, `model.ts`, `land.ts` | Typed catalogue, pure date/projection helpers and public-domain geometry | Update typical windows or understand map coordinates |
 
+The atlas's mobile layout lives in the 640 px media query in `styles.css`. Its controller keeps
+pin sizes in **CSS pixels**: divide view-box dimensions by the rendered SVG dimensions, then
+scale each pin by that ratio. A `ResizeObserver` updates that ratio after resizing; a hidden
+view gets a finite fallback until it is displayed. On mobile, the calendar is a wrapping list
+with dates, and selection focuses/scrolls to the detail card. The desktop annual chart stays.
+The festival tests exercise the real controller with simulated dimensions and resize callbacks;
+they do not replace a browser or physical touchscreen check.
+
 For TypeScript basics, read `format.ts` → its tests → `types.ts` → `progress.ts`.
 For the app, read `main.ts` → `app.ts` → `context.ts` → `bootstrap.ts` → one handler.
 

@@ -62,28 +62,39 @@ class Element {
   }
   addEventListener(name, listener) { this.listeners[name] = listener; }
   querySelector(selector) { return this.children[selector] || null; }
-  querySelectorAll() { return []; }
+  querySelectorAll(selector) { return this.children[selector] || []; }
+  getBoundingClientRect() { return this.rect || { width: 1000, height: 396 }; }
+  contains(target) { return !!target.dataset.calendarRow; }
   setAttribute(name, value) { this.attributes[name] = value; }
   closest(selector) {
     const key = { "[data-festival-month]": "festivalMonth", "[data-festival-id]": "festivalId", "[data-festival-zoom]": "festivalZoom" }[selector];
     return key in this.dataset ? this : null;
   }
-  focus() {}
+  focus() { this.focused = true; }
+  scrollIntoView() { this.scrolled = true; }
 }
-function harness() {
+function harness(mobile = false) {
   const section = new Element();
   const refs = Object.fromEntries(["months", "map", "detail", "calendar", "summary"].map(name => [name, new Element()]));
   for (const [name, ref] of Object.entries(refs)) section.children[`[data-festival-${name}]`] = ref;
   const svg = new Element();
+  const pin = new Element({ x: "500", y: "250" });
+  svg.children[".festival-pin"] = [pin];
   refs.map.children.svg = svg;
   for (const action of ["in", "out", "reset"]) refs.map.children[`[data-festival-zoom="${action}"]`] = new Element();
   const document = { getElementById: () => section, addEventListener() {} };
   const source = process.env.FIRSTROLL_TEST_APP
     ? readFileSync(path.join(path.dirname(path.resolve(root, process.env.FIRSTROLL_TEST_APP)), "festivals.js"), "utf8")
     : bundle("app/web/festivals.ts", "iife");
-  vm.runInNewContext(source, { document, Element, window: { setTimeout() {} }, Date });
+  let resize;
+  class ResizeObserver {
+    constructor(callback) { resize = callback; }
+    observe(target) { assert.equal(target, refs.map); }
+  }
+  vm.runInNewContext(source, { document, Element, ResizeObserver,
+    window: { setTimeout() {}, matchMedia: () => ({ matches: mobile }) }, Date });
   const click = dataset => section.listeners.click({ target: new Element(dataset) });
-  return { refs, svg, click };
+  return { refs, svg, pin, click, resize: () => resize() };
 }
 
 test("atlas entry mounts map and calendar without a network service", () => {
@@ -113,4 +124,34 @@ test("zoom stays bounded and reset restores the world view", () => {
   assert.ok(view[0] >= 0 && view[0] + view[2] <= 1000);
   click({ festivalZoom: "reset" });
   assert.equal(svg.attributes.viewBox, "0.00 16.00 1000.00 396.00");
+});
+
+test("pins retain CSS-pixel size on phones, resize, zoom and initially hidden views", () => {
+  const { svg, pin, click, resize } = harness();
+  svg.rect = { width: 320, height: 126.72 };
+  resize();
+  assert.match(pin.attributes.transform, /scale\(3\.1250\)/);
+  click({ festivalZoom: "in" });
+  const width = Number(svg.attributes.viewBox.split(" ")[2]);
+  const scale = Number(pin.attributes.transform.match(/scale\(([^)]+)\)/)[1]);
+  assert.ok(Math.abs(scale * 320 / width - 1) < 0.001);
+  svg.rect = { width: 0, height: 0 };
+  resize();
+  assert.doesNotMatch(pin.attributes.transform, /Infinity|NaN/);
+  svg.rect = { width: 1000, height: 396 };
+  click({ festivalZoom: "reset" });
+  assert.match(pin.attributes.transform, /scale\(1\.0000\)/);
+});
+
+test("mobile calendar selection reveals details without scrolling map taps or desktop", () => {
+  const { refs, click } = harness(true);
+  click({ festivalId: "sgiff" });
+  assert.equal(refs.detail.scrolled, undefined);
+  click({ festivalId: "cannes", calendarRow: "true" });
+  assert.equal(refs.detail.focused, true);
+  assert.equal(refs.detail.scrolled, true);
+  assert.match(refs.detail.innerHTML, /Festival de Cannes/);
+  const desktop = harness();
+  desktop.click({ festivalId: "cannes", calendarRow: "true" });
+  assert.equal(desktop.refs.detail.scrolled, undefined);
 });
