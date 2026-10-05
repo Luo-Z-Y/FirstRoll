@@ -3,7 +3,7 @@ const { test } = require("node:test");
 const { readFileSync } = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
-const { bundleApplication } = require("../../tools/frontend-build.cjs");
+const { bundleApplication } = require("../../tools/frontend/build.cjs");
 
 const root = path.resolve(__dirname, "../..");
 const compiled = bundleApplication({ write: false, metafile: true });

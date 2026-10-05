@@ -6,9 +6,10 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "build:local": "node tools/frontend-build.cjs --local",
+    "build:local": "node tools/frontend/build.cjs --local",
+    "preview": "npm run build:local && sh tools/frontend/preview.sh",
     "test:web": "node --test tests/web/*.test.cjs",
-    "build": "sh tools/build_web.sh",
+    "build": "sh tools/frontend/build.sh",
     "build:auth": "npm run typecheck && esbuild app/web/auth.ts --bundle --minify --format=iife --outfile=dist/assets/auth.js"
   },
   "dependencies": {

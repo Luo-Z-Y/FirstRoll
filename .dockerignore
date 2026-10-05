@@ -12,7 +12,8 @@
 !package-lock.json
 !tsconfig.json
 !tools
-!tools/frontend-build.cjs
+!tools/frontend
+!tools/frontend/build.cjs
 
 # FastAPI application source. The parent directory must be re-included before
 # Docker can follow the recursive app/** exception.

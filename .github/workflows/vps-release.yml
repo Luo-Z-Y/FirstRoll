@@ -102,7 +102,7 @@ jobs:
           # Public Supabase values; the browser bundle never receives a secret.
           FIRSTROLL_SUPABASE_URL: https://obnxmfcvshbkbsgxbmgg.supabase.co
           FIRSTROLL_SUPABASE_PUBLISHABLE_KEY: sb_publishable_P6VzoeBdroR-2yeit62cbg_vvTXH47Y
-        run: ./tools/build_web.sh
+        run: ./tools/frontend/build.sh
 
       - name: Validate the bounded site directory
         run: |

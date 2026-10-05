@@ -46,8 +46,14 @@ windows, not confirmed edition dates; verify with each organiser.
 
 ## Documentation Map
 
+New to the repository? Start with [the codebase guide](docs/CODEBASE.md). Frontend build and
+preview tools live together in `tools/frontend/`; release tooling remains in `tools/release/`.
+After installing the development dependencies, `npm run preview` builds and opens a local
+server at `http://127.0.0.1:4173/` (visit that address in your browser).
+
 | Reader need | Document |
 |---|---|
+| Find a feature, understand folders or choose a development command | [docs/CODEBASE.md](docs/CODEBASE.md) |
 | Topology, components, runtime modes, data flows, evidence rules, threat model and responsiveness | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) |
 | Install, configure, verify and troubleshoot the local edition; contributor checks | [docs/SETUP.md](docs/SETUP.md) |
 | Learn the strict TypeScript modules and shared browser build | [docs/FRONTEND_GUIDE.md](docs/FRONTEND_GUIDE.md) |

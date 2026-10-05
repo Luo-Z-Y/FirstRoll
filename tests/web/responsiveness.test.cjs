@@ -8,7 +8,7 @@ const root = path.resolve(__dirname, "../..");
 const appPath = path.resolve(root, process.env.FIRSTROLL_TEST_APP || "app/web/app.ts");
 const source = process.env.FIRSTROLL_TEST_APP
   ? readFileSync(appPath, "utf8")
-  : require("../../tools/frontend-build.cjs").bundleApplication({ write: false }).outputFiles[0].text;
+  : require("../../tools/frontend/build.cjs").bundleApplication({ write: false }).outputFiles[0].text;
 
 function deferred() {
   let resolve;

@@ -9,7 +9,7 @@ def test_director_shelf_uses_native_browser_assets_only(application_source: str)
     index = (WEB / "index.html").read_text(encoding="utf-8")
     app = application_source
     views = (WEB / "src" / "discovery" / "views.ts").read_text(encoding="utf-8")
-    build = (ROOT / "tools" / "build_web.sh").read_text(encoding="utf-8")
+    build = (ROOT / "tools" / "frontend" / "build.sh").read_text(encoding="utf-8")
 
     assert 'type="importmap"' not in index
     assert "closet3d.js" not in index
@@ -63,14 +63,14 @@ def test_loopback_preview_uses_a_separate_persistent_unlimited_test_account(appl
     app = application_source
     main = (ROOT / "app" / "backend" / "main.py").read_text(encoding="utf-8")
     integrations = (WEB / "integrations.ts").read_text(encoding="utf-8")
-    build = (ROOT / "tools" / "build_web.sh").read_text(encoding="utf-8")
+    build = (ROOT / "tools" / "frontend" / "build.sh").read_text(encoding="utf-8")
 
     assert "localTestAccountEmail" in (WEB / "auth-loader.ts").read_text(encoding="utf-8")
     assert '"/assets/local-auth.js?v=20260821-3"' in (WEB / "auth-loader.ts").read_text(encoding="utf-8")
     assert '["localhost", "127.0.0.1", "::1"]' in (WEB / "auth-loader.ts").read_text(encoding="utf-8")
     assert "if (localTestReady || (window.FIRSTROLL_CONFIG?.publicMode" in (WEB / "auth-loader.ts").read_text(encoding="utf-8")
     assert 'localTestAccountEmail: ""' in build
-    assert '"local-auth"' in (ROOT / "tools/frontend-build.cjs").read_text()
+    assert '"local-auth"' in (ROOT / "tools/frontend/build.cjs").read_text()
     assert "firstroll.local-test" in local_auth
     assert "firstroll-local-test-account" in local_auth
     assert "window.localStorage" in local_auth
@@ -92,7 +92,7 @@ def test_loopback_preview_uses_a_separate_persistent_unlimited_test_account(appl
     assert '"X-FirstRoll-DeepSeek-Key"' in integrations
     assert '"X-FirstRoll-YouTube-Key"' in integrations
     assert "localStorage" not in integrations
-    assert '"integrations"' in (ROOT / "tools/frontend-build.cjs").read_text()
+    assert '"integrations"' in (ROOT / "tools/frontend/build.cjs").read_text()
     assert "FIRSTROLL_SUPABASE_URL" in build
     assert "FIRSTROLL_SUPABASE_PUBLISHABLE_KEY" in build
 
@@ -100,8 +100,8 @@ def test_loopback_preview_uses_a_separate_persistent_unlimited_test_account(appl
 def test_frontend_build_identity_distinguishes_local_and_live_releases(application_source: str) -> None:
     index = (WEB / "index.html").read_text(encoding="utf-8")
     app = application_source
-    build = (ROOT / "tools" / "build_web.sh").read_text(encoding="utf-8")
-    preview = (ROOT / "tools" / "preview_hosted_web.sh").read_text(encoding="utf-8")
+    build = (ROOT / "tools" / "frontend" / "build.sh").read_text(encoding="utf-8")
+    preview = (ROOT / "tools" / "frontend" / "preview.sh").read_text(encoding="utf-8")
     deployment = (ROOT / ".github" / "workflows" / "vps-release.yml").read_text(encoding="utf-8")
 
     assert 'id="buildIdentity"' in index
@@ -146,9 +146,9 @@ def test_account_saved_films_are_persistent_and_user_scoped(application_source: 
 
 def test_account_auth_loads_only_supabase_or_the_loopback_test_account() -> None:
     index = (WEB / "index.html").read_text(encoding="utf-8")
-    build = (ROOT / "tools" / "build_web.sh").read_text(encoding="utf-8")
+    build = (ROOT / "tools" / "frontend" / "build.sh").read_text(encoding="utf-8")
     loader = (WEB / "auth-loader.ts").read_text(encoding="utf-8")
-    compiler = (ROOT / "tools/frontend-build.cjs").read_text(encoding="utf-8")
+    compiler = (ROOT / "tools/frontend/build.cjs").read_text(encoding="utf-8")
 
     assert 'src="/assets/auth-loader.js"' in index
     assert '"/assets/auth.js?v=' in loader
@@ -466,7 +466,7 @@ def test_festival_atlas_tab_is_self_contained_and_shipped() -> None:
         path.read_text(encoding="utf-8")
         for path in (WEB / "src/festivals").glob("*.ts")
     )
-    build = (ROOT / "tools/frontend-build.cjs").read_text(encoding="utf-8")
+    build = (ROOT / "tools/frontend/build.cjs").read_text(encoding="utf-8")
 
     assert 'data-product-view="festivals"' in index
     assert 'id="product-festivals"' in index

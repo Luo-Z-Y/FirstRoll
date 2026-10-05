@@ -138,7 +138,7 @@ class TestWorkflowPolicy:
         assert "secrets." not in build_job
         assert "packages: write" in build_job
         assert "docker logout ghcr.io" in build_job
-        assert "./tools/build_web.sh" in build_job
+        assert "./tools/frontend/build.sh" in build_job
         assert "python3 -m tools.release.vps prepare" in build_job
         assert "actions/upload-artifact@" in build_job
         assert "retention-days: 90" in build_job
