@@ -102,12 +102,7 @@ def test_frontend_build_identity_distinguishes_local_and_live_releases(applicati
     app = application_source
     build = (ROOT / "tools" / "build_web.sh").read_text(encoding="utf-8")
     preview = (ROOT / "tools" / "preview_hosted_web.sh").read_text(encoding="utf-8")
-    deployment = (
-        ROOT
-        / ".github"
-        / "workflows"
-        / "azure-static-web-apps-salmon-field-03695a010.yml"
-    ).read_text(encoding="utf-8")
+    deployment = (ROOT / ".github" / "workflows" / "vps-release.yml").read_text(encoding="utf-8")
 
     assert 'id="buildIdentity"' in index
     assert "renderBuildIdentity" in app
@@ -149,24 +144,21 @@ def test_account_saved_films_are_persistent_and_user_scoped(application_source: 
     assert "Passwords, provider API keys, prompts, evidence and generated studies do not" in migration
 
 
-def test_entra_external_id_account_auth_is_staged_without_breaking_supabase() -> None:
+def test_account_auth_loads_only_supabase_or_the_loopback_test_account() -> None:
     index = (WEB / "index.html").read_text(encoding="utf-8")
-    auth = (WEB / "entra-auth.ts").read_text(encoding="utf-8")
     build = (ROOT / "tools" / "build_web.sh").read_text(encoding="utf-8")
+    loader = (WEB / "auth-loader.ts").read_text(encoding="utf-8")
+    compiler = (ROOT / "tools/frontend-build.cjs").read_text(encoding="utf-8")
 
-    assert 'from "@azure/msal-browser"' in auth
-    assert "PublicClientApplication" in auth
-    assert "loginRedirect" in auth
-    assert "acquireTokenSilent" in auth
-    assert "knownAuthorities" in auth
-    assert 'cacheLocation: "localStorage"' in auth
-    assert 'id="entraAuthForm"' in index
-    assert "Sign in or create an account" in index
-    assert 'authProvider === "entra"' in (WEB / "auth-loader.ts").read_text(encoding="utf-8")
-    assert '"entra-auth"' in (ROOT / "tools/frontend-build.cjs").read_text()
-    assert "FIRSTROLL_ENTRA_AUTHORITY" in build
-    assert "FIRSTROLL_ENTRA_SPA_CLIENT_ID" in build
-    assert "FIRSTROLL_ENTRA_API_SCOPE" in build
+    assert 'src="/assets/auth-loader.js"' in index
+    assert '"/assets/auth.js?v=' in loader
+    assert '"/assets/local-auth.js?v=' in loader
+    assert "supabasePublishableKey" in loader
+    for retired in ("entra", "Entra", "msal"):
+        assert retired not in index
+        assert retired not in build
+        assert retired not in loader
+        assert retired not in compiler
 
 
 def test_public_deep_study_consumes_authenticated_safe_sse_progress(application_source: str) -> None:
@@ -411,13 +403,6 @@ def test_new_discovery_search_aborts_stale_search_and_shelf_work(application_sou
     assert "state.discovery.shelfRequestControllers.add(controller)" in app
     assert "state.discovery.shelfRequestControllers.delete(controller)" in app
     assert "refs.discoverySubmit.disabled = true" not in app
-
-
-def test_supabase_dialog_hides_the_unused_entra_form() -> None:
-    styles = (WEB / "styles.css").read_text(encoding="utf-8")
-
-    assert ".auth-dialog form.auth-provider-entra { display: none; }" in styles
-    assert 'body[data-auth-provider="entra"] form.auth-provider-entra { display: grid; }' in styles
 
 
 def test_director_shelf_renders_immediately_then_enriches_posters(application_source: str) -> None:

@@ -1,1 +1,1 @@
-# tools — FirstRoll build, release, and evaluation utilities.
+# tools — FirstRoll build, preview and release utilities.

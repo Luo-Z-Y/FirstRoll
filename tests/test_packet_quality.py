@@ -2,23 +2,46 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-import sys
+from typing import Any
 
-import pytest
-
-ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT))
-
+from app.backend.criticism import CriticalClaim, ReviewSource
 from app.backend.evidence import EvidencePacket
 from app.backend.packet_quality import assess_evidence_packet
-from tools.evaluate_packet_quality import (
-    assert_report_redacted,
-    build_packet,
-    check_case_expectations,
-)
+from app.backend.video_sources import FilmVideo
 
 
+CASES = Path(__file__).parent / "fixtures" / "packet_quality_cases.json"
 PRIVATE_EVIDENCE = "PRIVATE_PACKET_QUALITY_TEXT_MUST_NOT_ENTER_REPORT"
+
+
+def build_packet(case: dict[str, Any]) -> EvidencePacket:
+    return EvidencePacket.from_retrieval(
+        case["film"],
+        case["retrieval"],
+        case.get("focus"),
+        [CriticalClaim.model_validate(item) for item in case.get("critical_claims", [])],
+        reviews=[ReviewSource.model_validate(item) for item in case.get("reviews", [])],
+        videos=[FilmVideo.model_validate(item) for item in case.get("videos", [])],
+    )
+
+
+def check_case_expectations(case: dict[str, Any], assessment: dict[str, Any]) -> list[str]:
+    audit = case.get("audit", {})
+    failures = []
+    if assessment["identity"]["matches_expected"] is not True:
+        failures.append("identity_not_matched")
+    required_languages = {str(value).casefold() for value in audit.get("required_languages", [])}
+    if not required_languages <= set(assessment["diversity"]["languages"]):
+        failures.append("required_language_missing")
+    instructions_expected = audit.get("instruction_items_present") is True
+    flagged = int(assessment["instruction_safety"]["flagged_items"])
+    if instructions_expected and flagged < 1:
+        failures.append("instruction_not_detected")
+    if not instructions_expected and flagged:
+        failures.append("unexpected_instruction_flag")
+    if instructions_expected and not assessment["instruction_safety"]["containment_boundary"]:
+        failures.append("instruction_not_contained")
+    return failures
 
 
 def test_packet_quality_detects_duplicates_without_returning_evidence_text() -> None:
@@ -120,7 +143,7 @@ def test_packet_quality_reports_provenance_and_citation_gaps() -> None:
 
 
 def test_packet_quality_fixture_suite_is_synthetic_complete_and_instruction_safe() -> None:
-    suite = json.loads((ROOT / "evals" / "packet_quality_cases.json").read_text(encoding="utf-8"))
+    suite = json.loads(CASES.read_text(encoding="utf-8"))
 
     assert suite["suite_id"] == "firstroll-packet-quality-v1"
     assert [case["id"] for case in suite["cases"]] == [
@@ -160,8 +183,3 @@ def test_packet_quality_fixture_suite_is_synthetic_complete_and_instruction_safe
     assert "instruction_containment_missing" not in assessments[
         "malicious-retrieved-instructions"
     ]["issues"]
-
-
-def test_packet_quality_report_rejects_evidence_fields() -> None:
-    with pytest.raises(ValueError, match="Unsafe packet-quality result field"):
-        assert_report_redacted({"cases": [{"content": PRIVATE_EVIDENCE}]})

@@ -3,8 +3,7 @@ import type { ProductView, ThemePreference } from "./navigation/types";
 
 export interface RuntimeConfiguration {
   apiBase?: string; publicMode?: boolean; videoAnalysisEnabled?: boolean;
-  authProvider?: string; supabaseUrl?: string; supabasePublishableKey?: string;
-  entraAuthority?: string; entraSpaClientId?: string; entraApiScope?: string;
+  supabaseUrl?: string; supabasePublishableKey?: string;
   buildId?: string; buildNumber?: number; buildChannel?: string; buildCommit?: string;
   localTestAccountEmail?: string;
 }
