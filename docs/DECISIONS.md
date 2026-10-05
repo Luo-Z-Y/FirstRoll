@@ -1,12 +1,16 @@
 # FirstRoll Architecture Decision Register
 
 **Decision owner:** FirstRoll maintainer  
-**Last reconciled:** 4 September 2026
+**Last reconciled:** 1 October 2026
 
 This register captures the major decisions that shape the current product. It does not attempt to
 record every CSS or parsing implementation detail. A choice belongs here when changing it would
 alter trust boundaries, persistence, deployment, evidence semantics, provider policy, cost or the
 public API.
+
+Superseded and parked entries keep their number but are condensed to a short summary of context,
+decision and why they no longer apply. Their full original text is in Git history, for example
+`git show archive/azure:docs/DECISIONS.md`.
 
 ## Decision Index
 
@@ -14,28 +18,31 @@ public API.
 |---|---|---|---|
 | 001 | Evolve pyCinemetrics with preserved attribution | Accepted | Faster foundation versus inherited complexity |
 | 002 | Local-first private edition plus constrained hosted beta | Accepted | Private depth versus public convenience |
-| 003 | Split static frontend and FastAPI service across Azure and Render | Superseded by ADR-015 | Explicit boundary and fast shell versus multi-platform configuration |
+| 003 | Split static frontend and FastAPI service across Azure and Render | Superseded by ADR-015, then ADR-027 | Explicit boundary and fast shell versus multi-platform configuration |
 | 004 | Use Wikidata identity and explicit ambiguity confirmation | Superseded by ADR-018 | Correct identity versus one-click speed |
 | 005 | Use bounded provider adapters, not unconstrained LLM browsing | Accepted | Provenance and control versus breadth |
 | 006 | Type evidence by epistemic role | Accepted | Honest uncertainty versus simpler prose generation |
 | 007 | Keep private RAG in local SQLite FTS5 and embeddings | Accepted | Privacy and portability versus shared hosted search |
 | 008 | Use DeepSeek structured output, deterministic validation and one repair | Accepted | Reliability versus latency and model cost |
-| 009 | Use Supabase bearer verification and atomic quota RPCs without service-role keys | Superseded by ADR-016 | Least privilege versus an extra network dependency |
+| 009 | Use Supabase bearer verification and atomic quota RPCs without service-role keys | Accepted; active quota default (sign-in method superseded by ADR-017) | Least privilege versus an extra network dependency |
 | 010 | Stream allow-listed SSE progress and fetch the full result separately | Accepted | Privacy and authentication versus transient run state |
-| 011 | Keep the bounded LangGraph Agent behind a production gate | Accepted | Measured benefit versus premature orchestration complexity |
+| 011 | Keep the bounded LangGraph Agent behind a production gate | Parked by ADR-026 | Measured benefit versus premature orchestration complexity |
 | 012 | Keep clip analysis local in the public beta | Accepted | Privacy and feasible hosting versus no hosted visual analysis yet |
 | 013 | Make secondary providers optional and independently degradable | Accepted | Resilience versus uneven evidence coverage |
 | 014 | Avoid durable study/project storage in the beta | Accepted, temporary | Smaller data-risk surface versus no history/resume |
-| 015 | Consolidate hosting on Azure and stage Entra External ID | Partially superseded by ADR-017 | Simpler cloud boundary versus customer-tenant and quota migration work |
-| 016 | Decouple quota persistence from browser identity tokens | Accepted, deployment staged | Provider portability versus a protected backend database credential |
+| 015 | Consolidate hosting on Azure and stage Entra External ID | Superseded by ADR-017 and ADR-027 | Simpler cloud boundary versus customer-tenant and quota migration work |
+| 016 | Decouple quota persistence from browser identity tokens | Accepted; staged, not the active default | Provider portability versus a protected backend database credential |
 | 017 | Keep Supabase Auth and add RLS-owned account data | Accepted | Low-cost persistence versus an additional managed platform boundary |
 | 018 | Use TMDb as the optional primary catalogue with an open fallback | Accepted | Rich, fast metadata versus one optional credential and attribution duty |
 | 019 | Keep transient Discover continuity in per-tab session storage | Accepted | Refresh resilience versus bounded browser-local staleness |
-| 020 | Require autonomous Agent value against a deterministic baseline | Accepted | Honest capability evidence versus slower staged development |
-| 021 | Activate autonomous value ablations sequentially | Accepted | Exact cost isolation versus parallel execution |
-| 022 | Use native planner tool calls without delegating execution authority | Accepted | Standard protocol versus a deliberately policy-owned loop |
-| 023 | Use third-party benchmark tools as bounded diagnostics, not product gates | Accepted | Broader standard metrics versus preserving causal and human evidence |
-| 024 | Use GitHub environment review and Azure OIDC for backend delivery | Accepted and activated; proof approval pending | Simpler least-privilege delivery versus trusting two managed platforms |
+| 020 | Require autonomous Agent value against a deterministic baseline | Parked by ADR-026 | Honest capability evidence versus slower staged development |
+| 021 | Activate autonomous value ablations sequentially | Parked by ADR-026 | Exact cost isolation versus parallel execution |
+| 022 | Use native planner tool calls without delegating execution authority | Parked by ADR-026 | Standard protocol versus a deliberately policy-owned loop |
+| 023 | Use third-party benchmark tools as bounded diagnostics, not product gates | Parked by ADR-026 | Broader standard metrics versus preserving causal and human evidence |
+| 024 | Use GitHub environment review and Azure OIDC for backend delivery | Superseded by ADR-027 | Simpler least-privilege delivery versus trusting two managed platforms |
+| 025 | Standardise release rules, not frontend/backend hosting | Partially superseded by ADR-027 | Consistent release evidence versus per-service recovery work |
+| 026 | Park the autonomous research Agent programme | Accepted | A smaller, honest product surface versus losing in-tree Agent code |
+| 027 | Retire Azure and host the public beta on one VPS | Accepted; live since v219 | Flat cost and one control plane versus a self-managed single point of failure |
 
 ## ADR-001: Evolve pyCinemetrics with preserved attribution
 
@@ -100,7 +107,7 @@ quota-bounded Deep Study, but returns 404/503 for private or expensive local fea
 
 - “Local-first” is a data-placement rule, not a claim that no website exists.
 - Backend gates, not hidden buttons, enforce the mode boundary.
-- Some features intentionally differ between the Render and local editions.
+- Some features intentionally differ between the hosted and local editions.
 
 ### Revisit when
 
@@ -109,73 +116,29 @@ projects.
 
 ## ADR-003: Split static frontend and FastAPI service across Azure and Render
 
-**Status:** Superseded by ADR-015
+**Status:** Superseded by ADR-015, then by ADR-027
 **Date:** 15 August 2026
 
-### Context
-
-The frontend should load even when a free backend instance is asleep. The API also needs Docker for
-Python and the optional Douban MCP runtime.
-
-### Decision
-
-Deploy the browser bundle through Azure Static Web Apps and FastAPI as a separate Render Docker Web
-Service from `master`. Inject the API origin at static build time and configure exact CORS origins
-in the API. Define the planned Render-to-Azure Container Apps migration in Terraform without
-importing the existing Static Web App during the first infrastructure milestone.
-
-### Options considered
-
-| Option | Assessment |
-|---|---|
-| One combined Web Service | Simpler origin model, but every page load waits for backend cold start |
-| Separate Azure static and Render API services | Faster shell and explicit boundary; requires CORS and multi-platform operations |
-| Serverless functions | Poor fit for heavyweight Python/provider runtime and longer study requests |
-
-### Consequences
-
-- Public values are supplied to Azure's frontend build and the Render backend with different
-  variable names.
-- Bearer and request-scoped-key headers must be explicitly allowed by CORS.
-- The backend root identifies the API instead of serving a second visitor website.
-
-### Revisit when
-
-The Container Apps migration is complete and `api.firstroll.app` has passed the rollback window.
+- **Context:** the frontend had to load while a free backend instance slept, and the API needed
+  Docker for Python and the optional Douban MCP runtime.
+- **Decision:** serve the static bundle from Azure Static Web Apps and FastAPI as a separate Render
+  Docker service, inject the API origin at build time and allow exact CORS origins only.
+- **Why it no longer applies:** ADR-015 moved the API to Azure Container Apps and ADR-027 moved both
+  origins to one server. The separate-origin boundary and exact CORS allow-list survive.
 
 ## ADR-004: Use Wikidata identity and explicit ambiguity confirmation
 
 **Status:** Superseded by ADR-018
 **Date:** 15 August 2026
 
-### Context
-
-Film titles are not unique. Choosing the first search result can attach reviews, crew, videos and a
-study to the wrong work.
-
-### Decision
-
-Use Wikidata IDs as the canonical discovery identity, validate title/year/director signals and
-require a bounded browser choice whenever more than one candidate remains. IMDb identity is used
-where available to reconcile provider records. When an IMDb claim is absent, a title-derived
-provider candidate is accepted only if its structured title, release year and director all match the
-canonical film; a provider-local title alone remains insufficient.
-
-### Alternatives considered
-
-| Option | Risk |
-|---|---|
-| Always choose first result | Fast but silently wrong for remakes and reused titles |
-| Ask the model | Non-deterministic and difficult to audit |
-| Explicit identity confirmation | One extra action but preserves downstream provenance |
-
-### Consequences
-
-- Discovery can interrupt instead of pretending certainty.
-- Every downstream bundle is keyed to a canonical film ID.
-- Optional poster coverage can use a verified title-derived page without relaxing the canonical
-  identity boundary.
-- Multilingual title matching remains a provider-adapter responsibility.
+- **Context:** film titles are not unique; taking the first search result can attach reviews, crew,
+  videos and a study to the wrong work.
+- **Decision:** key discovery on Wikidata IDs, validate title, year and director, reconcile providers
+  through IMDb IDs where available, and require an explicit browser choice whenever more than one
+  candidate remains.
+- **Why it no longer applies:** ADR-018 made TMDb the optional primary catalogue with
+  provider-qualified IDs and kept Wikidata/Wikipedia as the key-free fallback. Explicit ambiguity
+  confirmation remains in force.
 
 ## ADR-005: Use bounded provider adapters, not unconstrained LLM browsing
 
@@ -281,10 +244,12 @@ clear acceptance boundary.
 
 ### Decision
 
-Use DeepSeek Pro by default for the local study, request a Pydantic-compatible structure, validate
-citations, score specificity/calibration/mechanisms deterministically and permit at most one repair.
-Generic wording and weak causal signalling lower quality scores; missing mechanisms and unsupported
-central assertions remain blocking.
+Use DeepSeek Pro by default in both editions (`deepseek-v4-pro`, overridable with `DEEPSEEK_MODEL`),
+request the Pydantic `GroundedStudy` structure, validate citations, score
+specificity/calibration/mechanisms with the deterministic `StudyQualityGate` and permit at most one
+repair: a schema retry or a quality repair, never both, so a study makes no more than two model
+calls. Generic wording and weak causal signalling lower quality scores; missing mechanisms and
+unsupported central assertions remain blocking.
 
 ### Alternatives considered
 
@@ -302,8 +267,9 @@ central assertions remain blocking.
 
 ## ADR-009: Use Supabase bearer verification and atomic quota RPCs without service-role keys
 
-**Status:** Superseded by ADR-016
-**Date:** 15 August 2026
+**Status:** Accepted; the active default quota path. Passwordless sign-in was superseded by
+ADR-017, and ADR-016 staged a portable alternative that is not active.
+**Date:** 15 August 2026 (status corrected 1 October 2026)
 
 ### Context
 
@@ -363,75 +329,19 @@ second authenticated GET after `run_completed`.
 
 ## ADR-011: Keep the bounded LangGraph Agent behind a production gate
 
-**Status:** Accepted  
+**Status:** Parked by ADR-026 (1 October 2026)
 **Date:** 18 August 2026
 
-### Context
-
-LangGraph can make tool choice, interrupts and bounded recovery explicit, but installing a framework
-does not prove better answers. Agency adds latency, cost, persistence and failure surface.
-
-### Decision
-
-Implement and test the graph core with fake service interfaces, deterministic tool authorisation,
-bounded reducers and explicit terminal states. Keep the fixed workflow as production and fallback
-until a real adapter runs the same frozen cases and demonstrates a justified gain.
-
-**24 August 2026 update:** after the fixed-workflow entry gate passed, the owner authorised a
-fail-closed local adapter and paired evaluation only. The adapter may acquire ephemeral attributed
-sources for a diagnostically limited packet and must skip planning for a passing packet. No HTTP
-route, hosted execution or production cut-over is authorised; the original decision boundary remains
-in force until the frozen comparison passes and receives separate review.
-
-**24 August 2026 outcome:** the fixed control completed 5/5, while the Agent completed 4/5 and fell
-below the 96.94 mean-quality floor. Although one bounded Letterboxd acquisition improved the target
-packet's automated sufficiency, the predeclared candidate failed. Production Agent integration is
-therefore NO-GO and the fixed workflow remains authoritative.
-
-**25 August 2026 revision:** the owner approved a successor text-only implementation, not a cut-over.
-The graph now owns one initial generation and at most two repairs; the model service makes no hidden
-repair for Agent runs. A future evaluator acquires once, freezes both packets and runs three samples
-per lane through the same retry controller, alternating order and retaining failures as zero. This
-isolates packet content from synthesis orchestration. Because the full run costs 30–90 synthesis
-calls, paid execution remains separately budget-gated. Claim review, genuine diversity review,
-targeted section editing and filmmaker coaching follow in that order; clip work is deferred.
-
-**25 August 2026 revised outcome:** after separate budget approval, both lanes completed 15/15 and
-Agent mean quality exceeded fixed by 0.63 points. Two Agent-owned retries recovered invalid initial
-generations, but raised P50/P95 ratios to `1.100404/1.993109`, failing both frozen latency limits. The
-authorisation is consumed, no human packet review occurred and later text stages remain blocked.
-
-**25 August 2026 latency revision:** continue T01 without paid calls, but preserve the failed result
-and thresholds. A parseable invalid response may remain in process memory long enough for the graph
-to request at most four exact field updates with an 800-token cap. Deterministic code merges the
-patch and revalidates the whole study; safe telemetry records category and strategy only. Agent
-initial temperature becomes `0`, while fixed production remains `0.2`. This is not evidence of a
-latency improvement.
-
-**25 August 2026 validation budget:** the owner approved one complete structural-repair comparison:
-30–90 synthesis calls, at most ten planner calls and at most ten provider calls. The confirmation is
-distinct from the consumed historical budget and does not authorise T02 or production routing.
-
-**25 August 2026 structural result:** all frozen machine targets passed with 15/15 completion in both
-lanes, P50/P95 ratios `1.003191/0.888329` and no repair. The target packet changed, but its study mean
-was 2.28 points below fixed. The private snapshot was then rejected because its worktree symlink
-resolved outside the allowed boundary. Preserve the machine result, consume the budget, do not
-reacquire/rerun, add preflight and keep T02 blocked because neither human evidence nor provider-backed
-structural-repair evidence exists.
-
-### Alternatives considered
-
-| Option | Assessment |
-|---|---|
-| Immediate Agent cut-over | Fast demonstration, no trustworthy comparison |
-| Never use an Agent | Simpler, cannot adapt research actions to evidence gaps |
-| Feature-gated measured adoption | More work, evidence-based decision |
-
-### Consequences
-
-- The repository contains an Agent core that is not falsely described as the public execution path.
-- Production adapters, durable checkpoint ownership and Agent evaluation remain required.
-- Model-proposed tools never bypass deterministic authorisation.
+- **Context:** LangGraph could make tool choice, interrupts and bounded recovery explicit, but a
+  framework does not prove better answers, and agency adds latency, cost and failure surface.
+- **Decision:** build a tested, default-off local graph core and keep the fixed workflow as production
+  and fallback until a frozen comparison showed a justified gain. The Agent never had an HTTP route.
+- **Outcome:** on 24 August the fixed control completed 5/5 and the Agent 4/5, below the 96.94
+  mean-quality floor (NO-GO). The 25 August text-only successor completed 15/15 with +0.63 mean
+  quality but failed both frozen latency limits (P50/P95 ratios 1.100/1.993). The structural-repair
+  rerun passed its machine targets, but the changed packet's study scored 2.28 points below fixed
+  and no human review was possible.
+- **Why parked:** ADR-026 removed the programme from `master`; see tag `archive/agent-programme`.
 
 ## ADR-012: Keep clip analysis local in the public beta
 
@@ -441,7 +351,8 @@ structural-repair evidence exists.
 ### Context
 
 Clip analysis uses large computer-vision dependencies, user-supplied media and potentially long CPU
-or GPU work. The hosted Container App has an ephemeral filesystem and deliberately bounded compute.
+or GPU work. The hosted API container has an ephemeral filesystem and deliberately bounded compute
+(one 2 GB server since ADR-027).
 
 ### Decision
 
@@ -467,9 +378,9 @@ match. Treating any one provider as core would make discovery fragile.
 
 ### Decision
 
-Keep Wikidata film identity independent of criticism. Represent provider readiness and failure in
-the UI, cache each bundle separately and let Deep Study proceed with available evidence or report
-insufficiency.
+Keep catalogue film identity (TMDb or Wikidata, ADR-018) independent of criticism. Represent
+provider readiness and failure in the UI, cache each bundle separately and let Deep Study proceed
+with available evidence or report insufficiency.
 
 ### Consequences
 
@@ -506,68 +417,32 @@ RLS policy, owner checks, operational runbook and deletion tests.
 
 ## ADR-015: Consolidate hosting on Azure and stage Entra External ID
 
-**Status:** Partially superseded by ADR-017; Azure hosting decision remains accepted
+**Status:** Superseded: identity staging by ADR-017, Azure hosting by ADR-027
 **Date:** 20 August 2026
 
-### Context
-
-The frontend already ran on Azure Static Web Apps while FastAPI ran on Render. This introduced two
-deployment control planes, a backend cold start and an API address tied to a hosting provider.
-Supabase magic-link authentication also does not match the desired public email-and-password
-account experience. The current Azure login belongs to an NUS workforce tenant and cannot be used
-as the public customer directory.
-
-### Decision
-
-Run FastAPI on Azure Container Apps behind `api.firstroll.app`, retain the static frontend at
-`firstroll.app`, and manage both Azure services with Terraform. Keep Spaceship as DNS and preserve
-Render temporarily as a rollback target.
-
-Stage Microsoft Entra External ID as a second, explicitly selected authentication provider. The
-target requires a customer tenant, separate SPA and API registrations, an email/password user flow
-and the delegated `access_as_user` scope. Keep Supabase active until the customer tenant exists and
-quota persistence no longer relies on a visitor's Supabase token.
-
-### Options considered
-
-| Option | Assessment |
-|---|---|
-| Keep Azure frontend, Render API and Supabase Auth | Lowest immediate effort, but retains two cloud control planes, the old API domain and magic-link UX |
-| Move API to Azure but keep Supabase indefinitely | Improves hosting and removes cold start; does not meet the requested account experience |
-| Move hosting to Azure and stage External ID separately | Gives a stable Azure topology while preserving a safe, independently reversible identity migration |
-| Use the NUS workforce tenant | Rejected: it is not controlled as a public customer directory and current account lacks tenant administration permission |
-
-### Consequences
-
-- `firstroll.app` and `api.firstroll.app` are stable product domains independent of a Render service
-  name.
-- Azure Container Registry stores immutable API images; a managed identity pulls them without an
-  ACR password.
-- One warm Container App replica removes the former free-tier wake delay but incurs ongoing cost.
-- Entra access-token validation is implemented but inactive, so the current Supabase login keeps
-  working throughout the migration.
-- An External ID customer tenant and a replacement quota persistence boundary are mandatory before
-  activation.
-- The browser and API provider switches must be deployed together; no client secret belongs in the
-  SPA.
-
-### Revisit when
-
-Entra External ID becomes materially necessary for the product rather than merely useful as a
-learning exercise. Any future activation must rerun the authentication, persistence and quota
-acceptance suite before replacing Supabase Auth.
+- **Context:** the frontend ran on Azure Static Web Apps and FastAPI on Render: two control planes, a
+  backend cold start and a provider-bound API address. Magic-link sign-in did not match the desired
+  email-and-password experience.
+- **Decision:** run FastAPI on Azure Container Apps behind `api.firstroll.app`, manage Azure with
+  Terraform, keep Render briefly for rollback and stage Microsoft Entra External ID as a second,
+  explicitly selected identity provider.
+- **Why it no longer applies:** ADR-017 kept Supabase Auth, so Entra was never activated. The Azure
+  Free Trial subscription was found disabled on 27 September 2026 and ADR-027 moved hosting to one
+  server.
+  Terraform and the Entra code were removed on 1 October 2026 (tag `archive/azure`). The stable
+  `firstroll.app` and `api.firstroll.app` domains survive.
 
 ## ADR-016: Decouple quota persistence from browser identity tokens
 
-**Status:** Accepted; deployment staged
-**Date:** 20 August 2026
+**Status:** Accepted; staged and selectable, not the active default
+**Date:** 20 August 2026 (reconciled 1 October 2026)
 
 ### Context
 
 The original quota RPC derived `auth.uid()` from a Supabase bearer token. That was least-privilege
-for the first beta, but it coupled paid-operation accounting to one identity product. An Entra
-access token cannot authorise a Supabase authenticated-only RPC, and forwarding visitor tokens into
-persistence expands the trust boundary.
+for the first beta, but it coupled paid-operation accounting to one identity product. A token from
+another identity provider (Entra External ID was then being staged) cannot authorise a Supabase
+authenticated-only RPC, and forwarding visitor tokens into persistence expands the trust boundary.
 
 ### Decision
 
@@ -576,40 +451,45 @@ first verifies the access token, then passes only a normalised identity provider
 subject to `deep_study_quota_decision`. Keep the three-per-account and thirty-global UTC limits and
 the transaction-scoped advisory lock.
 
-Run the schema on Supabase PostgreSQL initially if that avoids a new database charge. The same
-migration can later run on Azure Database for PostgreSQL. Select persistence explicitly with
-`FIRSTROLL_QUOTA_PROVIDER`; retain the old Supabase RPC only for a bounded rollback period.
+The migration (`database/migrations/202608200001_identity_neutral_deep_study_quotas.sql`) is
+portable: it can run on Supabase PostgreSQL, avoiding a new database charge, or on any other
+PostgreSQL service. Select persistence explicitly with `FIRSTROLL_QUOTA_PROVIDER`: `supabase`
+(default, the ADR-009 RPC) or `postgres` (`PostgresQuotaClient`) with `FIRSTROLL_DATABASE_URL`.
+
+**1 October 2026:** with Entra and Azure retired (ADR-027), the adapter and migration are kept as a
+portable option. Production still uses the Supabase RPC; no cut-over has been verified, and the
+former Entra-activation and Azure Key Vault steps are withdrawn.
 
 ### Options considered
 
 | Option | Assessment |
 |---|---|
-| Keep the visitor-token Supabase RPC | Cheapest short term, but blocks an Entra migration and couples identity to quota storage |
+| Keep the visitor-token Supabase RPC | Cheapest short term, but couples identity to quota storage |
 | Use a Supabase service-role REST key | Identity-neutral, but grants a broad backend credential and retains a provider-specific API |
 | Use generic PostgreSQL with a restricted login | Portable and narrow at the SQL boundary; introduces a backend secret and connection management |
-| Store counters in Container Apps memory | No database cost, but loses state and breaks under restart or multiple replicas |
+| Store counters in API process memory | No database cost, but loses state and breaks under restart or multiple replicas |
 
 ### Consequences
 
-- Supabase and Entra identities share one quota contract without sharing identifier namespaces.
+- Any verified identity provider can share one quota contract without sharing identifier namespaces.
 - Quota rows use `(usage_day, identity_provider, subject)` rather than a foreign key to
   `auth.users`.
 - The database sees no bearer token, email, prompt, film, evidence or generated study.
 - A dedicated login needs only schema usage and function execute permission; the security-definer
   function owns table access.
-- The database URL becomes a protected backend credential. It is stored as a Container Apps secret
-  and, during this stage, in encrypted remote Terraform state; Azure Key Vault is the next
-  hardening step.
+- Activation makes the database URL a protected backend credential. On the current server it would
+  live only in the owner-only `.env` file, never in the repository.
 - Daily counters need no historical account migration. The cut-over should begin at a UTC boundary
   or accept that the first transition day can reset a small demo allowance.
 
-### Action items
+### Action items (if activated)
 
-1. Install `database/migrations/202608200001_identity_neutral_deep_study_quotas.sql`.
-2. Create the restricted `firstroll_backend` login and store its URL securely.
-3. Switch quota storage while Supabase Auth remains active and test status, concurrency and 429s.
-4. Observe a full UTC day, then activate Entra separately.
-5. Remove the legacy RPC after its rollback window and move the database secret to Key Vault.
+1. Install, or confirm, the migration on the chosen PostgreSQL service.
+2. Create the restricted `firstroll_backend` login and store its URL in the server's private
+   configuration.
+3. Switch `FIRSTROLL_QUOTA_PROVIDER` while Supabase Auth remains active and test status,
+   concurrency and 429s.
+4. Observe a full UTC day before removing the legacy Supabase RPC.
 
 ## ADR-017: Keep Supabase Auth and add RLS-owned account data
 
@@ -651,11 +531,11 @@ keys, prompts, evidence and generated studies remain outside these account table
 
 ### Trade-off analysis
 
-This retains a second managed platform alongside Azure, but avoids inventing an authentication
-system and gives the browser a well-defined data-isolation mechanism. Provider-neutral quota code
-from ADR-016 remains valuable for later database portability; it does not require an immediate
-identity migration. The staged Entra implementation remains an optional architecture exercise,
-not a production dependency.
+This retained a second managed platform alongside Azure hosting, but avoids inventing an
+authentication system and gives the browser a well-defined data-isolation mechanism.
+Provider-neutral quota code from ADR-016 remains valuable for later database portability; it does
+not require an immediate identity migration. The staged Entra implementation was an optional
+architecture exercise, never a production dependency, and was removed with ADR-027.
 
 ### Consequences
 
@@ -665,7 +545,8 @@ not a production dependency.
 - A policy mistake would be a cross-account data risk, so migration tests and RLS acceptance tests
   are release requirements.
 - Saved films are durable; studies, evidence and personal provider keys are deliberately not.
-- Supabase remains an operational dependency even though the frontend and API run on Azure.
+- Supabase remains an operational dependency separate from the application host (Azure at the
+  time; one server since ADR-027).
 
 ### Action items
 
@@ -783,361 +664,231 @@ account data. Treat the snapshot as same-tab continuity rather than durable or c
 
 ## ADR-020: Require autonomous Agent value against a deterministic baseline
 
-**Status:** Accepted
+**Status:** Parked by ADR-026 (1 October 2026)
 **Date:** 28 August 2026
-**Decider:** FirstRoll maintainer
 
-### Context
-
-The bounded Agent correctly avoided unnecessary calls and enriched one sparse packet, but the model
-planner selected a single Letterboxd provider that a simple rule could also have selected. Several
-excerpts from that one domain changed the packet status to `passed` without establishing genuine
-source diversity. Later repeated synthesis passed machine gates, but the only changed packet scored
-lower and could not be reviewed by the owner. More end-to-end repetitions would not identify whether
-planning, acquisition, repair or writing supplied any value.
-
-### Decision
-
-Define the successor as an autonomous research-and-coaching Agent rather than a tool selector. Give
-it typed evidence-gap objectives, iterative reassessment, independent-origin recovery, bounded claim
-audit, targeted editing and evidence-linked filmmaker actions. Keep every action inside the existing
-deterministic policy envelope.
-
-Provide a deterministic no-model gap router over the same providers. Every planning experiment must
-compare the model against this baseline and the unchanged packet. A recovered packet needs at least
-two independent film-specific origins. Add Crossref's already bounded scholarly adapter to the Agent
-allow-list. If model planning cannot improve blinded usefulness or match it with fewer actions, use
-the deterministic router instead.
-
-Separate acquisition, structural repair and changed-packet synthesis ablations. Do not rely on random
-invalid generations to test repair, and do not let unchanged cases establish acquisition benefit.
-Historical comparisons and their thresholds remain immutable.
-
-### Options considered
-
-| Option | Assessment |
-|---|---|
-| Repeat the five-case Agent/fixed comparison | Expensive and still confounds planning, evidence and synthesis |
-| Treat any packet-status improvement as Agent value | Rewards source count and can be reproduced by one deterministic `if` statement |
-| Permit unconstrained model browsing | Broader but violates provenance, cost and injection boundaries |
-| Typed gaps plus deterministic ablations | Isolates each autonomous capability and removes model steps that do not earn their cost; accepted |
-
-### Consequences
-
-- Crossref becomes an Agent action without changing its identity, abstract or HTTPS boundaries.
-- Initially sufficient packets retain their zero-call guarantee.
-- Recovered packets may stop insufficient after one successful provider if no independent second
-  origin is available within budget; this is an intentional honesty improvement.
-- Planner outputs include an allow-listed objective but no free-form reasoning.
-- Local synthetic implementation can continue, but every paid ablation needs a fresh numeric budget.
-- Production remains fixed and no hosted Agent route exists.
-
-### Action items
-
-1. [x] Add typed evidence gaps and independent-origin recovery assessment.
-2. [x] Add a deterministic gap-router mode and safe planning-decision telemetry.
-3. [x] Add Crossref to the local Agent provider allow-list.
-4. [x] Build the acquire-once, blinded acquisition ablation harness.
-5. [x] Build controlled structural-repair and exact changed-packet synthesis ablation harnesses.
-6. [x] Implement bounded claim audit, targeted editing and filmmaker coaching behind the local flag
-   with synthetic tests.
-7. [ ] Record provider, reliability and owner-attested evidence before considering durable or hosted
-   execution.
+- **Context:** the bounded Agent's single-provider choice could be reproduced by a simple rule, and
+  several excerpts from one domain flipped a packet to `passed` without genuine source diversity.
+- **Decision:** redefine the successor as an autonomous research-and-coaching Agent with typed
+  evidence gaps, independent-origin recovery and separate acquisition, repair and changed-packet
+  ablations. Model planning had to beat, or match with fewer actions, a deterministic no-model
+  gap router over the same providers.
+- **Outcome:** the harnesses and synthetic tests were built; provider, reliability and owner-attested
+  evidence never followed.
+- **Why parked:** ADR-026 (tag `archive/agent-programme`). The deterministic-baseline rule is one of
+  its revival conditions.
 
 ## ADR-021: Activate autonomous value ablations sequentially
 
-**Status:** Accepted
+**Status:** Parked by ADR-026 (1 October 2026)
 **Date:** 28 August 2026
-**Decider:** FirstRoll maintainer
 
-### Context
-
-A01 and A02 exercise different paid capabilities and use different denominators. Activating both
-through one top-level status would weaken one-run enforcement and make a partial failure harder to
-attribute. The owner approved both exact limits after their harnesses and thresholds were committed,
-but this does not justify parallel execution or flexible output paths.
-
-### Decision
-
-Activate A01 first for one run capped at three planner calls, five physical provider calls and three
-external turns per active lane. Bind it to the committed programme, case suite, frozen canonical
-identity reference, dated redacted report, private packet snapshot and private consumption lock. Record A02's separate approval—18 expected and
-36 maximum model calls with no acquisition calls—but keep its machine status inactive until A01 has
-run and its approval is consumed. A later committed checkpoint may then activate A02 without changing
-its frozen thresholds or limits.
-
-### Consequences
-
-- A report cannot be redirected to an ad-hoc path after approval.
-- A private lock is written before the first potentially paid action and is never deleted to enable a
-  repeat.
-- An A01 outcome cannot silently spend A02's allowance, and A02 cannot start while A01 is active.
-- A03, hosted routing, Agent cut-over and clip analysis remain unauthorised.
-- Owner packet ratings are still a separate human action and cannot be supplied by the Agent.
-
-**Recorded outcome:** A01 consumed three planner and four physical provider calls but both active
-lanes ended budget-exhausted with the evidence-class-diversity gap still present. No private packet
-or human gate was opened. A02 then showed 9/9 valid, exact-preserving field patches versus 4/9 valid
-complete regenerations; its mandatory regeneration-completion target therefore failed. Both
-sequential approvals are consumed and A03 remains blocked. A later no-call correction keeps
-scholarly abstracts and video context as distinct epistemic types, makes every required gap part of
-sufficiency and prevents evidence-only completion from reserving a real synthesis call. It does not
-change either historical outcome. Distinct A01R and A02R harnesses now gate corrected class-aware
-acquisition and 24-sample targeted-patch reliability; each requires a new decision, exact paths and a
-fresh budget.
+- **Context:** the A01 acquisition and A02 repair ablations used different paid capabilities and
+  denominators.
+- **Decision:** activate them one at a time, each with an exact budget, fixed report paths and a
+  private consumption lock written before the first paid action.
+- **Outcome:** A01 used three planner and four provider calls, but both active lanes ended
+  budget-exhausted with the evidence-class gap open. A02 produced 9/9 valid field patches versus 4/9
+  valid regenerations, failing its regeneration-completion target. Corrected A01R/A02R harnesses
+  were built but never funded.
+- **Why parked:** ADR-026 (tag `archive/agent-programme`).
 
 ## ADR-022: Use native planner tool calls without delegating execution authority
 
-**Status:** Accepted
+**Status:** Parked by ADR-026 (1 October 2026)
 **Date:** 28 August 2026
-**Decider:** FirstRoll maintainer
 
-### Context
-
-The local model planner originally described available research actions inside the user prompt and
-returned a `tool` plus `target_gap` JSON object in ordinary assistant content. Deterministic code
-validated and authorised that proposal, but the protocol did not use the provider's dedicated
-function-call channel. It also left FirstRoll responsible for distinguishing a tool proposal from
-arbitrary generated content.
-
-Native function calling offers typed capability declarations, dedicated call IDs and a standard
-response envelope. Using an automatic model-owned tool loop, however, would let untrusted provider
-results re-enter planning directly, weaken exact one-turn accounting and invite model-generated film
-IDs, URLs or limits.
-
-### Decision
-
-Expose each currently addressable acquisition capability through the DeepSeek request's native
-`tools` field and require one `tool_calls` response. Give each function exactly one model-controlled
-argument: a turn-specific `target_gap` enum. Forbid additional arguments, parallel calls and the
-legacy assistant-content fallback. Omit providers known to be unavailable before transport.
-
-Treat the native call as an untrusted proposal. Preserve independent graph authorisation, construct
-all execution arguments from verified application state, execute through the hard-coded adapter map,
-normalise results into `EvidencePacket` and let deterministic policy decide whether another turn is
-permitted. Do not append raw output as a `role: tool` message. Keep synthesis, repair, audit, editing
-and coaching as controller-invoked structured-output calls without research tools.
-
-### Options considered
-
-| Option | Assessment |
-|---|---|
-| Keep JSON in assistant content | Provider-portable and already bounded, but not a native tool protocol |
-| Use an SDK automatic tool runner | Convenient, but obscures authorisation, retries, raw-result handling and spend ownership |
-| Let native calls supply film IDs, queries and limits | More flexible, but gives hallucinated arguments a path to providers |
-| Native proposal plus existing policy gate | Standard envelope while preserving identity, injection, cost and retry boundaries; accepted |
-
-### Consequences
-
-- The planner request no longer uses `response_format: json_object`.
-- Exactly one non-empty native function call ID, recognised function and strict JSON argument object
-  are required.
-- The model cannot provide provider execution arguments or start a second action itself.
-- Native protocol use is visible in safe planning-decision telemetry and becomes an A01R machine
-  target.
-- A01 remains an immutable historical content-JSON result; A01R is the first native-protocol test.
-- Synthetic tests do not establish current DeepSeek model compatibility or planner value. A paid
-  A01R run still requires separate exact approval.
-
-### Action items
-
-1. [x] Replace planner content JSON with native `tools` and `tool_calls`.
-2. [x] Reject zero, parallel, malformed, legacy-content and extra-argument calls.
-3. [x] Preserve independent authorisation and trusted argument construction.
-4. [x] Add protocol telemetry, A01R acceptance and detailed code documentation.
-5. [ ] Validate provider compatibility and acquisition value only under an approved A01R run.
+- **Context:** the local planner returned tool proposals as JSON inside ordinary assistant content.
+- **Decision:** use DeepSeek's native `tools`/`tool_calls` with a single `target_gap` argument, treat
+  each call as an untrusted proposal, build execution arguments from verified application state and
+  never return raw provider output to the model as a `role: tool` message.
+- **Outcome:** implemented with synthetic tests only; provider compatibility and planner value were
+  never validated under a paid A01R run.
+- **Why parked:** ADR-026 (tag `archive/agent-programme`). The fixed Deep Study workflow uses
+  structured output without tool calls.
 
 ## ADR-023: Use third-party benchmark tools as bounded diagnostics, not product gates
 
-**Status:** Accepted
+**Status:** Parked by ADR-026 (1 October 2026)
 **Date:** 31 August 2026
-**Decider:** FirstRoll maintainer
 
-### Context
-
-FirstRoll's bespoke evaluators measure identity, packet provenance, citations, graph retries, complete
-lifecycle latency and owner usefulness, but they do not provide standard TTFT/ITL, serving throughput
-or reusable model-task interfaces. GuideLLM supplies serving metrics and native tool-call workloads;
-lm-evaluation-harness supplies repeatable model-level tasks. Neither understands FirstRoll's graph,
-private packets, causal lane controls or human gates by default.
-
-The current product has no Agent route or representative OpenAI-compatible benchmark endpoint.
-Running standard tools directly against DeepSeek would measure a paid provider rather than the
-complete FirstRoll system. Mock scores and latency are especially easy to mislabel as product
-performance.
-
-### Decision
-
-Pin GuideLLM and lm-evaluation-harness as `uvx` development tools rather than runtime dependencies.
-Qualify them against a named loopback mock, retain setup/startup failures, and keep all raw output
-under `.firstroll`. Commit only public synthetic profiles/tasks and redacted aggregate evidence.
-
-Use GuideLLM only for transport/serving questions against a representative separately authorised
-endpoint. Use lm-evaluation-harness for commit-safe model diagnostics, beginning with claim-support
-boundaries. Do not let either tool replace A01R–A03, complete failure accounting, citation validation
-or personal owner review. Every real-model or concurrent run still needs an exact request/token
-budget and fresh output path.
-
-### Options considered
-
-| Option | Assessment |
-|---|---|
-| Report mock GuideLLM throughput as current performance | Fast but false; it measures configured sleep/token simulation |
-| Run broad academic tasks and call the Agent good | Measures general model behaviour, not retrieval, tools or filmmaker value |
-| Add an OpenAI-compatible production Agent route for GuideLLM | Expands attack and persistence boundaries solely for a benchmark |
-| Use mock-qualified tools beneath causal product gates | Adds standard diagnostics without weakening current evidence rules; accepted |
-
-### Consequences
-
-- GuideLLM's local macOS runner uses `spawn`; the failed default-fork startup remains recorded.
-- lm-eval API profiles require the `[api]` dependency extra; the failed setup attempt remains recorded.
-- The public claim-support task can later detect model regressions but is not a production threshold.
-- No current native-Agent quality, TTFT, ITL, throughput or concurrency claim exists.
-- A future benchmark adapter must remain loopback-only and cannot register a product HTTP route.
-- Mock/dummy outputs, generated samples and package caches are not committed.
-
-### Action items
-
-1. [x] Qualify GuideLLM native tool-call and lm-eval local-chat paths against a mock.
-2. [x] Add a public 12-case claim-support diagnostic and strict exact-match configuration.
-3. [x] Add a redacted, reproducible audit over immutable FirstRoll reports.
-4. [x] Document current benchmark gaps and prioritised improvements.
-5. [ ] Run no real model or load profile without a fresh exact authorisation.
+- **Context:** the bespoke evaluators lacked standard serving and model-task metrics, but GuideLLM
+  and lm-evaluation-harness do not understand FirstRoll's packets, lane controls or human gates.
+- **Decision:** pin both as `uvx` development tools, qualify them only against a loopback mock and
+  never let them replace causal product gates or owner review.
+- **Outcome:** mock qualification and a 12-case claim-support diagnostic were committed; no
+  real-model or load profile ran.
+- **Why parked:** ADR-026 removed the profiles, tasks and audit tooling with `evals/` (tag
+  `archive/agent-programme`). FirstRoll makes no TTFT, throughput or Agent-quality claim.
 
 ## ADR-024: Use GitHub environment review and Azure OIDC for backend delivery
 
-**Status:** Accepted and activated; proof approval pending
+**Status:** Superseded by ADR-027
 **Date:** 4 September 2026
+
+- **Context:** a proposed HMAC Approval Broker was not runnable, and the backend workflow still used
+  long-lived Azure and registry credentials.
+- **Decision:** make the protected GitHub `production` environment the sole human approval authority
+  and deploy immutable image digests through two narrowly scoped Azure OIDC managed identities, with
+  exact revision checks and automatic image rollback.
+- **Outcome:** activated on 4 September 2026, but no owner-approved proof deployment was recorded
+  before the Azure subscription was found disabled on 27 September.
+- **Why it no longer applies:** ADR-027 retired Azure (tag `archive/azure`). The single protected
+  `production` environment gate, with no custom broker, carries forward unchanged.
+
+## ADR-025: Standardise release rules, not frontend/backend hosting
+
+**Status:** Partially superseded by ADR-027; the shared release rules remain in force
+**Date:** 10 September 2026
+
+- **Context:** the separate Azure frontend and backend workflows had different freshness,
+  verification, retention and recovery behaviour.
+- **Decision:** share a tested, standard-library release-receipt protocol binding source SHA,
+  component, run, build attempt, payload hash and a seven-day approval expiry; fetch only reviewed
+  control modules from the approved commit; refuse a stale revision after approval; retain evidence
+  for 90 days; never cancel an active production deployment automatically.
+- **Still in force:** these rules and `tools/release/protocol.py`, now used by the single
+  `VPS Release` workflow together with `tools/release/vps.py`.
+- **Retired by ADR-027:** the separate Azure workflows, frontend package recovery and the Azure-only
+  manifest, risk, summary, frontend and CLI modules (tag `archive/azure`).
+
+## ADR-026: Park the autonomous research Agent programme
+
+**Status:** Accepted
+**Date:** 1 October 2026
 **Decider:** FirstRoll maintainer
 
 ### Context
 
-The first backend-CD proposal combined a useful release manifest and risk classifier with a proposed
-HMAC capability, Approval Broker and GitHub App. The broker was not a runnable HTTP service, used
-in-memory replay state, had an unimplemented GitHub approval operation and was not called by the
-workflow. Meanwhile, the workflow still used long-lived Azure/ACR credentials and treated several
-failed production checks as warnings. Operating the proposal would therefore add a sensitive service
-without making deployment authority safer.
+ADR-011 and ADR-020–023 kept a default-off local LangGraph Agent, its evaluation harness and frozen
+results beside the fixed Deep Study workflow. The Agent never had an HTTP route.
 
-The repository already has a branch-restricted GitHub `production` environment with a required human
-owner review. Azure supports GitHub OIDC federation and exact-resource role scopes.
+- None of the paid comparisons run from 24 August 2026 cleared its full gate: the paired run missed
+  the quality floor, the text-only successor failed its latency limits, the structural-repair run
+  lowered the changed packet's study score without human review, A01 exhausted its budget with the
+  gap still open and A02 failed its regeneration-completion target.
+- No evaluation budget was released after 31 August; the corrected A01R and A02R harnesses never ran.
+  Production stayed NO-GO throughout.
+- The Agent code, its evaluation harness and their tests consumed review and dependency effort on
+  every change, while the open product work (live acceptance, responsiveness, persistence) lay
+  elsewhere.
 
 ### Decision
 
-Use GitHub's protected environment as the sole approval authority and defer any custom broker until a
-demonstrated requirement cannot be met by the platform gate. Terraform creates separate user-assigned
-managed identities:
+Remove the programme from `master` and keep it recoverable at tag `archive/agent-programme`:
+`local_research_agent`, `autonomous_runs`, `autonomous_agent`, `research_agent_contract`,
+`autonomous_study`, `agent_evidence`, `research_graph/`, the Agent-only DeepSeek methods, the
+evaluation, review and benchmark tools, `evals/`, their tests and the eight Agent and evaluation
+documents. Drop `langgraph`.
 
-- build: GitHub `master` subject, `AcrPush` on one registry and `Reader` on one Container App;
-- deploy: GitHub `production` environment subject and `Contributor` on that exact Container App.
-
-Both Azure federated credentials use the exact identity-bound subject prefix reported by GitHub,
-including the public immutable owner and repository IDs. The legacy name-only prefix does not match
-the token currently issued for this repository and therefore fails closed at Azure login.
-
-The workflow generates and seals deterministic release evidence, deploys an immutable image digest
-on a fresh runner with no checkout, requires exact release-identity verification and automatically
-restores the previous image after a failed post-deployment check. A feature variable keeps the whole
-path disabled until the infrastructure and GitHub settings are complete.
-
-After bootstrap, the delivery workflow owns the Container App image field. The commit SHA is baked
-into each image, and Azure's configured image reference is compared with the approved digest.
-Terraform ignores only that image field while retaining ownership of configuration, secrets, probes,
-scaling, identities and ingress. This prevents an unrelated infrastructure apply from reverting a
-newer approved application release.
+The fixed workflow of ADR-008, with at most two model calls per study, is the only study path.
+Packet-quality assessment (`app/backend/packet_quality.py`) stays a product feature; its synthetic
+six-case fixture now lives at `tests/fixtures/packet_quality_cases.json`.
 
 ### Options considered
 
 | Option | Assessment |
 |---|---|
-| GitHub environment plus Azure OIDC | Reuses an implemented human gate, removes stored cloud passwords and permits exact role scopes; accepted |
-| Complete and host a custom Approval Broker | Could add external policy and durable capabilities, but creates another high-value service, secret and failure mode without a current need; deferred |
-| Keep Azure JSON and ACR password secrets | Easier initially, but long-lived credentials have broader leakage and rotation risk; rejected |
-| Deploy automatically after green CI | Fast, but violates the explicit human production-approval boundary; rejected |
+| Keep the Agent default-off in `master` | No code lost, but every change keeps paying review and dependency cost for an unused path |
+| Fund another bounded A01R/A02R run | Could add evidence, but no budget was released and earlier runs showed no route to a product gain |
+| Remove from `master` behind an archive tag | Smaller, honest product surface; revival needs a rebase onto current code; accepted |
 
 ### Consequences
 
-- Repository administrators still control GitHub environment policy and Azure federation configuration.
-- GitHub and Azure audit histories are relied on; FirstRoll has no separate append-only approval ledger.
-- Vulnerability scanning, SBOMs and signed attestations remain visible future controls, not fabricated passes.
-- An approved high-risk release is not automatically safe; the owner must inspect the risk reasons.
-- Applying Terraform and enabling the workflow are manual production changes with separate review.
-- Changing `image_tag` in Terraform no longer performs routine application releases after bootstrap.
+- `FIRSTROLL_LOCAL_AGENT_ENABLED` and the `langgraph` dependency no longer exist.
+- Historical outcomes remain summarised in ADR-011 and ADR-020–023 and recorded in
+  `docs/PROGRESS_ARCHIVE_2026-08.md`. The frozen evaluation results, including the fixed-workflow
+  baseline, the 21 August accessibility audit and the 12 September synthetic responsiveness report,
+  are readable only from the tag.
+- Claim audit, targeted editing and filmmaker coaching, which were Agent-programme stages, are not
+  planned work.
+- Archived code will drift from `master`; it is a reference, not a ready-to-run branch.
 
-### Action items
+### Revival conditions
 
-1. [x] Replace long-lived workflow credentials with two OIDC identities in code.
-2. [x] Integrate the deterministic manifest/risk implementation into the real workflow.
-3. [x] Add exact revision verification and automatic rollback.
-4. [x] Remove the unused broker/capability/audit implementation and claims.
-5. [x] Review and apply the Terraform plan.
-6. [x] Configure GitHub repository and protected-environment values.
-7. [ ] Complete one owner-approved proof deployment.
+All must hold before any of it returns:
 
-## ADR-025: Standardise release rules, not frontend/backend hosting
+1. A named product question that the fixed workflow demonstrably cannot answer.
+2. An owner-approved numeric budget for model calls, provider calls and human review, recorded
+   before any paid call.
+3. Restoration on a fresh `feat/` branch from current `origin/master`, reconciled with the current
+   study service, with `langgraph` re-added deliberately.
+4. Frozen comparisons against both the unchanged fixed workflow and a deterministic no-model
+   baseline (ADR-020), including blinded owner packet review.
+5. No HTTP route, hosted execution or durable checkpoint store until those comparisons pass and a new
+   ADR accepts the result.
 
-**Status:** Accepted for implementation; production approval remains separate
-**Date:** 10 September 2026
+## ADR-027: Retire Azure and host the public beta on one VPS
+
+**Status:** Accepted; live since v219 (29 September 2026)
+**Date:** 28 September 2026 (hosting choice); 1 October 2026 (Azure code retired)
 **Decider:** FirstRoll maintainer
 
 ### Context
 
-The frontend had no post-approval freshness check, file-level live verification or retained-package
-recovery. The backend had stronger checks but its scope compared only the immediate merge parent,
-potentially overlooking accumulated undeployed work. Different cancellation and retention behaviour
-made an otherwise small product harder to operate.
+- The Azure Free Trial subscription was found disabled on 27 September 2026. The Container Apps
+  environment was suspended, `api.firstroll.app` timed out and `firstroll.app` returned 404; Supabase
+  stayed active.
+- Restoring Azure meant pay-as-you-go charges for Container Apps, Container Registry and Log
+  Analytics. A later read showed the API resource in failed provisioning with nothing to recover.
+- On 28 September the owner chose a rented server instead and by 29 September had bought a Tencent
+  Lighthouse Starter instance in Singapore (2 vCPUs, 2 GB memory, 40 GB SSD). The owner approved the
+  v219 launch on 29 September.
+- Entra External ID had never been activated (ADR-017). Keeping Terraform, the OIDC identities and
+  the Azure workflows would have left an unused, credential-bearing delivery path in the repository.
 
 ### Decision
 
-Keep independent static frontend and container backend workflows, hosting and credentials. Share a
-tested, standard-library release-receipt protocol and identical exact-commit control fetching and
-post-approval freshness checks. Bind source SHA, component, run, build attempt, payload hash and a
-seven-day approval expiry. Retain GitHub artefacts for 90 days for evidence and frontend recovery.
-Never cancel an active production deployment automatically to make room for newer code.
+Host the public beta on one server and remove the Azure path:
 
-The frontend establishes its first verified baseline through an explicit manual bootstrap candidate
-and owner approval. Later releases bind the known-good live receipt to a successful trusted GitHub
-run and available artefact. Verify the complete candidate and recovery inventories before using the
-Azure token; verify exact public files and API reachability after upload; restore and verify the
-previous package on failure. An expired new-approval window does not forbid recovery of an available
-known-good package. An unavailable recovery package cannot be silently replaced by an unrelated build.
-
-The backend retains its detailed risk manifest, Azure OIDC identities and immutable image deployment.
-It additionally binds that evidence to the common receipt and compares changes with the deployed
-source SHA (whole-tree review if unknown). Neither workflow applies Terraform or database migrations.
+- **Stack (`infra/vps`):** Docker Compose runs Caddy and the API container. Caddy terminates TLS for
+  `firstroll.app` and `api.firstroll.app`, serves the static release and proxies the API; separate
+  origins and the exact CORS allow-list stay. `bootstrap.sh` prepares Ubuntu 24.04; `deploy.sh`
+  releases, rolls back and reports status, switching the site only after the API reports the baked
+  commit.
+- **Release (`.github/workflows/vps-release.yml`):** a CI-gated build without production credentials
+  pushes the API image to GitHub Container Registry and seals a receipt with
+  `tools/release/protocol.py` and `tools/release/vps.py`. A human repository owner must approve that
+  exact run in the protected `production` environment. The deploy job verifies the receipt before the
+  deploy key is available, refuses a revision that is no longer current `master`, connects over a
+  pinned SSH host key, deploys by image digest and checks the live site and API. A failed activation
+  restores the previous state on the server; a failed live check triggers `deploy.sh rollback`.
+- **Identity and quota:** Supabase Auth is the only provider (`FIRSTROLL_AUTH_PROVIDER` accepts only
+  `supabase`); `EntraAuthVerifier`, `app/web/entra-auth.js`, `@azure/msal-browser`, the
+  `ENTRA_*`/`FIRSTROLL_ENTRA_*` variables, the browser `authProvider`/`entra*` fields and PyJWT are
+  removed. Quota uses the Supabase RPC by default; the portable PostgreSQL adapter of ADR-016 is
+  retained.
+- **Retired:** `infra/terraform`, the Static Web Apps and backend-release workflows, the Azure-only
+  release modules and `app/web/staticwebapp.config.json`, all at tag `archive/azure`. Any local
+  Terraform state is gitignored. Spaceship remains the DNS provider.
 
 ### Options considered
 
-| Option | Trade-off | Decision |
-|---|---|---|
-| Shared release protocol, separate deploy workflows | Consistent checks without coupling unrelated changes; service-specific recovery remains necessary | Accepted |
-| Containerise the frontend to match the backend | Extra running-service responsibilities merely for symmetry | Rejected |
-| One combined release/credential | Fewer buttons but wider authority and harder partial-failure handling; not atomic across Azure services | Deferred |
-| Add a broker, new storage service or staging infrastructure now | Additional cost and administration before proving the existing delivery path | Deferred |
+| Option | Assessment |
+|---|---|
+| Upgrade Azure to pay-as-you-go | Keeps the reviewed OIDC path, but adds ongoing multi-service charges and a failed API resource to rebuild |
+| Use the server but keep the Azure code dormant in `master` | Easy return path, but two delivery stories, unused credential configuration and stale tests |
+| One server, Azure archived at a tag | Flat prepaid cost and one control plane, at the price of a self-managed host; accepted |
 
-### Consequences and limits
+### Consequences
 
-- Receipt hashes are integrity checks, not independent signatures. Reviewed source/control modules,
-  workflow YAML, platform administrators and GitHub's environment configuration remain trusted.
-- Deploy runners download two fixed control modules from the approved source commit; no application
-  checkout, dependency installation or deployment-artefact script execution occurs.
-- Frontend risk is conservative: initial/release-control changes are high; other updates are at least
-  medium. The backend retains its detailed deterministic classifier. Neither replaces vulnerability
-  scanning, browser acceptance or independent review.
-- The first frontend rollout has no automatic legacy recovery. Later recovery depends on retained
-  packages, provider availability and enough job time; cancellation or outage can require intervention.
-- Ninety-day GitHub retention is bounded storage, not an archival guarantee. Registry image retention
-  remains separate. No permanent storage, signing service or extra Azure compute was added.
-- Browser testing, live rollout and deliberately failed-rollout recovery remain operational evidence
-  to collect after the owner approves the relevant production actions.
+- One server is a single point of failure: no autoscaling, no CDN, and a few seconds of API restart
+  on every release while Caddy keeps serving the static shell.
+- The deploy key is a long-lived credential, unlike the former OIDC exchange: its private half is
+  held in the approval-bound `production` environment and on the operator's machine. Membership of
+  the `docker` group is root-equivalent. Rotate the key if exposed.
+- The host holds no durable product data. Accounts, saved films and quotas stay in Supabase, whose
+  Free plan pauses a project after seven idle days and then breaks sign-in.
+- Rollback needs the previous image and site directory; v219 was the first server release and had no
+  rollback target. Stack, configuration and database rollback are not automated.
+- Paid Deep Study stays disabled on the server until authenticated quota readiness is verified.
+- Returning to Azure would mean restoring from `archive/azure` and re-reviewing every workflow,
+  identity and credential.
 
-### Acceptance
+### Revisit when
 
-Executable tests cover approval/run/attempt mismatches, independent fingerprint binding, expiry,
-unsafe paths, file alteration, baseline substitution, failed/provider-foreign recovery runs, expired
-backups, live receipt/file/API failures, rollback checks during API outages and cumulative change
-selection. Structural and executable-shell tests ensure both workflows retain the same gates.
-8. [ ] Consider scanning, SBOMs and attestations as a later hardening slice.
+Sustained traffic, an availability target or a second region justifies managed hosting or a CDN, and
+in any case before the server term ends on 29 September 2027.
 
 ## How to Add or Change a Decision
 
@@ -1145,4 +896,6 @@ selection. Structural and executable-shell tests ensure both workflows retain th
 2. State the constraint and at least two credible alternatives.
 3. Record privacy, cost, reliability and maintenance consequences.
 4. Link the implementation and acceptance evidence in `docs/PROGRESS.md`.
-5. Mark the old ADR `Superseded` rather than rewriting its historical decision.
+5. Mark the old ADR `Superseded by ADR-0NN` or `Parked`, keep its number and condense its body to
+   a short summary of context, decision and why it no longer applies; Git history keeps the full
+   text.

@@ -6,7 +6,7 @@ const path = require("node:path");
 const root = path.resolve(__dirname, "../..");
 
 function load(entry, globals = {}) {
-  const source = buildSync({ absWorkingDir: root, entryPoints: [entry], bundle: true, format: "cjs", write: false, external: ["@supabase/supabase-js", "@azure/msal-browser"] }).outputFiles[0].text;
+  const source = buildSync({ absWorkingDir: root, entryPoints: [entry], bundle: true, format: "cjs", write: false, external: ["@supabase/supabase-js"] }).outputFiles[0].text;
   const module = { exports: {} };
   vm.runInNewContext(source, { module, exports: module.exports, ...globals });
   return module.exports;
@@ -211,12 +211,12 @@ test("Supabase adapter preserves password auth, bearer headers and user-scoped s
   assert.equal(h.storage.size, 0);
 });
 
-test("typed auth loader retains the loopback-only local adapter and provider selection", () => {
+test("typed auth loader selects only Supabase or the loopback-only local adapter", () => {
   for (const [hostname, config, expected] of [
     ["localhost", { localTestAccountEmail: "test@example.org" }, "local-auth.js"],
     ["firstroll.app", { localTestAccountEmail: "test@example.org" }, null],
     ["firstroll.app", { publicMode: true, supabaseUrl: "https://test.supabase.co", supabasePublishableKey: "sb_publishable_test" }, "auth.js"],
-    ["firstroll.app", { publicMode: true, authProvider: "entra", entraAuthority: "https://test.ciamlogin.com/tenant", entraSpaClientId: "test", entraApiScope: "scope" }, "entra-auth.js"],
+    ["firstroll.app", { publicMode: true, authProvider: "entra", entraAuthority: "https://test.ciamlogin.com/tenant", entraSpaClientId: "test", entraApiScope: "scope" }, null],
     ["firstroll.app", { publicMode: true, authProvider: "entra" }, null],
   ]) {
     const h = browser(), scripts = [];

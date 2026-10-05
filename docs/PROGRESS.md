@@ -9,169 +9,45 @@ Status vocabulary:
 - **Complete** — implemented and verified against its current acceptance criteria.
 - **In progress** — active implementation exists, but required work remains.
 - **Planned** — accepted scope, not yet implemented.
+- **Partial** — part of the accepted scope works; the remainder is planned.
 - **Blocked** — cannot progress without a named decision, dependency or permission.
+- **Parked** — removed by a recorded decision; recoverable from a named archive tag.
+- **Live** — running on the public beta; a qualifier names any acceptance still pending.
 
 ## Current Snapshot
 
-**Festival PR integration — 4 October 2026:** reconciled PR #52 with current master in an isolated
-worktree. The older PR modified deleted `app.js`; its navigation is now part of typed context/view
-validation, and the atlas is split into strict TypeScript data/model/land/controller modules plus
-one compiled entry. Local/Docker/hosted builds share the compiler; the local API allow-list includes
-the compiled asset. No raw JavaScript source or old coordinator was restored. Typical-window
-status labels no longer imply that an edition is confirmed to be running; month-filter focus is
-restored after rendering.
+**Last updated:** 5 October 2026 (PR #50 reconciled with current master; Agent/Azure removal is
+branch-only; deployed TypeScript and festival features are preserved)
 
-Verification: **655 repository tests and 80 frontend cases pass**, including minified hosted
-bundles, catalogue integrity, month overlap/toggle, selection, bounded zoom/reset, leap-day handling
-and persisted Festivals navigation. Strict typing, local/hosted builds, scoped Ruff and diff checks
-pass. The loopback API and compiled festival asset return HTTP 200. Fresh interactive inspection
-was blocked by the in-app browser client; the original PR's older visual evidence is historical,
-not a claim of new acceptance. README, architecture, guide and Obsidian notes are aligned.
-
-Delivery is through the existing PR #52; the original checkout and untracked user files are
-untouched. Merging is not deployment approval: **production stays v230 / ec9975c8** until a new
-exact release is authorised. No server, credential, database or feature-flag changes were made.
-
-**v230 deployed to Tencent — 4 October 2026:** the owner explicitly authorised exact release
-`37208179152`, revision `ec9975c8559925ed7654f939113446402226ea9b`, and cancellation of obsolete
-waiting run `36839340540`. The obsolete run was cancelled; the current candidate and deployment
-jobs succeeded. The GitHub approval API found no pending request: its approval history already
-recorded the gate as `skipped` under the repository owner's account. The agent did not bypass or
-change environment protections; the API approval attempt made no change.
-
-Release evidence:
-
-- 653 repository tests, 73 frontend cases against local/source and minified hosted builds;
-  exact-head and merged-master CI passed, including the Docker build.
-- Receipt `vps-ec9975c8-37208179152-1`, receipt SHA-256
-  `80168c9954bfd68b71e531df86a95a95d77b8ee3c6f2b899d7ac312f21b51533`;
-  immutable image SHA-256 `ad4b4f620269e56631b8a9c8c5157cbd4968d0ba7b6e52c3d4dff17ee99c7dff`.
-- Candidate archive/receipt binding validated independently. GitHub and independent live checks
-  passed static-file hashes, matching API identity, CORS, contract/status and hidden API docs.
-- Real signed-out production browser: v230 badge, correct *In the Mood for Love* (2000)
-  identity, twelve-film director shelf, dossier with Douban/Letterboxd ratings, Settings boundary
-  and opening/closing the email/password sign-in dialogue.
-- VPS status confirms the API healthy and v219 / `b678e52e` retained as the previous site/image.
-  No rollback was needed; a destructive recovery drill was not performed.
-
-No database migration, secret/feature-flag change or paid model call was made. Live authenticated
-sign-in, saved-film/password updates and quota acceptance remain untested; mocked adapter tests
-are not a substitute. Hosted Deep Study and video analysis remain disabled. These smoke checks
-do not establish every external provider's availability or a performance/error-rate baseline.
-
-### Migration implementation checkpoint (before deployment)
-
-**Complete frontend TypeScript migration — 4 October 2026:** all hand-written browser
-application modules now pass strict checks, including the composition root, context/bootstrap,
-remaining controllers/views, session restoration and Supabase/Entra/local auth/settings.
-`app.ts` is 64 lines; feature modules remain below 500 lines. Removed the declaration-only
-startup shim; typed state and lazy service wiring cover the whole application graph.
-Added runtime decoding for consumed API/account fields and corrupt-storage fallbacks.
-Account capabilities are explicit; unsupported settings operations no longer claim success.
-Local, Docker and hosted builds compile all adapters at the existing JavaScript URLs.
-The early theme script and account-provider loader are also typed, not left inline in HTML.
-
-Verification: 653 repository tests and 73 frontend cases pass, including source and minified
-application builds and new decoder, account-adapter, storage, in-memory key and negative
-type-contract checks.
-No paid provider requests or production deployment were part of the implementation phase;
-the subsequent exact-run deployment is recorded above. Production remains owner-gated. A real localhost
-browser smoke check verified page startup, Settings, the sign-in dialogue and Analyse/Discover
-navigation. Live authenticated/provider operations and local Docker execution are not claimed.
-
-### Historical migration checkpoints
-
-**Strict TypeScript follow-up — 2 October 2026:** analysis controller/view, navigation/theme,
-recent searches and shared UI helpers have moved from JavaScript to strict TypeScript.
-Added explicit clip/metadata/result/DOM contracts, closed navigation choices and runtime
-validation of unknown analysis JSON. Genuine backend `Unknown` shot scales and prop counts
-are retained. Invalid nested records fail before rendering/export; filename/object-label HTML
-is escaped, missing canvas contexts and unrelated DOM events are handled safely.
-There is no framework, API, hosting or auth-contract change. Remaining controller/root/context
-JavaScript is still a declared boundary, not claimed fully migrated.
-
-Verification: 645 repository tests and 62 frontend cases pass. Ten additional frontend cases
-cover analysis parsing and integration, navigation/storage/DOM guards and compile-only negative
-type contracts. No explicit `any`, `@ts-ignore` or disabled strict mode is used in the migrated
-source. README, architecture and learning notes are aligned. Production remains unchanged;
-publishing this development checkpoint does not approve a deployment.
-
-**Completed modularisation — 2 October 2026:** PR #51 now reaches the intended architectural
-milestone. `app.js` is a **58-line composition root**, down from the original 3,843 lines.
-Per-application context, event wiring, navigation, account UI, sessions, discovery/shelf,
-dossier, videos, criticism and Deep Study have explicit module boundaries. Clip rendering is
-separate from its controller; all `src/` modules are at most 500 lines. Existing auth/settings
-adapters remain unchanged. Full controller typing is a future improvement, not claimed here.
-
-Verification: **645 repository tests passed**; **52 frontend cases** pass against both the
-source build and minified hosted bundle (18 module, 27 request/race, seven application tests).
-New cases exercise inert construction, independent state, idempotent startup, DOM-ready boot,
-cross-feature rendering, bounded session snapshots, stale shelf responses and acyclic imports.
-The race harness now injects dependencies rather than redefining hoisted handlers. Local and
-hosted builds pass; CI runs all frontend tests on the release bundle and syntax-checks nested
-JavaScript. Interactive visual acceptance remains unverified because the browser preview was
-blocked; local Docker is unavailable and the container build remains a CI check. No paid calls,
-database/DNS changes or production approval are part of this milestone. Earlier checkpoints
-below are retained as history. See [Frontend Guide](FRONTEND_GUIDE.md) for the final learning map.
-
-**Development checkpoint — 2 October 2026:** continued the same incremental refactor on
-`chore/frontend-typescript` / PR #51. Typed discovery views and film-selection helpers now
-own identity choices, selected-edition and shelf HTML; shared crew-name filtering is separate.
-`app.js` is **2,410 lines**, down from 2,597 at the previous checkpoint and 3,843 originally.
-Request ownership, timeouts, cancellation, focus and session persistence remain in the coordinator.
-
-Verification: **645 repository tests passed**, including **45 executable frontend cases**;
-all 27 request/race cases also passed against the hosted minified build. Type-checking,
-local/hosted builds and scoped lint passed. A one-off comparison against `d774547` passed
-128 HTML/selection parity checks. Eight new persistent tests cover film de-duplication,
-missing titles/posters, selected cards, loading placeholders, accessible choices and escaped text.
-No visual redesign, paid provider call, migration or production deployment was made. The main
-checkout's separate cleanup branch remains untouched. Next: dossier/video/criticism controllers.
-
-**Development checkpoint — 1 October 2026:** first incremental frontend modularisation is
-implemented, separate from the live v219 release. `app/web/app.js` is reduced from 3,843 to
-2,597 lines; shared helpers, progress parsing and pure clip-analysis algorithms are strict
-TypeScript modules. Clip state is isolated in a JavaScript controller. The coordinator,
-auth/settings and DOM controllers are not yet fully typed. See [Frontend Guide](FRONTEND_GUIDE.md).
-
-Verification: **645 repository tests pass**, including 37 executable frontend cases (the
-existing 27 race tests plus 10 new module cases). All 27 race cases also pass against the
-minified hosted bundle; strict type-checking, local/hosted builds and scoped Ruff checks pass.
-The loopback server returns HTTP 200 for the compiled asset and healthy API. Interactive
-browser inspection was blocked by the preview client. Docker could not run locally because
-the daemon was unavailable; the existing CI container-build gate must still pass. No
-production deployment, paid provider call or data migration was performed. Next: review this
-checkpoint, then extract discovery/dossier feature controllers behind typed data boundaries.
-
-**Last updated:** 1 October 2026 (public HTTPS receipt/health still match v219; deployment architecture
-reconciled with code; interactive acceptance and authenticated quota verification remain open)
-
-**Release stage:** public beta v219 is running on Tencent Lighthouse in Singapore. The owner
-approved the two-record DNS switch and exact production run `36534759362`; the workflow deployed
-commit `b678e52e14deb84cdf7d2d1653e2c44405e0d988` and passed its external receipt/file/API/CORS
-verification. Both hostnames have valid HTTPS and public DNS points to `119.28.111.192`. Public HTTPS
-checks on 1 October return the correct receipt and API health without overriding DNS. Browser
-sign-in and interactive acceptance are still not claimed. Paid Deep Study stays disabled; quota verification and
-a live recovery drill remain. No previous working VPS release exists.
+**Release stage:** VPS public beta v232 (`cf43ba57`), deployed by owner-approved run `37213215944`
+on 5 October 2026. Pipeline and independent file/API/contract/CORS/hidden-doc checks passed, as did
+live desktop festival navigation, November filtering, SGIFF details and zoom/reset. Prior v230
+browser checks covered search, shelf, dossier, Settings and the sign-in dialogue. Authenticated
+account/quota acceptance remains unverified; paid Deep Study and video analysis stay disabled.
+v230 is retained for application rollback; no recovery drill was performed. This PR refresh
+does not deploy, change secrets or authorise another release. Hosting procedures: [Operations](OPERATIONS.md) and
+[infra/vps/README.md](../infra/vps/README.md).
 
 **Primary development URL:** `http://127.0.0.1:8000`
-**Public beta URL:** `https://firstroll.app` (v219 live; public HTTPS rechecked 1 October)
-**Automated verification:** 642 repository tests passing locally on 29 September 2026, including
-54 single-server checks, 34 same-ASGI-loop concurrency checks and 27 Node request/race checks.
-The new VPS cases simulate activation and recovery failures without touching a server. They do not
-replace first-live-release acceptance or a real recovery drill.
+**Public beta URL:** `https://firstroll.app` (v232 live; public HTTPS checked 5 October)
+**Automated verification:** 301 repository tests, 80 frontend tests (local and minified hosted
+application), strict typing, local/hosted builds and Ruff pass for the refreshed PR on 5 October.
+The smaller Python suite removes Agent/Azure-only tests, not the live festival/account tests. The VPS tests simulate activation
+and recovery failures without touching a server; they do not replace browser acceptance or a real
+recovery drill.
 
 | Area | Status | Current evidence |
 |---|---|---|
 | Film discovery | Complete | TMDb primary catalogue with open Wikidata/Wikipedia failover, explicit ambiguity confirmation, attributed dossier enrichment and the always-available native director shelf |
 | Public video resources | Complete | Persistent cumulative catalogue; typed tabs; bounded uploader-description and public YouTube-caption extraction |
-| Product navigation | Complete | Discover, Analyse, Festivals and Settings preserve per-tab view content and scroll; a versioned `sessionStorage` snapshot makes the Discover workspace refresh-safe; Study remains consolidated into Discover |
-| Festival atlas | Implemented; not deployed in v230 | 32 festivals (including SGIFF) and the Oscars; zoomable inline map, toggleable month filter, approximate window status and calendar; strict TypeScript integration passes automated checks; fresh browser acceptance blocked |
+| Product navigation | Complete | Discover, Analyse, Festivals and Settings preserve per-tab view content and scroll; versioned session storage makes Discover refresh-safe |
+| Festival atlas | Live in v232 | 32 festivals and the Oscars; inline map, month filter and calendar; typical windows, not confirmed edition dates; typed module/build integration preserved |
+| Frontend TypeScript | Complete | Strict composition root, controllers/views, decoders and adapters; shared compiler for local, Docker and hosted assets; 80 frontend tests |
 | Theme support | Complete | System-aware light/dark themes with a locally persisted accessible toggle |
 | Local settings | Complete | Write-only connector credentials plus local add, remove and index controls for the private library |
-| Hosted public beta | Live — browser acceptance pending | v219 deployed on Tencent with owner approval; public HTTPS receipt/health match on 1 October; interactive account/shelf acceptance still outstanding |
-| Accounts and quotas | Complete | Supabase email authentication, atomic daily Deep Study quotas and a launch-independent localhost test account |
-| Authenticated research progress | Implemented | Allow-listed SSE lifecycle events, owner-scoped result retrieval and secret/evidence redaction tests; final interactive browser observation remains pending |
+| Hosted public beta | Live — authenticated acceptance pending | v232 on Tencent with exact-run approval; live file/API and festival desktop checks passed; authenticated account/quota checks remain |
+| Accounts and quotas | Complete — hosted quota check pending | Supabase email-and-password authentication (the only provider), atomic daily Deep Study quotas through the Supabase RPC (portable PostgreSQL adapter staged, not active) and a launch-independent localhost test account; authenticated quota verification on the server is outstanding |
+| Authenticated research progress | Complete — browser observation pending | Allow-listed SSE lifecycle events, owner-scoped result retrieval and secret/evidence redaction tests; final interactive browser observation remains pending |
 | Private library catalogue | Complete | Seven existing film-study PDFs retained; managed uploads and non-destructive removal; paths and content withheld from public APIs |
 | PDF ingestion | Complete | Token-aware page chunks, overlap, section hints, language and stable IDs |
 | Local embeddings | Complete | 4,381 of 4,381 chunks embedded with a local multilingual 384-dimension model; background prewarm removes the cold packet stall |
@@ -185,109 +61,93 @@ replace first-live-release acceptance or a real recovery drill.
 | Criticism source controls | Complete | Tabbed provider switcher; first selection fetches and later selections reuse the cached bundle |
 | Evidence packet | Complete | Film record, theory, critic claims, raw review text and attributed video text separated by explicit permitted uses; focus-ranked bounded packet selection |
 | Deep Study schema | Complete | Critic, theory, hypothesis, mechanism, alternative, verification and confidence fields |
-| Quality control | Complete | Deterministic gate, citation checks, bounded synthesis recovery and at most one bounded repair call |
+| Quality control | Complete | Deterministic gate, citation checks and at most one bounded repair call (schema or quality), so no more than two model calls per study |
+| Packet-quality assessment | Complete | `app/backend/packet_quality.py` scores the evidence packet of each completed study for the UI; synthetic six-case fixture in `tests/fixtures/packet_quality_cases.json`. The frozen fixed-workflow evaluation baseline and its results are archived at tag `archive/agent-programme` |
 | Evidence-layered UI | Complete | Inspectable progress, packet and citations; quality status, validated `S*`/`C*`/`E*` citations, retrieval rationale and expandable excerpts; WCAG-audited keyboard flow |
-| Fixed-workflow evaluation baseline | Complete | Frozen, fingerprinted fixed/Agent/A01/A02 metrics; the entry gate passes all 17 targets and 11 required steps; GuideLLM/lm-eval tooling is mock-qualified only |
-| Autonomous research Agent | Blocked | Local, default-off. A01R class-aware acquisition and A02R patch-reliability harnesses are implemented with native tool calls; every paid comparison so far failed at least one gate, production remains NO-GO and no evaluation budget has been released since 31 August |
-| Release delivery | Live release verified — recovery drill pending | Protected master, exact-run owner approval, sealed v219 receipt, digest deployment over pinned SSH and successful external live checks; legacy Azure workflows remain disabled |
-| Web responsiveness | In progress | Blocking API work offloaded to the worker pool, dossier-lifetime fetch cancellation, pre-authentication Deep Study cancel controls and minified assets, measured synthetically; live profiling of search → shelf → dossier → reception is still required |
-| Clip analysis | Complete | Scene/shot metrics, shot scale, colour, objects and JSON/CSV export (local edition only) |
-| Clip evidence in Deep Study | Planned (deferred) | Deferred until the text Agent programme is accepted; study generation does not consume measured clip observations or timecodes |
+| Autonomous research Agent | Parked | Removed on 1 October 2026 (commit `9d29263`) after no paid comparison cleared its gate; recoverable from tag `archive/agent-programme`; revival conditions in [ADR-026](DECISIONS.md#adr-026-park-the-autonomous-research-agent-programme) |
+| Release delivery | Live release verified — recovery drill pending | `VPS Release`: protected `master`, exact-run owner approval in `production`, sealed receipt, image-digest deployment over pinned SSH, external live checks and rollback on failed verification; Azure delivery retired (tag `archive/azure`) |
+| Web responsiveness | In progress | Blocking API work offloaded to the worker pool, dossier-lifetime fetch cancellation, pre-authentication Deep Study cancel controls and minified assets, measured synthetically on 12 September; live profiling of search → shelf → dossier → reception is still required |
+| Clip analysis | Complete | Scene/shot metrics, shot scale, colour, objects and JSON/CSV export (local edition only); still runs on the API event loop |
+| Clip evidence in Deep Study | Planned (deferred) | Study generation does not consume measured clip observations or timecodes |
 | Creator primary sources | Partial | Relevant video descriptions and available public captions enter Deep Study; verified speaker attribution remains planned |
-| Persistent projects | Planned | Film, clip, study and note sessions are not retained as reusable projects; the autonomous phase store is a private run checkpoint only |
+| Persistent projects | Planned | Film, clip, study and note sessions are not retained as reusable projects; a completed study lives for ten minutes in API process memory |
 
 ## Next Milestone
 
-### Single-server cut-over — Live (interactive acceptance and recovery drill pending)
+### Public-beta acceptance on the server — In progress
 
-Objective: bring `firstroll.app` and `api.firstroll.app` back online on one rented server without
-weakening the human production gate.
-
-Acceptance criteria:
-
-- [x] Caddy + Docker Compose stack with the API deployed by immutable digest, the former static cache
-  policy and rotated logs (`infra/vps`).
-- [x] Idempotent Ubuntu 24.04 bootstrap: Docker, service account, firewall, swap, unattended
-  security updates and key-only SSH.
-- [x] Server-side release that switches the site only after the API reports the baked commit, with
-  rollback and status commands.
-- [x] `VPS Release` workflow: CI-gated candidate, credential-free build to GitHub Container Registry,
-  sealed receipt, verification before the deploy key exists, pinned host key, live checks and rollback.
-- [x] CI validation of the stack files and 30 structural/behavioural tests.
-- [x] Server purchased, bootstrapped and reachable through separate administrator/deployment keys;
-  approved reboot verified on the updated kernel.
-- [x] GitHub `production` deployment secret and pinned VPS host/user variables configured; existing
-  human reviewer and master-only deployment policy verified and preserved.
-- [x] Legacy Azure release workflows disabled and their two obsolete waiting candidates cancelled.
-- [x] Owner added DeepSeek/YouTube keys; presence and private configuration validated without values.
-- [x] Cloud TCP 443 allow rule observed after the owner's setup.
-- [ ] Authenticated quota readiness verified before enabling paid Deep Study.
-- [x] DNS moved from Azure; certificates issued for both hostnames.
-- [x] VPS release activation enabled; candidate built; image inputs and anonymous digest pull verified.
-- [x] Exact-run owner approval; deployment and external live verification pass.
-- [ ] First owner-approved release verified in a browser (receipt, sign-in, search, shelf, dossier).
-- [ ] Rollback drill on the server.
-
-Next boundary: complete interactive browser acceptance, verify the
-authenticated quota boundary before enabling paid Deep Study, then plan a separately approved live
-recovery drill. The v219 approval does not approve another run, a database migration or paid calls.
-
-### Autonomous Agent causal ablations — Blocked (awaiting owner evaluation budget)
-
-Objective: prove which autonomous components add value before integrating claim review, coaching or a
-product route.
+Objective: finish authenticated acceptance of live v232 before enabling paid Deep Study. The single-server
+cut-over itself is complete (stack, bootstrap, `VPS Release`, DNS and TLS, exact-run approval and
+external live checks; see the 28–29 September entries).
 
 Acceptance criteria:
 
-- [x] Define typed evidence gaps and require independent origins for recovered packets.
-- [x] Add a deterministic acquisition baseline and Crossref Agent action.
-- [x] Acquire each provider observation once and share it privately across fixed, deterministic and
-  model-planned lanes.
-- [x] Blind lane identity during owner packet review.
-- [x] Provide a frozen field-patch versus regeneration harness with controlled schema/citation faults.
-- [x] Require exact preservation of accepted fields and complete citation validation.
-- [x] Freeze value, latency, token, privacy and human thresholds before any paid call.
-- [ ] Reuse an accepted private packet for synthesis without reacquisition.
-- [ ] Advance claim audit only if the preceding capability earns its cost against the baseline.
+- [ ] Browser acceptance of the live release (receipt, sign-in, saved films, search, shelf, dossier
+  and reception) against the checklist in [Operations](OPERATIONS.md).
+- [ ] Authenticated quota readiness verified on the server (status, concurrency and refusal once a
+  limit is reached) before paid Deep Study is enabled.
+- [ ] A separately approved rollback drill on the server, once a second release exists to roll back
+  to.
+- [ ] A Supabase keep-alive or monitor, so the Free-plan seven-day pause cannot silently break
+  sign-in.
+- [ ] Owner removes the Azure-era GitHub settings that no workflow reads. A names-only listing on
+  1 October showed repository variables `ACR_LOGIN_SERVER`, `AZURE_CONTAINER_APP_NAME`,
+  `AZURE_RESOURCE_GROUP`, `AZURE_SUBSCRIPTION_ID`, `AZURE_TENANT_ID` and `BACKEND_RELEASE_ENABLED`,
+  repository secret `AZURE_BUILD_CLIENT_ID`, and `production` secrets `AZURE_DEPLOY_CLIENT_ID` and
+  `AZURE_STATIC_WEB_APPS_API_TOKEN_*`, a deployment token that should also be reset in Azure if the
+  Static Web App still exists. The owner also decides on any remaining Azure resources and the
+  gitignored local Terraform state.
 
-Blocking decision: A01R and A02R are implemented but no paid or human evaluation budget has been
-released since 31 August 2026. The owner must either fund a bounded run or record the programme as
-parked.
+Boundary: the v232 approval does not approve another run, a database migration or paid calls. The
+next owner-approved release will be the first built after the trim.
 
-### Standardised production release bootstrap — Superseded while Azure is suspended
+### 5 October 2026 — Refresh PR #50 without reverting the live frontend
 
-Carried from the 10 September 2026 entry. The single-server cut-over replaces this proof; it would
-only become relevant again if the Azure subscription were reactivated:
+Integrated the existing trim branch with current `master` (`cf43ba57`) in an isolated worktree,
+preserving its history for a normal fast-forward push. Resolved conflicts in CI, HTML, assets,
+builds and documentation. Retired the renamed `entra-auth.ts`, its loader branch, globals,
+compiler entry and API asset allow-list entry; kept the Supabase and loopback-only adapters.
+CI still checks strict TypeScript and all 80 frontend cases. The festival catalogue/controller,
+navigation and shared build remain intact. No generated bundles or user-private files are tracked.
 
-- an owner-approved initial frontend release (`allow_initial_release` acknowledgement, then approval of
-  the protected `production` environment), which establishes the first `/release.json` rollback
-  baseline;
-- an owner-approved backend release so the production API matches `master` (as recorded on
-  4 September 2026 it still ran its previous image);
-- browser acceptance of the released candidate and a separately approved live recovery drill.
+Kept the compact documentation structure and carried forward the TypeScript learning guide and
+v230/v232 release evidence. The superseded Azure docs/tests and Entra adapter are removed only
+from this branch; original contents remain in Git and the archive tags. The original user checkout
+and its untracked files are untouched. Current-master/CI checklist completion requires remote
+CI to pass for the new head; merging and deployment are separate actions.
+
+### 4–5 October 2026 — Live TypeScript and festival checkpoints
+
+- v230 / `ec9975c8`, run `37208179152`: TypeScript migration, 653 Python and 73 frontend tests;
+  signed-out search/shelf/dossier/Settings/sign-in-dialogue browser checks passed.
+- v232 / `cf43ba57`, run `37213215944`: festival integration, 655 Python and 80 frontend tests;
+  live festival navigation/filtering/SGIFF/zoom/reset checks passed after exact-run approval.
+- v232 receipt `vps-cf43ba57-37213215944-1`, SHA-256
+  `212dec21a570e13f4f683e5919a78fd0e03fcce1246040de072a0b85d17733fe`;
+  image SHA-256 `eb0f9f92e000336f64cffdc48755932e8b8c0be8ef9c6a09d6aa2c752875e556`.
+- API healthy; v230 retained for rollback. No database/secret/feature-flag changes or paid calls.
+  Authenticated account/quota, mobile/pinch and sustained monitoring are not claimed as verified.
 
 ### Live responsiveness profiling and API-loop isolation — Planned
 
-Carried from the 12 September 2026 entry:
-
-- authorised live search → shelf → dossier → reception profiling; investigate repeated Wikidata
-  enrichment, redundant TMDb shelf work, video captions delaying cards and unnecessary shelf/player DOM
-  replacement before introducing new cache or provider-flow contracts;
-- remove the authentication wait on initial account-data hydration;
-- move local clip analysis off the API loop onto a bounded serial worker, after a separate review of
-  shared output paths and model state.
+- Authorised live search → shelf → dossier → reception profiling. Investigate repeated Wikidata
+  enrichment, redundant TMDb shelf work, video captions delaying cards and unnecessary shelf/player
+  DOM replacement before introducing new cache or provider-flow contracts.
+- Remove the authentication wait on initial account-data hydration (saved films and settings).
+- Move local clip analysis off the API event loop onto a bounded serial worker, after a separate
+  review of shared output paths and model state.
 
 ## Subsequent Priorities
 
-1. **Claim audit and targeted editor** — classify evidential strength and patch only fields or
-   sections named by deterministic validation.
-2. **Evidence-grounded filmmaker coach** — turn accepted claims into traceable viewing and production
-   exercises without adding film facts.
-3. **Durable local Agent pilot** — add owner-scoped checkpointing, cancellation, resume and private
-   project retention after reliability gates pass.
-4. **Clip-to-study evidence bridge** — remain deferred until the complete text Agent is accepted.
-5. **Creator primary-source layer** — ingest attributed interviews, commentaries and production
+1. **Persistent film projects** — owner-scoped retention of film, clip, study and note sessions,
+   meeting ADR-014's revisit conditions: RLS, deletion, export and a migration with tests.
+2. **Cost telemetry and an operator kill switch** — required before raising either daily Deep Study
+   limit.
+3. **Clip-to-study evidence bridge** — let measured clip observations and timecodes enter the evidence
+   packet in the local edition.
+4. **Creator primary-source layer** — ingest attributed interviews, commentaries and production
    records; distinguish direct quotation, paraphrase and inference.
+5. **Release hardening** — image scanning, SBOMs and signed provenance for the `VPS Release` path.
 
 ## Known Risks and Constraints
 
@@ -300,37 +160,73 @@ Carried from the 12 September 2026 entry:
 - Creator intention must not be inferred from style, criticism or theory alone.
 - The local multilingual model adds a first-load delay and a sizeable local download.
 - Inherited computer-vision dependencies may behave differently across operating systems.
-- The public beta will run on one rented server: a single point of failure with a long-lived deploy
-  key, no CDN and a brief API restart on every release.
+- The public beta runs on one rented server: a single point of failure with a long-lived deploy key,
+  no CDN and a brief API restart on every release. The server's private configuration and TLS state
+  are not in the repository and need an owner-held off-host backup.
 - The Supabase Free plan pauses the project after seven idle days, which breaks sign-in until it is
   resumed in the dashboard.
+- Parked Agent and retired Azure code exist only at their archive tags and will drift from `master`.
 
 ## Milestone Ledger
 
 Dated entries, newest first. Entries dated 6–31 August 2026 were moved unchanged into
 [PROGRESS_ARCHIVE_2026-08.md](PROGRESS_ARCHIVE_2026-08.md) on 27 September 2026.
 
-### 2 October 2026 — Festival atlas tab
+### 1 October 2026 — Agent programme parked, Azure path retired and documentation consolidated
 
-Historical branch implementation (subsequently migrated to TypeScript on 4 October).
-Added a **Festivals** primary tab (originally `app/web/festivals.js`): a world map of 32 major international
-film festivals and the Oscars and a twelve-month calendar. Pins and calendar bars show whether each festival is on
-now, starts within 60 days or comes later; a month filter dims the map and narrows the calendar, and
-selecting a festival shows its city, typical window, focus and official site where known. The map
-zooms up to 8× by wheel, pinch, double-click or buttons and pans by dragging, with counter-scaled
-pins; choosing the active month again clears the filter. The list includes the Singapore International
-Film Festival and the Academy Awards, shown as a gold awards-ceremony pin whose calendar bar is the
-early-to-mid-March span in which the single-evening ceremony usually falls. The land
-outline is Natural Earth 1:110m (public domain, via world-atlas) projected equirectangularly and
-inlined, so the view adds no runtime dependency or network request.
+Commit `9d29263` on `chore/trim-and-crystallise` removed the unused Agent and Azure paths; the same
+branch then consolidated the documentation. The change is confined to repository files: it made no
+provider, database, DNS, GitHub-setting, cloud-resource or production-deployment change, and live
+v219 predates it.
 
-Acceptance evidence: 643 repository tests pass, including a new asset test for the tab, script, view
-registration and build step; checked in a local browser in light and dark themes at desktop and
-375 px widths with no horizontal scroll and no console errors.
+| Removed | Recover from |
+|---|---|
+| Autonomous research Agent: six backend modules, `app/backend/research_graph/`, the Agent-only DeepSeek methods, `FIRSTROLL_LOCAL_AGENT_ENABLED` and the `langgraph` dependency | `archive/agent-programme` |
+| Evaluation harness: `tools/evaluate_*.py`, `tools/review_*.py`, the benchmark audit, gate, packet and smoke tools, the whole `evals/` directory and eight Agent/evaluation documents | `archive/agent-programme` |
+| Azure delivery: `infra/terraform`, the Static Web Apps and backend-release workflows, `tools/release/{cli,manifest,risk,summary,frontend}.py`, the Azure receipt functions and CLI in `tools/release/protocol.py` (now only the shared helpers `vps.py` imports) and `app/web/staticwebapp.config.json` | `archive/azure` |
+| Entra External ID: `EntraAuthVerifier`, `app/web/entra-auth.js`, `@azure/msal-browser`, the `ENTRA_*`/`FIRSTROLL_ENTRA_*` variables, browser `authProvider`/`entra*` fields and the PyJWT dependency | `archive/azure` |
 
-Constraints: festival dates are static typical windows rather than confirmed edition dates and need
-an annual review (Sundance moves to Boulder from 2027; FESPACO is biennial). Next: consider sourcing
-confirmed edition dates and linking festivals to films in Discover.
+Kept: the fixed Deep Study workflow; packet-quality assessment, whose fixture moved to
+`tests/fixtures/packet_quality_cases.json`; Supabase Auth as the only accepted
+`FIRSTROLL_AUTH_PROVIDER`; the Supabase quota RPC by default, with `PostgresQuotaClient` selectable
+through `FIRSTROLL_QUOTA_PROVIDER=postgres`; the `infra/vps` stack and `VPS Release` with
+`tools/release/protocol.py` and `vps.py`; CI, minus its Terraform step; local clip analysis.
+
+Decisions: [ADR-026](DECISIONS.md#adr-026-park-the-autonomous-research-agent-programme) parks the
+Agent programme with revival conditions, and
+[ADR-027](DECISIONS.md#adr-027-retire-azure-and-host-the-public-beta-on-one-vps) records the VPS
+hosting and Azure retirement. ADR-003, 004, 011, 015 and 020–025 are condensed and marked
+superseded or parked. ADR-009's status is corrected: the Supabase RPC is the active quota default,
+and ADR-016's PostgreSQL adapter is staged, not active.
+
+Documentation: the readme was cut to an overview, and eight topic documents were folded into a set
+in which each topic has one owner (scopes in the readme's Documentation Map):
+
+| Former document | Now in |
+|---|---|
+| `API_REFERENCE`, `DATA_MODEL`, `DATA_SOURCES` | [Data](DATA.md) |
+| `HOSTING`, `RELEASE` | [Operations](OPERATIONS.md) and [infra/vps/README.md](../infra/vps/README.md) |
+| `LOCAL_SETUP` | [Setup](SETUP.md) |
+| `THREAT_MODEL`, `WEB_RESPONSIVENESS` | [Architecture](ARCHITECTURE.md) |
+
+Acceptance evidence:
+
+- `.venv/bin/python -m pytest -q tests`: 289 passed, including 54 single-server release checks,
+  16 shared release-primitive checks, 34 same-ASGI-loop concurrency checks and the test that runs
+  the 27 Node request/race checks (`node --test tests/web/responsiveness.test.cjs`). The fall from
+  642 tests on `058c747` reflects the removed Agent, evaluation and Azure release code.
+- `ruff check app/backend --exclude app/backend/algorithms`: clean.
+- Production frontend build (`tools/build_web.sh`, live channel): passes.
+
+Constraints:
+
+- Restoring the Agent requires ADR-026's revival conditions; its frozen evaluation results,
+  including the fixed-workflow baseline, are readable only from `archive/agent-programme`.
+- Azure-era GitHub settings, any remaining Azure resources and local Terraform state are untouched
+  and await the owner decision listed in **Next Milestone**.
+
+Next actionable work: the public-beta acceptance milestone above, starting with browser acceptance
+and authenticated quota verification; then live responsiveness profiling.
 
 ### 1 October 2026 — Explain the deployed architecture and correct stale documentation
 
@@ -562,8 +458,9 @@ Implemented on `fix/web-responsiveness`, without a production approval or provid
 5. Added dependency-free executable JavaScript race tests to the existing Python CI gate and an
    optional, pinned-tool Chrome diagnostic that starts no backend, fulfils/blocks page HTTP traffic
    and removes speculative connection hints. This is not an OS-level network sandbox.
-6. Reconciled README, architecture/API/hosting prose and [Web Responsiveness](WEB_RESPONSIVENESS.md)
-   with the implementation, measurements and remaining work.
+6. Reconciled README, architecture/API/hosting prose and the web-responsiveness note (since folded
+   into [Architecture](ARCHITECTURE.md#7-web-responsiveness)) with the implementation, measurements
+   and remaining work.
 
 Acceptance evidence, recorded separately:
 
@@ -576,9 +473,9 @@ Acceptance evidence, recorded separately:
   With a synthetic 500 ms token delay, median click-to-busy mutation improved from about 502 ms to
   0.4–0.8 ms. The next-frame paint proxy improved from about 511 ms to 27–28 ms; it is not INP. Forty
   candidate cancellations before token readiness sent zero mocked study POSTs. Both widths had zero
-  uncaught page errors and no horizontal overflow. The hash-bound
-  [synthetic report](../evals/results/web-responsiveness-2026-09-12.json) is retained; no live latency or
-  model-speed result is claimed.
+  uncaught page errors and no horizontal overflow. The hash-bound synthetic report
+  `evals/results/web-responsiveness-2026-09-12.json` is retained (at tag `archive/agent-programme`
+  since 1 October 2026); no live latency or model-speed result is claimed.
 - **Review:** fixed the reviewer's cached-criticism-tab busy-state regression and added both fetch and
   structuring transition tests. Also removed speculative connection hints from the browser fixture
   and narrowed its network-isolation claim.
@@ -717,7 +614,7 @@ For each meaningful implementation change:
 2. add a dated milestone entry when a coherent feature set completes;
 3. record automated and live acceptance evidence;
 4. move the next actionable milestone into **Next Milestone**;
-5. keep limitations explicit rather than silently removing unfinished scope.
+5. keep limitations explicit rather than silently removing unfinished scope;
 6. when the ledger grows past roughly one month or one thousand lines, move older dated entries
    unchanged into a dated `PROGRESS_ARCHIVE_<year>-<month>.md` file and link it from the ledger
    heading.

@@ -8,7 +8,6 @@ from app.backend import main
 from app.backend.auth import (
     AuthConfigurationError,
     AuthenticationError,
-    EntraAuthVerifier,
     SupabaseAuthVerifier,
     configured_auth_verifier,
 )
@@ -112,51 +111,12 @@ def test_supabase_auth_verifier_requires_complete_https_configuration() -> None:
         SupabaseAuthVerifier("", "").verify_authorisation("Bearer token")
 
 
-def test_entra_auth_verifier_accepts_an_api_token_with_the_required_scope() -> None:
-    user_id = str(uuid4())
-    verifier = EntraAuthVerifier(
-        "https://firstroll-login.ciamlogin.com/00000000-0000-0000-0000-000000000001",
-        "00000000-0000-0000-0000-000000000002",
-        "access_as_user",
-        transport=lambda token: {
-            "oid": user_id,
-            "emails": ["viewer@example.com"],
-            "scp": "openid access_as_user",
-        },
-    )
+def test_auth_provider_factory_accepts_only_supabase(monkeypatch) -> None:
+    monkeypatch.setenv("FIRSTROLL_AUTH_PROVIDER", "supabase")
 
-    user = verifier.verify_authorisation("Bearer valid-entra-token")
+    assert isinstance(configured_auth_verifier(), SupabaseAuthVerifier)
 
-    assert user.user_id == user_id
-    assert user.email == "viewer@example.com"
-    assert user.role == "authenticated"
-    assert user.provider == "entra"
-
-
-def test_entra_auth_verifier_rejects_missing_scope_and_incomplete_configuration() -> None:
-    verifier = EntraAuthVerifier(
-        "https://firstroll-login.ciamlogin.com/00000000-0000-0000-0000-000000000001",
-        "00000000-0000-0000-0000-000000000002",
-        "access_as_user",
-        transport=lambda token: {"sub": "customer", "scp": "openid"},
-    )
-
-    with pytest.raises(AuthenticationError, match="not authorised"):
-        verifier.verify_authorisation("Bearer wrong-scope")
-    assert EntraAuthVerifier("http://example.test", "not-a-uuid").configured is False
-
-
-def test_auth_provider_factory_selects_exactly_one_provider(monkeypatch) -> None:
     monkeypatch.setenv("FIRSTROLL_AUTH_PROVIDER", "entra")
-    monkeypatch.setenv(
-        "ENTRA_AUTHORITY",
-        "https://firstroll-login.ciamlogin.com/00000000-0000-0000-0000-000000000001",
-    )
-    monkeypatch.setenv("ENTRA_API_CLIENT_ID", "00000000-0000-0000-0000-000000000002")
-
-    assert isinstance(configured_auth_verifier(), EntraAuthVerifier)
-
-    monkeypatch.setenv("FIRSTROLL_AUTH_PROVIDER", "unknown")
     with pytest.raises(AuthConfigurationError, match="FIRSTROLL_AUTH_PROVIDER"):
         configured_auth_verifier()
 

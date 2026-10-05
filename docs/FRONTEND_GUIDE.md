@@ -41,7 +41,7 @@ Splitting code is useful when each file has a clear responsibility, not merely f
 | `src/analysis/controller.ts`, `view.ts` | Typed private clip state/upload/export and rendering | Follow the Analyse feature |
 | `src/analysis/dom.ts`, `response.ts` | DOM contract and runtime response validation | See the difference between types and validation |
 | `src/shared/ui.ts` | Typed focus, progress markup and API-base helpers | Follow accessible focus scheduling |
-| `auth.ts`, `entra-auth.ts`, `local-auth.ts`, `integrations.ts` | Typed account/settings adapters | Follow sign-in or settings |
+| `auth.ts`, `local-auth.ts`, `integrations.ts` | Typed account/settings adapters (Entra retired) | Follow sign-in or settings |
 | `theme-init.ts`, `auth-loader.ts` | Early theme restoration and account-provider selection | Follow startup before the app |
 | `festivals.ts`, `src/festivals/controller.ts` | Self-contained atlas entry, map gestures, filtering and calendar rendering | Follow the Festivals tab |
 | `src/festivals/data.ts`, `model.ts`, `land.ts` | Typed catalogue, pure date/projection helpers and public-domain geometry | Update typical windows or understand map coordinates |
@@ -174,7 +174,7 @@ Hosted: dist/assets/app.js      → Caddy /assets/app.js
 
 `tsc` checks types without emitting files. esbuild then strips types and bundles imports.
 The output has no unresolved module imports, so the existing classic script tag and public
-filename remain valid. Hosted output is minified; localhost output is readable. Auth, Entra,
+filename remain valid. Hosted output is minified; localhost output is readable. Supabase auth,
 local-account, settings and the two early startup scripts have their own compiled IIFE bundles, produced
 by the same build command. The default config template is TypeScript; hosted/runtime configuration
 is generated JavaScript data. Neither source changes nor local builds deploy production.

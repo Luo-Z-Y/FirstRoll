@@ -29,7 +29,7 @@ Delivered without a configured/paid model, planner, acquisition-provider or depl
 6. Added `tools/audit_agent_benchmarks.py` and the reproducible redacted
    `agent-benchmark-audit-2026-08-31.json`, fingerprinting nine immutable report/contract inputs.
 7. Documented exact current fixed/Agent/A01/A02/packet metrics, tool suitability, unsupported claims
-   and prioritised improvements in [Agent Benchmark Audit](AGENT_BENCHMARK_AUDIT.md).
+   and prioritised improvements in [Agent Benchmark Audit](https://github.com/Luo-Z-Y/FirstRoll/blob/archive/agent-programme/docs/AGENT_BENCHMARK_AUDIT.md).
 8. Added ADR-023: GuideLLM/lm-eval are bounded diagnostics and cannot replace A01R–A03, complete
    failure accounting, citation validation or personal owner review.
 9. Expanded synthetic coverage to 381 tests; both real-model benchmark authorisation and every
@@ -70,7 +70,7 @@ Delivered without a model, planner or provider call:
    raw tool output never returns to the planner; deterministic policy owns continuation.
 6. Added safe `native_tool_calls`/`deterministic_router` protocol labels and an A01R
    `planner_protocol_integrity` machine target.
-7. Added [Native Tool Calling](NATIVE_TOOL_CALLING.md), including former/new request and response
+7. Added [Native Tool Calling](https://github.com/Luo-Z-Y/FirstRoll/blob/archive/agent-programme/docs/NATIVE_TOOL_CALLING.md), including former/new request and response
    code, strict schema comparison, execution path, authority boundaries, rejection cases and testing.
 8. Expanded synthetic coverage to 376 tests and retained A01R/A02R's null paid confirmations.
 

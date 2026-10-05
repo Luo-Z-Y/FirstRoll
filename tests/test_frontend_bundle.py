@@ -23,7 +23,6 @@ def test_missing_local_bundle_has_an_actionable_error(monkeypatch, tmp_path):
     [
         "app",
         "auth",
-        "entra-auth",
         "local-auth",
         "integrations",
         "theme-init",
