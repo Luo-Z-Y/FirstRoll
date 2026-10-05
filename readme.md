@@ -45,7 +45,9 @@ calendar. Month filtering, selection and zoom use no map API or credential. Date
 windows, not confirmed edition dates; verify with each organiser. The mobile update adds
 scrollable 44-pixel month controls, a separate zoom toolbar, screen-sized pins and a wrapping
 calendar list with explicit dates. Selecting a mobile calendar entry reveals its detail card.
-These changes are tested in code but still await mobile visual acceptance and deployment.
+The header also fits narrow phones without hiding navigation, account controls or the build
+label. Browser layout/interaction checks passed at 320, 390 and 430 CSS px and desktop;
+physical-device pinch testing and production deployment remain outstanding.
 
 ## Documentation Map
 

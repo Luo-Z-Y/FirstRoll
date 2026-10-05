@@ -1969,15 +1969,15 @@ button.festival-calendar-row:hover, .festival-calendar-row.is-selected { backgro
   .identity-confirmation-intro { grid-template-columns: 1fr; gap: 8px; }
   .identity-confirmation-intro .eyebrow { grid-column: auto; }
   .identity-choice-grid { grid-template-columns: 1fr; }
-  .site-header { min-height: 72px; grid-template-columns: 1fr auto; grid-template-areas: "brand tools" "nav nav"; gap: 10px; padding: 10px 0 12px; }
+  .site-header { min-height: 72px; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "brand tools" "nav nav"; gap: 10px; padding: 10px 0 12px; }
   .brand { font-size: 1.25rem; }
   .brand { grid-area: brand; }
   .brand-mark { width: 30px; height: 30px; transform: translateY(-1.25px) scaleY(0.985); }
   .build-identity { margin-left: 0; padding: 3px 5px 2px; font-size: 0.43rem; }
-  .primary-nav { grid-area: nav; width: 100%; }
-  .primary-nav .nav-link { flex: 1; }
+  .primary-nav { grid-area: nav; width: 100%; min-width: 0; }
+  .primary-nav .nav-link { flex: 1 1 0; min-width: 0; min-height: 44px; }
   .header-tools { grid-area: tools; gap: 8px; }
-  .nav-link { padding: 7px 10px; font-size: 0.68rem; }
+  .nav-link { padding: 7px 6px; font-size: 0.68rem; }
   .auth-identity { display: none; }
   .auth-sign-out { display: none; }
   .integrations-view { padding-top: 44px; }
@@ -2047,6 +2047,12 @@ button.festival-calendar-row:hover, .festival-calendar-row.is-selected { backgro
   .detail-facts-list { padding-top: 4px; }
   .score-card { min-width: calc(50% - 4px); }
   .detail-close { top: 12px; right: 12px; }
+}
+
+/* Keep the build label without forcing the account/theme controls off a small phone. */
+@media (max-width: 380px) {
+  .brand { display: grid; grid-template-columns: 30px minmax(0, 1fr); min-width: 0; max-width: 100%; gap: 3px 6px; text-align: left; }
+  .brand .build-identity { grid-column: 1 / -1; justify-self: start; }
 }
 
 @media (prefers-reduced-motion: reduce) {
