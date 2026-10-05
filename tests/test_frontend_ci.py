@@ -6,7 +6,7 @@ ROOT = Path(__file__).resolve().parents[1]
 WORKFLOWS = ROOT / ".github" / "workflows"
 CI = (WORKFLOWS / "ci.yml").read_text(encoding="utf-8")
 DEPLOYMENT = (WORKFLOWS / "vps-release.yml").read_text(encoding="utf-8")
-BUILD = (ROOT / "tools" / "build_web.sh").read_text(encoding="utf-8")
+BUILD = (ROOT / "tools" / "frontend" / "build.sh").read_text(encoding="utf-8")
 DEPENDABOT = (ROOT / ".github" / "dependabot.yml").read_text(encoding="utf-8")
 AGENT_POLICY = (ROOT / "AGENTS.md").read_text(encoding="utf-8")
 PULL_REQUEST_TEMPLATE = (ROOT / ".github" / "pull_request_template.md").read_text(encoding="utf-8")

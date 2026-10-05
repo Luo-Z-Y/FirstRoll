@@ -2,7 +2,7 @@
 
 set -eu
 
-project_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+project_root=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 source_dir="$project_root/app/web"
 output_dir="$project_root/dist"
 api_base=${FIRSTROLL_API_BASE:-}
@@ -92,7 +92,7 @@ cp "$source_dir/favicon.svg" "$output_dir/assets/favicon.svg"
 
 npm ci --include=dev --ignore-scripts --no-audit --no-fund
 # Preserve classic-script globals and release filenames while reducing transfer and parse work.
-node "$project_root/tools/frontend-build.cjs" "$output_dir/assets/app.js"
+node "$project_root/tools/frontend/build.cjs" "$output_dir/assets/app.js"
 ./node_modules/.bin/esbuild "$source_dir/styles.css" \
   --minify \
   --target=es2020,chrome100,firefox100,safari15.4 \

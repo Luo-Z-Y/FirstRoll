@@ -16,27 +16,81 @@ Status vocabulary:
 
 ## Current Snapshot
 
-**Last updated:** 5 October 2026 (PR #50 merged as `2f14c31`; mobile festival polish prepared;
-neither change is deployed; mobile browser acceptance passed, physical-touch testing pending)
+**Last updated:** 5 October 2026. Agent/Azure retirement, codebase organisation
+and the film-duration rounding fix are merged into master. Mobile festival polish
+is prepared in PR #57. Previous mobile browser acceptance passed; physical-touch
+testing remains pending. Merging does not confirm production deployment.
 
-**Release stage:** VPS public beta v232 (`cf43ba57`), deployed by owner-approved run `37213215944`
-on 5 October 2026. Pipeline and independent file/API/contract/CORS/hidden-doc checks passed, as did
-live desktop festival navigation, November filtering, SGIFF details and zoom/reset. Prior v230
-browser checks covered search, shelf, dossier, Settings and the sign-in dialogue. Authenticated
-account/quota acceptance remains unverified; paid Deep Study and video analysis stay disabled.
-v230 is retained for application rollback; no recovery drill was performed. This PR refresh
-does not deploy, change secrets or authorise another release. Hosting procedures: [Operations](OPERATIONS.md) and
-[infra/vps/README.md](../infra/vps/README.md).
+### Codebase organisation checkpoint
+
+Frontend development tooling is grouped under `tools/frontend/`: `build.cjs`,
+`build.sh`, `preview.sh` and the optional historical `check-responsiveness.cjs`
+diagnostic. Repository-root resolution, Docker's nested build-context allow-list,
+workflow invocations, tests and documentation have been updated together.
+
+Existing `npm run build` and `build:local` commands remain stable.
+`npm run preview` compiles before launching the hosted-style loopback UI.
+Pytest defaults to `tests/` instead of scanning unrelated workspace directories.
+
+The [Codebase guide](CODEBASE.md) maps folders, features, tests and daily commands.
+Backend router extraction remains a separate future change. This reorganisation
+does not change Python service imports, HTTP routes, feature flags, database
+schema or production approval policy. Private and untracked files are excluded.
+
+### Verification evidence
+
+These results describe separate verification checkpoints, not a completed
+verification of the newly combined PR branch:
+
+- Original tooling checkpoint: 304 Python tests and 80 frontend tests passed
+  against source and minified hosted bundles. Strict TypeScript, local and hosted
+  builds, focused Ruff checks, shell syntax and whitespace checks passed.
+- Tooling PR tested with the duration fix on master: 304 Python tests and
+  81 frontend tests passed, including source and minified hosted bundles.
+- Mobile PR tested with the duration fix on master: 301 Python tests and
+  84 frontend tests passed, including source and minified hosted bundles.
+- Earlier mobile browser checks passed at 320, 390 and 430 CSS pixels and
+  1280 pixels on desktop. These do not establish physical-device pinch/pan
+  behaviour.
+- Fresh CI must pass after combining the mobile and tooling changes.
+  Record its results separately rather than treating earlier runs as proof
+  of the combined branch.
+
+The optional historical browser benchmark was not rerun. It requires its
+documented baseline and browser toolchain. A previous broad Ruff scan reported
+23 findings in unchanged legacy `app/backend/algorithms` files.
+
+The reduced Python test count follows the removal of Agent/Azure-only tests,
+not the removal of live festival or account tests. VPS tests simulate activation
+and recovery failures; they do not replace browser acceptance or a real
+recovery drill.
+
+### Production checkpoint
+
+**Last verified release:** VPS public beta v232 (`cf43ba57`), deployed through
+owner-approved run `37213215944` on 5 October 2026.
+
+Pipeline and independent checks passed for file fingerprints, API identity,
+API contracts, CORS and hidden documentation routes. Live desktop checks covered
+festival navigation, November filtering, SGIFF details and zoom/reset.
+Earlier v230 browser checks covered search, shelf, dossier, Settings and the
+sign-in dialogue.
+
+Authenticated account/quota acceptance remains unverified. At that verified
+checkpoint, paid Deep Study and video analysis were disabled, and v230 was
+retained for application rollback. No recovery drill was performed.
+
+A merge or documentation update does not establish a newer live release.
+Deployment requires approval of the exact release run, followed by successful
+deployment and live verification. This PR does not change secrets or authorise
+production deployment.
 
 **Primary development URL:** `http://127.0.0.1:8000`
-**Public beta URL:** `https://firstroll.app` (v232 live; public HTTPS checked 5 October)
-**Automated verification:** 301 repository tests, 83 frontend tests (local and minified hosted
-application), strict typing and local/hosted builds pass for mobile festival polish on 5 October.
-An additional broad Ruff scan reports 23 pre-existing findings in the unchanged legacy
-`app/backend/algorithms` files; this frontend-only change does not modify those files.
-The smaller Python suite removes Agent/Azure-only tests, not the live festival/account tests. The VPS tests simulate activation
-and recovery failures without touching a server; they do not replace browser acceptance or a real
-recovery drill.
+
+**Public beta URL:** `https://firstroll.app`
+
+Hosting and recovery procedures:
+[Operations](OPERATIONS.md) and [VPS stack](../infra/vps/README.md).
 
 | Area | Status | Current evidence |
 |---|---|---|
@@ -139,6 +193,12 @@ Acceptance criteria:
 
 Boundary: the v232 approval does not approve another run, a database migration or paid calls. The
 next owner-approved release will be the first built after the trim.
+
+### 5 October 2026 — Film-duration rounding fix (local, not deployed)
+
+Round total minutes before splitting hours and minutes, preventing `1h 60m`.
+Added regression coverage for hour boundaries, numeric strings and invalid values.
+TypeScript and all 81 frontend tests passed; whitespace check passed.
 
 ### 5 October 2026 — Refresh PR #50 without reverting the live frontend
 
@@ -255,7 +315,7 @@ Acceptance evidence:
   the 27 Node request/race checks (`node --test tests/web/responsiveness.test.cjs`). The fall from
   642 tests on `058c747` reflects the removed Agent, evaluation and Azure release code.
 - `ruff check app/backend --exclude app/backend/algorithms`: clean.
-- Production frontend build (`tools/build_web.sh`, live channel): passes.
+- Production frontend build (`tools/frontend/build.sh`, live channel): passes.
 
 Constraints:
 

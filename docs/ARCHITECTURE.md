@@ -162,7 +162,7 @@ Other components:
 | `app/web` | `index.html`, `styles.css`, `app.ts` and `src/` typed controllers/views/contracts; `auth.ts`, `integrations.ts`, `local-auth.ts`, startup scripts and `festivals.ts`. `config.js` is generated runtime/build data; browser assets are compiled JavaScript | Secrets, authorisation decisions, evidence validation |
 | `supabase/migrations` | Account tables with RLS; quota functions in a revoked `firstroll_private` schema | Studies, prompts, evidence |
 | `database/migrations` | Portable identity-neutral quota migration for any PostgreSQL; staged, not the production path | Bearer tokens, email |
-| `Dockerfile`, `infra/vps`, `tools/build_web.sh`, `tools/release/`, `.github/workflows/` | Hosted image, server stack, static build, release receipts and verification, CI and the gated release | See [Operations](OPERATIONS.md) |
+| `Dockerfile`, `infra/vps`, `tools/frontend/build.sh`, `tools/release/`, `.github/workflows/` | Hosted image, server stack, static build, release receipts and verification, CI and the gated release | See [Operations](OPERATIONS.md) |
 
 ## 4. Core Data Flows
 
@@ -300,7 +300,7 @@ hypotheses.
 `app.ts` is a 64-line composition root; `src/context.ts` assembles state and `src/bootstrap.ts`
 wires handlers. Feature controllers own request IDs, cancellation and mutation; views render
 escaped markup. Consumed API/account JSON passes runtime decoders before entering typed state.
-`tools/frontend-build.cjs` runs strict checking and bundles the same entries for localhost,
+`tools/frontend/build.cjs` runs strict checking and bundles the same entries for localhost,
 Docker and hosted releases. Source is TypeScript; the browser receives JavaScript. Entra is no
 longer an entry, dependency, loader branch or supported API provider. Supabase and the strictly
 loopback-only development adapter remain. See [Frontend Guide](FRONTEND_GUIDE.md).
@@ -440,7 +440,7 @@ Design rules, preserving the request, evidence and release contracts above:
 | `app.js` | 154,709 | 115,716 | 36,319 | 31,176 |
 | `styles.css` | 95,119 | 80,486 | 17,000 | 15,733 |
 
-- `tools/check_web_responsiveness.cjs` (optional browser diagnostic; starts no backend and fulfils
+- `tools/frontend/check-responsiveness.cjs` (optional browser diagnostic; starts no backend and fulfils
   or blocks every page request, but is no OS-level sandbox). Chrome 152, 4× CPU throttle, 390 px
   and 1440 px, twenty interactions each, synthetic 500 ms token delay: median click-to-busy fell
   from about 502 ms to 0.4–0.8 ms; a two-frame paint proxy (not INP) from about 511 ms to 27–28 ms;

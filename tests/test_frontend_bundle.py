@@ -56,9 +56,9 @@ def test_all_handwritten_frontend_modules_are_typescript():
 def test_container_and_hosted_builds_compile_the_same_source():
     dockerfile = (ROOT / "Dockerfile").read_text(encoding="utf-8")
     ignore = (ROOT / ".dockerignore").read_text(encoding="utf-8")
-    hosted = (ROOT / "tools/build_web.sh").read_text(encoding="utf-8")
+    hosted = (ROOT / "tools/frontend/build.sh").read_text(encoding="utf-8")
     assert "RUN npm run build:local" in dockerfile
     assert "COPY --from=frontend-builder /web/app/web/generated/" in dockerfile
-    for name in ("package.json", "package-lock.json", "tsconfig.json", "tools/frontend-build.cjs"):
+    for name in ("package.json", "package-lock.json", "tsconfig.json", "tools/frontend/build.cjs"):
         assert f"!{name}\n" in ignore
-    assert 'node "$project_root/tools/frontend-build.cjs" "$output_dir/assets/app.js"' in hosted
+    assert 'node "$project_root/tools/frontend/build.cjs" "$output_dir/assets/app.js"' in hosted

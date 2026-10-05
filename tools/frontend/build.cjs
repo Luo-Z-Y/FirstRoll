@@ -2,7 +2,7 @@ const path = require("node:path");
 const { buildSync } = require("esbuild");
 const { execFileSync } = require("node:child_process");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "../..");
 
 // One compiler configuration for localhost, hosted releases and the request-race tests.
 // The entry exports nothing: esbuild resolves imports into a classic-script-compatible file.
