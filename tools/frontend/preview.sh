@@ -2,7 +2,7 @@
 
 set -eu
 
-project_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+project_root=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 preview_port=${PORT:-4173}
 
 # Use the same feature boundary as firstroll.app while serving the frontend and

@@ -10,7 +10,7 @@ const os = require("node:os");
 const path = require("node:path");
 const { chromium } = require("playwright");
 
-const root = path.resolve(__dirname, "..");
+const root = path.resolve(__dirname, "../..");
 const revision = process.argv[2];
 if (!revision || !/^[0-9a-f]{40}$/.test(revision)) {
   throw new Error("Supply the full baseline Git commit SHA as the only argument.");

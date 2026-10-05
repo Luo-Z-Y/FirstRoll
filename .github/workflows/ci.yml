@@ -78,7 +78,7 @@ jobs:
           FIRSTROLL_API_BASE: https://firstroll.example.com
           FIRSTROLL_SUPABASE_URL: https://example.supabase.co
           FIRSTROLL_SUPABASE_PUBLISHABLE_KEY: sb_publishable_test
-        run: ./tools/build_web.sh
+        run: ./tools/frontend/build.sh
       - name: Test the minified release application
         env:
           FIRSTROLL_TEST_APP: dist/assets/app.js

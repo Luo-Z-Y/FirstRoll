@@ -81,7 +81,7 @@ documentation at <http://127.0.0.1:8000/docs>; the hosted mode does not publish 
 |---|---|
 | Identity | `luo_zhiyang@outlook.com`, any password of eight or more characters |
 | Where it works | Any port, but only when both the browser URL host and the connecting client are loopback (`localhost`, `127.0.0.1` or `::1`); every other host rejects its token |
-| Launchers | `uv run firstroll` and the hosted preview (`tools/preview_hosted_web.sh`) expose the same account |
+| Launchers | `uv run firstroll` and the hosted preview (`tools/frontend/preview.sh`) expose the same account |
 | Storage | Profile, preferences and saved films live in that browser's local storage, not in Supabase |
 | Allowance | Bypasses only FirstRoll's own Deep Study counters; DeepSeek, YouTube and other provider limits and billing still apply |
 
@@ -253,7 +253,7 @@ Install the development extra (`uv sync --extra dev`) and Node.js 22, then run
 | Local frontend bundles | `npm run build:local` | Generated scripts under `app/web/generated/` |
 | Whitespace | `git diff --check` | No output |
 
-Always pass `tests` to pytest: `pyproject.toml` sets no test paths. The inherited modules under
+Pytest defaults to `tests/`; an explicit path still works for focused checks. The inherited modules under
 `app/backend/algorithms` still carry historical lint findings and are excluded from the lint gate.
 CI (`.github/workflows/ci.yml`) runs the pytest suite (against `requirements-hosted.txt`) and the
 strict frontend build and Node suite, audits the npm lock, validates the VPS stack, builds the production image and
@@ -262,7 +262,7 @@ checks its Douban MCP handshake, and builds the static frontend. CI does not run
 
 ### Static frontend build
 
-`tools/build_web.sh` (also `npm run build`) runs `npm ci`, minifies the app with esbuild and writes
+`tools/frontend/build.sh` (also `npm run build`) runs `npm ci`, minifies the app with esbuild and writes
 the hosted site to the Git-ignored `dist/` with a generated `assets/config.js`.
 
 | Variable | Required | Rule |
@@ -274,7 +274,7 @@ the hosted site to the Git-ignored `dist/` with a generated `assets/config.js`.
 | `FIRSTROLL_BUILD_NUMBER`, `FIRSTROLL_BUILD_COMMIT` | No | Default to the Git commit count (plus one for `local`) and short SHA |
 
 ```bash
-FIRSTROLL_API_BASE=https://firstroll.example.com ./tools/build_web.sh
+FIRSTROLL_API_BASE=https://firstroll.example.com ./tools/frontend/build.sh
 FIRSTROLL_TEST_APP=dist/assets/app.js npm run test:web
 ```
 
@@ -282,7 +282,8 @@ The second command reruns the frontend suite against the minified application bu
 
 ### Hosted-mode preview
 
-`tools/preview_hosted_web.sh` serves the hosted interface and API from one loopback origin, by default
+Run `npm run preview` to compile the frontend, then launch `tools/frontend/preview.sh`.
+The launcher serves the hosted interface and API from one loopback origin, by default
 <http://127.0.0.1:4173> (set `PORT` to change it). It sets `FIRSTROLL_PUBLIC_MODE=true`,
 `FIRSTROLL_SERVE_HOSTED_FRONTEND=true`, `FIRSTROLL_VIDEO_ANALYSIS_ENABLED=false` and
 `FIRSTROLL_BUILD_CHANNEL=local`. Export `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` to exercise real
@@ -293,7 +294,7 @@ but still needs a DeepSeek key from the environment or the local store.
 
 ### Optional browser diagnostic
 
-`tools/check_web_responsiveness.cjs` measures immediate study feedback in Chrome against synthetic
+`tools/frontend/check-responsiveness.cjs` measures immediate study feedback in Chrome against synthetic
 fixtures, without starting the backend or contacting providers. It needs a prior `dist` build, an
 installed Google Chrome, Playwright 1.58.2 kept outside the project's dependencies, and the full
 SHA of a baseline commit present in this clone:
@@ -302,7 +303,7 @@ SHA of a baseline commit present in this clone:
 browser_tools=$(mktemp -d)
 npm --prefix "$browser_tools" install --ignore-scripts --no-audit --no-fund \
   --package-lock=false playwright@1.58.2
-NODE_PATH="$browser_tools/node_modules" node tools/check_web_responsiveness.cjs <baseline-full-sha>
+NODE_PATH="$browser_tools/node_modules" node tools/frontend/check-responsiveness.cjs <baseline-full-sha>
 ```
 
 It writes screenshots and a hash-bound JSON report to a fresh temporary directory. Synthetic timings

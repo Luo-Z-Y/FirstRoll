@@ -26,7 +26,7 @@ FROM node:22-bookworm-slim AS frontend-builder
 WORKDIR /web
 COPY package.json package-lock.json tsconfig.json ./
 RUN npm ci --include=dev --ignore-scripts --no-audit --no-fund
-COPY tools/frontend-build.cjs ./tools/frontend-build.cjs
+COPY tools/frontend/build.cjs ./tools/frontend/build.cjs
 COPY app/web ./app/web
 RUN npm run build:local
 

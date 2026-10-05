@@ -16,6 +16,28 @@ Status vocabulary:
 
 ## Current Snapshot
 
+### 5 October 2026 — Codebase organisation checkpoint
+
+Frontend development tooling is grouped under `tools/frontend/`: `build.cjs`, `build.sh`,
+`preview.sh` and the optional historical `check-responsiveness.cjs` diagnostic. Repository-root
+resolution, Docker's nested build-context allow-list, workflow invocations, tests and current
+documentation have been updated together. Existing `npm run build` and `build:local` commands
+remain stable. `npm run preview` now compiles before launching the hosted-style loopback UI;
+pytest defaults to `tests/` instead of scanning unrelated workspace directories.
+
+[Codebase guide](CODEBASE.md) maps folders, features, tests and daily commands, and identifies
+backend router extraction as a separate future change. No Python service imports, HTTP routes,
+feature flags, database schema or production approval policy changed. Private/untracked files,
+model assets and the independent mobile and monochrome worktrees are preserved.
+
+Verification: 304 Python tests, 80 frontend cases against source and minified hosted bundles,
+strict TypeScript, local/hosted builds, new-test Ruff checks, shell syntax and whitespace checks
+pass. Three new tests cover preview root/port/flag handling and the nested Docker/compiler
+contract. The frontend count reflects current merged master, not the unmerged mobile PR.
+The optional browser benchmark was not executed; it still requires its documented historical
+baseline and browser toolchain. Remote CI must validate the container build before merge.
+Production remains v232; reorganising source does not deploy it.
+
 **Last updated:** 5 October 2026 (PR #50 reconciled with current master; Agent/Azure removal is
 branch-only; deployed TypeScript and festival features are preserved)
 
@@ -222,7 +244,7 @@ Acceptance evidence:
   the 27 Node request/race checks (`node --test tests/web/responsiveness.test.cjs`). The fall from
   642 tests on `058c747` reflects the removed Agent, evaluation and Azure release code.
 - `ruff check app/backend --exclude app/backend/algorithms`: clean.
-- Production frontend build (`tools/build_web.sh`, live channel): passes.
+- Production frontend build (`tools/frontend/build.sh`, live channel): passes.
 
 Constraints:
 

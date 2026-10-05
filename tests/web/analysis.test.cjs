@@ -5,7 +5,7 @@ const path = require("node:path");
 const vm = require("node:vm");
 const Module = require("node:module");
 const { buildSync } = require("esbuild");
-const { bundleApplication } = require("../../tools/frontend-build.cjs");
+const { bundleApplication } = require("../../tools/frontend/build.cjs");
 
 const root = path.resolve(__dirname, "../..");
 const source = process.env.FIRSTROLL_TEST_APP

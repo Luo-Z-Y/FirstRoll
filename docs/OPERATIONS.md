@@ -225,7 +225,7 @@ acceptance ([section 11](#11-public-beta-acceptance-checks)) stays manual.
 | Check out the CI-approved revision | Full history (for the build number), without persisted credentials |
 | Bind the release to current master | Fails if the checkout or remote `master` differs from the CI SHA. A manual run also needs successful push CI for that SHA |
 | Audit frontend dependency lock | `npm audit --audit-level=high` |
-| Build the production frontend | `./tools/build_web.sh` with the API base `https://api.firstroll.app`, channel `live` and the public Supabase values |
+| Build the production frontend | `./tools/frontend/build.sh` with the API base `https://api.firstroll.app`, channel `live` and the public Supabase values |
 | Validate the bounded site directory | Checks the entry files, rejects symbolic links, runs `node --check` and confirms the API base and channel |
 | Build the backend image | `docker build --build-arg FIRSTROLL_RELEASE_SHA=<commit>` |
 | Smoke-test the container and its public boundary | Public mode with Deep Study and video analysis off. `/api/health` must report `ok` and the commit; `/docs`, `/redoc` and `/openapi.json` must return 404 |
