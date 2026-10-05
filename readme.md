@@ -38,11 +38,14 @@ rules and how the code enforces them:
 Live file/API verification and desktop festival filtering/details/zoom checks passed; v230 remains
 the application rollback target. No TMDb token is configured, so discovery uses Wikidata/Wikipedia.
 Authenticated account/quota acceptance and a rollback drill remain outstanding. The Agent/Azure
-removal described in this branch is not deployed. Evidence: [docs/PROGRESS.md](docs/PROGRESS.md).
+removal is merged but not deployed. Evidence: [docs/PROGRESS.md](docs/PROGRESS.md).
 
 **Festivals:** 32 festivals, including SGIFF, and the Oscars appear on an inline world map and
 calendar. Month filtering, selection and zoom use no map API or credential. Dates are typical
-windows, not confirmed edition dates; verify with each organiser.
+windows, not confirmed edition dates; verify with each organiser. The mobile update adds
+scrollable 44-pixel month controls, a separate zoom toolbar, screen-sized pins and a wrapping
+calendar list with explicit dates. Selecting a mobile calendar entry reveals its detail card.
+These changes are tested in code but still await mobile visual acceptance and deployment.
 
 ## Documentation Map
 

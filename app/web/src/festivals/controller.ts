@@ -47,6 +47,7 @@ export function mountFestivalAtlas(section: HTMLElement) {
       const selected = state.selected === festival.id;
       const classes = ["festival-pin", `is-${current.key}`, festival.kind === "awards" ? "is-awards" : "", dimmed ? "is-dimmed" : "", selected ? "is-selected" : ""].join(" ").trim();
       return `<g class="${classes}" data-x="${x.toFixed(1)}" data-y="${y.toFixed(1)}" data-festival-id="${festival.id}" role="button" tabindex="${dimmed ? -1 : 0}" aria-label="${escapeHtml(`${festival.name}, ${festival.city}, ${formatWindow(festival)}`)}" aria-pressed="${selected}">
+        <circle class="festival-pin-hit" r="12"></circle>
         <circle class="festival-pin-halo" r="11"></circle>
         <circle class="festival-pin-dot" r="4.5"></circle>
         <title>${escapeHtml(`${festival.name} · ${festival.city} · ${formatWindow(festival)}`)}</title>
@@ -81,13 +82,14 @@ export function mountFestivalAtlas(section: HTMLElement) {
     };
   }
 
-  // Pins are counter-scaled so they keep their on-screen size at every zoom level.
+  // Use CSS pixels, not the original SVG width: pins must remain legible on phones
+  // as well as at each zoom level. The calendar offers unambiguous dense-city selection.
   function applyView() {
     const svg = map.querySelector("svg");
     if (!svg) return;
     const { x, y, w, h } = state.view;
     svg.setAttribute("viewBox", `${x.toFixed(2)} ${y.toFixed(2)} ${w.toFixed(2)} ${h.toFixed(2)}`);
-    const scale = (1 / zoomLevel()).toFixed(4);
+    const scale = unitsPerPixel().toFixed(4);
     svg.querySelectorAll<SVGGElement>(".festival-pin").forEach((pin) => {
       pin.setAttribute("transform", `translate(${pin.dataset.x} ${pin.dataset.y}) scale(${scale})`);
     });
@@ -124,6 +126,8 @@ export function mountFestivalAtlas(section: HTMLElement) {
     const svg = map.querySelector("svg");
     if (!svg) return 1;
     const rect = svg.getBoundingClientRect();
+    // The Festivals view is initially hidden; never write Infinity into a transform.
+    if (!rect.width || !rect.height) return 1 / zoomLevel();
     // preserveAspectRatio "meet" fits the tighter dimension.
     return Math.max(state.view.w / rect.width, state.view.h / rect.height);
   }
@@ -245,7 +249,16 @@ export function mountFestivalAtlas(section: HTMLElement) {
       return;
     }
     const target = targetElement.closest<HTMLElement | SVGElement>("[data-festival-id]");
-    if (target && !gesture.dragged) select(target.dataset.festivalId);
+    if (target && !gesture.dragged) {
+      const fromCalendar = calendar.contains(target);
+      select(target.dataset.festivalId);
+      // On a phone the detail card is above the calendar. Bring the result back
+      // into view rather than leaving a tap looking as though nothing happened.
+      if (fromCalendar && window.matchMedia("(max-width: 640px)").matches) {
+        detail.focus({ preventScroll: true });
+        detail.scrollIntoView({ block: "start", behavior: "auto" });
+      }
+    }
   });
 
   map.addEventListener("wheel", (event) => {
@@ -339,5 +352,7 @@ export function mountFestivalAtlas(section: HTMLElement) {
   });
 
   render();
+  // Resize/orientation changes must not leave stale, tiny hit targets behind.
+  if (typeof ResizeObserver !== "undefined") new ResizeObserver(applyView).observe(map);
 
 }

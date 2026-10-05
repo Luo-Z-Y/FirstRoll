@@ -16,8 +16,8 @@ Status vocabulary:
 
 ## Current Snapshot
 
-**Last updated:** 5 October 2026 (PR #50 reconciled with current master; Agent/Azure removal is
-branch-only; deployed TypeScript and festival features are preserved)
+**Last updated:** 5 October 2026 (PR #50 merged as `2f14c31`; mobile festival polish prepared;
+neither change is deployed; mobile visual acceptance remains pending)
 
 **Release stage:** VPS public beta v232 (`cf43ba57`), deployed by owner-approved run `37213215944`
 on 5 October 2026. Pipeline and independent file/API/contract/CORS/hidden-doc checks passed, as did
@@ -30,8 +30,10 @@ does not deploy, change secrets or authorise another release. Hosting procedures
 
 **Primary development URL:** `http://127.0.0.1:8000`
 **Public beta URL:** `https://firstroll.app` (v232 live; public HTTPS checked 5 October)
-**Automated verification:** 301 repository tests, 80 frontend tests (local and minified hosted
-application), strict typing, local/hosted builds and Ruff pass for the refreshed PR on 5 October.
+**Automated verification:** 301 repository tests, 82 frontend tests (local and minified hosted
+application), strict typing and local/hosted builds pass for mobile festival polish on 5 October.
+An additional broad Ruff scan reports 23 pre-existing findings in the unchanged legacy
+`app/backend/algorithms` files; this frontend-only change does not modify those files.
 The smaller Python suite removes Agent/Azure-only tests, not the live festival/account tests. The VPS tests simulate activation
 and recovery failures without touching a server; they do not replace browser acceptance or a real
 recovery drill.
@@ -71,6 +73,29 @@ recovery drill.
 | Clip evidence in Deep Study | Planned (deferred) | Study generation does not consume measured clip observations or timecodes |
 | Creator primary sources | Partial | Relevant video descriptions and available public captions enter Deep Study; verified speaker attribution remains planned |
 | Persistent projects | Planned | Film, clip, study and note sessions are not retained as reusable projects; a completed study lives for ten minutes in API process memory |
+
+## 5 October 2026 — Mobile festival atlas polish (visual acceptance pending)
+
+- PR #50 merged at its verified head after both CI runs passed and GitHub reported no conflicts,
+  no unresolved conversations and zero commits behind master. Merged-master CI `37248750628`
+  passed. This retires experimental Agent/Azure code while retaining the typed atlas and fixed
+  Deep Study workflow. The cleanup release must not be approved separately by automation.
+- At widths up to 640 px, month controls scroll horizontally with 44 px touch height; zoom
+  controls sit above the map rather than covering it. The intro is more compact and long names
+  wrap. The calendar becomes a readable date-labelled list instead of a squashed annual chart.
+- Pins now use actual CSS-pixel dimensions with 24 px hit circles, recalculated on zoom and
+  resize. Zero-sized hidden views use a finite fallback. Closely located festivals can still
+  overlap at world scale: zoom or use the calendar for precise selection.
+- Mobile calendar selection focuses and reveals the detail card. Pin selection and desktop
+  calendar selection do not force scrolling. Tests cover these boundaries and pin sizing.
+- 301 Python tests and 82 frontend cases pass, including the minified application; strict typing,
+  both builds and whitespace checks pass. An initial minified-test invocation named `web.js`
+  incorrectly; rerunning against the actual `dist/assets/app.js` passed.
+- Visual acceptance is **not complete**: the in-app browser rejects the running localhost preview
+  with `ERR_BLOCKED_BY_CLIENT`. Owner screenshot/preview checks at 320, 390 and 430 px, light/dark,
+  calendar selection and zoom/reset remain required. Real-device pinch/pan is also unverified.
+- Production stays v232. No secrets, account settings, database, feature flags or DNS changed.
+  Prepare one combined release after acceptance, then obtain approval for its exact run.
 
 ## Next Milestone
 

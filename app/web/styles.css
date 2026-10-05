@@ -1833,6 +1833,7 @@ html[data-theme="dark"] .critical-provider-actions button.is-active.is-loaded::a
 .festival-pin { cursor: pointer; outline: none; transition: opacity 200ms var(--ease-fluid); }
 .festival-pin-dot { fill: var(--ink-soft); stroke: var(--paper-light); stroke-width: 1.5; }
 .festival-pin-halo { fill: transparent; }
+.festival-pin-hit { fill: transparent; }
 .festival-pin.is-soon .festival-pin-dot { fill: var(--olive); }
 .festival-pin.is-now .festival-pin-dot { fill: var(--red); }
 .festival-pin.is-now .festival-pin-halo { fill: var(--red); opacity: 0.22; }
@@ -1885,11 +1886,30 @@ button.festival-calendar-row:hover, .festival-calendar-row.is-selected { backgro
 }
 
 @media (max-width: 640px) {
-  .festival-pin-dot { r: 9px; stroke-width: 2.5px; }
-  .festival-pin-halo { r: 20px; }
-  .festival-calendar-row { grid-template-columns: 1fr; gap: 6px; }
-  .festival-calendar-head > span:first-child { display: none; }
-  .festival-calendar-head .festival-track span:nth-child(even) { display: none; }
+  #product-festivals { padding-top: 24px; }
+  #product-festivals .analyse-intro { gap: 18px; margin-bottom: 22px; }
+  #product-festivals .analyse-intro h1 { font-size: clamp(2.5rem, 10vw, 3.5rem); }
+  #product-festivals .analyse-intro > p { font-size: 0.9rem; }
+  .festival-months { flex-wrap: nowrap; overflow-x: auto; padding: 4px 2px 10px; gap: 8px; }
+  .festival-months button { flex: 0 0 auto; min-height: 44px; align-items: center; font-size: 0.875rem; }
+  .festival-atlas, .festival-map, .festival-detail { min-width: 0; }
+  /* Keep large touch controls outside the small world map, not over its pins. */
+  .festival-zoom { position: static; flex-direction: row; justify-content: flex-end; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; box-shadow: none; }
+  .festival-zoom button { width: 48px; height: 44px; border: 0; border-left: 1px solid var(--line); }
+  .festival-detail { padding: 18px; scroll-margin-top: 24px; }
+  .festival-detail h2 { line-height: 1.1; overflow-wrap: anywhere; }
+  .festival-detail .eyebrow { overflow-wrap: anywhere; }
+  .festival-link, .festival-clear { display: inline-flex; align-items: center; min-height: 44px; font-size: 0.875rem; }
+  .festival-legend { gap: 10px 16px; font-size: 0.8rem; }
+  .festival-year { margin-top: 28px; }
+  #product-festivals .section-heading { flex-wrap: wrap; gap: 8px; }
+  #product-festivals .section-meta { text-align: left; }
+  .festival-calendar-row { grid-template-columns: 1fr; gap: 6px; min-height: 64px; padding: 14px 12px; }
+  .festival-calendar-name { gap: 5px; }
+  .festival-calendar-name strong { font-size: 1rem; white-space: normal; overflow-wrap: anywhere; line-height: 1.4; }
+  .festival-calendar-name small { font-size: 0.8125rem; line-height: 1.5; }
+  /* Dates stay explicit in each row; a compressed twelve-month timeline does not. */
+  .festival-calendar-head, .festival-calendar-row .festival-track { display: none; }
 }
 
 @media (max-width: 1120px) {
