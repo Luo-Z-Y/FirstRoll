@@ -21,8 +21,9 @@ export function formatBytes(bytes: number): string {
 export function formatFilmDuration(minutes: unknown): string {
   const total = Number(minutes);
   if (!Number.isFinite(total) || total <= 0) return "";
-  const hours = Math.floor(total / 60);
-  const remainder = Math.round(total % 60);
+  const roundedMinutes = Math.round(total);
+  const hours = Math.floor(roundedMinutes / 60);
+  const remainder = roundedMinutes % 60;
   if (!hours) return `${remainder} min`;
   return remainder ? `${hours}h ${remainder}m` : `${hours}h`;
 }

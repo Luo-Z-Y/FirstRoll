@@ -101,6 +101,12 @@ Acceptance criteria:
 Boundary: the v232 approval does not approve another run, a database migration or paid calls. The
 next owner-approved release will be the first built after the trim.
 
+### 5 October 2026 — Film-duration rounding fix (local, not deployed)
+
+Round total minutes before splitting hours and minutes, preventing `1h 60m`.
+Added regression coverage for hour boundaries, numeric strings and invalid values.
+TypeScript and all 81 frontend tests passed; whitespace check passed.
+
 ### 5 October 2026 — Refresh PR #50 without reverting the live frontend
 
 Integrated the existing trim branch with current `master` (`cf43ba57`) in an isolated worktree,
