@@ -16,6 +16,17 @@ Status vocabulary:
 
 ## Current Snapshot
 
+### 6 October 2026 — CI trigger simplification (local branch)
+
+Restricted push-triggered CI to `master` while retaining pull-request CI. Feature branches
+need an open PR (draft is sufficient) for remote checks. All existing checks remain unconditional.
+Removed the unfinished change-scope wiring and live-revision lookup from the workflows;
+the Python classifier and tests remain local learning exercises, not active CI policy.
+Documentation-only filtering and pending-release reuse are deferred. Production release
+creation, freshness checks and owner approval are unchanged. This is not deployed or merged.
+Verification: 76 focused CI, VPS release and release-protocol tests pass, including new
+trigger-policy and unconditional-check regression tests. Whitespace checks pass.
+
 **Last updated:** 5 October 2026. Agent/Azure retirement, codebase organisation
 and the film-duration rounding fix are merged into master. Mobile festival polish
 is prepared in PR #57. Previous mobile browser acceptance passed; physical-touch
