@@ -1,18 +1,22 @@
 <!doctype html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description" content="FirstRoll helps filmmakers discover films and analyse clips." />
   <meta name="color-scheme" content="light dark" />
-  <title>FirstRoll — Film discovery and analysis</title>
+  <title>FirstRoll</title>
   <script src="/assets/theme-init.js"></script>
   <link rel="icon" href="/assets/favicon.svg?v=20260814-6" type="image/svg+xml" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/assets/styles.css?v=20261002-3" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap"
+    rel="stylesheet" />
+  <link rel="stylesheet" href="/assets/styles.css?v=20261007-1" />
 </head>
+
 <body data-api-base="">
   <div class="app-shell">
     <header class="site-header">
@@ -33,14 +37,18 @@
         <button id="authOpen" class="auth-open" type="button" hidden>Sign in</button>
         <span id="authIdentity" class="auth-identity" hidden></span>
         <button id="authSignOut" class="auth-sign-out" type="button" hidden>Sign out</button>
-        <button id="themeToggle" class="theme-toggle" type="button" aria-label="Switch to dark mode" title="Switch to dark mode">
+        <button id="themeToggle" class="theme-toggle" type="button" aria-label="Switch to dark mode"
+          title="Switch to dark mode">
           <span class="theme-toggle-thumb" aria-hidden="true">
             <svg class="theme-icon theme-icon-sun" viewBox="0 0 24 24" focusable="false">
               <circle cx="12" cy="12" r="3.5" fill="none" stroke="currentColor" stroke-width="1.8" />
-              <path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M18.7 5.3l-1.4 1.4M6.7 17.3l-1.4 1.4" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.8" />
+              <path
+                d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M18.7 5.3l-1.4 1.4M6.7 17.3l-1.4 1.4"
+                fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.8" />
             </svg>
             <svg class="theme-icon theme-icon-moon" viewBox="0 0 24 24" focusable="false">
-              <path d="M19.2 15.1A7.8 7.8 0 0 1 8.9 4.8 7.8 7.8 0 1 0 19.2 15.1Z" fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="1.8" />
+              <path d="M19.2 15.1A7.8 7.8 0 0 1 8.9 4.8 7.8 7.8 0 1 0 19.2 15.1Z" fill="none" stroke="currentColor"
+                stroke-linejoin="round" stroke-width="1.8" />
             </svg>
           </span>
         </button>
@@ -51,14 +59,7 @@
     <main>
       <section id="product-discovery" class="product-view active">
         <header class="discovery-hero" aria-labelledby="discoveryTitle">
-          <div>
-            <p class="eyebrow">Evidence-grounded film study</p>
-            <h1 id="discoveryTitle">Find the film.<br /><em>Build the reading.</em></h1>
-          </div>
-          <p>
-            Confirm the exact edition, inspect attributed perspectives and turn available evidence
-            into precise questions for your next viewing.
-          </p>
+          <h1 id="discoveryTitle">Find a film.</h1>
         </header>
 
         <form id="discoveryForm" class="search-stage" role="search" aria-label="Find a film">
@@ -68,7 +69,8 @@
           </div>
           <div class="search-field">
             <label for="filmYear">Year <small>Optional</small></label>
-            <input id="filmYear" name="year" type="number" min="1888" max="2100" inputmode="numeric" placeholder="1982" />
+            <input id="filmYear" name="year" type="number" min="1888" max="2100" inputmode="numeric"
+              placeholder="1982" />
           </div>
           <div class="search-field">
             <label for="filmDirector">Director <small>Optional</small></label>
@@ -84,7 +86,8 @@
           <p id="discoveryConnection" class="connection-state hidden" aria-live="polite"></p>
         </div>
 
-        <section id="discoveryResultsSection" class="results-section hidden" aria-labelledby="resultsTitle" aria-busy="false">
+        <section id="discoveryResultsSection" class="results-section hidden" aria-labelledby="resultsTitle"
+          aria-busy="false">
           <div class="section-heading">
             <div>
               <h2 id="resultsTitle" tabindex="-1">Search results</h2>
@@ -167,20 +170,27 @@
 
             <div class="status-wrap">
               <p id="statusText" role="status" aria-live="polite"></p>
-              <div class="progress-track" aria-hidden="true"><div id="progressBar" class="progress-bar"></div></div>
+              <div class="progress-track" aria-hidden="true">
+                <div id="progressBar" class="progress-bar"></div>
+              </div>
             </div>
             <video id="previewVideo" controls playsinline muted></video>
           </aside>
 
           <section class="analysis-panel card">
             <nav class="view-tabs" role="tablist" aria-label="Analysis sections">
-              <button id="analysisTabOverview" class="tab active" type="button" role="tab" aria-selected="true" aria-controls="view-overview" tabindex="0" data-view="overview">Overview</button>
-              <button id="analysisTabShotData" class="tab" type="button" role="tab" aria-selected="false" aria-controls="view-shotdata" tabindex="-1" data-view="shotdata">Shot data</button>
-              <button id="analysisTabColour" class="tab" type="button" role="tab" aria-selected="false" aria-controls="view-color" tabindex="-1" data-view="color">Colour</button>
-              <button id="analysisTabObjects" class="tab" type="button" role="tab" aria-selected="false" aria-controls="view-objects" tabindex="-1" data-view="objects">Objects</button>
+              <button id="analysisTabOverview" class="tab active" type="button" role="tab" aria-selected="true"
+                aria-controls="view-overview" tabindex="0" data-view="overview">Overview</button>
+              <button id="analysisTabShotData" class="tab" type="button" role="tab" aria-selected="false"
+                aria-controls="view-shotdata" tabindex="-1" data-view="shotdata">Shot data</button>
+              <button id="analysisTabColour" class="tab" type="button" role="tab" aria-selected="false"
+                aria-controls="view-color" tabindex="-1" data-view="color">Colour</button>
+              <button id="analysisTabObjects" class="tab" type="button" role="tab" aria-selected="false"
+                aria-controls="view-objects" tabindex="-1" data-view="objects">Objects</button>
             </nav>
 
-            <section id="view-overview" class="view active" role="tabpanel" aria-labelledby="analysisTabOverview" aria-live="polite">
+            <section id="view-overview" class="view active" role="tabpanel" aria-labelledby="analysisTabOverview"
+              aria-live="polite">
               <div id="overviewPlaceholder" class="placeholder">No analysis yet.</div>
               <div id="overviewContent" class="hidden"></div>
             </section>
@@ -197,7 +207,8 @@
               <div id="objectsContent" class="hidden"></div>
               <div id="llmDraftWrap" class="hidden">
                 <button id="generateLlmDraftBtn" class="ghost-btn inline">Generate interpretation brief</button>
-                <textarea id="llmDraftText" readonly placeholder="A structured scene brief will appear here…"></textarea>
+                <textarea id="llmDraftText" readonly
+                  placeholder="A structured scene brief will appear here…"></textarea>
               </div>
             </section>
           </section>
@@ -218,7 +229,8 @@
         <div class="festival-months" role="group" aria-label="Filter festivals by month" data-festival-months></div>
         <div class="festival-atlas">
           <figure class="festival-map" data-festival-map></figure>
-          <aside class="festival-detail" tabindex="-1" aria-label="Festival details" aria-live="polite" data-festival-detail></aside>
+          <aside class="festival-detail" tabindex="-1" aria-label="Festival details" aria-live="polite"
+            data-festival-detail></aside>
         </div>
         <ul class="festival-legend" aria-label="Map key">
           <li><span class="is-now"></span>Within typical window</li>
@@ -246,19 +258,24 @@
         <section id="integrationSignedOut" class="integration-gate card">
           <p class="eyebrow">FirstRoll account</p>
           <h2>Sign in to manage settings.</h2>
-          <p>The hosted Settings area is account-scoped. Local library files and server credentials remain unavailable here.</p>
+          <p>The hosted Settings area is account-scoped. Local library files and server credentials remain unavailable
+            here.</p>
           <button id="integrationSignIn" type="button">Sign in or create an account</button>
         </section>
 
         <div id="integrationDashboard" class="integration-dashboard hidden">
-          <p id="integrationStatus" class="integration-page-status" role="status" aria-live="polite">Loading account settings…</p>
+          <p id="integrationStatus" class="integration-page-status" role="status" aria-live="polite">Loading account
+            settings…</p>
 
           <nav class="settings-section-tabs" role="tablist" aria-label="Settings sections">
-            <button id="accountSettingsTab" class="is-active" type="button" role="tab" aria-selected="true" aria-controls="accountSettingsPanel" data-settings-section="account">Account settings</button>
-            <button id="systemSettingsTab" type="button" role="tab" aria-selected="false" aria-controls="systemSettingsPanel" data-settings-section="system">System settings</button>
+            <button id="accountSettingsTab" class="is-active" type="button" role="tab" aria-selected="true"
+              aria-controls="accountSettingsPanel" data-settings-section="account">Account settings</button>
+            <button id="systemSettingsTab" type="button" role="tab" aria-selected="false"
+              aria-controls="systemSettingsPanel" data-settings-section="system">System settings</button>
           </nav>
 
-          <section id="accountSettingsPanel" class="settings-panel" role="tabpanel" aria-labelledby="accountSettingsTab" data-settings-panel="account">
+          <section id="accountSettingsPanel" class="settings-panel" role="tabpanel" aria-labelledby="accountSettingsTab"
+            data-settings-panel="account">
             <section class="integration-account card">
               <div>
                 <p class="eyebrow">Signed-in account</p>
@@ -281,7 +298,8 @@
                 <p>This name appears in FirstRoll’s header and follows the account across devices.</p>
                 <form id="accountProfileForm" class="account-settings-form">
                   <label for="accountDisplayName">Display name</label>
-                  <input id="accountDisplayName" name="displayName" type="text" autocomplete="name" maxlength="80" required />
+                  <input id="accountDisplayName" name="displayName" type="text" autocomplete="name" maxlength="80"
+                    required />
                   <button type="submit">Save display name</button>
                 </form>
                 <p id="accountProfileStatus" class="account-setting-status" role="status" aria-live="polite"></p>
@@ -295,9 +313,11 @@
                 <p>Use at least eight characters. Changing the password keeps this device signed in.</p>
                 <form id="accountPasswordForm" class="account-settings-form">
                   <label for="accountNewPassword">New password</label>
-                  <input id="accountNewPassword" name="newPassword" type="password" autocomplete="new-password" minlength="8" required />
+                  <input id="accountNewPassword" name="newPassword" type="password" autocomplete="new-password"
+                    minlength="8" required />
                   <label for="accountConfirmPassword">Confirm new password</label>
-                  <input id="accountConfirmPassword" name="confirmPassword" type="password" autocomplete="new-password" minlength="8" required />
+                  <input id="accountConfirmPassword" name="confirmPassword" type="password" autocomplete="new-password"
+                    minlength="8" required />
                   <button type="submit">Update password</button>
                 </form>
                 <p id="accountPasswordStatus" class="account-setting-status" role="status" aria-live="polite"></p>
@@ -312,14 +332,16 @@
                 </div>
                 <span id="accountLibraryCount">0 films</span>
               </header>
-              <p>Films saved here belong to this signed-in account and are available on another device after sign-in.</p>
+              <p>Films saved here belong to this signed-in account and are available on another device after sign-in.
+              </p>
               <div id="accountSavedFilms" class="account-saved-films" aria-live="polite">
                 <p class="module-empty">No saved films yet. Open a film dossier and choose “Save to account”.</p>
               </div>
             </section>
           </section>
 
-          <section id="systemSettingsPanel" class="settings-panel hidden" role="tabpanel" aria-labelledby="systemSettingsTab" data-settings-panel="system">
+          <section id="systemSettingsPanel" class="settings-panel hidden" role="tabpanel"
+            aria-labelledby="systemSettingsTab" data-settings-panel="system">
             <section class="system-appearance card" aria-labelledby="appearanceSettingsTitle">
               <div>
                 <p class="eyebrow">Appearance</p>
@@ -335,82 +357,91 @@
             </section>
 
             <section class="integration-quota card" aria-labelledby="integrationQuotaTitle">
-            <div>
-              <p class="eyebrow">FirstRoll allowance</p>
-              <h2 id="integrationQuotaTitle">Deep Study</h2>
-            </div>
-            <div>
-              <strong id="integrationQuota">Checking the daily allowance…</strong>
-              <p id="integrationQuotaMeta">Quota status is loading.</p>
-            </div>
-          </section>
+              <div>
+                <p class="eyebrow">FirstRoll allowance</p>
+                <h2 id="integrationQuotaTitle">Deep Study</h2>
+              </div>
+              <div>
+                <strong id="integrationQuota">Checking the daily allowance…</strong>
+                <p id="integrationQuotaMeta">Quota status is loading.</p>
+              </div>
+            </section>
 
             <div class="integration-grid">
-            <article class="integration-card card">
-              <header>
-                <div>
-                  <span class="integration-index">01</span>
-                  <h2>DeepSeek</h2>
-                </div>
-                <span class="integration-badge">Use your own API</span>
-              </header>
-              <p id="deepseekAllowanceCopy">Generate Deep Study with FirstRoll’s demo allowance, or paste your own DeepSeek API key. When a personal key is present, that study uses your DeepSeek account and provider balance; FirstRoll’s three-study daily safety limit still applies.</p>
-              <form id="deepseekSessionForm" class="session-key-form">
-                <label for="deepseekSessionKey">Personal DeepSeek API key</label>
-                <div>
-                  <input id="deepseekSessionKey" type="password" autocomplete="off" spellcheck="false" placeholder="Paste a key for this tab" />
-                  <button type="submit">Use for this tab</button>
-                </div>
-              </form>
-              <footer>
-                <span id="deepseekSessionState">Using the FirstRoll platform connection</span>
-                <button id="deepseekSessionClear" class="integration-clear" type="button" hidden>Clear key</button>
-              </footer>
-            </article>
+              <article class="integration-card card">
+                <header>
+                  <div>
+                    <span class="integration-index">01</span>
+                    <h2>DeepSeek</h2>
+                  </div>
+                  <span class="integration-badge">Use your own API</span>
+                </header>
+                <p id="deepseekAllowanceCopy">Generate Deep Study with FirstRoll’s demo allowance, or paste your own
+                  DeepSeek API key. When a personal key is present, that study uses your DeepSeek account and provider
+                  balance; FirstRoll’s three-study daily safety limit still applies.</p>
+                <form id="deepseekSessionForm" class="session-key-form">
+                  <label for="deepseekSessionKey">Personal DeepSeek API key</label>
+                  <div>
+                    <input id="deepseekSessionKey" type="password" autocomplete="off" spellcheck="false"
+                      placeholder="Paste a key for this tab" />
+                    <button type="submit">Use for this tab</button>
+                  </div>
+                </form>
+                <footer>
+                  <span id="deepseekSessionState">Using the FirstRoll platform connection</span>
+                  <button id="deepseekSessionClear" class="integration-clear" type="button" hidden>Clear key</button>
+                </footer>
+              </article>
 
-            <article class="integration-card card">
-              <header>
-                <div>
-                  <span class="integration-index">02</span>
-                  <h2>YouTube</h2>
-                </div>
-                <span class="integration-badge">Better fetching</span>
-              </header>
-              <p>Paste your own YouTube Data API key to search with your Google Cloud quota. Official API search generally finds broader, fresher interviews, trailers and film-study videos; without a personal key, FirstRoll uses its available platform connection and public fallbacks.</p>
-              <form id="youtubeSessionForm" class="session-key-form">
-                <label for="youtubeSessionKey">YouTube Data API key</label>
-                <div>
-                  <input id="youtubeSessionKey" type="password" autocomplete="off" spellcheck="false" placeholder="Paste a key for this tab" />
-                  <button type="submit">Use for this tab</button>
-                </div>
-              </form>
-              <footer>
-                <span id="youtubeSessionState">Using the FirstRoll platform connection</span>
-                <button id="youtubeSessionClear" class="integration-clear" type="button" hidden>Clear key</button>
-              </footer>
-            </article>
+              <article class="integration-card card">
+                <header>
+                  <div>
+                    <span class="integration-index">02</span>
+                    <h2>YouTube</h2>
+                  </div>
+                  <span class="integration-badge">Better fetching</span>
+                </header>
+                <p>Paste your own YouTube Data API key to search with your Google Cloud quota. Official API search
+                  generally finds broader, fresher interviews, trailers and film-study videos; without a personal key,
+                  FirstRoll uses its available platform connection and public fallbacks.</p>
+                <form id="youtubeSessionForm" class="session-key-form">
+                  <label for="youtubeSessionKey">YouTube Data API key</label>
+                  <div>
+                    <input id="youtubeSessionKey" type="password" autocomplete="off" spellcheck="false"
+                      placeholder="Paste a key for this tab" />
+                    <button type="submit">Use for this tab</button>
+                  </div>
+                </form>
+                <footer>
+                  <span id="youtubeSessionState">Using the FirstRoll platform connection</span>
+                  <button id="youtubeSessionClear" class="integration-clear" type="button" hidden>Clear key</button>
+                </footer>
+              </article>
 
-            <article class="integration-card integration-card-local card">
-              <header>
-                <div>
-                  <span class="integration-index">03</span>
-                  <h2>Douban MCP</h2>
+              <article class="integration-card integration-card-local card">
+                <header>
+                  <div>
+                    <span class="integration-index">03</span>
+                    <h2>Douban MCP</h2>
+                  </div>
+                  <span class="integration-badge is-local">Hosted MCP</span>
+                </header>
+                <p>FirstRoll runs a pinned Douban MCP connector inside the hosted backend for film ratings and
+                  Chinese-language review summaries. Visitors are never asked for a Douban cookie.</p>
+                <div class="integration-local-boundary">
+                  <strong id="doubanPlatformState">Checking the hosted connection…</strong>
+                  <span>Anonymous provider access · unofficial source · may be temporarily rate-limited by Douban</span>
                 </div>
-                <span class="integration-badge is-local">Hosted MCP</span>
-              </header>
-              <p>FirstRoll runs a pinned Douban MCP connector inside the hosted backend for film ratings and Chinese-language review summaries. Visitors are never asked for a Douban cookie.</p>
-              <div class="integration-local-boundary">
-                <strong id="doubanPlatformState">Checking the hosted connection…</strong>
-                <span>Anonymous provider access · unofficial source · may be temporarily rate-limited by Douban</span>
-              </div>
-              <footer>
-                <a href="https://github.com/moria97/douban-mcp" target="_blank" rel="noopener noreferrer">View connector ↗</a>
-                <span>No visitor credential is accepted</span>
-              </footer>
-            </article>
+                <footer>
+                  <a href="https://github.com/moria97/douban-mcp" target="_blank" rel="noopener noreferrer">View
+                    connector ↗</a>
+                  <span>No visitor credential is accepted</span>
+                </footer>
+              </article>
             </div>
 
-            <p class="system-key-note">Personal provider keys remain in memory for this browser tab, are cleared on refresh or sign-out, and are never saved to your FirstRoll account.</p>
+            <p class="system-key-note">Personal provider keys remain in memory for this browser tab, are cleared on
+              refresh or sign-out, and are never saved to your FirstRoll account.</p>
           </section>
         </div>
       </section>
@@ -425,8 +456,10 @@
       <h2 id="authHeading">Welcome back</h2>
       <p id="authDescription">Sign in to use Deep Study and open your saved films on any device.</p>
       <div class="auth-mode-switch" role="tablist" aria-label="Account action">
-        <button class="is-active" type="button" role="tab" aria-selected="true" tabindex="0" data-auth-mode="sign-in">Sign in</button>
-        <button type="button" role="tab" aria-selected="false" tabindex="-1" data-auth-mode="sign-up">Create account</button>
+        <button class="is-active" type="button" role="tab" aria-selected="true" tabindex="0"
+          data-auth-mode="sign-in">Sign in</button>
+        <button type="button" role="tab" aria-selected="false" tabindex="-1" data-auth-mode="sign-up">Create
+          account</button>
       </div>
     </div>
     <form id="authForm" class="auth-provider-form auth-provider-supabase">
@@ -440,7 +473,8 @@
       </div>
       <div class="auth-field">
         <label id="authPasswordLabel" for="authPassword">Password</label>
-        <input id="authPassword" name="password" type="password" autocomplete="current-password" minlength="8" required />
+        <input id="authPassword" name="password" type="password" autocomplete="current-password" minlength="8"
+          required />
       </div>
       <button id="authSubmit" type="submit">Sign in</button>
       <button id="authReset" class="auth-reset" type="button">Forgot password?</button>
@@ -456,4 +490,5 @@
   <script src="/assets/app.js?v=20261002-1"></script>
   <script src="/assets/festivals.js?v=20261002-3"></script>
 </body>
+
 </html>

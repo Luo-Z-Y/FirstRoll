@@ -16,6 +16,26 @@ Status vocabulary:
 
 ## Current Snapshot
 
+### 7 October 2026 — Static monochrome Discover refresh (development)
+
+`feat/frontend-refresh` removes the Discover introduction, leaving “Find a film.” and the
+labelled search form. Shared CSS colours are neutral in light and dark mode, with semantic
+accent/focus tokens and no greyscale filter on film artwork. The browser title is `FirstRoll`.
+Existing theme persistence, search field IDs, navigation and backend behaviour are preserved.
+Other screens receive the shared palette but have not had their copy/layout redesigned.
+
+Verification: strict TypeScript and local/hosted builds pass; 85 frontend tests pass against
+both source and minified hosted output; 11 hosted-mode Python tests pass (with the existing
+Starlette/httpx deprecation warning); whitespace checks pass. Browser checks cover both themes,
+narrow and wide layouts without horizontal overflow, and a search returning a 12-film director
+shelf. Festival navigation renders. Full authenticated flows, physical-device touch testing and
+full dossier acceptance were not repeated. New tests protect the title, minimal hero, labelled
+fields and neutral stylesheet without filtering artwork.
+
+Next: review the static preview before adding an optional, reduced-motion-aware shader.
+No shader, backend change, merge or production deployment is included. Earlier checkpoints
+below retain their original dates and are not fresh production verification.
+
 **Last updated:** 5 October 2026. Agent/Azure retirement, codebase organisation
 and the film-duration rounding fix are merged into master. Mobile festival polish
 is prepared in PR #57. Previous mobile browser acceptance passed; physical-touch
