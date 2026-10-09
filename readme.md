@@ -116,7 +116,9 @@ The original GPL-3.0 licence and contributor attribution remain applicable. See
   write-only in the Git-ignored `.firstroll/`.
 - **Workspace:** state survives view changes and refreshes (per-tab `sessionStorage`, 24 hours);
   five recent searches stay in the browser; newer searches cancel stale requests;
-  keyboard-accessible tabs, specific retry states and light or dark themes.
+  keyboard-accessible tabs, specific retry states and black, white and grey light/dark themes,
+  including local Settings. Festival statuses use labels, outlines and patterns rather than hue.
+  Film artwork, video and measured colour-analysis results retain their original colours.
 
 ## Architecture
 

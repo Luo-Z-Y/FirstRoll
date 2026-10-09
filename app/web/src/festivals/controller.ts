@@ -45,12 +45,13 @@ export function mountFestivalAtlas(section: HTMLElement) {
       const current = status(festival, today);
       const dimmed = !inMonth(festival, state.month);
       const selected = state.selected === festival.id;
+      const label = `${festival.name}, ${festival.city}, ${formatWindow(festival)}, ${current.label}${festival.kind === "awards" ? ", Awards ceremony" : ""}`;
       const classes = ["festival-pin", `is-${current.key}`, festival.kind === "awards" ? "is-awards" : "", dimmed ? "is-dimmed" : "", selected ? "is-selected" : ""].join(" ").trim();
-      return `<g class="${classes}" data-x="${x.toFixed(1)}" data-y="${y.toFixed(1)}" data-festival-id="${festival.id}" role="button" tabindex="${dimmed ? -1 : 0}" aria-label="${escapeHtml(`${festival.name}, ${festival.city}, ${formatWindow(festival)}`)}" aria-pressed="${selected}">
+      return `<g class="${classes}" data-x="${x.toFixed(1)}" data-y="${y.toFixed(1)}" data-festival-id="${festival.id}" role="button" tabindex="${dimmed ? -1 : 0}" aria-label="${escapeHtml(label)}" aria-pressed="${selected}">
         <circle class="festival-pin-hit" r="12"></circle>
         <circle class="festival-pin-halo" r="11"></circle>
         <circle class="festival-pin-dot" r="4.5"></circle>
-        <title>${escapeHtml(`${festival.name} · ${festival.city} · ${formatWindow(festival)}`)}</title>
+        <title>${escapeHtml(label)}</title>
       </g>`;
     }).join("");
     map.innerHTML = `<div class="festival-zoom" role="group" aria-label="Map zoom">
@@ -190,7 +191,7 @@ export function mountFestivalAtlas(section: HTMLElement) {
         const current = status(festival, today);
         const selected = state.selected === festival.id;
         return `<button type="button" class="festival-calendar-row${selected ? " is-selected" : ""}" data-festival-id="${festival.id}" aria-pressed="${selected}">
-          <span class="festival-calendar-name"><strong>${escapeHtml(festival.name)}</strong><small>${escapeHtml(festival.city)} · ${escapeHtml(formatWindow(festival))}</small></span>
+          <span class="festival-calendar-name"><strong>${escapeHtml(festival.name)}</strong><small>${escapeHtml(festival.city)} · ${escapeHtml(formatWindow(festival))} · ${escapeHtml(current.label)}${festival.kind === "awards" ? " · Awards ceremony" : ""}</small></span>
           <span class="festival-track">
             ${MONTHS.map((_, index) => `<i style="left:${(CUMULATIVE[index] / 365) * 100}%"></i>`).join("")}
             <b class="festival-bar is-${current.key}${festival.kind === "awards" ? " is-awards" : ""}" style="left:${((start - 1) / 365) * 100}%;width:${Math.max(0.8, ((end - start + 1) / 365) * 100)}%"></b>
