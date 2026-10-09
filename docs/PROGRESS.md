@@ -16,8 +16,8 @@ Status vocabulary:
 
 ## Current Snapshot
 
-**Last updated:** 9 October 2026. A black, white and grey UI is prepared on
-`feat/neutral-ui`, isolated from other frontend work. Agent/Azure retirement,
+**Last updated:** 9 October 2026. A black, white and grey UI is published as draft
+PR #62 (`feat/neutral-ui`), isolated from other frontend work. Agent/Azure retirement,
 codebase organisation, the film-duration fix and mobile festival polish are merged
 into master. Physical-touch testing remains pending. Neither this local theme
 checkpoint nor a merge confirms production deployment.
@@ -156,9 +156,9 @@ Hosting and recovery procedures:
 - Independent review caught a light-theme nested error-panel contrast regression;
   scoped dark panel backgrounds, a regression test and browser measurements now
   cover it. No further review findings remain open in this change.
-- Next: publish a reviewable PR, reconcile its overlap with active frontend PR #61
-  before either is merged, wait for required CI and obtain human approval of the
-  exact production run after merge. No deployment is authorised by this change.
+- Delivery: draft PR #62 is open. Next: reconcile its overlap with active frontend
+  PR #61 before either is merged, wait for required CI and obtain human approval of
+  the exact production run after merge. No deployment is authorised by this change.
 
 ## 5 October 2026 — Mobile festival atlas polish and narrow-header repair
 
