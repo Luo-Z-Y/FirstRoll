@@ -104,6 +104,18 @@ test("atlas entry mounts map and calendar without a network service", () => {
   assert.match(refs.calendar.innerHTML, /Singapore International Film Festival/);
 });
 
+test("festival statuses and awards remain explicit without colour cues", () => {
+  const { refs } = harness();
+  const pins = refs.map.innerHTML.match(/<g class="festival-pin[^>]+>/g);
+  assert.equal(pins.length, FESTIVALS.length);
+  for (const pin of pins) assert.match(pin, /aria-label="[^"]*(?:Within typical window|Typical window in ~)/);
+  assert.match(refs.map.innerHTML, /<title>[^<]*Awards ceremony<\/title>/);
+  const rows = refs.calendar.innerHTML.match(/<small>[^<]+<\/small>/g);
+  assert.equal(rows.length, FESTIVALS.length);
+  for (const row of rows) assert.match(row, /Within typical window|Typical window in ~/);
+  assert.match(refs.calendar.innerHTML, /Awards ceremony<\/small>/);
+});
+
 test("month filter toggles off and excludes out-of-month selections", () => {
   const { refs, click } = harness();
   click({ festivalId: "sgiff" });
