@@ -37,10 +37,10 @@
 }
 
 # The Glass Vault demo for the Tencent Cloud Hackathon 2026 (judging until early November 2026),
-# served by name because its passkeys need a domain. Its own repository runs the `glassvault`
+# at a name of its own because its passkeys need a domain. Its own repository runs the `glassvault`
 # container on this stack's network and asks for a password; until that container runs, this site
 # answers 502 and FirstRoll's sites are unaffected. See docs/OPERATIONS.md, section 7.
-119-28-111-192.sslip.io {
+glassvault.luo-zy.com {
 	encode zstd gzip
 	header {
 		-Server

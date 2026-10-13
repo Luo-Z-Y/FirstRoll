@@ -45,7 +45,7 @@ Browser ─HTTPS─► Caddy (on the server, ports 80/443)
                    ├─ firstroll.app      ─► /opt/firstroll/releases/current   (static site)
                    ├─ api.firstroll.app  ─► api container :10000 (FastAPI, internal only)
                    │                          └─► Supabase Auth/Postgres · DeepSeek · public film sources
-                   └─ 119-28-111-192.sslip.io ─► glassvault container :8000 (hackathon demo; section 7)
+                   └─ glassvault.luo-zy.com ─► glassvault container :8000 (hackathon demo; section 7)
 ```
 
 | Component | Production setting |
@@ -300,7 +300,7 @@ curl -s https://firstroll.app/release.json                             # live re
 ### The Glass Vault demo site
 
 Until the Tencent Cloud Hackathon 2026 ends (judging into early November 2026), this server also
-hosts the Glass Vault demo at `https://119-28-111-192.sslip.io`, a separate project of the same
+hosts the Glass Vault demo at `https://glassvault.luo-zy.com`, a separate project of the same
 owner. FirstRoll's Caddyfile has its site block; everything else belongs to the Glass Vault
 repository (`deploy/README.md` there):
 
