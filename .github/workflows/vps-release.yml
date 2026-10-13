@@ -338,9 +338,11 @@ jobs:
             vps-release/stack/Caddyfile \
             vps-release/stack/deploy.sh \
             "firstroll:$remote_dir/"
-          # The server always runs the stack files reviewed in the approved commit.
+          # The server always runs the stack files reviewed in the approved commit. The Caddyfile is
+          # rewritten in place: Caddy bind-mounts that one file, so replacing it (as `install` does,
+          # with a new inode) would leave the container reading the old one and a reload changing nothing.
           ssh -F "$SSH_CONFIG" firstroll \
-            "install -m 0755 '$remote_dir/deploy.sh' /opt/firstroll/deploy.sh && install -m 0644 '$remote_dir/docker-compose.yml' '$remote_dir/Caddyfile' /opt/firstroll/"
+            "install -m 0755 '$remote_dir/deploy.sh' /opt/firstroll/deploy.sh && install -m 0644 '$remote_dir/docker-compose.yml' /opt/firstroll/ && cat '$remote_dir/Caddyfile' > /opt/firstroll/Caddyfile"
 
       - name: Release on the server
         id: rollout
