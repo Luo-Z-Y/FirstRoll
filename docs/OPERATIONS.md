@@ -295,7 +295,11 @@ curl -s https://firstroll.app/release.json                             # live re
   directories on the server, and the rotated container logs. No other audit export exists.
 - **The Caddyfile is rewritten in place** by each release (`cat > /opt/firstroll/Caddyfile`), not
   replaced. Caddy bind-mounts that one file, so a new file at the same path would stay invisible to
-  the running container and `caddy reload` would quietly keep the old configuration.
+  the running container and `caddy reload` would quietly keep the old configuration. A container
+  that started before such a replacement keeps reading the old file until it restarts: compare
+  `docker compose --project-directory /opt/firstroll exec -T caddy cat /etc/caddy/Caddyfile` with
+  the file on the host, and if they differ, restart it once with `docker compose
+  --project-directory /opt/firstroll restart caddy` (about 2 s; certificates stay in `caddy_data`).
 
 ### The Glass Vault demo site
 
