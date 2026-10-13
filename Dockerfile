@@ -12,11 +12,11 @@ RUN apt-get update \
     && npm ci --ignore-scripts --audit=false \
     && npm run build \
     && npm pkg set \
-        dependencies.@modelcontextprotocol/sdk=1.30.0 \
+        dependencies.@modelcontextprotocol/sdk=1.31.0 \
         overrides.body-parser=2.3.0 \
         overrides.express=5.2.1 \
         overrides.path-to-regexp=8.4.2 \
-        overrides.qs=6.15.3 \
+        overrides.qs=6.16.0 \
     && npm install --ignore-scripts --audit=false \
     && npm prune --omit=dev --ignore-scripts --audit=false \
     && npm audit --omit=dev --audit-level=high \

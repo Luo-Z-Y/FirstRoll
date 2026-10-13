@@ -21,6 +21,15 @@ and the film-duration rounding fix are merged into master. Mobile festival polis
 is prepared in PR #57. Previous mobile browser acceptance passed; physical-touch
 testing remains pending. Merging does not confirm production deployment.
 
+### Douban MCP dependency advisories
+
+**Complete (13 October 2026).** New advisories failed the image's `npm audit --audit-level=high`
+gate, so every pull request's CI failed: GHSA-6qxp-vccf-f47h (high) in the pinned
+`@modelcontextprotocol/sdk` 1.30.0, and GHSA-x5fp-wj9c-mxmx and GHSA-4mjr-xmp4-gh2g (moderate) in
+the `qs` 6.15.3 override. The Dockerfile now pins the patched `@modelcontextprotocol/sdk` 1.31.0 and
+`qs` 6.16.0. Evidence: the image builds with the audit gate passing, and the hosted Douban MCP
+handshake lists `list-movie-reviews` and `search-movie` as before.
+
 ### Codebase organisation checkpoint
 
 Frontend development tooling is grouped under `tools/frontend/`: `build.cjs`,
