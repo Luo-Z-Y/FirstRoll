@@ -71,7 +71,7 @@ flowchart LR
 |---|---|---|
 | DNS | Spaceship | Points `firstroll.app` and `api.firstroll.app` at the server; runs no application code |
 | Server | Tencent Lighthouse, Singapore (sizing in [Operations](OPERATIONS.md)) | Runs the two production containers from `infra/vps` |
-| Caddy | Container on the server, ports 80/443 | Certificates for both hostnames; serves `releases/current`; reverse-proxies the API without buffering SSE |
+| Caddy | Container on the server, ports 80/443 | Certificates for both hostnames and, until November 2026, the Glass Vault hackathon demo's; serves `releases/current`; reverse-proxies the API without buffering SSE |
 | Web interface | Static files from Caddy, executed in the browser | HTML, CSS and vanilla JavaScript plus the bundled Supabase client; no server-side rendering |
 | FastAPI | Container on the same server; port 10000 on the internal network only | Provider calls, identity checks, evidence assembly, validation, quota ordering |
 | Supabase | Managed service outside the server | Accounts, sessions, recovery; RLS-owned account rows; default quota functions |
