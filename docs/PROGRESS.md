@@ -25,7 +25,7 @@ testing remains pending. Merging does not confirm production deployment.
 
 ### Glass Vault demo on the server
 
-**Complete, pending an owner-approved release (13 October 2026).** Caddy has a site block
+**Live (13 October 2026).** Caddy has a site block
 for `glassvault.luo-zy.com` that forwards to the Glass Vault demo container, which that
 project deploys on `firstroll_default` behind a password (OPERATIONS section 7). Releases now
 rewrite the Caddyfile in place: replacing the bind-mounted file left the running Caddy reading
@@ -33,10 +33,15 @@ the old one, so until this change a release that only changed the Caddyfile chan
 Evidence: `tests/test_vps_release.py` covers the site block and the in-place write; `caddy
 validate` passes as CI runs it; locally, an in-place write reached a running container where
 `install` did not, and the block forwarded to the demo (health 200, 401 without its password,
-413 over 4 MB). The release reloads Caddy without recreating it. Known constraint: the demo
-shares the server's memory and the Docker daemon until November 2026. The demo container already
-runs (deployed 13 October; FirstRoll's containers untouched), so the site goes live with the
-approved release. Next: approve it; retire the block after the hackathon.
+413 over 4 MB). The release (`c875191`) wrote the Caddyfile in place, but the site still did not
+appear: the Caddy container had started on 29 September, the 5 October releases had replaced the
+file with `install`, and so the container had read the 29 September file ever since. The only
+difference was the demo's block, so FirstRoll's own configuration had not drifted. With the owner's
+approval Caddy was restarted once (firstroll.app answered again within 2 s); it then issued the
+demo's certificate and served it. Live checks: Let's Encrypt certificate, 401 without the demo's
+password, its full flow with the password, 413 over 4 MB, and firstroll.app and the API healthy.
+Known constraint: the demo shares the server's memory and the Docker daemon until November 2026.
+Next: retire the block after the hackathon.
 
 ### Douban MCP dependency advisories
 
