@@ -254,8 +254,8 @@ class TestServerStack:
 
     def test_the_glass_vault_demo_site_only_forwards_its_own_host_to_its_own_container(self):
         sites = re.findall(r"^(\S+) \{$", CADDYFILE, re.MULTILINE)
-        assert sites == ["{$FIRSTROLL_SITE_DOMAIN}", "{$FIRSTROLL_API_DOMAIN}", "119-28-111-192.sslip.io"]
-        demo = CADDYFILE[CADDYFILE.index("119-28-111-192.sslip.io {"):]
+        assert sites == ["{$FIRSTROLL_SITE_DOMAIN}", "{$FIRSTROLL_API_DOMAIN}", "glassvault.luo-zy.com"]
+        demo = CADDYFILE[CADDYFILE.index("glassvault.luo-zy.com {"):]
         assert re.findall(r"reverse_proxy (\S+)", demo) == ["glassvault:8000"]
         assert "max_size 4MB" in demo
         assert "file_server" not in demo and "root " not in demo

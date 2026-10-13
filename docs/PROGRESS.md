@@ -26,7 +26,7 @@ testing remains pending. Merging does not confirm production deployment.
 ### Glass Vault demo on the server
 
 **Complete, pending an owner-approved release (13 October 2026).** Caddy has a site block
-for `119-28-111-192.sslip.io` that forwards to the Glass Vault demo container, which that
+for `glassvault.luo-zy.com` that forwards to the Glass Vault demo container, which that
 project deploys on `firstroll_default` behind a password (OPERATIONS section 7). Releases now
 rewrite the Caddyfile in place: replacing the bind-mounted file left the running Caddy reading
 the old one, so until this change a release that only changed the Caddyfile changed nothing.
