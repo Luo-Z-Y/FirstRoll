@@ -16,11 +16,96 @@ Status vocabulary:
 
 ## Current Snapshot
 
-**Last updated:** 9 October 2026. A black, white and grey UI is published as draft
-PR #62 (`feat/neutral-ui`), isolated from other frontend work. Agent/Azure retirement,
-codebase organisation, the film-duration fix and mobile festival polish are merged
-into master. Physical-touch testing remains pending. Neither this local theme
-checkpoint nor a merge confirms production deployment.
+**Last updated:** 13 October 2026. The server also hosts the Glass Vault hackathon
+demo behind Caddy until the hackathon ends; see "Glass Vault demo on the server" below.
+Before that (5 October 2026): Agent/Azure retirement, codebase organisation
+and the film-duration rounding fix are merged into master. Mobile festival polish
+is prepared in PR #57. Previous mobile browser acceptance passed; physical-touch
+testing remains pending. Merging does not confirm production deployment.
+
+### Static monochrome Discover refresh
+
+**Complete (prepared 7 October 2026).** Discover drops its introduction, leaving “Find a film.” and
+the labelled search form. Shared CSS colours are neutral in light and dark mode, with semantic
+accent/focus tokens and no greyscale filter on film artwork. The browser title is `FirstRoll`.
+Existing theme persistence, search field IDs, navigation and backend behaviour are preserved.
+Other screens receive the shared palette but have not had their copy/layout redesigned; the
+all-screen monochrome pass follows separately.
+
+Verification (7 October): strict TypeScript and local/hosted builds pass; 85 frontend tests pass
+against both source and minified hosted output; 11 hosted-mode Python tests pass; whitespace checks
+pass. Browser checks cover both themes, narrow and wide layouts without horizontal overflow, and a
+search returning a 12-film director shelf. Festival navigation renders. Full authenticated flows,
+physical-device touch testing and full dossier acceptance were not repeated. New tests protect the
+title, minimal hero, labelled fields and neutral stylesheet without filtering artwork.
+
+Next: an optional, reduced-motion-aware shader. No shader, backend change or production deployment
+is included.
+
+### All-screen black, white and grey UI
+
+**Complete (prepared 9 October, reconciled with the Discover refresh 16 October 2026).**
+
+
+- Replaced cream, terracotta, olive, gold and coloured component literals with
+  neutral shades in both themes, including the director shelf, fallback artwork,
+  dossier, Deep Study, Analyse, festival atlas and independent local Settings.
+- Added explicit contrast pairs for primary actions, authentication and dark
+  panels, including nested saved-film error states. Keyboard focus remains visible.
+  Theme persistence, motion preferences, layout and existing workflows are unchanged.
+- Festival pins and the legend use filled, hollow and dashed treatments; calendar
+  bars retain awards hatching. Status wording is explicit in pin labels/tooltips
+  and calendar rows. Limited study/packet states also have dashed borders.
+- Real posters, backdrops, videos, measured scene colours and the analysis hue
+  wheel remain unfiltered. The monochrome palette applies to the interface, not
+  evidence. No private library or credential data was used for verification.
+- Acceptance: **93 frontend tests** passed against both source and minified hosted
+  assets; **304 Python tests** passed (one existing Starlette/httpx deprecation
+  warning). Strict TypeScript, local/hosted builds and whitespace checks passed.
+- Synthetic Chrome checks passed in both themes at **320, 390, 430 and 1280 CSS px**:
+  search, shelf, dossier, authentication button contrast, nested saved-film errors,
+  Analyse, festival filtering/selection, focus and persisted theme switching. No
+  horizontal overflow was measured. Local Settings actions/layout passed at 1280 px.
+  Screenshots were inspected. All 76 fixture API requests were local GETs; external
+  requests, including web fonts, were blocked. These checks do not establish live
+  provider, physical-device or authenticated-account acceptance.
+- Independent review caught a light-theme nested error-panel contrast regression;
+  scoped dark panel backgrounds, a regression test and browser measurements now
+  cover it. No further review findings remain open in this change.
+- Reconciliation (16 October): built on the static Discover refresh above. The
+  combined stylesheet keeps this pass's palette, contrast pairs and broader `--focus`
+  outline, and the refresh's minimal hero, flatter search form and solid label and
+  placeholder colours; the stylesheet cache version is `20261016-1`. The 9 October
+  browser checks predate the reconciliation and are not repeated here.
+
+### Glass Vault demo on the server
+
+**Live (13 October 2026).** Caddy has a site block
+for `glassvault.luo-zy.com` that forwards to the Glass Vault demo container, which that
+project deploys on `firstroll_default` behind a password (OPERATIONS section 7). Releases now
+rewrite the Caddyfile in place: replacing the bind-mounted file left the running Caddy reading
+the old one, so until this change a release that only changed the Caddyfile changed nothing.
+Evidence: `tests/test_vps_release.py` covers the site block and the in-place write; `caddy
+validate` passes as CI runs it; locally, an in-place write reached a running container where
+`install` did not, and the block forwarded to the demo (health 200, 401 without its password,
+413 over 4 MB). The release (`c875191`) wrote the Caddyfile in place, but the site still did not
+appear: the Caddy container had started on 29 September, the 5 October releases had replaced the
+file with `install`, and so the container had read the 29 September file ever since. The only
+difference was the demo's block, so FirstRoll's own configuration had not drifted. With the owner's
+approval Caddy was restarted once (firstroll.app answered again within 2 s); it then issued the
+demo's certificate and served it. Live checks: Let's Encrypt certificate, 401 without the demo's
+password, its full flow with the password, 413 over 4 MB, and firstroll.app and the API healthy.
+Known constraint: the demo shares the server's memory and the Docker daemon until November 2026.
+Next: retire the block after the hackathon.
+
+### Douban MCP dependency advisories
+
+**Complete (13 October 2026).** New advisories failed the image's `npm audit --audit-level=high`
+gate, so every pull request's CI failed: GHSA-6qxp-vccf-f47h (high) in the pinned
+`@modelcontextprotocol/sdk` 1.30.0, and GHSA-x5fp-wj9c-mxmx and GHSA-4mjr-xmp4-gh2g (moderate) in
+the `qs` 6.15.3 override. The Dockerfile now pins the patched `@modelcontextprotocol/sdk` 1.31.0 and
+`qs` 6.16.0. Evidence: the image builds with the audit gate passing, and the hosted Douban MCP
+handshake lists `list-movie-reviews` and `search-movie` as before.
 
 ### Codebase organisation checkpoint
 
@@ -128,37 +213,6 @@ Hosting and recovery procedures:
 | Clip evidence in Deep Study | Planned (deferred) | Study generation does not consume measured clip observations or timecodes |
 | Creator primary sources | Partial | Relevant video descriptions and available public captions enter Deep Study; verified speaker attribution remains planned |
 | Persistent projects | Planned | Film, clip, study and note sessions are not retained as reusable projects; a completed study lives for ten minutes in API process memory |
-
-## 9 October 2026 — Black, white and grey UI (local, not deployed)
-
-- Replaced cream, terracotta, olive, gold and coloured component literals with
-  neutral shades in both themes, including the director shelf, fallback artwork,
-  dossier, Deep Study, Analyse, festival atlas and independent local Settings.
-- Added explicit contrast pairs for primary actions, authentication and dark
-  panels, including nested saved-film error states. Keyboard focus remains visible.
-  Theme persistence, motion preferences, layout and existing workflows are unchanged.
-- Festival pins and the legend use filled, hollow and dashed treatments; calendar
-  bars retain awards hatching. Status wording is explicit in pin labels/tooltips
-  and calendar rows. Limited study/packet states also have dashed borders.
-- Real posters, backdrops, videos, measured scene colours and the analysis hue
-  wheel remain unfiltered. The monochrome palette applies to the interface, not
-  evidence. No private library or credential data was used for verification.
-- Acceptance: **93 frontend tests** passed against both source and minified hosted
-  assets; **304 Python tests** passed (one existing Starlette/httpx deprecation
-  warning). Strict TypeScript, local/hosted builds and whitespace checks passed.
-- Synthetic Chrome checks passed in both themes at **320, 390, 430 and 1280 CSS px**:
-  search, shelf, dossier, authentication button contrast, nested saved-film errors,
-  Analyse, festival filtering/selection, focus and persisted theme switching. No
-  horizontal overflow was measured. Local Settings actions/layout passed at 1280 px.
-  Screenshots were inspected. All 76 fixture API requests were local GETs; external
-  requests, including web fonts, were blocked. These checks do not establish live
-  provider, physical-device or authenticated-account acceptance.
-- Independent review caught a light-theme nested error-panel contrast regression;
-  scoped dark panel backgrounds, a regression test and browser measurements now
-  cover it. No further review findings remain open in this change.
-- Delivery: draft PR #62 is open. Next: reconcile its overlap with active frontend
-  PR #61 before either is merged, wait for required CI and obtain human approval of
-  the exact production run after merge. No deployment is authorised by this change.
 
 ## 5 October 2026 — Mobile festival atlas polish and narrow-header repair
 

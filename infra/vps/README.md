@@ -6,7 +6,7 @@ These files run the hosted public beta on one rented Linux server:
 |---|---|
 | `bootstrap.sh` | One-time root preparation of a fresh Ubuntu 24.04 server |
 | `docker-compose.yml` | Caddy (TLS, static site, reverse proxy) plus the FirstRoll API container |
-| `Caddyfile` | Hostnames, cache headers and the API proxy |
+| `Caddyfile` | Hostnames, cache headers, the API proxy, and the Glass Vault demo's site until November 2026 |
 | `.env.example` | Template for `/opt/firstroll/.env`; the real file is never committed |
 | `deploy.sh` | Release, rollback and status commands executed on the server |
 

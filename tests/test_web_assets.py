@@ -232,9 +232,9 @@ def test_production_image_pins_and_bundles_douban_mcp() -> None:
     assert "FROM node:22-bookworm-slim AS douban-mcp-builder" in dockerfile
     assert "DOUBAN_MCP_REF=1adc26d39532db893616ceb7ea851733948ae69e" in dockerfile
     assert "npm ci --ignore-scripts --audit=false" in dockerfile
-    assert "dependencies.@modelcontextprotocol/sdk=1.30.0" in dockerfile
+    assert "dependencies.@modelcontextprotocol/sdk=1.31.0" in dockerfile  # GHSA-6qxp-vccf-f47h
     assert "overrides.path-to-regexp=8.4.2" in dockerfile
-    assert "overrides.qs=6.15.3" in dockerfile
+    assert "overrides.qs=6.16.0" in dockerfile  # GHSA-x5fp-wj9c-mxmx, GHSA-4mjr-xmp4-gh2g
     assert "npm audit --omit=dev --audit-level=high" in dockerfile
     assert "FIRSTROLL_DOUBAN_MCP_PATH=/opt/douban-mcp/dist/index.js" in dockerfile
     assert "COPY --from=douban-mcp-builder /usr/local/bin/node" in dockerfile
@@ -245,7 +245,7 @@ def test_archive_pullout_collapses_before_zoom_can_clip_its_copy() -> None:
     styles = (WEB / "styles.css").read_text(encoding="utf-8")
     views = (WEB / "src" / "discovery" / "views.ts").read_text(encoding="utf-8")
 
-    assert "/assets/styles.css?v=20261009-neutral" in index
+    assert "/assets/styles.css?v=20261016-1" in index
     assert "/assets/app.js?v=20261002-1" in index
     assert "closet3d.js" not in index
     assert 'class="archive-pullout-shell"' in views
@@ -346,7 +346,7 @@ def test_discovery_and_dossier_expose_a_clear_task_hierarchy(application_source:
 
     assert 'class="discovery-hero"' in index
     assert 'id="discoveryTitle"' in index
-    assert "Find the film." in index
+    assert "Find a film." in index
     assert "Required</small>" in index
     assert index.count("Optional</small>") == 2
     assert ".discovery-hero" in styles
