@@ -16,7 +16,7 @@ Status vocabulary:
 
 ## Current Snapshot
 
-**Last updated:** 16 October 2026 (CI trigger simplification, below). On 13 October the server
+**Last updated:** 16 October 2026 (Discover refresh and CI trigger simplification, below). On 13 October the server
 also began hosting the Glass Vault hackathon demo behind Caddy until the hackathon ends; see
 "Glass Vault demo on the server" below.
 Before that (5 October 2026): Agent/Azure retirement, codebase organisation
