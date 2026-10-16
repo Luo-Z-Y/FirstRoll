@@ -16,30 +16,60 @@ Status vocabulary:
 
 ## Current Snapshot
 
-### 7 October 2026 — Static monochrome Discover refresh (development)
-
-`feat/frontend-refresh` removes the Discover introduction, leaving “Find a film.” and the
-labelled search form. Shared CSS colours are neutral in light and dark mode, with semantic
-accent/focus tokens and no greyscale filter on film artwork. The browser title is `FirstRoll`.
-Existing theme persistence, search field IDs, navigation and backend behaviour are preserved.
-Other screens receive the shared palette but have not had their copy/layout redesigned.
-
-Verification: strict TypeScript and local/hosted builds pass; 85 frontend tests pass against
-both source and minified hosted output; 11 hosted-mode Python tests pass (with the existing
-Starlette/httpx deprecation warning); whitespace checks pass. Browser checks cover both themes,
-narrow and wide layouts without horizontal overflow, and a search returning a 12-film director
-shelf. Festival navigation renders. Full authenticated flows, physical-device touch testing and
-full dossier acceptance were not repeated. New tests protect the title, minimal hero, labelled
-fields and neutral stylesheet without filtering artwork.
-
-Next: review the static preview before adding an optional, reduced-motion-aware shader.
-No shader, backend change, merge or production deployment is included. Earlier checkpoints
-below retain their original dates and are not fresh production verification.
-
-**Last updated:** 5 October 2026. Agent/Azure retirement, codebase organisation
+**Last updated:** 13 October 2026. The server also hosts the Glass Vault hackathon
+demo behind Caddy until the hackathon ends; see "Glass Vault demo on the server" below.
+Before that (5 October 2026): Agent/Azure retirement, codebase organisation
 and the film-duration rounding fix are merged into master. Mobile festival polish
 is prepared in PR #57. Previous mobile browser acceptance passed; physical-touch
 testing remains pending. Merging does not confirm production deployment.
+
+### Static monochrome Discover refresh
+
+**Complete (prepared 7 October 2026).** Discover drops its introduction, leaving “Find a film.” and
+the labelled search form. Shared CSS colours are neutral in light and dark mode, with semantic
+accent/focus tokens and no greyscale filter on film artwork. The browser title is `FirstRoll`.
+Existing theme persistence, search field IDs, navigation and backend behaviour are preserved.
+Other screens receive the shared palette but have not had their copy/layout redesigned; the
+all-screen monochrome pass follows separately.
+
+Verification (7 October): strict TypeScript and local/hosted builds pass; 85 frontend tests pass
+against both source and minified hosted output; 11 hosted-mode Python tests pass; whitespace checks
+pass. Browser checks cover both themes, narrow and wide layouts without horizontal overflow, and a
+search returning a 12-film director shelf. Festival navigation renders. Full authenticated flows,
+physical-device touch testing and full dossier acceptance were not repeated. New tests protect the
+title, minimal hero, labelled fields and neutral stylesheet without filtering artwork.
+
+Next: an optional, reduced-motion-aware shader. No shader, backend change or production deployment
+is included.
+
+### Glass Vault demo on the server
+
+**Live (13 October 2026).** Caddy has a site block
+for `glassvault.luo-zy.com` that forwards to the Glass Vault demo container, which that
+project deploys on `firstroll_default` behind a password (OPERATIONS section 7). Releases now
+rewrite the Caddyfile in place: replacing the bind-mounted file left the running Caddy reading
+the old one, so until this change a release that only changed the Caddyfile changed nothing.
+Evidence: `tests/test_vps_release.py` covers the site block and the in-place write; `caddy
+validate` passes as CI runs it; locally, an in-place write reached a running container where
+`install` did not, and the block forwarded to the demo (health 200, 401 without its password,
+413 over 4 MB). The release (`c875191`) wrote the Caddyfile in place, but the site still did not
+appear: the Caddy container had started on 29 September, the 5 October releases had replaced the
+file with `install`, and so the container had read the 29 September file ever since. The only
+difference was the demo's block, so FirstRoll's own configuration had not drifted. With the owner's
+approval Caddy was restarted once (firstroll.app answered again within 2 s); it then issued the
+demo's certificate and served it. Live checks: Let's Encrypt certificate, 401 without the demo's
+password, its full flow with the password, 413 over 4 MB, and firstroll.app and the API healthy.
+Known constraint: the demo shares the server's memory and the Docker daemon until November 2026.
+Next: retire the block after the hackathon.
+
+### Douban MCP dependency advisories
+
+**Complete (13 October 2026).** New advisories failed the image's `npm audit --audit-level=high`
+gate, so every pull request's CI failed: GHSA-6qxp-vccf-f47h (high) in the pinned
+`@modelcontextprotocol/sdk` 1.30.0, and GHSA-x5fp-wj9c-mxmx and GHSA-4mjr-xmp4-gh2g (moderate) in
+the `qs` 6.15.3 override. The Dockerfile now pins the patched `@modelcontextprotocol/sdk` 1.31.0 and
+`qs` 6.16.0. Evidence: the image builds with the audit gate passing, and the hosted Douban MCP
+handshake lists `list-movie-reviews` and `search-movie` as before.
 
 ### Codebase organisation checkpoint
 

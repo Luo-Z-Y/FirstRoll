@@ -43,8 +43,9 @@ The Azure path (Static Web Apps, Container Apps, Terraform, Entra External ID) w
 ```text
 Browser ─HTTPS─► Caddy (on the server, ports 80/443)
                    ├─ firstroll.app      ─► /opt/firstroll/releases/current   (static site)
-                   └─ api.firstroll.app  ─► api container :10000 (FastAPI, internal only)
-                                              └─► Supabase Auth/Postgres · DeepSeek · public film sources
+                   ├─ api.firstroll.app  ─► api container :10000 (FastAPI, internal only)
+                   │                          └─► Supabase Auth/Postgres · DeepSeek · public film sources
+                   └─ glassvault.luo-zy.com ─► glassvault container :8000 (hackathon demo; section 7)
 ```
 
 | Component | Production setting |
@@ -292,6 +293,37 @@ curl -s https://firstroll.app/release.json                             # live re
   and `caddy validate`; the rest of CI and the local hosted-mode preview are in [Setup](SETUP.md).
 - **Audit trail:** GitHub deployment history and job summaries, the `state/` records and `releases/`
   directories on the server, and the rotated container logs. No other audit export exists.
+- **The Caddyfile is rewritten in place** by each release (`cat > /opt/firstroll/Caddyfile`), not
+  replaced. Caddy bind-mounts that one file, so a new file at the same path would stay invisible to
+  the running container and `caddy reload` would quietly keep the old configuration. A container
+  that started before such a replacement keeps reading the old file until it restarts: compare
+  `docker compose --project-directory /opt/firstroll exec -T caddy cat /etc/caddy/Caddyfile` with
+  the file on the host, and if they differ, restart it once with `docker compose
+  --project-directory /opt/firstroll restart caddy` (about 2 s; certificates stay in `caddy_data`).
+
+### The Glass Vault demo site
+
+Until the Tencent Cloud Hackathon 2026 ends (judging into early November 2026), this server also
+hosts the Glass Vault demo at `https://glassvault.luo-zy.com`, a separate project of the same
+owner. FirstRoll's Caddyfile has its site block; everything else belongs to the Glass Vault
+repository (`deploy/README.md` there):
+
+| Part | Where |
+|---|---|
+| Container | `glassvault-glassvault-1`, Compose project `glassvault`, `/opt/glassvault/docker-compose.yml` |
+| Settings and keys | `/opt/glassvault/.env`, root, mode 0600 |
+| Network | Joins `firstroll_default`; Caddy reaches it as `glassvault:8000`; nothing published on the host |
+| Limits | 512 MB memory and no swap, one CPU, read-only, all capabilities dropped; request bodies over 4 MB are refused at Caddy |
+| Access | The demo asks for a password and caps its paid API calls per hour |
+| Deployment | Glass Vault's `deploy/deploy.sh`, run by `ubuntu` with sudo. It never touches `/opt/firstroll` |
+
+- **If the container is absent**, the demo host answers 502; FirstRoll's own sites are unaffected.
+  A FirstRoll release or rollback does not touch it, and `--remove-orphans` does not cross projects.
+- **Trust:** the demo is on FirstRoll's network, so it could reach `api:10000` directly (public mode
+  applies there as it does through Caddy). Anyone in the `docker` group, the `firstroll` deploy
+  account included, can read the demo's keys with `docker inspect`.
+- **To retire it:** `sudo docker compose -f /opt/glassvault/docker-compose.yml down`, then remove the
+  site block from this repository's Caddyfile in a normal release, and delete `/opt/glassvault`.
 
 ## 8. Rollback and recovery
 
@@ -443,6 +475,9 @@ run on Supabase's database or any other PostgreSQL server.
   tokens, and each study makes at most two model calls. Add cost telemetry and an operator-visible
   kill switch before raising either limit.
 - **GitHub:** artefacts kept for 90 days count towards the repository's storage allowance.
+- **Shared until November 2026:** the Glass Vault demo ([section 7](#the-glass-vault-demo-site)) takes up
+  to 512 MB of memory and one CPU beside the API's `768M`. Check `docker stats --no-stream` if the
+  API slows down.
 - **Availability:** one server, with no CDN, autoscaling or failover. Each release recreates the API
   container, so the API is unavailable for a few seconds while Caddy keeps serving the static site.
   Until the site switches, the previous site talks to the new API.
