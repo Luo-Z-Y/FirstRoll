@@ -245,7 +245,7 @@ def test_archive_pullout_collapses_before_zoom_can_clip_its_copy() -> None:
     styles = (WEB / "styles.css").read_text(encoding="utf-8")
     views = (WEB / "src" / "discovery" / "views.ts").read_text(encoding="utf-8")
 
-    assert "/assets/styles.css?v=20261002-3" in index
+    assert "/assets/styles.css?v=20261007-1" in index
     assert "/assets/app.js?v=20261002-1" in index
     assert "closet3d.js" not in index
     assert 'class="archive-pullout-shell"' in views
@@ -312,8 +312,8 @@ def test_interface_states_are_actionable_and_keyboard_navigable(application_sour
     assert all(key in local_auth for key in navigation_keys)
     assert "button.tabIndex = active ? 0 : -1" in auth
     assert "button.tabIndex = active ? 0 : -1" in local_auth
-    assert "--action-text: #fff7ed" in styles
-    assert "--action-text: #11120f" in styles
+    assert "--action-text: #ffffff" in styles
+    assert "--action-text: #111111" in styles
 
 
 def test_deep_study_keeps_progress_packet_gaps_and_citations_inspectable(application_source: str) -> None:
@@ -346,7 +346,7 @@ def test_discovery_and_dossier_expose_a_clear_task_hierarchy(application_source:
 
     assert 'class="discovery-hero"' in index
     assert 'id="discoveryTitle"' in index
-    assert "Find the film." in index
+    assert "Find a film." in index
     assert "Required</small>" in index
     assert index.count("Optional</small>") == 2
     assert ".discovery-hero" in styles
