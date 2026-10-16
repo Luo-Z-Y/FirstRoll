@@ -16,7 +16,8 @@ Status vocabulary:
 
 ## Current Snapshot
 
-**Last updated:** 16 October 2026 (Discover refresh and CI trigger simplification, below). On 13 October the server
+**Last updated:** 16 October 2026 (Discover refresh, all-screen monochrome UI and CI trigger
+simplification, below). On 13 October the server
 also began hosting the Glass Vault hackathon demo behind Caddy until the hackathon ends; see
 "Glass Vault demo on the server" below.
 Before that (5 October 2026): Agent/Azure retirement, codebase organisation
@@ -42,6 +43,41 @@ title, minimal hero, labelled fields and neutral stylesheet without filtering ar
 
 Next: an optional, reduced-motion-aware shader. No shader, backend change or production deployment
 is included.
+
+### All-screen black, white and grey UI
+
+**Complete (prepared 9 October, reconciled with the Discover refresh 16 October 2026).**
+
+- Replaced cream, terracotta, olive, gold and coloured component literals with
+  neutral shades in both themes, including the director shelf, fallback artwork,
+  dossier, Deep Study, Analyse, festival atlas and independent local Settings.
+- Added explicit contrast pairs for primary actions, authentication and dark
+  panels, including nested saved-film error states. Keyboard focus remains visible.
+  Theme persistence, motion preferences, layout and existing workflows are unchanged.
+- Festival pins and the legend use filled, hollow and dashed treatments; calendar
+  bars retain awards hatching. Status wording is explicit in pin labels/tooltips
+  and calendar rows. Limited study/packet states also have dashed borders.
+- Real posters, backdrops, videos, measured scene colours and the analysis hue
+  wheel remain unfiltered. The monochrome palette applies to the interface, not
+  evidence. No private library or credential data was used for verification.
+- Acceptance: **93 frontend tests** passed against both source and minified hosted
+  assets; **304 Python tests** passed (one existing Starlette/httpx deprecation
+  warning). Strict TypeScript, local/hosted builds and whitespace checks passed.
+- Synthetic Chrome checks passed in both themes at **320, 390, 430 and 1280 CSS px**:
+  search, shelf, dossier, authentication button contrast, nested saved-film errors,
+  Analyse, festival filtering/selection, focus and persisted theme switching. No
+  horizontal overflow was measured. Local Settings actions/layout passed at 1280 px.
+  Screenshots were inspected. All 76 fixture API requests were local GETs; external
+  requests, including web fonts, were blocked. These checks do not establish live
+  provider, physical-device or authenticated-account acceptance.
+- Independent review caught a light-theme nested error-panel contrast regression;
+  scoped dark panel backgrounds, a regression test and browser measurements now
+  cover it. No further review findings remain open in this change.
+- Reconciliation (16 October): built on the static Discover refresh above. The
+  combined stylesheet keeps this pass's palette, contrast pairs and broader `--focus`
+  outline, and the refresh's minimal hero, flatter search form and solid label and
+  placeholder colours; the stylesheet cache version is `20261016-1`. The 9 October
+  browser checks predate the reconciliation and are not repeated here.
 
 ### CI trigger simplification
 
@@ -160,7 +196,7 @@ Hosting and recovery procedures:
 | Product navigation | Complete | Discover, Analyse, Festivals and Settings preserve per-tab view content and scroll; versioned session storage makes Discover refresh-safe |
 | Festival atlas | Live in v232 | 32 festivals and the Oscars; inline map, month filter and calendar; typical windows, not confirmed edition dates; typed module/build integration preserved |
 | Frontend TypeScript | Complete | Strict composition root, controllers/views, decoders and adapters; shared compiler for local, Docker and hosted assets; 80 frontend tests |
-| Theme support | Complete | System-aware light/dark themes with a locally persisted accessible toggle |
+| Theme support | Complete — monochrome refresh verified locally | System-aware light/dark themes with a locally persisted accessible toggle; neutral UI and local Settings, with original film/media and measured colour data preserved |
 | Local settings | Complete | Write-only connector credentials plus local add, remove and index controls for the private library |
 | Hosted public beta | Live — authenticated acceptance pending | v232 on Tencent with exact-run approval; live file/API and festival desktop checks passed; authenticated account/quota checks remain |
 | Accounts and quotas | Complete — hosted quota check pending | Supabase email-and-password authentication (the only provider), atomic daily Deep Study quotas through the Supabase RPC (portable PostgreSQL adapter staged, not active) and a launch-independent localhost test account; authenticated quota verification on the server is outstanding |

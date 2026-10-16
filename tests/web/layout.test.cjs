@@ -21,7 +21,7 @@ test("UI stylesheet uses neutral colours without filtering film artwork", () => 
   }
   assert.doesNotMatch(css, /grayscale\(/);
   assert.match(css, /--accent:/);
-  assert.match(css, /--focus-ring:/);
+  assert.match(css, /--focus:/);
 });
 
 test("small-screen header keeps shrinkable tracks and a later stacked brand override", () => {

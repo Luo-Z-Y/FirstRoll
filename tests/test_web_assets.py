@@ -245,7 +245,7 @@ def test_archive_pullout_collapses_before_zoom_can_clip_its_copy() -> None:
     styles = (WEB / "styles.css").read_text(encoding="utf-8")
     views = (WEB / "src" / "discovery" / "views.ts").read_text(encoding="utf-8")
 
-    assert "/assets/styles.css?v=20261007-1" in index
+    assert "/assets/styles.css?v=20261016-1" in index
     assert "/assets/app.js?v=20261002-1" in index
     assert "closet3d.js" not in index
     assert 'class="archive-pullout-shell"' in views
@@ -470,7 +470,7 @@ def test_festival_atlas_tab_is_self_contained_and_shipped() -> None:
 
     assert 'data-product-view="festivals"' in index
     assert 'id="product-festivals"' in index
-    assert '"/assets/festivals.js?v=20261002-3"' in index
+    assert '"/assets/festivals.js?v=20261009-neutral"' in index
     assert 'festivals: requiredElement<HTMLElement>("product-festivals")' in app
     assert '"festivals"' in build
     assert not (WEB / "festivals.js").exists()
