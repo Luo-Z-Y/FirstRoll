@@ -1,6 +1,8 @@
 import re
 from pathlib import Path
 
+import yaml
+
 
 ROOT = Path(__file__).resolve().parents[1]
 WORKFLOWS = ROOT / ".github" / "workflows"
@@ -33,6 +35,18 @@ def test_pull_request_ci_has_a_bounded_read_only_token() -> None:
 
 def test_ci_runs_the_complete_hosted_safe_test_suite() -> None:
     assert "run: python -m pytest -q tests" in CI
+
+
+def test_ci_checks_pull_requests_and_only_master_pushes() -> None:
+    workflow = yaml.load(CI, Loader=yaml.BaseLoader)
+    assert workflow["on"] == {"push": {"branches": ["master"]}, "pull_request": ""}
+
+
+def test_ci_keeps_all_existing_checks_unconditional() -> None:
+    workflow = yaml.load(CI, Loader=yaml.BaseLoader)
+    checks = workflow["jobs"]["checks"]
+    assert "if" not in checks
+    assert all("if" not in step for step in checks["steps"])
 
 
 def test_frontend_dependencies_are_locked_audited_and_script_safe() -> None:
