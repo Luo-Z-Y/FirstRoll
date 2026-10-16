@@ -35,3 +35,21 @@
 	# buffering, so authenticated Deep Study progress keeps working behind the proxy.
 	reverse_proxy api:10000
 }
+
+# The Glass Vault demo for the Tencent Cloud Hackathon 2026 (judging until early November 2026),
+# at a name of its own because its passkeys need a domain. Its own repository runs the `glassvault`
+# container on this stack's network and asks for a password; until that container runs, this site
+# answers 502 and FirstRoll's sites are unaffected. See docs/OPERATIONS.md, section 7.
+glassvault.luo-zy.com {
+	encode zstd gzip
+	header {
+		-Server
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options nosniff
+		Referrer-Policy no-referrer
+	}
+	request_body {
+		max_size 4MB
+	}
+	reverse_proxy glassvault:8000
+}

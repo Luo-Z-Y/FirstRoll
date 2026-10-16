@@ -252,6 +252,20 @@ class TestServerStack:
         ):
             assert placeholder in CADDYFILE
 
+    def test_the_glass_vault_demo_site_only_forwards_its_own_host_to_its_own_container(self):
+        sites = re.findall(r"^(\S+) \{$", CADDYFILE, re.MULTILINE)
+        assert sites == ["{$FIRSTROLL_SITE_DOMAIN}", "{$FIRSTROLL_API_DOMAIN}", "glassvault.luo-zy.com"]
+        demo = CADDYFILE[CADDYFILE.index("glassvault.luo-zy.com {"):]
+        assert re.findall(r"reverse_proxy (\S+)", demo) == ["glassvault:8000"]
+        assert "max_size 4MB" in demo
+        assert "file_server" not in demo and "root " not in demo
+
+    def test_a_release_rewrites_the_mounted_caddyfile_in_place(self):
+        # Caddy bind-mounts the single file, so a new inode (as `install` makes) would never reach it.
+        upload = step(load_workflow(WORKFLOW), "deploy", "Upload the release package to the server")["run"]
+        assert "cat '$remote_dir/Caddyfile' > /opt/firstroll/Caddyfile" in upload
+        assert not re.search(r"install [^&]*'\$remote_dir/Caddyfile'", upload)
+
     def test_environment_template_keeps_the_public_boundary_and_no_secret_values(self):
         values = env_values(ENV_EXAMPLE)
         assert values["FIRSTROLL_PUBLIC_MODE"] == "true"
