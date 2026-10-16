@@ -223,6 +223,10 @@ FirstRoll/
 
 ## Development and Delivery
 
+CI runs on pull requests and pushes to `master`, avoiding duplicate feature-branch push runs.
+Open a draft PR for early remote checks. All existing tests and builds still run, including for
+documentation-only PRs; release creation and exact-run production approval remain unchanged.
+
 Contributor checks (pytest, strict TypeScript, Node contracts/race tests, Ruff, local/hosted builds
 and the hosted-mode preview) are listed in
 [docs/SETUP.md](docs/SETUP.md#development-and-verification).
