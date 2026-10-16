@@ -1771,7 +1771,7 @@ output { color: #eeeeee; font-family: "IBM Plex Mono", monospace; font-size: 0.7
 .status-wrap p.is-error { color: #ffffff; font-weight: 700; }
 .progress-track { height: 5px; overflow: hidden; background: rgba(255, 255, 255, 0.1); }
 .progress-bar { width: 0; height: 100%; background: var(--red); transition: width 160ms linear; }
-#previewVideo { width: 100%; aspect-ratio: 16 / 9; border: 1px solid var(--line-night); background: #000; }
+#previewVideo { width: 100%; aspect-ratio: 16 / 9; border: 1px solid var(--line-night); background: #000000; }
 .analysis-panel { min-height: 690px; padding: 16px; background: var(--night); }
 .view-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
 .tab { border: 1px solid var(--line-night); border-radius: 999px; padding: 7px 12px; color: var(--muted-night); background: rgba(255, 255, 255, 0.025); font-size: 0.72rem; cursor: pointer; }

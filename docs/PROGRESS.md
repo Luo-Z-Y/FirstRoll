@@ -16,8 +16,10 @@ Status vocabulary:
 
 ## Current Snapshot
 
-**Last updated:** 13 October 2026. The server also hosts the Glass Vault hackathon
-demo behind Caddy until the hackathon ends; see "Glass Vault demo on the server" below.
+**Last updated:** 16 October 2026 (Discover refresh, all-screen monochrome UI and CI trigger
+simplification, below). On 13 October the server
+also began hosting the Glass Vault hackathon demo behind Caddy until the hackathon ends; see
+"Glass Vault demo on the server" below.
 Before that (5 October 2026): Agent/Azure retirement, codebase organisation
 and the film-duration rounding fix are merged into master. Mobile festival polish
 is prepared in PR #57. Previous mobile browser acceptance passed; physical-touch
@@ -45,7 +47,6 @@ is included.
 ### All-screen black, white and grey UI
 
 **Complete (prepared 9 October, reconciled with the Discover refresh 16 October 2026).**
-
 
 - Replaced cream, terracotta, olive, gold and coloured component literals with
   neutral shades in both themes, including the director shelf, fallback artwork,
@@ -77,6 +78,16 @@ is included.
   outline, and the refresh's minimal hero, flatter search form and solid label and
   placeholder colours; the stylesheet cache version is `20261016-1`. The 9 October
   browser checks predate the reconciliation and are not repeated here.
+
+### CI trigger simplification
+
+**Complete (16 October 2026).** Push-triggered CI now runs only for `master`; pull-request CI is
+unchanged. Feature branches need an open pull request (a draft is enough) for remote checks, which
+removes the duplicate push and pull-request runs per branch. Every existing check stays
+unconditional, including for documentation-only pull requests. Documentation-only filtering and
+pending-release reuse are deferred. Production release creation, freshness checks and owner approval
+are unchanged. Evidence: trigger-policy and unconditional-check regression tests in
+`tests/test_frontend_ci.py`, together with the existing CI, VPS release and release-protocol tests.
 
 ### Glass Vault demo on the server
 
