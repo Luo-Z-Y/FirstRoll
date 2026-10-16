@@ -49,6 +49,14 @@ The header also fits narrow phones without hiding navigation, account controls o
 label. Browser layout/interaction checks passed at 320, 390 and 430 CSS px and desktop;
 physical-device pinch testing and production deployment remain outstanding.
 
+## Interface refresh
+
+Discover now opens with “Find a film.” and the search form, without introductory promotional
+copy. Shared interface colours use a neutral black/white/grey palette in both light and dark
+mode; film artwork retains its original colours. The browser tab title is `FirstRoll`.
+Theme persistence and the existing search flow are unchanged. This is the static first phase,
+on the development branch; an animated background is not implemented or deployed.
+
 ## Documentation Map
 
 New to the repository? Start with [the codebase guide](docs/CODEBASE.md). Frontend build and

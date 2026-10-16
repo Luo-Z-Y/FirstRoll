@@ -16,13 +16,32 @@ Status vocabulary:
 
 ## Current Snapshot
 
-**Last updated:** 16 October 2026 (CI trigger simplification, below). On 13 October the server
+**Last updated:** 16 October 2026 (Discover refresh and CI trigger simplification, below). On 13 October the server
 also began hosting the Glass Vault hackathon demo behind Caddy until the hackathon ends; see
 "Glass Vault demo on the server" below.
 Before that (5 October 2026): Agent/Azure retirement, codebase organisation
 and the film-duration rounding fix are merged into master. Mobile festival polish
 is prepared in PR #57. Previous mobile browser acceptance passed; physical-touch
 testing remains pending. Merging does not confirm production deployment.
+
+### Static monochrome Discover refresh
+
+**Complete (prepared 7 October 2026).** Discover drops its introduction, leaving “Find a film.” and
+the labelled search form. Shared CSS colours are neutral in light and dark mode, with semantic
+accent/focus tokens and no greyscale filter on film artwork. The browser title is `FirstRoll`.
+Existing theme persistence, search field IDs, navigation and backend behaviour are preserved.
+Other screens receive the shared palette but have not had their copy/layout redesigned; the
+all-screen monochrome pass follows separately.
+
+Verification (7 October): strict TypeScript and local/hosted builds pass; 85 frontend tests pass
+against both source and minified hosted output; 11 hosted-mode Python tests pass; whitespace checks
+pass. Browser checks cover both themes, narrow and wide layouts without horizontal overflow, and a
+search returning a 12-film director shelf. Festival navigation renders. Full authenticated flows,
+physical-device touch testing and full dossier acceptance were not repeated. New tests protect the
+title, minimal hero, labelled fields and neutral stylesheet without filtering artwork.
+
+Next: an optional, reduced-motion-aware shader. No shader, backend change or production deployment
+is included.
 
 ### CI trigger simplification
 

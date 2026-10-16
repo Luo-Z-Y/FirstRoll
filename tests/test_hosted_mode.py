@@ -41,7 +41,8 @@ def test_public_mode_does_not_register_generated_api_documentation() -> None:
     assert local_app.docs_url == "/docs"
     assert local_app.redoc_url == "/redoc"
     assert local_app.openapi_url == "/openapi.json"
-    assert {"/docs", "/redoc", "/openapi.json"}.issubset({route.path for route in local_app.routes})
+    assert {"/docs", "/redoc",
+            "/openapi.json"}.issubset({route.path for route in local_app.routes})
 
 
 def test_local_startup_prewarms_embeddings_without_blocking_public_mode(monkeypatch) -> None:
@@ -113,7 +114,8 @@ def test_hosted_frontend_preview_serves_public_ui_with_next_local_build(monkeypa
     monkeypatch.setattr(
         main,
         "_git_value",
-        lambda *args: "83" if args[:2] == ("rev-list", "--count") else "abc12345",
+        lambda *args: "83" if args[:2] == ("rev-list",
+                                           "--count") else "abc12345",
     )
     client = TestClient(main.app)
 
@@ -121,7 +123,12 @@ def test_hosted_frontend_preview_serves_public_ui_with_next_local_build(monkeypa
     config = client.get("/assets/config.js")
 
     assert page.status_code == 200
-    assert "FirstRoll — Film discovery and analysis" in page.text
+    assert "<title>FirstRoll</title>" in page.text
+    assert '<h1 id="discoveryTitle">Find a film.</h1>' in page.text
+    assert "Build the reading." not in page.text
+    assert "Confirm the exact edition, inspect attributed perspectives" not in page.text
+    for field in ("filmTitle", "filmYear", "filmDirector"):
+        assert f'for="{field}"' in page.text
     assert "publicMode: true" in config.text
     assert 'buildId: "v84"' in config.text
     assert 'buildChannel: "local"' in config.text
