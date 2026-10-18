@@ -1,6 +1,7 @@
 # FirstRoll Data: Sources, Storage and HTTP API
 
-**Last reconciled:** 1 October 2026 against commit `9d29263` · **API version:** `0.1.0`
+**Last reconciled:** 1 October 2026 against commit `9d29263`; Singapore screening listings, the
+poster proxy and the opening-screen storage key added 18 October 2026 · **API version:** `0.1.0`
 
 This document owns three contracts: [data sources](#1-data-sources) (provider roles, selection
 policy, attribution and licence boundaries), the [data model](#2-data-model) (every persisted or
@@ -167,6 +168,47 @@ Study evidence.
   ≤12,000 kept. Signed caption URLs are never stored; `text_checked_at` prevents repeat attempts, and
   a missing or blocked track leaves the video usable.
 
+### Singapore screening listings
+
+The **Cinemas** tab is a viewing aid, not study evidence: nothing from it reaches Deep Study.
+`app/backend/screenings_venues.py` and `screenings_sgiff.py` read only each venue's own public
+website, or for Objectifs its ticketing site, and keep titles, start times, venue, booking or film
+link, poster URL and a short detail (rating and hall, director, original title, festival section
+and credits, or "Sold out"). Unrelated fields, such as registration-form keys in the Asian Film
+Archive response or street addresses in Peatix results, are discarded.
+
+| Source | Access | Cache | Hosts (fetch · links · posters) | Notes |
+|---|---|---|---|---|
+| Asian Film Archive | Public WordPress REST `wp-json/wp/v2/mep_events` (100 most recently modified, featured media embedded) | 1 hour | `asianfilmarchive.org`, `www.asianfilmarchive.org` for all three | Midnight "programme" posts are skipped; booking links on third-party ticketing hosts are dropped in favour of the event's own page. Whether robots.txt permits this path has not been verified |
+| Filmhouse | Public `filmhouse.sg/films/` HTML | 1 hour | `filmhouse.sg`, `www.filmhouse.sg`; posters also `cdn.taposapp.com` | Year-less dates resolved to the nearest future date |
+| Alliance Française de Singapour | Public `alliancefrancaise.org.sg/events?tag=1` HTML, cut into one bounded block per card | 1 hour | `alliancefrancaise.org.sg` for all three | Year-less dates as above; a card never borrows the next card's date |
+| Shaw Theatres | Undocumented internal JSON its own site requests: `shaw.sg/internal/get_simple_locations` plus `get_show_times?date=…` for 7 days (8 requests per refresh), with the header `x-api-forward-to: internal` that Shaw's pages send | 3 hours | `shaw.sg`, `www.shaw.sg`; posters also `snow-shaw-cdn.azureedge.net` | Reported with `coverage_days: 7`. The header is sent only to the Shaw hosts. The owner accepted the terms risk of this undocumented endpoint on 18 October 2026. The poster CDN host has not been checked against live data |
+| Singapore International Film Festival | `sgiff.com/explore-films/` HTML, plus `sgiff.com/film/{slug}/` for films showing in range | 12 hours; 10 minutes while film pages were only partly read | `sgiff.com`, `www.sgiff.com` | Film pages add per-screening venue, section tags, Q&A and sold-out notices; four workers within a 12 s budget, pages cached 12 hours (at most 500, expired pages evicted on each read). Outside the festival no film page is requested. `wp-json` returns 403 and is not used |
+| Objectifs (via Peatix) | Undocumented JSON Peatix's own search page requests: `peatix.com/search/events?q=objectifs&country=SG&p=1&size=50` with `X-Requested-With: XMLHttpRequest` and FirstRoll's own user agent | 3 hours | Fetch and links `peatix.com`; posters `cdn.peatix.com` | Kept only for organiser 474137 (Objectifs), single-day events at UTC+8 whose names look like screenings. A 1 s pause between organiser requests honours robots.txt `Crawl-delay: 1` |
+| Golden Village, ArtScience Cinema | Never requested | — | — | Reported as `unlisted` with a reason: GV presents a bot challenge and its robots.txt disallows every unnamed crawler; ArtScience Cinema closed on 1 September 2026, according to the venue. Films at a multiplex carry a plain link to GV's own site, built from the source `url` |
+
+**Transport.** Every venue request uses `app/backend/screenings_http.py`: HTTPS on the default
+port only, no credentials in URLs, and a per-source host allow-list for fetches, links and posters
+(off-list values become `null`, checked in the adapter and again by the service). Redirects are
+checked before they are followed (HTTPS, default port, no credentials, an allowed host; at most
+three). Connections go only to public unicast addresses, with the address checked being the
+address connected (a DNS-rebinding guard); IPv4 is tried first with a 5 s connect window per
+address. Reads time out after 15 s, a response must finish within 30 s and stay under 4,000,000
+bytes (posters: 10 s and 3 MiB). `HTTP(S)_PROXY` environment variables are ignored. The user agent
+is `Mozilla/5.0 (compatible; FirstRoll/0.1; +https://firstroll.app) screening-listings`.
+
+**What visitors' browsers contact.** Only FirstRoll: the static site, the listings JSON and poster
+images from the API. Upstream poster URLs never leave the server; the browser accepts only
+`/api/screenings/posters/<32 hex>` paths and loads them with `referrerpolicy="no-referrer"`. Venue
+sites open only when a visitor follows a booking, film or unlisted-venue link.
+
+**Failures.** Each source fails independently and is retried after five minutes. A failed or slow
+refresh keeps serving the last successful listings, marked `stale`, for up to 24 hours. The logger
+`firstroll.screenings` records a warning naming the source and the failure sentence or exception
+type, with the traceback; retrieved content is withheld. Times are Singapore time (UTC+8). The
+service keeps the next 14 days, drops sessions that started more than 30 minutes ago and removes
+duplicates. Retrieved text is rendered as escaped text only.
+
 ### What reaches DeepSeek
 
 | Material | Packet evidence type | Packet ID |
@@ -210,8 +252,8 @@ results are process memory only.
 | `.firstroll/videos/*.json` | Both | As above | Video catalogue, descriptions and captions |
 | `.firstroll/connectors/douban-mcp/` | Local | Durable | Optional connector install (code, not data); the hosted image uses `/opt/douban-mcp` |
 | `img/<clip stem>/` | Local | Durable until deleted | Clip-analysis frames, `shotlen.csv`/`.png`, `objects.csv` and charts |
-| Process memory | Both | Until restart | Study runs, discovery/related/reception caches, embedding warm-up state |
-| Browser `sessionStorage` | Both | Per tab | Discover and product-view continuity |
+| Process memory | Both | Until restart | Study runs, discovery/related/reception caches, Singapore listing and poster caches, embedding warm-up state |
+| Browser `sessionStorage` | Both | Per tab | Discover and product-view continuity; whether the opening screen was entered |
 | Browser `localStorage` | Both | Per browser | Theme, recent searches, Supabase session; loopback test-account records |
 | Browser memory | Both | Per tab | Personal DeepSeek/YouTube keys |
 
@@ -346,7 +388,8 @@ fields.
 | Key | Storage | Contents and limits |
 |---|---|---|
 | `firstroll.discovery-session` | `sessionStorage` | Versioned snapshot ≤500 KB and ≤24 hours old: public query, up to 20 candidates, 12 director films and 10 nearby films, shelf state, optional dossier film ID |
-| `firstroll.product-session` | `sessionStorage` | Active product view and three scroll offsets |
+| `firstroll.product-session` | `sessionStorage` | Active product view and one scroll offset per view |
+| `firstroll.welcome-seen` | `sessionStorage` | `1` once the visitor enters from the opening screen; later loads in the tab skip it. If storage is blocked the opening shows on every load |
 | `firstroll.theme` | `localStorage` | Theme choice |
 | `firstroll.recent-searches` | `localStorage` | Up to five title/year/director searches |
 | Supabase session | `localStorage` (supabase-js) | Access and refresh tokens; PKCE flow with automatic refresh |
@@ -368,6 +411,15 @@ evicted on overflow. The store is per process and survives neither restart nor a
 **Caches.** TMDb and Wikidata detail and related-film dictionaries and the reception dictionary
 (stored only when scores or awards exist) last for the process lifetime with no size limit or
 eviction. They are accelerators, not records of truth.
+
+**Singapore listings.** `ScreeningsService` keeps one entry per venue (lifetimes in
+[Singapore screening listings](#singapore-screening-listings); failures five minutes, stale
+listings served for up to 24 hours), with at most one read per venue in flight on a long-lived pool
+of up to eight threads. `PosterProxy` keeps a registry of up to 5,000 poster IDs, each expiring
+24 hours after it last appeared in a listing, an LRU image cache capped at 64 MiB with a 24-hour
+lifetime, and remembered failures for ten minutes. All of it is per process: after a restart a
+browser holding a cached listing (up to ten minutes) gets 404 for its posters until a listing
+request registers them again.
 
 **Transient study objects.** `study.observability` (stage timings, aggregate counts) and
 `study.packet_quality` (identity and citation checks, issue codes, ratios, labels) are aggregate-only
@@ -436,7 +488,9 @@ quota; it cannot work through Caddy or any non-loopback host.
 | `X-FirstRoll-Run-ID` | Response | Run UUID on the Deep Study stream |
 | `Retry-After` | Response | On 429: seconds until the next UTC reset, minimum 60 |
 | `WWW-Authenticate: Bearer` | Response | On 401 |
-| `Cache-Control` | Response | `no-store` on `/`, `/assets/config.js` and run results; `no-store, no-transform` on the stream |
+| `Cache-Control` | Response | `no-store` on `/`, `/assets/config.js`, run results and poster errors; `no-store, no-transform` on the stream; `public, max-age=600` on Singapore listings; `public, max-age=86400` on posters |
+| `Content-Encoding: gzip`, `Vary: Accept-Encoding` | Response | Singapore listings, gzipped when `Accept-Encoding` allows gzip |
+| `Content-Security-Policy: default-src 'none'; sandbox`, `Cross-Origin-Resource-Policy: cross-origin`, `X-Content-Type-Options: nosniff` | Response | Poster images |
 | `Vary`, `X-Content-Type-Options: nosniff`, `X-Accel-Buffering: no` | Response | Stream (`Vary: Authorization, X-FirstRoll-DeepSeek-Key`; buffering disabled) and run results (`Vary: Authorization`) |
 
 ### Error contract
@@ -513,6 +567,16 @@ confident, attributed result (including a missing Douban install or Letterboxd c
 Clients must require an explicit choice among several search candidates before opening a dossier or
 starting Deep Study, ignore unknown response fields, and never treat provider summaries as direct
 film observation.
+
+### Singapore screenings
+
+Both routes are **Public** and run on their own thread limiters (three for listings, four for
+posters), so slow venues or image hosts cannot starve other synchronous routes.
+
+| Route | Parameters | Response |
+|---|---|---|
+| `GET /api/screenings/singapore` | — | `generated_at`; `timezone` (`Asia/Singapore`); `range` (`from`, `to`: 14 days including today); `sources` (`id`, `name`, `kind` = `multiplex`/`independent`/`cinematheque`/`museum`/`cultural`/`festival`, `url`, `state` = `ok`/`empty`/`error`/`unlisted`, `count`, `fetched_at`, `message`, `coverage_days` (14, Shaw 7, `null` when unlisted), `stale`); `screenings` (`title`, `venue`, `source`, `starts_at`, `date`, `url` on the source's link allow-list or `null`, `poster` as `/api/screenings/posters/<id>` or `null`, `details`), sorted by start time then title. Waits at most 20 s; a venue still loading is served stale or reported as an error while its read continues |
+| `GET /api/screenings/posters/{poster_id}` | `poster_id`: 32 lowercase hex characters (the first 32 of the SHA-256 of the upstream HTTPS URL), listed within the last 24 hours | Image bytes whose type is sniffed (`image/jpeg`, `png`, `webp`, `gif` or `avif`; the upstream must declare one too, and SVG or HTML is never served); 404 `Unknown poster.` for malformed, unknown or expired IDs; 502 `The poster could not be fetched.` |
 
 ### Deep Study
 

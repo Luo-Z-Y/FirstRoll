@@ -1,6 +1,7 @@
 # FirstRoll Architecture
 
-**Status:** current branch implementation · **Last reconciled:** 5 October 2026
+**Status:** current branch implementation · **Last reconciled:** 5 October 2026; the Singapore
+listings fetch boundary, poster proxy and opening screen added 18 October 2026 (not deployed)
 
 Production remains v232 / `cf43ba57`. This branch retires Agent/Azure code but is not deployed.
 The TypeScript migration and festival atlas from current master are preserved.
@@ -21,7 +22,7 @@ model and the responsiveness design. Installation and verification commands are 
 ```mermaid
 flowchart LR
     subgraph Browser["Visitor browser"]
-        UI["FirstRoll interface<br/>Discover · Deep Study · Analyse · Settings"]
+        UI["FirstRoll interface<br/>Discover · Deep Study · Analyse · Festivals · Cinemas · Settings"]
         Session["Supabase JS session<br/>email + password"]
     end
     subgraph VPS["One Tencent Lighthouse server · Docker Compose"]
@@ -46,6 +47,7 @@ flowchart LR
         Criticism["Crossref · Douban MCP<br/>Letterboxd · Guardian"]
         Video["YouTube · Bilibili"]
         DeepSeek["DeepSeek API"]
+        Venues["Singapore venue sites<br/>allow-listed HTTPS only"]
     end
     GHCR[("GHCR image")]
 
@@ -59,6 +61,7 @@ flowchart LR
     API --> Runs
     API --> HCache
     API --> Catalogue & Criticism & Video & DeepSeek
+    API -->|"listings · posters (proxied)"| Venues
     GHCR -.->|"pulled by digest after owner approval"| API
 
     UI -.->|"loopback only"| LocalAPI
@@ -154,12 +157,14 @@ Backend modules (`app/backend`):
 | `study_observability.py` | `StudyTrace`: allow-listed stage timings, statuses, counts and token usage | Prompts, evidence, credentials, model output |
 | `research_stream.py` | Fixed public SSE vocabulary; `StudyRunStore` (owner-scoped, 50 runs, 10-minute TTL) | Durable results, hidden reasoning |
 | `analysis_pipeline.py`, `algorithms/` | Shot, scene, colour, object and shot-scale measurement derived from pyCinemetrics | Study evidence (no bridge yet) |
+| `screenings.py`, `screenings_venues.py`, `screenings_sgiff.py`, `screenings_model.py` | Singapore venue adapters and `ScreeningsService`: per-venue single-flight reads on a bounded pool, caches, stale fallback, host allow-lists for links and posters | Study evidence; booking |
+| `screenings_http.py`, `screenings_posters.py`, `screenings_api.py` | Guarded outbound HTTPS transport; `PosterProxy` registry and byte cache; the two public routes and their thread limiters | Arbitrary URLs: only allow-listed hosts and registered poster IDs |
 
 Other components:
 
 | Component | Responsibility | Does not own |
 |---|---|---|
-| `app/web` | `index.html`, `styles.css`, `app.ts` and `src/` typed controllers/views/contracts; `auth.ts`, `integrations.ts`, `local-auth.ts`, startup scripts and `festivals.ts`. `config.js` is generated runtime/build data; browser assets are compiled JavaScript | Secrets, authorisation decisions, evidence validation |
+| `app/web` | `index.html`, `styles.css`, `app.ts` and `src/` typed controllers/views/contracts; `auth.ts`, `integrations.ts`, `local-auth.ts`, startup scripts, `festivals.ts` and `screenings.ts`. `config.js` is generated runtime/build data; browser assets are compiled JavaScript | Secrets, authorisation decisions, evidence validation |
 | `supabase/migrations` | Account tables with RLS; quota functions in a revoked `firstroll_private` schema | Studies, prompts, evidence |
 | `database/migrations` | Portable identity-neutral quota migration for any PostgreSQL; staged, not the production path | Bearer tokens, email |
 | `Dockerfile`, `infra/vps`, `tools/frontend/build.sh`, `tools/release/`, `.github/workflows/` | Hosted image, server stack, static build, release receipts and verification, CI and the gated release | See [Operations](OPERATIONS.md) |
@@ -293,6 +298,25 @@ browser upload → temporary file → metadata, shots (TransNetV2), scenes, colo
 Measurements do not yet enter the evidence packet, so film-form statements remain viewing
 hypotheses.
 
+### Singapore screening listings
+
+```text
+browser → GET /api/screenings/singapore (3-thread limiter, ≤ 20 s)
+→ ScreeningsService: each venue whose cache has expired is read once (single-flight), on a pool of
+  up to 8 threads, through the guarded HTTPS transport
+→ adapter parses the venue's page or JSON into Screening records
+→ service keeps 14 days, drops sessions >30 minutes old and duplicates, re-checks link hosts and
+  swaps each allow-listed poster URL for /api/screenings/posters/<id>
+→ gzipped JSON, Cache-Control: public, max-age=600
+browser → GET {apiBase}/api/screenings/posters/<id> (4-thread limiter)
+→ PosterProxy: registered ID only → guarded download (10 s, 3 MiB) → sniffed raster type → bytes
+```
+
+A venue still loading after the deadline is served from its earlier listings, marked `stale`, or
+reported as an error while its read finishes in the background; a failed refresh keeps serving the
+last good listings for up to a day. Nothing from this flow enters a Deep Study packet. Sources,
+lifetimes and terms notes are in [Data](DATA.md#singapore-screening-listings).
+
 ## 5. Evidence and Reliability Rules
 
 ### Browser module and build boundary
@@ -308,6 +332,12 @@ loopback-only development adapter remain. See [Frontend Guide](FRONTEND_GUIDE.md
 `festivals.ts` mounts typed catalogue, date/projection and controller modules. The inline land
 outline needs no tile server or token. The map, calendar, filter and zoom preserve the festival
 feature shipped in v232; approximate annual windows do not establish confirmed edition dates.
+
+`screenings.ts` mounts the Cinemas controller, which fetches only `{apiBase}/api/screenings/singapore`
+(30 s timeout), decodes it at runtime, keeps HTTPS links and FirstRoll poster paths only and renders
+escaped markup. The opening screen (`src/discovery/welcome.ts`, `atmosphere.ts`) runs from the
+application bootstrap: a modal dialog with a local WebGL shader (no external script, texture or
+request), shown once per tab session and released, with its GPU resources, on entry.
 
 Typed evidence separation is the governing product rule: every item states what it is and what it
 may support.
@@ -348,6 +378,8 @@ may support.
 | SSE → browser | Fields listed in section 4 | Prompts, keys, review bodies, passages, model output, exception text |
 | Observability log | Stage names, durations, statuses, bounded counts, token usage | Prompts, evidence, credentials, model output |
 | Local API → disk | `.firstroll/` documents, index, settings and caches; `img/` outputs | Git: both are ignored |
+| API → Singapore venue sites | Fixed listing requests to each adapter's allow-listed HTTPS hosts; Shaw's `x-api-forward-to: internal` header to Shaw hosts only; downloads of registered poster URLs | Visitor IP addresses, cookies or headers; any URL a visitor supplies |
+| Venue data → browser | Escaped titles, times and details; HTTPS links on each source's link allow-list; FirstRoll poster paths | Upstream poster URLs; markup; non-raster images |
 | Build context → image | `Dockerfile`, `requirements-hosted.txt`, `app/` (allow-list `.dockerignore`) | `.firstroll`, keys, any other local file |
 
 ### Assets
@@ -372,6 +404,11 @@ may support.
 | Surface discovery | Generated docs not registered; private routes 404 | `/api/contract` still lists local route names |
 | Account rows exposed | RLS `auth.uid() = user_id`; no `anon` privileges; quota tables in a revoked schema behind `security definer` functions | Depends on Supabase configuration staying intact |
 | Private material leaves the device | Only selected excerpts reach DeepSeek; `.firstroll` ignored; allow-list build context | Selected excerpts do reach an external provider |
+| Server-side request forgery through venue reads or the poster proxy | No route accepts a URL. Adapters request fixed URLs on per-source host allow-lists; poster IDs resolve only to URLs the service registered from allow-listed poster hosts in the last 24 hours. HTTPS on the default port without credentials; redirects validated before following (at most three); connections only to public unicast addresses, checking the address actually connected (DNS rebinding); environment proxies ignored | A compromised or redirected allow-listed venue host can still return arbitrary content, bounded as below |
+| Hostile or oversized venue responses | 15 s read timeout, 30 s total, 4,000,000-byte cap (posters 10 s and 3 MiB); parsers keep bounded fields; text rendered escaped; links kept only on allow-listed hosts | A redesigned page can make a source fail or mislabel times; the source list reports failures |
+| Poster proxy serves active content | Type sniffed from the bytes and also declared upstream: JPEG, PNG, WebP, GIF or AVIF only, never SVG or HTML; `nosniff`, `Content-Security-Policy: default-src 'none'; sandbox`; errors `no-store` | — |
+| Venue hosts track visitors | Browsers contact only FirstRoll for listings and posters (`referrerpolicy="no-referrer"` on images); venue sites see a visitor only after a deliberate click | FirstRoll's server address and user agent are visible to every venue |
+| Slow venues exhaust workers | Single-flight per venue on a pool of at most 8 threads; separate limiters of 3 (listings) and 4 (posters) threads; a 20 s listing deadline | No per-client rate limit; repeated poster misses can still trigger upstream fetches (failures are remembered for ten minutes) |
 | Host or container compromise | `no-new-privileges` on both containers; the API also drops all capabilities, has a 768 MB default memory limit and publishes no port; `ufw`, key-only SSH, unattended security updates | The API runs as root inside its container; the Docker group is root-equivalent |
 
 ### Release-path threats and controls
@@ -425,6 +462,11 @@ Design rules, preserving the request, evidence and release contracts above:
   clicks cannot overlap, and cancellation during authentication sends no study request.
 - The shared compiler bundles strict TypeScript entries into readable local or minified hosted
   JavaScript, keeping classic-script globals, fixed filenames and revalidation; CSS is minified too.
+- Singapore listings and posters run on their own anyio thread limiters (three and four threads),
+  not the shared worker pool, and venue reads run on the listing service's own bounded pool, so a
+  slow venue or image host cannot starve `/api/health` or other synchronous routes.
+- The opening-screen shader is capped at 30 fps and 960 × 540 pixels, pauses when hidden or off
+  screen and releases its WebGL resources on entry.
 
 **Measured evidence (12 September 2026 checkpoint, synthetic, not production latency):**
 

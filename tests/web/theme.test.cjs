@@ -9,6 +9,8 @@ const stylesheet = process.env.FIRSTROLL_TEST_APP
   ? path.join(path.dirname(path.resolve(root, process.env.FIRSTROLL_TEST_APP)), "styles.css")
   : path.join(root, "app/web/styles.css");
 const css = transformSync(readFileSync(stylesheet, "utf8"), { loader: "css" }).code;
+// Named chromatic exceptions; every other application colour literal must stay grey.
+const ACCENT_DECLARATION = /(?<![\w-])(--signal|--festival-(?:now|soon|later|awards)):\s*#[\da-f]{6};/gi;
 const settings = readFileSync(path.join(root, "app/backend/settings.html"), "utf8").match(/<style>([\s\S]*?)<\/style>/)[1];
 
 function declarations(source, selector) {
@@ -44,8 +46,9 @@ function contrast(a, b) {
 }
 
 for (const [name, source] of [["application", css], ["local Settings", settings]]) {
-  test(`${name} uses neutral colour literals without filtering film content`, () => {
-    const literals = [...source.matchAll(/#([\da-f]{8}|[\da-f]{6}|[\da-f]{4}|[\da-f]{3})\b|rgba?\(([^)]*)\)/gi)];
+  test(`${name} uses neutral colour literals outside named accents, without filtering film content`, () => {
+    const neutral = source.replace(ACCENT_DECLARATION, "");
+    const literals = [...neutral.matchAll(/#([\da-f]{8}|[\da-f]{6}|[\da-f]{4}|[\da-f]{3})\b|rgba?\(([^)]*)\)/gi)];
     assert.ok(literals.length > 40);
     for (const [literal, hex, rgb] of literals) {
       const values = hex
@@ -70,6 +73,10 @@ for (const [name, source] of [["application", css], ["local Settings", settings]
       for (const text of ["--ink", muted]) assert.ok(contrast(value(text), value("--paper")) >= 4.5);
       for (const action of ["--red", "--red-dark"]) assert.ok(contrast(value(actionText), value(action)) >= 4.5);
       assert.ok(contrast(value("--focus"), value("--paper")) >= 3);
+      if (name === "application") {
+        assert.ok(contrast(value("--signal"), value("--paper")) >= 4.5, "signal text such as LIVE");
+        assert.ok(contrast(value("--action-text"), value("--signal")) >= 4.5, "text on the active view");
+      }
     });
   }
 }
@@ -88,13 +95,33 @@ test("permanently dark panels scope readable actions and secondary text in both 
       assert.ok(contrast(value("--action-text"), value("--red")) >= 4.5, `${panel} action text`);
       assert.ok(contrast(value("--red"), value("--night-panel")) >= 3, `${panel} action boundary`);
       assert.ok(contrast(value("--focus"), value("--night-panel")) >= 3, `${panel} focus`);
+      assert.ok(contrast(value("--signal"), value("--night-panel")) >= 3, `${panel} signal progress`);
     }
   }
   assert.equal(declarations(css, ".auth-dialog form button").color, "var(--action-text)");
   assert.equal(declarations(css, ".deep-study").background, "var(--night)");
 });
 
-test("monochrome festival and quality states retain non-colour distinctions", () => {
+test("festival colours keep contrast in both themes", () => {
+  for (const theme of ["light", "dark"]) {
+    const variables = { ...declarations(css, ":root"),
+      ...(theme === "dark" ? declarations(css, 'html[data-theme="dark"]') : {}),
+      ...declarations(css, "#product-festivals"),
+      ...(theme === "dark" ? declarations(css, 'html[data-theme="dark"] #product-festivals') : {}) };
+    const value = token => resolve(variables, token);
+    for (const state of ["now", "soon", "later", "awards"]) {
+      assert.ok(contrast(value(`--festival-${state}`), value("--paper-light")) >= 3, `${theme} ${state} mark`);
+    }
+    assert.ok(contrast(value("--action-text"), value("--festival-now")) >= 4.5, `${theme} now status text`);
+    assert.ok(contrast(value("--festival-soon"), value("--paper")) >= 4.5, `${theme} soon status text`);
+  }
+  assert.equal(declarations(css, ".festival-pin.is-now .festival-pin-dot").fill, "var(--festival-now)");
+  assert.equal(declarations(css, ".festival-pin.is-soon .festival-pin-dot").stroke, "var(--festival-soon)");
+  assert.equal(declarations(css, ".festival-pin.is-awards .festival-pin-dot").stroke, "var(--festival-awards)");
+  assert.equal(declarations(css, ".festival-pin-dot").fill, "var(--festival-later)");
+});
+
+test("festival and quality states retain non-colour distinctions", () => {
   assert.equal(declarations(css, ".festival-pin.is-soon .festival-pin-dot").fill, "var(--paper-light)");
   assert.ok(declarations(css, ".festival-pin.is-awards .festival-pin-dot")["stroke-dasharray"]);
   assert.ok(declarations(css, ".festival-pin.is-now .festival-pin-halo").fill);

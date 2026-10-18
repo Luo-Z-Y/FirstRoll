@@ -3,6 +3,7 @@ const { test } = require("node:test");
 const { readFileSync } = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
+const { buildSync } = require("esbuild");
 const { bundleApplication } = require("../../tools/frontend/build.cjs");
 
 const root = path.resolve(__dirname, "../..");
@@ -144,6 +145,31 @@ test("festival navigation persists and restores the new typed view and scroll", 
   second.restoreProductSession();
   assert.equal(second.state.productView, "festivals");
   assert.equal(second.state.viewScroll.festivals, 260);
+});
+
+test("screenings navigation persists and restores its typed view and scroll", () => {
+  const h = harness(), app = h.create();
+  const views = [];
+  h.document.dispatchEvent = event => views.push(event.detail.view);
+  assert.equal(app.state.viewScroll.screenings, 0);
+  app.setProductView("screenings");
+  assert.equal(app.state.productView, "screenings");
+  assert.deepEqual(views, ["screenings"]);
+  assert.equal(JSON.parse(h.storage.get("firstroll.product-session")).view, "screenings");
+  h.window.scrollY = 420;
+  app.setProductView("discovery");
+  assert.equal(app.state.viewScroll.screenings, 420);
+  app.setProductView("screenings");
+  const second = h.create();
+  second.restoreProductSession();
+  assert.equal(second.state.productView, "screenings");
+  assert.equal(second.state.viewScroll.screenings, 420);
+  const navigation = buildSync({ absWorkingDir: root, entryPoints: ["app/web/src/navigation/types.ts"],
+    bundle: true, format: "cjs", write: false }).outputFiles[0].text;
+  const types = { module: { exports: {} } };
+  vm.runInNewContext(navigation, types);
+  assert.equal(types.module.exports.isProductView("screenings"), true);
+  assert.equal(types.module.exports.isProductView("cinemas"), false);
 });
 
 test("typed recent searches validate stored entries, cap/deduplicate and handle delegated actions", () => {

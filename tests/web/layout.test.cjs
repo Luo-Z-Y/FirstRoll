@@ -4,12 +4,32 @@ const { readFileSync } = require("node:fs");
 const path = require("node:path");
 const { transformSync } = require("esbuild");
 
-test("UI stylesheet uses neutral colours without filtering film artwork", () => {
+// The only chromatic literals: one sparse UI red (light, dark and the permanently dark
+// panels) and four festival data colours (light and dark). Everything else stays grey.
+const ACCENT_DECLARATION = /(?<![\w-])(--signal|--festival-(?:now|soon|later|awards)):\s*#[\da-f]{6};/gi;
+
+test("welcome entry has no focus box but retains an underlined keyboard cue", () => {
   const root = path.resolve(__dirname, "../..");
   const stylesheet = process.env.FIRSTROLL_TEST_APP
     ? path.join(path.dirname(path.resolve(root, process.env.FIRSTROLL_TEST_APP)), "styles.css")
     : path.join(root, "app/web/styles.css");
   const css = transformSync(readFileSync(stylesheet, "utf8"), { loader: "css" }).code;
+  assert.match(css, /\.welcome-enter:focus-visible\s*\{[^}]*outline: none;[^}]*text-decoration: underline;/);
+  // Static text colours key off the state mirrored onto the dialog, not :has() (Firefox < 121).
+  assert.match(css, /\.welcome-screen\[data-shader-state=static\] \.welcome-enter[^{]*\{[^}]*color: var\(--ink\);/);
+  assert.doesNotMatch(css, /:has\([^)]*discovery-shader/);
+});
+
+test("UI stylesheet is grey apart from named accent tokens, without filtering film artwork", () => {
+  const root = path.resolve(__dirname, "../..");
+  const stylesheet = process.env.FIRSTROLL_TEST_APP
+    ? path.join(path.dirname(path.resolve(root, process.env.FIRSTROLL_TEST_APP)), "styles.css")
+    : path.join(root, "app/web/styles.css");
+  const source = transformSync(readFileSync(stylesheet, "utf8"), { loader: "css" }).code;
+  const counts = {};
+  for (const [, token] of source.matchAll(ACCENT_DECLARATION)) counts[token] = (counts[token] || 0) + 1;
+  assert.deepEqual(counts, { "--signal": 3, "--festival-now": 2, "--festival-soon": 2, "--festival-later": 2, "--festival-awards": 2 });
+  const css = source.replace(ACCENT_DECLARATION, "");
   for (const [, hex] of css.matchAll(/#([\da-f]{6}|[\da-f]{3})\b/gi)) {
     const expanded = hex.length === 3 ? [...hex].map(c => c + c).join("") : hex;
     assert.equal(expanded.slice(0, 2), expanded.slice(2, 4), hex);
@@ -22,6 +42,19 @@ test("UI stylesheet uses neutral colours without filtering film artwork", () => 
   assert.doesNotMatch(css, /grayscale\(/);
   assert.match(css, /--accent:/);
   assert.match(css, /--focus:/);
+  // Keep the red sparse: only these rules may paint with the signal token.
+  const signalRules = [...source.matchAll(/([^{}]+)\{[^{}]*var\(--signal\)[^{}]*\}/g)].map(([, selector]) => selector.trim()).sort();
+  assert.deepEqual(signalRules, [
+    ".brand-mark",
+    ".inline-fetch-track i",
+    ".nav-link.active",
+    ".progress-bar",
+    "html[data-build-channel=live] .build-identity",
+  ]);
+  // Festival data colours stay inside the atlas.
+  for (const [, selector] of source.matchAll(/([^{}]+)\{[^{}]*var\(--festival-[^{}]*\}/g)) {
+    assert.match(selector.trim(), /^\.festival-/, selector);
+  }
 });
 
 test("small-screen header keeps shrinkable tracks and a later stacked brand override", () => {

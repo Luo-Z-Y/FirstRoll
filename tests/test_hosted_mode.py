@@ -124,7 +124,7 @@ def test_hosted_frontend_preview_serves_public_ui_with_next_local_build(monkeypa
 
     assert page.status_code == 200
     assert "<title>FirstRoll</title>" in page.text
-    assert '<h1 id="discoveryTitle">Find a film.</h1>' in page.text
+    assert '<h1 id="discoveryTitle">Find a film</h1>' in page.text
     assert "Build the reading." not in page.text
     assert "Confirm the exact edition, inspect attributed perspectives" not in page.text
     for field in ("filmTitle", "filmYear", "filmDirector"):

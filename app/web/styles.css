@@ -8,6 +8,8 @@
   --accent: #171717;
   --accent-hover: #333333;
   --focus: #595959;
+  /* The one chromatic UI accent: brand mark, active view, progress and the live build. */
+  --signal: #c8102e;
   /* Legacy colour names remain aliases for the neutral theme. */
   --red: var(--accent);
   --red-dark: var(--accent-hover);
@@ -50,6 +52,7 @@ html[data-theme="dark"] {
   --accent: #eeeeee;
   --accent-hover: #d4d4d4;
   --focus: #d4d4d4;
+  --signal: #ff5c5c;
   --action-text: #111111;
   --olive: #b3b3b3;
   --gold: #cccccc;
@@ -91,6 +94,7 @@ html[data-theme="dark"] {
   --red-dark: var(--accent-hover);
   --action-text: #111111;
   --focus: #eeeeee;
+  --signal: #ff5c5c;
   --line: var(--line-night);
   --inverse-bg: #eeeeee;
   --inverse-text: #111111;
@@ -168,7 +172,7 @@ input { accent-color: var(--accent); }
   display: block;
   width: 38%;
   height: 100%;
-  background: linear-gradient(90deg, var(--red-dark), var(--red));
+  background: var(--signal);
   animation: inline-fetch-progress 1.15s ease-in-out infinite;
 }
 
@@ -222,9 +226,8 @@ input { accent-color: var(--accent); }
   object-fit: contain;
   transform: translateY(-1.75px) scaleY(0.985);
   transform-origin: bottom center;
+  color: var(--signal);
 }
-
-html[data-theme="dark"] .brand-mark { filter: invert(1); }
 
 .build-identity {
   margin-left: 3px;
@@ -245,8 +248,8 @@ html[data-build-channel="local"] .build-identity {
 }
 
 html[data-build-channel="live"] .build-identity {
-  border-color: color-mix(in srgb, var(--olive) 44%, transparent);
-  color: var(--olive);
+  border-color: color-mix(in srgb, var(--signal) 44%, transparent);
+  color: var(--signal);
 }
 
 .primary-nav {
@@ -280,8 +283,8 @@ html[data-build-channel="live"] .build-identity {
 }
 
 .nav-link.active {
-  color: var(--inverse-text);
-  background: var(--inverse-bg);
+  color: var(--action-text);
+  background: var(--signal);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.14), 0 4px 12px rgba(0, 0, 0, 0.12);
 }
 
@@ -533,6 +536,150 @@ html[data-theme="dark"] .theme-icon-moon { opacity: 1; transform: rotate(0) scal
 .analyse-intro h1 em {
   color: var(--red);
   font-style: normal;
+}
+
+/* Opening screen: a full-viewport dialog whose label flies into the Discover heading.
+   The root has no `scrollbar-gutter: stable`: with classic scrollbars that gutter stays
+   uncovered beside the dialog. Discover on a fresh tab fits a desktop viewport, so releasing
+   the scroll lock normally adds no scrollbar and does not move the heading. */
+.welcome-screen {
+  position: fixed;
+  inset: 0;
+  margin: 0;
+  padding: 0;
+  width: 100vw;
+  height: 100%;
+  height: 100dvh;
+  max-width: none;
+  max-height: none;
+  border: 0;
+  color: var(--ink);
+  background: transparent;
+  overflow: hidden;
+  opacity: 1;
+  transition: opacity 1500ms cubic-bezier(0.65, 0, 0.25, 1);
+}
+
+.welcome-screen::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 70% 35%, var(--paper-deep), var(--paper) 65%);
+  transition: opacity 1500ms cubic-bezier(0.65, 0, 0.25, 1);
+}
+
+.welcome-screen[open] { display: grid; place-items: center; }
+.welcome-screen.is-leaving { pointer-events: none; }
+.welcome-screen.is-leaving:not(.has-heading-flight) { opacity: 0; }
+.welcome-screen.is-leaving::before,
+.welcome-screen.is-leaving .discovery-shader,
+.welcome-screen.is-leaving .shader-credit,
+.welcome-screen.is-leaving .shader-toggle { opacity: 0; }
+.welcome-screen.has-heading-flight .welcome-enter { visibility: hidden; }
+.welcome-screen::backdrop { background: transparent; }
+
+.welcome-heading-flight {
+  position: fixed;
+  display: block;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 3;
+}
+
+body.welcome-open { overflow: hidden; }
+body.welcome-transition #discoveryTitle { visibility: hidden; }
+/* Finish the existing reveal without removing/restarting its animation on hand-off. */
+body.welcome-transition .product-view { animation-delay: -420ms; }
+
+.welcome-enter {
+  position: relative;
+  z-index: 1;
+  margin: 0;
+  max-width: calc(100% - 40px);
+  padding: 18px 32px;
+  border: 0;
+  border-radius: 4px;
+  color: #ffffff;
+  background: transparent;
+  cursor: pointer;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.7);
+  font: 500 clamp(1.5rem, 4vw, 2.75rem)/1.15 "DM Sans", sans-serif;
+  letter-spacing: -0.04em;
+}
+
+.welcome-enter:hover { text-decoration: underline; text-underline-offset: 0.2em; }
+.welcome-enter:not(:disabled):active { transform: none; }
+.welcome-enter:focus-visible { outline: none; text-decoration: underline; text-underline-offset: 0.2em; text-decoration-thickness: 2px; }
+#welcomeLabel { display: block; }
+
+.discovery-shader {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 1;
+  border-radius: inherit;
+  transition: opacity 1500ms cubic-bezier(0.65, 0, 0.25, 1);
+}
+
+.discovery-shader[data-shader-state="static"] { opacity: 0; }
+
+.welcome-screen > .shader-toggle {
+  position: absolute;
+  top: max(16px, env(safe-area-inset-top));
+  right: max(16px, env(safe-area-inset-right));
+  z-index: 2;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: #ffffff;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.7);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: opacity 450ms ease;
+}
+
+.shader-credit {
+  position: absolute;
+  z-index: 1;
+  bottom: max(12px, env(safe-area-inset-bottom));
+  left: 50%;
+  transform: translateX(-50%);
+  margin: 0;
+  width: max-content;
+  max-width: calc(100% - 32px);
+  padding: 6px 10px;
+  text-align: center;
+  background: transparent;
+  color: #ffffff;
+  font-size: 0.65rem;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.7);
+  transition: opacity 450ms ease;
+}
+
+.shader-credit a { color: inherit; }
+
+/* atmosphere.ts mirrors the renderer state onto the dialog, so no :has() is needed (Firefox < 121). */
+.welcome-screen[data-shader-state="static"] .welcome-enter,
+.welcome-screen[data-shader-state="static"] .shader-toggle,
+.welcome-screen[data-shader-state="static"] .shader-credit {
+  color: var(--ink);
+  text-shadow: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .discovery-shader, .shader-toggle { display: none; }
+  .welcome-screen, .welcome-screen::before, .discovery-shader { transition: none; }
+  /* No shader is drawn, so the text sits on the plain paper gradient. */
+  .welcome-enter, .shader-credit { color: var(--ink); text-shadow: none; }
 }
 
 .discovery-hero {
@@ -1770,7 +1917,7 @@ output { color: #eeeeee; font-family: "IBM Plex Mono", monospace; font-size: 0.7
 .status-wrap p { margin: 0 0 7px; color: var(--muted-night); font-size: 0.7rem; }
 .status-wrap p.is-error { color: #ffffff; font-weight: 700; }
 .progress-track { height: 5px; overflow: hidden; background: rgba(255, 255, 255, 0.1); }
-.progress-bar { width: 0; height: 100%; background: var(--red); transition: width 160ms linear; }
+.progress-bar { width: 0; height: 100%; background: var(--signal); transition: width 160ms linear; }
 #previewVideo { width: 100%; aspect-ratio: 16 / 9; border: 1px solid var(--line-night); background: #000000; }
 .analysis-panel { min-height: 690px; padding: 16px; background: var(--night); }
 .view-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
@@ -1824,7 +1971,20 @@ html[data-theme="dark"] .critical-provider-actions button.is-active.is-loaded::a
 }
 
 /* Festival atlas */
-#product-festivals { padding: 42px 0 70px; }
+/* Data colours belong to the atlas, not the neutral application chrome. */
+#product-festivals {
+  --festival-now: #a7412b;
+  --festival-soon: #187365;
+  --festival-later: #496f9e;
+  --festival-awards: #926900;
+  padding: 42px 0 70px;
+}
+html[data-theme="dark"] #product-festivals {
+  --festival-now: #ee927b;
+  --festival-soon: #70c8b5;
+  --festival-later: #91b3df;
+  --festival-awards: #e0bb61;
+}
 .festival-months { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 18px; }
 .festival-months button {
   display: inline-flex; align-items: baseline; gap: 5px;
@@ -1849,13 +2009,13 @@ html[data-theme="dark"] .critical-provider-actions button.is-active.is-loaded::a
 .festival-zoom button:hover:not(:disabled) { background: var(--control-fill-hover); }
 .festival-zoom button:disabled { color: var(--ink-soft); opacity: 0.4; cursor: default; }
 .festival-pin { cursor: pointer; outline: none; transition: opacity 200ms var(--ease-fluid); }
-.festival-pin-dot { fill: var(--ink-soft); stroke: var(--paper-light); stroke-width: 1.5; }
+.festival-pin-dot { fill: var(--festival-later); stroke: var(--paper-light); stroke-width: 1.5; }
 .festival-pin-halo { fill: transparent; }
 .festival-pin-hit { fill: transparent; }
-.festival-pin.is-soon .festival-pin-dot { fill: var(--paper-light); stroke: var(--ink); stroke-width: 2; }
-.festival-pin.is-now .festival-pin-dot { fill: var(--red); }
-.festival-pin.is-now .festival-pin-halo { fill: var(--red); opacity: 0.22; }
-.festival-pin.is-awards .festival-pin-dot { fill: var(--paper-light); stroke: var(--ink); stroke-width: 2; stroke-dasharray: 2 1; }
+.festival-pin.is-soon .festival-pin-dot { fill: var(--paper-light); stroke: var(--festival-soon); stroke-width: 2; }
+.festival-pin.is-now .festival-pin-dot { fill: var(--festival-now); }
+.festival-pin.is-now .festival-pin-halo { fill: var(--festival-now); opacity: 0.22; }
+.festival-pin.is-awards .festival-pin-dot { fill: var(--paper-light); stroke: var(--festival-awards); stroke-width: 2; stroke-dasharray: 2 1; }
 .festival-pin:hover .festival-pin-dot, .festival-pin:focus-visible .festival-pin-dot { transform: scale(1.35); }
 .festival-pin:focus-visible .festival-pin-halo { fill: none; stroke: var(--ink); stroke-width: 1.5; }
 .festival-pin.is-selected .festival-pin-dot { transform: scale(1.5); stroke: var(--ink); }
@@ -1866,17 +2026,17 @@ html[data-theme="dark"] .critical-provider-actions button.is-active.is-loaded::a
 .festival-detail strong { color: var(--ink); }
 .festival-window { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .festival-status { padding: 2px 8px; border-radius: 999px; font-size: 0.7rem; font-weight: 700; background: var(--soft-fill); border: 1px solid var(--line); }
-.festival-status.is-now { color: var(--action-text); background: var(--red); border-color: transparent; }
-.festival-status.is-soon { color: var(--olive); border-color: var(--olive); }
+.festival-status.is-now { color: var(--action-text); background: var(--festival-now); border-color: transparent; }
+.festival-status.is-soon { color: var(--festival-soon); border-color: var(--festival-soon); }
 .festival-hint { font-size: 0.78rem; }
 .festival-link { color: var(--red-dark); font-size: 0.8rem; font-weight: 700; }
 .festival-clear { align-self: flex-start; margin-top: auto; border: 1px solid var(--line); border-radius: 999px; padding: 6px 12px; background: var(--control-fill); color: var(--ink); font: 600 0.74rem "DM Sans", sans-serif; cursor: pointer; }
 .festival-legend { display: flex; flex-wrap: wrap; gap: 18px; margin: 12px 0 0; padding: 0; list-style: none; color: var(--ink-soft); font-size: 0.74rem; }
 .festival-legend li { display: inline-flex; align-items: center; gap: 6px; }
-.festival-legend span { width: 9px; height: 9px; border-radius: 50%; background: var(--ink-soft); }
-.festival-legend .is-now { background: var(--red); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent); }
-.festival-legend .is-soon { background: var(--paper-light); border: 2px solid var(--ink); }
-.festival-legend .is-awards { background: var(--paper-light); border: 2px dashed var(--ink); }
+.festival-legend span { width: 9px; height: 9px; border-radius: 50%; background: var(--festival-later); }
+.festival-legend .is-now { background: var(--festival-now); box-shadow: 0 0 0 3px color-mix(in srgb, var(--festival-now) 22%, transparent); }
+.festival-legend .is-soon { background: var(--paper-light); border: 2px solid var(--festival-soon); }
+.festival-legend .is-awards { background: var(--paper-light); border: 2px dashed var(--festival-awards); }
 .festival-year { margin-top: 44px; }
 .festival-calendar { display: flex; flex-direction: column; border-top: 1px solid var(--line); }
 .festival-calendar-row {
@@ -1893,10 +2053,10 @@ button.festival-calendar-row:hover, .festival-calendar-row.is-selected { backgro
 .festival-track { position: relative; display: block; height: 18px; }
 .festival-calendar-head .festival-track span { position: absolute; top: 0; color: var(--ink-soft); font: 500 0.62rem "IBM Plex Mono", monospace; text-transform: uppercase; }
 .festival-track i { position: absolute; top: 0; bottom: 0; border-left: 1px solid var(--line); }
-.festival-bar { position: absolute; top: 4px; height: 10px; min-width: 4px; border-radius: 3px; background: var(--ink-soft); }
-.festival-bar.is-soon { background: var(--paper-light); box-shadow: inset 0 0 0 1.5px var(--ink); }
-.festival-bar.is-now { background: var(--red); }
-.festival-bar.is-awards { background: repeating-linear-gradient(135deg, var(--gold) 0 3px, transparent 3px 5px); box-shadow: inset 0 0 0 1px var(--gold); }
+.festival-bar { position: absolute; top: 4px; height: 10px; min-width: 4px; border-radius: 3px; background: var(--festival-later); }
+.festival-bar.is-soon { background: color-mix(in srgb, var(--festival-soon) 18%, var(--paper-light)); box-shadow: inset 0 0 0 1.5px var(--festival-soon); }
+.festival-bar.is-now { background: var(--festival-now); }
+.festival-bar.is-awards { background: repeating-linear-gradient(135deg, var(--festival-awards) 0 3px, transparent 3px 5px); box-shadow: inset 0 0 0 1px var(--festival-awards); }
 .festival-today { position: absolute; top: -9px; bottom: -9px; border-left: 2px solid var(--red); opacity: 0.55; }
 
 @media (max-width: 900px) {
@@ -1928,6 +2088,79 @@ button.festival-calendar-row:hover, .festival-calendar-row.is-selected { backgro
   .festival-calendar-name small { font-size: 0.8125rem; line-height: 1.5; }
   /* Dates stay explicit in each row; a compressed twelve-month timeline does not. */
   .festival-calendar-head, .festival-calendar-row .festival-track { display: none; }
+}
+
+/* Singapore listings: neutral chrome; programmed venues marked by a rule, not a colour. */
+#product-screenings { padding: 42px 0 70px; }
+#product-screenings .analyse-intro > p { max-width: 480px; }
+.screenings-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+.screenings-kinds, .screenings-days { display: flex; flex-wrap: wrap; gap: 6px; }
+.screenings-days { margin-bottom: 26px; }
+.screenings-kinds button, .screenings-days button {
+  display: inline-flex; align-items: baseline; gap: 5px;
+  border: 1px solid var(--line); border-radius: 999px; padding: 6px 12px;
+  background: var(--control-fill); color: var(--ink-soft);
+  font: 600 0.76rem "DM Sans", sans-serif; cursor: pointer;
+  transition: background-color 200ms var(--ease-fluid), color 200ms var(--ease-fluid);
+}
+.screenings-days button span { font-family: "IBM Plex Mono", monospace; font-size: 0.62rem; opacity: 0.7; }
+.screenings-days button.is-quiet { opacity: 0.55; }
+.screenings-kinds button:hover, .screenings-days button:hover { background: var(--control-fill-hover); color: var(--ink); }
+.screenings-kinds button[aria-pressed="true"], .screenings-days button[aria-pressed="true"] { background: var(--inverse-bg); color: var(--inverse-text); border-color: transparent; opacity: 1; }
+.screenings-search { width: min(260px, 100%); padding: 8px 12px; border: 1px solid var(--line); border-radius: 999px; background: var(--control-fill); color: var(--ink); font: 500 0.82rem "DM Sans", sans-serif; }
+.screenings-list { display: flex; flex-direction: column; border-top: 1px solid var(--line); }
+.screenings-list[aria-busy="true"] { cursor: progress; }
+.screenings-film { display: grid; grid-template-columns: 72px minmax(0, 1fr); gap: 18px; padding: 18px 6px; border-bottom: 1px solid var(--line); }
+.screenings-film.is-programmed { box-shadow: inset 3px 0 0 var(--ink); padding-left: 14px; }
+.screenings-poster { width: 72px; aspect-ratio: 2 / 3; overflow: hidden; border: 1px solid var(--line); border-radius: var(--radius); background: var(--soft-fill); display: grid; place-items: center; color: var(--ink-soft); font: 400 1.8rem "Bebas Neue", sans-serif; }
+.screenings-poster img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.screenings-film-body { min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.screenings-film-body header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 14px; }
+.screenings-film h3 { margin: 0; font-family: "Bebas Neue", sans-serif; font-size: 1.7rem; font-weight: 400; line-height: 1.05; overflow-wrap: anywhere; }
+.screenings-study { border: 0; padding: 0; background: none; color: var(--ink-soft); font: 600 0.76rem "DM Sans", sans-serif; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.screenings-study:hover { color: var(--ink); }
+.screenings-details { margin: 0; color: var(--ink-soft); font-size: 0.8rem; }
+.screenings-venues { display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.screenings-venues li { display: grid; grid-template-columns: minmax(150px, 240px) minmax(0, 1fr); gap: 12px; align-items: baseline; }
+.screenings-venue { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.screenings-venue strong { font-size: 0.84rem; overflow-wrap: anywhere; }
+.screenings-venue small { color: var(--ink-soft); font: 500 0.62rem "IBM Plex Mono", monospace; text-transform: uppercase; }
+.screenings-times { display: flex; flex-wrap: wrap; gap: 6px; }
+.screenings-times a, .screenings-times span { padding: 3px 8px; border: 1px solid var(--line); border-radius: var(--radius); color: var(--ink); font: 500 0.76rem "IBM Plex Mono", monospace; text-decoration: none; }
+.screenings-times a:hover { background: var(--inverse-bg); color: var(--inverse-text); border-color: transparent; }
+.screenings-times .screenings-more, .screenings-times .screenings-elsewhere { border-style: dashed; color: var(--ink-soft); }
+.screenings-note { margin: -8px 0 18px; color: var(--ink-soft); font-size: 0.78rem; line-height: 1.5; }
+.screenings-empty { padding: 28px 6px; color: var(--ink-soft); }
+.screenings-empty p { margin: 0 0 12px; }
+/* .ghost-btn is styled for the dark panels; the retry action sits on the page itself. */
+.screenings-retry { color: var(--ink); border-color: var(--line); background: var(--control-fill); }
+.screenings-retry:hover:not(:disabled) { color: var(--ink); border-color: var(--ink); background: var(--control-fill-hover); }
+.screenings-sources { margin-top: 28px; color: var(--ink-soft); font-size: 0.8rem; }
+.screenings-sources summary { cursor: pointer; font-weight: 700; color: var(--ink); }
+.screenings-sources ul { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 6px 18px; margin: 12px 0 0; padding: 0; list-style: none; }
+.screenings-sources li { display: flex; flex-direction: column; gap: 1px; padding: 6px 0; border-bottom: 1px solid var(--line); }
+.screenings-sources a { color: var(--ink); font-weight: 600; }
+/* States stay grey: an error is set in full ink weight, earlier listings by a dashed rule. */
+.screenings-sources li.is-error span { color: var(--ink); font-weight: 600; }
+.screenings-sources li.is-stale { border-bottom-style: dashed; }
+.screenings-source-coverage, .screenings-source-stale { color: var(--ink-soft); font: 500 0.62rem/1.5 "IBM Plex Mono", monospace; }
+
+@media (max-width: 640px) {
+  #product-screenings { padding-top: 24px; }
+  #product-screenings .analyse-intro { gap: 18px; margin-bottom: 22px; }
+  #product-screenings .analyse-intro h1 { font-size: clamp(2.5rem, 10vw, 3.5rem); }
+  #product-screenings .analyse-intro > p { font-size: 0.9rem; }
+  .screenings-search { width: 100%; min-height: 44px; font-size: 1rem; }
+  .screenings-kinds, .screenings-days { flex-wrap: nowrap; overflow-x: auto; padding: 4px 2px 10px; gap: 8px; }
+  .screenings-kinds button, .screenings-days button { flex: 0 0 auto; min-height: 44px; align-items: center; font-size: 0.875rem; }
+  .screenings-film { grid-template-columns: 56px minmax(0, 1fr); gap: 12px; }
+  .screenings-poster { width: 56px; }
+  .screenings-venues li { grid-template-columns: 1fr; gap: 6px; }
+  .screenings-times a, .screenings-times span { display: inline-flex; align-items: center; min-height: 36px; padding: 4px 10px; font-size: 0.85rem; }
+  .screenings-study { min-height: 44px; font-size: 0.875rem; }
+  .screenings-retry { min-height: 44px; }
+  #product-screenings .section-heading { flex-wrap: wrap; gap: 8px; }
+  #product-screenings .section-meta { text-align: left; }
 }
 
 @media (max-width: 1120px) {
@@ -2068,6 +2301,9 @@ button.festival-calendar-row:hover, .festival-calendar-row.is-selected { backgro
 @media (max-width: 380px) {
   .brand { display: grid; grid-template-columns: 30px minmax(0, 1fr); min-width: 0; max-width: 100%; gap: 3px 6px; text-align: left; }
   .brand .build-identity { grid-column: 1 / -1; justify-self: start; }
+  /* Five destinations share the narrowest phones without clipping a label. */
+  .primary-nav { gap: 2px; }
+  .nav-link { padding: 7px 2px; letter-spacing: 0; font-size: 0.66rem; }
 }
 
 @media (prefers-reduced-motion: reduce) {

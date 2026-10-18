@@ -1,5 +1,6 @@
 import type { AppContext } from "./context";
 import type { Services } from "./services";
+import { mountWelcomeScreen } from "./discovery/welcome";
 
 // Event registration only. Called once by the application composition root.
 export function createBootstrap(context: AppContext, services: () => Services) {
@@ -61,6 +62,7 @@ export function createBootstrap(context: AppContext, services: () => Services) {
     renderRecentSearches(state.discovery.recentSearches);
     restoreDiscoverySession();
     restoreProductSession();
+    mountWelcomeScreen(() => setProductView("discovery", { restoreScroll: false }));
     window.addEventListener("pagehide", persistCurrentSession);
 
     refs.sampleInterval.addEventListener("input", () => {

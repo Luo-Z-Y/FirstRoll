@@ -1,12 +1,13 @@
 export type ThemePreference = "system" | "light" | "dark";
-export type ProductView = "discovery" | "analyse" | "festivals" | "settings";
+export type ProductView = "discovery" | "analyse" | "festivals" | "screenings" | "settings";
 
 export function isThemePreference(value: unknown): value is ThemePreference {
   return value === "system" || value === "light" || value === "dark";
 }
 
 export function isProductView(value: unknown): value is ProductView {
-  return value === "discovery" || value === "analyse" || value === "festivals" || value === "settings";
+  return value === "discovery" || value === "analyse" || value === "festivals" || value === "screenings"
+    || value === "settings";
 }
 
 export interface ProductViewOptions {

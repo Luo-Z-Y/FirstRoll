@@ -39,8 +39,10 @@ entry point, repository policies, licence/attribution and the README. Keep `.fir
 
 | Task | Start here | Check here |
 |---|---|---|
-| Page layout or styling | `app/web/index.html`, `styles.css` | Browser at phone/desktop widths, `tests/test_web_assets.py` |
+| Page layout or styling | `app/web/index.html`, `styles.css` | Browser at phone/desktop widths, `tests/test_web_assets.py`, `tests/web/layout.test.cjs` and `theme.test.cjs` (grey palette, the five `--signal` rules, festival data colours, contrast) |
 | Festival map | `app/web/src/festivals/` | `tests/web/festivals.test.cjs` |
+| Opening screen and shader | `app/web/src/discovery/welcome.ts`, `welcome-heading.ts`, `atmosphere.ts`, `colourful-infinity.ts` (CC BY-NC-SA 3.0; see [Shader attribution](SHADER_ATTRIBUTION.md)) | `tests/web/welcome.test.cjs`, `welcome-heading.test.cjs`, `atmosphere.test.cjs`, `layout.test.cjs` |
+| Singapore cinema listings | Backend `screenings.py`, `screenings_venues.py`, `screenings_sgiff.py`, `screenings_http.py`, `screenings_posters.py`, `screenings_api.py`; frontend `app/web/screenings.ts`, `src/screenings/` | `tests/test_screenings.py`, `test_screening_posters.py`; `tests/web/screenings.test.cjs`, `screenings-controller.test.cjs` |
 | Search, shelf and dossier | `app/web/src/discovery/`, `dossier/` | Frontend application/race tests; `tests/test_discovery.py` |
 | API routes and feature boundaries | `app/backend/main.py` | Hosted-mode, auth and API contract tests |
 | Film catalogue providers | `discovery.py`, `tmdb_discovery.py` in the backend | Discovery/TMDb tests |

@@ -20,7 +20,7 @@ export function createContext() {
 
   const state: AppState = {
     productView: "discovery",
-    viewScroll: { discovery: 0, analyse: 0, festivals: 0, settings: 0 },
+    viewScroll: { discovery: 0, analyse: 0, festivals: 0, screenings: 0, settings: 0 },
     discovery: {
       results: [],
       selectedFilm: null,
@@ -52,6 +52,7 @@ export function createContext() {
       discovery: requiredElement<HTMLElement>("product-discovery"),
       analyse: requiredElement<HTMLElement>("product-analyse"),
       festivals: requiredElement<HTMLElement>("product-festivals"),
+      screenings: requiredElement<HTMLElement>("product-screenings"),
       settings: requiredElement<HTMLElement>("product-settings"),
     },
     productNav: Array.from(document.querySelectorAll<HTMLElement>(".nav-link[data-product-view]")),
