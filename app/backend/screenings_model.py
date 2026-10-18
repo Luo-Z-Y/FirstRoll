@@ -8,10 +8,11 @@ from __future__ import annotations
 
 import html
 import re
+import string
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
 from typing import Any, Literal, Protocol
-from urllib.parse import urljoin
+from urllib.parse import quote, urljoin
 
 from pydantic import BaseModel, ConfigDict
 
@@ -96,11 +97,16 @@ def clean_text(value: Any, limit: int = 240) -> str:
 
 
 def safe_url(value: Any, hosts: frozenset[str] | set[str], base: str | None = None) -> str | None:
-    """An HTTPS URL on one of ``hosts``, resolved against ``base``; anything else is dropped."""
+    """An HTTPS URL on one of ``hosts``, resolved against ``base``; anything else is dropped.
+
+    Non-ASCII characters, spaces and control characters are percent-encoded, as the standard
+    library does for redirect targets, so a poster such as ``Café.jpg`` can be requested.
+    ASCII punctuation, including existing ``%XX`` escapes, is left as it is.
+    """
     raw = str(value or "").strip()
     if not raw:
         return None
-    resolved = urljoin(base, raw) if base else raw
+    resolved = quote(urljoin(base, raw) if base else raw, safe=string.punctuation)
     return resolved if host_allowed(resolved, hosts) else None
 
 
@@ -161,7 +167,7 @@ def infer_day(day: int, month_name: str, today: date) -> date | None:
         try:
             candidate = date(year, month, day)
         except ValueError:
-            return None
+            continue  # 29 February exists only in leap years.
         if candidate >= today - timedelta(days=60):
             return candidate
     return None
@@ -178,7 +184,7 @@ def festival_day(day: int, month_name: str, weekday: str, today: date) -> date |
         try:
             candidate = date(year, month, day)
         except ValueError:
-            return None
+            continue  # 29 February exists only in leap years.
         if candidate.weekday() == expected:
             candidates.append(candidate)
     return min(candidates, key=lambda candidate: abs((candidate - today).days), default=None)

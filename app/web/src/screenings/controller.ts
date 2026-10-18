@@ -170,9 +170,16 @@ export function mountScreenings(section: HTMLElement, options: ScreeningsOptions
     const target = event.target as Element | null;
     if (!target) return;
     if (target.closest("[data-screenings-retry]")) {
-      // The retry button is replaced while loading; a repeat failure puts focus on the new one.
+      // Loading removes the focused retry button. If focus fell to the page, a repeat failure
+      // puts it on the new button and a success on the day heading; a visitor who moved on
+      // during the load keeps focus where they put it.
       void load().then(() => {
-        if (state.phase === "failed") list.querySelector<HTMLElement>("[data-screenings-retry]")?.focus();
+        const active = document.activeElement;
+        if (active && active !== document.body) return;
+        const next = state.phase === "failed"
+          ? list.querySelector<HTMLElement>("[data-screenings-retry]")
+          : state.phase === "ready" ? dayTitle : null;
+        next?.focus();
       });
       return;
     }

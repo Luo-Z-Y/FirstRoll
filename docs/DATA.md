@@ -189,13 +189,23 @@ Archive response or street addresses in Peatix results, are discarded.
 
 **Transport.** Every venue request uses `app/backend/screenings_http.py`: HTTPS on the default
 port only, no credentials in URLs, and a per-source host allow-list for fetches, links and posters
-(off-list values become `null`, checked in the adapter and again by the service). Redirects are
+(off-list values become `null`, checked in the adapter and again by the service). Retrieved URLs
+have non-ASCII characters, spaces and control characters percent-encoded before that check
+(existing `%XX` escapes and other ASCII punctuation are kept), so a poster such as `Café.jpg` can
+be fetched; a URL that still cannot be sent fails as an ordinary unreachable source. Redirects are
 checked before they are followed (HTTPS, default port, no credentials, an allowed host; at most
-three). Connections go only to public unicast addresses, with the address checked being the
-address connected (a DNS-rebinding guard); IPv4 is tried first with a 5 s connect window per
-address. Reads time out after 15 s, a response must finish within 30 s and stay under 4,000,000
-bytes (posters: 10 s and 3 MiB). `HTTP(S)_PROXY` environment variables are ignored. The user agent
-is `Mozilla/5.0 (compatible; FirstRoll/0.1; +https://firstroll.app) screening-listings`.
+three), and each redirect's own body is closed unread. Connections go only to public unicast
+addresses, with the address checked being the address connected (a DNS-rebinding guard); IPv4 is
+tried first with a 5 s connect window per address.
+
+Each receive times out after 15 s. A whole request, redirects included, must finish within 30 s
+of starting: the limit is checked after every network read, no connect window runs past it,
+and a watchdog shuts the request's connections down when it runs out, so a host that trickles its
+status line, headers or body is cut off at 30 s and reported as too slow. DNS lookups are left to
+the system resolver and fall outside that limit. A response must stay under 4,000,000 bytes.
+Posters: 10 s per receive, 10 s in total and 3 MiB. `HTTP(S)_PROXY` environment variables are
+ignored. The user agent is
+`Mozilla/5.0 (compatible; FirstRoll/0.1; +https://firstroll.app) screening-listings`.
 
 **What visitors' browsers contact.** Only FirstRoll: the static site, the listings JSON and poster
 images from the API. Upstream poster URLs never leave the server; the browser accepts only
@@ -203,11 +213,16 @@ images from the API. Upstream poster URLs never leave the server; the browser ac
 sites open only when a visitor follows a booking, film or unlisted-venue link.
 
 **Failures.** Each source fails independently and is retried after five minutes. A failed or slow
-refresh keeps serving the last successful listings, marked `stale`, for up to 24 hours. The logger
-`firstroll.screenings` records a warning naming the source and the failure sentence or exception
-type, with the traceback; retrieved content is withheld. Times are Singapore time (UTC+8). The
-service keeps the next 14 days, drops sessions that started more than 30 minutes ago and removes
-duplicates. Retrieved text is rendered as escaped text only.
+refresh keeps serving the last successful listings, marked `stale`, for up to 24 hours; a venue
+whose last successful read found nothing stays `empty` (marked `stale`) while a slow refresh runs.
+A listings request waits at most 20 s for a refresh, counted from when that refresh started, so
+requests that arrive or queue for a listing thread during a long refresh are not held again.
+Browsers may cache listings for ten minutes only when every source is `ok`, `empty` or `unlisted`
+and none is stale; otherwise for 30 seconds, so a reload soon shows the read that finished. The
+logger `firstroll.screenings` records a warning naming the source and the failure sentence or
+exception type, with the traceback; retrieved content is withheld. Times are Singapore time
+(UTC+8). The service keeps the next 14 days, drops sessions that started more than 30 minutes ago
+and removes duplicates. Retrieved text is rendered as escaped text only.
 
 ### What reaches DeepSeek
 
@@ -488,8 +503,8 @@ quota; it cannot work through Caddy or any non-loopback host.
 | `X-FirstRoll-Run-ID` | Response | Run UUID on the Deep Study stream |
 | `Retry-After` | Response | On 429: seconds until the next UTC reset, minimum 60 |
 | `WWW-Authenticate: Bearer` | Response | On 401 |
-| `Cache-Control` | Response | `no-store` on `/`, `/assets/config.js`, run results and poster errors; `no-store, no-transform` on the stream; `public, max-age=600` on Singapore listings; `public, max-age=86400` on posters |
-| `Content-Encoding: gzip`, `Vary: Accept-Encoding` | Response | Singapore listings, gzipped when `Accept-Encoding` allows gzip |
+| `Cache-Control` | Response | `no-store` on `/`, `/assets/config.js`, run results and poster errors; `no-store, no-transform` on the stream; on Singapore listings `public, max-age=600` when every source is `ok`, `empty` or `unlisted` and none is stale, otherwise `public, max-age=30`; `public, max-age=86400` on posters |
+| `Content-Encoding: gzip`, `Vary: Accept-Encoding, Origin` | Response | Singapore listings, gzipped when `Accept-Encoding` allows gzip. `Origin` is listed because CORS headers are added only to allowed cross-origin requests, so a copy cached without them must not answer the site (CORS appends `Origin` once more on those requests) |
 | `Content-Security-Policy: default-src 'none'; sandbox`, `Cross-Origin-Resource-Policy: cross-origin`, `X-Content-Type-Options: nosniff` | Response | Poster images |
 | `Vary`, `X-Content-Type-Options: nosniff`, `X-Accel-Buffering: no` | Response | Stream (`Vary: Authorization, X-FirstRoll-DeepSeek-Key`; buffering disabled) and run results (`Vary: Authorization`) |
 
@@ -575,7 +590,7 @@ posters), so slow venues or image hosts cannot starve other synchronous routes.
 
 | Route | Parameters | Response |
 |---|---|---|
-| `GET /api/screenings/singapore` | — | `generated_at`; `timezone` (`Asia/Singapore`); `range` (`from`, `to`: 14 days including today); `sources` (`id`, `name`, `kind` = `multiplex`/`independent`/`cinematheque`/`museum`/`cultural`/`festival`, `url`, `state` = `ok`/`empty`/`error`/`unlisted`, `count`, `fetched_at`, `message`, `coverage_days` (14, Shaw 7, `null` when unlisted), `stale`); `screenings` (`title`, `venue`, `source`, `starts_at`, `date`, `url` on the source's link allow-list or `null`, `poster` as `/api/screenings/posters/<id>` or `null`, `details`), sorted by start time then title. Waits at most 20 s; a venue still loading is served stale or reported as an error while its read continues |
+| `GET /api/screenings/singapore` | — | `generated_at`; `timezone` (`Asia/Singapore`); `range` (`from`, `to`: 14 days including today); `sources` (`id`, `name`, `kind` = `multiplex`/`independent`/`cinematheque`/`museum`/`cultural`/`festival`, `url`, `state` = `ok`/`empty`/`error`/`unlisted`, `count`, `fetched_at`, `message`, `coverage_days` (14, Shaw 7, `null` when unlisted), `stale`); `screenings` (`title`, `venue`, `source`, `starts_at`, `date`, `url` on the source's link allow-list or `null`, `poster` as `/api/screenings/posters/<id>` or `null`, `details`), sorted by start time then title. Waits at most 20 s, counted from when each venue's refresh started; a venue still loading is served from its earlier successful read, marked `stale` (an empty read stays `empty`), or reported as an error while its read continues. Cached for ten minutes once every source has settled, otherwise 30 seconds |
 | `GET /api/screenings/posters/{poster_id}` | `poster_id`: 32 lowercase hex characters (the first 32 of the SHA-256 of the upstream HTTPS URL), listed within the last 24 hours | Image bytes whose type is sniffed (`image/jpeg`, `png`, `webp`, `gif` or `avif`; the upstream must declare one too, and SVG or HTML is never served); 404 `Unknown poster.` for malformed, unknown or expired IDs; 502 `The poster could not be fetched.` |
 
 ### Deep Study

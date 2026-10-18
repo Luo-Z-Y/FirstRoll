@@ -169,6 +169,6 @@ export function summaryText(listings: Listings, films: FilmGroup[], day: string 
     `${plural(films.length, "film")} at ${plural(venueCount, "venue")}`,
     failed ? `${plural(failed, "source")} unavailable` : "",
     stale ? `${plural(stale, "source")} showing earlier listings` : "",
-    ...short.map((source) => `${source.name} lists only the next ${plural(source.coverageDays || 0, "day")}`),
+    ...short.map((source) => `${source.name}: times read for the next ${plural(source.coverageDays || 0, "day")}`),
   ].filter(Boolean).join(" · ");
 }

@@ -68,10 +68,35 @@ test("small-screen header keeps shrinkable tracks and a later stacked brand over
   const narrow = css.lastIndexOf("@media (max-width: 380px)");
   const mobile = css.lastIndexOf("@media (max-width: 640px)");
   assert.ok(narrow > mobile && mobile > 0);
+  // Five destinations, the build label and the longest signed-in identity overflow one row
+  // below about 1,190px (measured with the real fonts), so the nav takes its own row below
+  // 1,200px; phones then refine it.
+  const tablet = css.lastIndexOf("@media (max-width: 1199px)");
+  assert.ok(tablet > 0 && tablet < mobile);
+  const tabletRules = css.slice(tablet, css.indexOf("\n}", tablet));
+  assert.match(tabletRules, /\.site-header\s*\{[^}]*grid-template-columns: minmax\(0, 1fr\) auto;/);
+  assert.match(tabletRules, /\.site-header\s*\{[^}]*grid-template-areas: "brand tools" "nav nav";/);
+  assert.match(tabletRules, /\.brand\s*\{[^}]*grid-area: brand;/);
+  assert.match(tabletRules, /\.primary-nav\s*\{[^}]*grid-area: nav;/);
+  assert.match(tabletRules, /\.header-tools\s*\{[^}]*grid-area: tools;/);
   const rules = css.slice(mobile, narrow);
   assert.match(rules, /\.site-header\s*\{[^}]*grid-template-columns: minmax\(0, 1fr\) auto;/);
   assert.match(rules, /\.primary-nav\s*\{[^}]*min-width: 0;/);
   assert.match(rules, /\.primary-nav \.nav-link\s*\{[^}]*min-width: 0;[^}]*min-height: 44px;/);
   assert.match(css.slice(narrow), /\.brand\s*\{[^}]*display: grid;/);
   assert.match(css.slice(narrow), /\.brand \.build-identity\s*\{[^}]*grid-column: 1 \/ -1;/);
+});
+
+test("days with no films keep their label contrast and are marked by a dashed rule", () => {
+  const root = path.resolve(__dirname, "../..");
+  const stylesheet = process.env.FIRSTROLL_TEST_APP
+    ? path.join(path.dirname(path.resolve(root, process.env.FIRSTROLL_TEST_APP)), "styles.css")
+    : path.join(root, "app/web/styles.css");
+  const css = transformSync(readFileSync(stylesheet, "utf8"), { loader: "css" }).code;
+  // A quiet day is still an enabled toggle, so fading it would take its label below 4.5:1.
+  assert.match(css, /\.screenings-days button\.is-quiet\s*\{[^}]*border-style: dashed;/);
+  for (const [, selector, body] of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+    if (!/\.screenings-days button(?![\w-]| span)/.test(selector)) continue;
+    assert.doesNotMatch(body, /opacity:/, selector.trim());
+  }
 });

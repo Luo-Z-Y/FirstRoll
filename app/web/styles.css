@@ -2104,9 +2104,10 @@ button.festival-calendar-row:hover, .festival-calendar-row.is-selected { backgro
   transition: background-color 200ms var(--ease-fluid), color 200ms var(--ease-fluid);
 }
 .screenings-days button span { font-family: "IBM Plex Mono", monospace; font-size: 0.62rem; opacity: 0.7; }
-.screenings-days button.is-quiet { opacity: 0.55; }
+/* Days with no films stay enabled, so mark them with a dashed rule rather than fading the label. */
+.screenings-days button.is-quiet { border-style: dashed; }
 .screenings-kinds button:hover, .screenings-days button:hover { background: var(--control-fill-hover); color: var(--ink); }
-.screenings-kinds button[aria-pressed="true"], .screenings-days button[aria-pressed="true"] { background: var(--inverse-bg); color: var(--inverse-text); border-color: transparent; opacity: 1; }
+.screenings-kinds button[aria-pressed="true"], .screenings-days button[aria-pressed="true"] { background: var(--inverse-bg); color: var(--inverse-text); border-color: transparent; }
 .screenings-search { width: min(260px, 100%); padding: 8px 12px; border: 1px solid var(--line); border-radius: 999px; background: var(--control-fill); color: var(--ink); font: 500 0.82rem "DM Sans", sans-serif; }
 .screenings-list { display: flex; flex-direction: column; border-top: 1px solid var(--line); }
 .screenings-list[aria-busy="true"] { cursor: progress; }
@@ -2170,9 +2171,17 @@ button.festival-calendar-row:hover, .festival-calendar-row.is-selected { backgro
   .search-field:nth-of-type(3) { border-right: 0; }
 }
 
+/* Five destinations, the build label and the longest signed-in identity (190px) need about
+   1,190px on one row (measured with the real fonts), so narrower windows give the nav its own row. */
+@media (max-width: 1199px) {
+  .site-header { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "brand tools" "nav nav"; row-gap: 10px; padding: 10px 0 12px; }
+  .brand { grid-area: brand; }
+  .primary-nav { grid-area: nav; justify-self: center; }
+  .header-tools { grid-area: tools; }
+}
+
 @media (max-width: 900px) {
   .app-shell { padding: 0 20px; }
-  .site-header { grid-template-columns: 1fr auto; }
   .criterion-object { width: min(100%, 340px); }
   .detail-hero { grid-template-columns: 1fr; padding: 38px; }
   .detail-facts { border-left: 0; border-top: 1px solid var(--line-night); padding: 18px 0 0; }

@@ -27,7 +27,7 @@ export interface SourceStatus {
   state: SourceState;
   count: number;
   message: string | null;
-  // How many days ahead the venue publishes, when the API reports it (Shaw: 7).
+  // How many days ahead FirstRoll reads this source, when the API reports it (Shaw: 7).
   coverageDays: number | null;
   // True when FirstRoll is serving an earlier copy because the latest read failed.
   stale: boolean;
@@ -206,7 +206,7 @@ export function kindIncludes(filter: KindFilter, kind: VenueKind | undefined): b
   return true;
 }
 
-// True when the chosen day lies past the last day this source publishes.
+// True when the chosen day lies past the last day FirstRoll reads from this source.
 export function beyondCoverage(source: SourceStatus, day: string | null, from: string): boolean {
   return Boolean(day && from && source.coverageDays !== null && day >= addDays(from, source.coverageDays));
 }

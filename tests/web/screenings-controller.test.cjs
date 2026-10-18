@@ -214,11 +214,32 @@ test("failed and timed-out requests offer a retry that loads again", async () =>
   await settle();
   assert.match(h.refs.list.innerHTML, /took too long[\s\S]*data-screenings-retry/);
   assert.equal(h.retryButton.focused, 1);
+  assert.equal(h.refs["day-title"].focused, 0);
+  // Removing the focused button drops focus to the page; a success lands it on the day heading.
+  h.document.activeElement = h.document.body;
   h.refs.list.fire("click", { target: h.target({ screeningsRetry: "" }) });
   assert.equal(h.requests.length, 3);
   await respond(h);
   assert.match(h.refs.list.innerHTML, /screenings-film/);
   assert.equal(h.refs.summary.textContent, "2 films at 2 venues · 1 source showing earlier listings");
+  assert.equal(h.refs["day-title"].focused, 1);
+  assert.equal(h.retryButton.focused, 1);
+});
+
+test("a retry leaves focus alone when the visitor moved it during the load", async () => {
+  const h = harness();
+  h.viewChanged("screenings");
+  await respond(h, {}, { ok: false, status: 503 });
+  h.document.activeElement = h.refs.query;
+  h.refs.list.fire("click", { target: h.target({ screeningsRetry: "" }) });
+  await respond(h, {}, { ok: false, status: 503 });
+  assert.match(h.refs.list.innerHTML, /could not be loaded[\s\S]*data-screenings-retry/);
+  assert.equal(h.retryButton.focused, 0);
+  h.refs.list.fire("click", { target: h.target({ screeningsRetry: "" }) });
+  await respond(h);
+  assert.match(h.refs.list.innerHTML, /screenings-film/);
+  assert.equal(h.refs["day-title"].focused, 0);
+  assert.equal(h.refs.query.focused, 0);
 });
 
 test("loaded listings render days, sources, the unlisted note and proxied posters", async () => {
@@ -284,9 +305,9 @@ test("day and kind choices update pressed states, counts, heading and summary", 
   h.kindButtons[0].parentElement.fire("click", { target: h.kindButtons[2] });
   assert.match(h.refs.days.innerHTML, /aria-label="Today, 1 film"/);
   assert.match(h.refs.days.innerHTML, /aria-label="Tomorrow, 1 film"/);
-  // Past Shaw's seven published days, the summary says why multiplex listings stop.
+  // Past the seven days FirstRoll reads from Shaw, the summary says why multiplex listings stop.
   h.refs.days.fire("click", { target: h.target({ screeningsDay: "2026-10-24" }) });
-  assert.equal(h.refs.summary.textContent, "0 films at 0 venues · 1 source showing earlier listings · Shaw Theatres lists only the next 7 days");
+  assert.equal(h.refs.summary.textContent, "0 films at 0 venues · 1 source showing earlier listings · Shaw Theatres: times read for the next 7 days");
 });
 
 test("title filtering waits for a pause in typing before updating the list and live summary", async () => {

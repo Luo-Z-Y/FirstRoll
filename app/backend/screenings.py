@@ -7,9 +7,12 @@ source state instead of an empty listing. This module schedules and caches the r
 
 * Each venue is refreshed by one in-flight read at a time (single-flight), on a
   long-lived bounded pool, so concurrent visitors never multiply upstream requests.
-* A request waits at most ``deadline_seconds`` in total. A venue still being read after
-  that is served from its earlier listings, marked ``stale``, or reported as an error;
-  its read carries on in the background and fills the cache for the next request.
+* A request waits at most ``deadline_seconds`` in total, and no read holds visitors for
+  longer than ``deadline_seconds`` after it started: requests that arrive, or queue for a
+  listing thread, while a long read runs wait only for what is left of its deadline. A
+  venue still being read after that is served from its earlier successful read (with
+  listings or without), marked ``stale``, or reported as an error; its read carries on in
+  the background and fills the cache for the next request.
 * A refresh that fails keeps serving the earlier listings, marked ``stale``, for up to
   a day, and is retried after ``FAILURE_CACHE_SECONDS``.
 * Booking links and posters survive only on each adapter's allow-listed hosts, and
@@ -82,6 +85,7 @@ class ScreeningsService:
         self.deadline_seconds = deadline_seconds
         self._cache: dict[str, _Entry] = {}
         self._inflight: dict[str, Future[None]] = {}
+        self._started: dict[str, float] = {}  # time.monotonic() when each read was submitted.
         self._venue_locks = {adapter.venue.id: threading.Lock() for adapter in self.adapters}
         self._lock = threading.Lock()
         # Threads start on first use and the pool lives as long as the service. With one
@@ -102,8 +106,11 @@ class ScreeningsService:
             for adapter in self.adapters
             if self._due(adapter, now_ts)
         }
-        if refreshing:
-            wait(list(refreshing.values()), timeout=self.deadline_seconds)
+        # The deadline runs from when each read started, not from when this request arrived.
+        for future, started in refreshing.values():
+            remaining = started + self.deadline_seconds - time.monotonic()
+            if remaining > 0:
+                wait([future], timeout=remaining)
 
         statuses: list[dict[str, Any]] = []
         screenings: list[dict[str, Any]] = []
@@ -111,8 +118,8 @@ class ScreeningsService:
         cutoff = now - timedelta(minutes=30)
         first, last = today.isoformat(), last_day.isoformat()
         for adapter in self.adapters:
-            future = refreshing.get(adapter.venue.id)
-            status, items = self._current(adapter, self.clock(), future is not None and not future.done())
+            pending = adapter.venue.id in refreshing and not refreshing[adapter.venue.id][0].done()
+            status, items = self._current(adapter, self.clock(), pending)
             link_hosts = frozenset(getattr(adapter, "link_hosts", ()))
             poster_hosts = frozenset(getattr(adapter, "poster_hosts", ()))
             kept = 0
@@ -157,14 +164,18 @@ class ScreeningsService:
             entry = self._cache.get(adapter.venue.id)
         return entry is None or entry.expires <= now
 
-    def _refresh_in_background(self, adapter: ScreeningAdapter, today: date) -> Future[None]:
+    def _refresh_in_background(
+        self, adapter: ScreeningAdapter, today: date
+    ) -> tuple[Future[None], float]:
+        """The venue's in-flight read, started now if none is running, and its start time."""
         venue_id = adapter.venue.id
         with self._lock:
             future = self._inflight.get(venue_id)
             if future is None or future.done():
+                self._started[venue_id] = time.monotonic()
                 future = self._executor.submit(self._refresh, adapter, today)
                 self._inflight[venue_id] = future
-        return future
+            return future, self._started[venue_id]
 
     def _current(
         self, adapter: ScreeningAdapter, now: float, pending: bool
@@ -175,8 +186,9 @@ class ScreeningsService:
             entry = self._cache.get(adapter.venue.id)
         if entry is not None and not pending:
             return entry.status, entry.items
-        # Still being read after the deadline: earlier listings stand in, marked stale.
-        if entry is not None and entry.items and self._recent(entry, now):
+        # Still being read after the deadline: the earlier successful read stands in, marked
+        # stale, even when it found nothing (a venue with no films is not a failure).
+        if entry is not None and self._recent(entry, now):
             status = entry.status.model_copy(update={"stale": True, "message": SLOW_MESSAGE})
             return status, entry.items
         return self._status(adapter, now, "error", message=SLOW_MESSAGE), ()

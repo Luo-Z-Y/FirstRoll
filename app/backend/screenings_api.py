@@ -3,6 +3,12 @@
 Both routes run their blocking work on their own small thread limiters rather than on
 the shared default pool, so a slow venue or image host can never starve
 ``/api/health`` or any other synchronous route of threads.
+
+Listings are cached by browsers for ten minutes only when every venue has settled (read,
+empty or unlisted, and nothing stale); while a venue is still loading, failed or stale the
+lifetime is thirty seconds, so a reload soon picks up the read that finished meanwhile.
+Responses vary by ``Origin`` as well as ``Accept-Encoding``, because CORS headers are added
+only to cross-origin requests and a copy cached without them must not answer the site.
 """
 
 from __future__ import annotations
@@ -10,6 +16,7 @@ from __future__ import annotations
 import gzip
 import json
 from functools import partial
+from typing import Any
 
 import anyio
 import anyio.to_thread
@@ -21,7 +28,10 @@ from app.backend.screenings_posters import POSTER_ID, PosterNotFound, PosterUnav
 
 LISTING_THREADS = 3
 POSTER_THREADS = 4
-LISTING_HEADERS = {"Cache-Control": "public, max-age=600", "Vary": "Accept-Encoding"}
+LISTING_HEADERS = {"Vary": "Accept-Encoding, Origin"}
+SETTLED_CACHE = "public, max-age=600"
+UNSETTLED_CACHE = "public, max-age=30"
+SETTLED_STATES = frozenset({"ok", "empty", "unlisted"})
 POSTER_HEADERS = {
     "Cache-Control": "public, max-age=86400",
     "X-Content-Type-Options": "nosniff",
@@ -63,9 +73,20 @@ def accepts_gzip(header: str) -> bool:
     return weights.get("*", 0.0) > 0
 
 
-def encoded_listings(service: ScreeningsService, compress: bool) -> bytes:
-    body = json.dumps(service.listings(), ensure_ascii=False, separators=(",", ":")).encode("utf-8")
-    return gzip.compress(body, compresslevel=6, mtime=0) if compress else body
+def listings_settled(listings: dict[str, Any]) -> bool:
+    """Whether every source has a settled answer worth caching for ten minutes."""
+    return all(
+        source.get("state") in SETTLED_STATES and not source.get("stale")
+        for source in listings.get("sources", ())
+    )
+
+
+def encoded_listings(service: ScreeningsService, compress: bool) -> tuple[bytes, bool]:
+    """The listings JSON, gzipped if asked, and whether every source has settled."""
+    listings = service.listings()
+    body = json.dumps(listings, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    encoded = gzip.compress(body, compresslevel=6, mtime=0) if compress else body
+    return encoded, listings_settled(listings)
 
 
 def add_screenings_routes(app: FastAPI, service: ScreeningsService) -> None:
@@ -75,11 +96,11 @@ def add_screenings_routes(app: FastAPI, service: ScreeningsService) -> None:
     async def singapore_screenings(request: Request) -> Response:
         """Public listings from Singapore venues; each venue is cached and fails independently."""
         compress = accepts_gzip(request.headers.get("accept-encoding", ""))
-        body = await anyio.to_thread.run_sync(
+        body, settled = await anyio.to_thread.run_sync(
             partial(encoded_listings, service, compress),
             limiter=_limiter(_listing_limiter, LISTING_THREADS),
         )
-        headers = dict(LISTING_HEADERS)
+        headers = {**LISTING_HEADERS, "Cache-Control": SETTLED_CACHE if settled else UNSETTLED_CACHE}
         if compress:
             headers["Content-Encoding"] = "gzip"
         return Response(content=body, media_type="application/json", headers=headers)

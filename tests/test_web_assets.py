@@ -523,6 +523,12 @@ def test_singapore_listings_tab_is_shipped_and_reads_only_the_firstroll_api() ->
 
     assert 'data-product-view="screenings">Cinemas</button>' in index
     assert 'id="product-screenings"' in index
+    # A successful retry moves focus here, so the heading must accept scripted focus.
+    assert '<h2 data-screenings-day-title tabindex="-1">' in index
+    # The seven-day Shaw window is how far FirstRoll reads, not a claim about Shaw itself.
+    assert "(Shaw is read a week ahead)" in index
+    assert "Shaw publishes" not in index
+    assert "lists only the next" not in screenings
     assert '"/assets/screenings.js?v=20261018-1"' in index
     assert 'screenings: requiredElement<HTMLElement>("product-screenings")' in app
     assert '"screenings"' in build

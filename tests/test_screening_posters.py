@@ -3,6 +3,7 @@
 import asyncio
 import email.message
 import hashlib
+import http.client
 import io
 import socket
 import threading
@@ -260,9 +261,35 @@ def test_poster_route_answers_404_for_unknown_ids_and_502_for_upstream_failures(
     assert "svg" not in failed.headers["content-type"]
 
 
-def fake_upstream(monkeypatch, script: dict[str, tuple[int, dict[str, str], bytes]]) -> list:
-    """Replace the guarded HTTPS handler's network step with scripted responses."""
+class ScriptedBody(io.BytesIO):
+    """A scripted response body that counts what is read from it and, like
+    ``http.client.HTTPResponse``, reads as empty once closed."""
+
+    def __init__(self, body: bytes, consumed: dict[str, int], url: str) -> None:
+        super().__init__(body)
+        self.consumed, self.url = consumed, url
+
+    def _count(self, chunk: bytes) -> bytes:
+        self.consumed[self.url] = self.consumed.get(self.url, 0) + len(chunk)
+        return chunk
+
+    def read(self, size: int | None = -1) -> bytes:
+        return b"" if self.closed else self._count(super().read(size))
+
+    def read1(self, size: int = -1) -> bytes:
+        return b"" if self.closed else self._count(super().read1(size))
+
+
+def fake_upstream(
+    monkeypatch,
+    script: dict[str, tuple[int, dict[str, str], bytes]],
+    consumed: dict[str, int] | None = None,
+) -> list:
+    """Replace the guarded HTTPS handler's network step with scripted responses.
+
+    ``consumed``, when given, collects how many body bytes were read for each URL."""
     opened: list[tuple[str, dict[str, str]]] = []
+    counts = {} if consumed is None else consumed
 
     def https_open(self, request):
         opened.append((request.full_url, {key.casefold(): value for key, value in request.header_items()}))
@@ -270,7 +297,8 @@ def fake_upstream(monkeypatch, script: dict[str, tuple[int, dict[str, str], byte
         message = email.message.Message()
         for key, value in headers.items():
             message[key] = value
-        response = urllib.response.addinfourl(io.BytesIO(body), message, request.full_url, code=status)
+        response = urllib.response.addinfourl(
+            ScriptedBody(body, counts, request.full_url), message, request.full_url, code=status)
         response.msg = "OK" if status == 200 else "Found"
         return response
 
@@ -339,6 +367,55 @@ def test_responses_are_bounded_in_size_and_malformed_json_is_reported(monkeypatc
         request_json("https://venue.example/bad.json", allowed_hosts={"venue.example"})
     with pytest.raises(ScreeningError, match="own HTTPS"):
         request_bytes("https://other.example/", allowed_hosts={"venue.example"}, accept="*/*")
+
+
+def test_redirect_bodies_are_closed_unread_rather_than_buffered(monkeypatch) -> None:
+    consumed: dict[str, int] = {}
+    fake_upstream(monkeypatch, {
+        "https://shaw.sg/start": (302, {"Location": "https://www.shaw.sg/final"}, b"x" * 5_000_000),
+        "https://www.shaw.sg/final": (200, {"Content-Type": "application/json"}, b"[]"),
+    }, consumed)
+
+    body, _, _ = request_bytes("https://shaw.sg/start", allowed_hosts={"shaw.sg", "www.shaw.sg"},
+                               accept="application/json", max_bytes=1000)
+
+    assert body == b"[]"
+    # The standard handler would read all 5 MB of the redirect, past the 1,000-byte cap.
+    assert consumed.get("https://shaw.sg/start", 0) == 0
+    assert consumed["https://www.shaw.sg/final"] == 2
+
+
+def test_a_url_http_cannot_encode_is_a_screening_error_before_any_socket(monkeypatch, fake_sockets) -> None:
+    resolve_to(monkeypatch, "93.184.216.34")
+
+    with pytest.raises(ScreeningError, match="could not be reached"):
+        request_bytes("https://img.venue.example/café.jpg", allowed_hosts=HOSTS, accept="image/*")
+    assert fake_sockets == []
+
+
+def test_poster_route_answers_a_remembered_502_for_a_url_http_cannot_encode(monkeypatch) -> None:
+    lookups: list[str] = []
+
+    def getaddrinfo(host, *args, **kwargs):
+        lookups.append(host)
+        raise OSError("No network in tests.")
+
+    # Not fake_sockets: the test client's event loop needs real sockets for its own wake-ups.
+    monkeypatch.setattr(socket, "getaddrinfo", getaddrinfo)
+    proxy = PosterProxy()  # The real guarded transport.
+    poster = identifier(proxy.register("https://img.venue.example/くちづけ.jpg", HOSTS))
+    monkeypatch.setenv("FIRSTROLL_PUBLIC_MODE", "true")
+    application = main.create_api_application(public_mode=True)
+    add_screenings_routes(application, ScreeningsService([], posters=proxy))
+    client = TestClient(application, raise_server_exceptions=False)
+
+    failed = client.get(f"/api/screenings/posters/{poster}")
+
+    assert failed.status_code == 502
+    assert failed.headers["cache-control"] == "no-store"
+    assert failed.headers["x-content-type-options"] == "nosniff"
+    assert poster in proxy._failures
+    assert lookups == []  # It failed while building the request, before any lookup.
 
 
 def test_only_plain_https_urls_on_listed_hosts_are_allowed() -> None:
@@ -417,6 +494,27 @@ def test_a_rebound_private_answer_is_skipped_for_the_public_one(monkeypatch, fak
     assert [attempt for sock in fake_sockets for attempt in sock.attempts] == ["93.184.216.34"]
 
 
+def test_the_guarded_opener_refuses_a_private_resolution_before_any_socket(monkeypatch, fake_sockets) -> None:
+    """The real opener must connect through the guard, not http.client's own connect."""
+    resolve_to(monkeypatch, "127.0.0.1")
+
+    with pytest.raises(ScreeningError) as raised:
+        request_bytes("https://shaw.sg/x", allowed_hosts={"shaw.sg"}, accept="*/*")
+
+    assert "public address" in str(raised.value.__cause__.reason)
+    assert fake_sockets == []
+
+
+def test_connect_windows_stay_within_the_requests_total_limit(monkeypatch, fake_sockets) -> None:
+    resolve_to(monkeypatch, "2606:4700:4700::1111")  # FakeSocket never answers on IPv6.
+
+    with pytest.raises(ScreeningError, match="could not be reached"):
+        request_bytes("https://venue.example/x", allowed_hosts={"venue.example"}, accept="*/*",
+                      timeout=15, total_seconds=1.0)
+
+    assert 0 < fake_sockets[0].timeouts[0] <= 1.0
+
+
 @pytest.mark.parametrize("timeout", [None, socket._GLOBAL_DEFAULT_TIMEOUT, "15", True, float("nan"),
                                      float("inf"), -1, 0])
 def test_non_numeric_timeouts_never_leave_a_blocking_socket(monkeypatch, fake_sockets, timeout) -> None:
@@ -480,3 +578,165 @@ def test_slow_poster_hosts_use_their_own_four_threads(monkeypatch) -> None:
 
     assert [response.status_code for response in responses] == [200] * 7
     assert active["most"] == POSTER_THREADS
+
+
+# Total time limit. These harnesses use only local sockets: a socketpair, or a plain-TCP
+# loopback server reached through the real guarded opener with TLS (and only TLS) skipped.
+TRICKLE_LIMIT = 0.5
+TRICKLE_BOUND = 1.5  # The limit plus a generous margin; every trickle below lasts 3 s or more.
+
+
+class TricklingVenue:
+    """A loopback server that answers one request from a script of (bytes, pause before)."""
+
+    def __init__(self, steps: list[tuple[bytes, float]]) -> None:
+        self.server = socket.create_server(("127.0.0.1", 0))
+        self.server.settimeout(5)
+        self.port = self.server.getsockname()[1]
+        self.steps = steps
+        self.stop = threading.Event()
+        self.thread = threading.Thread(target=self._serve, daemon=True)
+        self.thread.start()
+
+    def _serve(self) -> None:
+        try:
+            connection, _ = self.server.accept()
+        except OSError:
+            return
+        with connection:
+            connection.settimeout(5)
+            try:
+                request = b""
+                while b"\r\n\r\n" not in request:
+                    part = connection.recv(4096)
+                    if not part:
+                        return
+                    request += part
+                for data, pause in self.steps:
+                    if self.stop.wait(pause):
+                        return
+                    connection.sendall(data)
+            except OSError:
+                return
+
+    def close(self) -> None:
+        self.stop.set()
+        self.server.close()
+        self.thread.join(5)
+
+
+@pytest.fixture
+def loopback_venue(monkeypatch):
+    """Start a TricklingVenue that the real guarded opener reaches for any host."""
+    venues: list[TricklingVenue] = []
+
+    def start(steps: list[tuple[bytes, float]]) -> TricklingVenue:
+        venue = TricklingVenue(steps)
+        venues.append(venue)
+        monkeypatch.setattr(socket, "getaddrinfo", lambda host, port, *args, **kwargs: [
+            (socket.AF_INET, socket.SOCK_STREAM, 6, "", ("127.0.0.1", venue.port))])
+        return venue
+
+    monkeypatch.setattr(screenings_http, "public_address", lambda raw: raw == "127.0.0.1")
+    monkeypatch.setattr(screenings_http._GuardedConnection, "connect", http.client.HTTPConnection.connect)
+    yield start
+    for venue in venues:
+        venue.close()
+
+
+def trickled(data: bytes, pause: float) -> list[tuple[bytes, float]]:
+    return [(bytes([byte]), pause) for byte in data]
+
+
+TRICKLES = {
+    "status line": trickled(b"HTTP/1.1 200 OK\r\n", 0.2)
+    + [(b"Content-Length: 2\r\n\r\nok", 0)],
+    "headers": [(b"HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nX-Padding: ", 0)]
+    + [(b"a", 0.1)] * 30 + [(b"\r\nContent-Length: 2\r\n\r\nok", 0)],
+    "chunk size": [(b"HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n", 0)]
+    + [(b"0", 0.1)] * 30 + [(b"2\r\nok\r\n0\r\n\r\n", 0)],
+    "body": [(b"HTTP/1.1 200 OK\r\nContent-Length: 30\r\n\r\n", 0)] + [(b"x", 0.1)] * 30,
+}
+
+
+@pytest.mark.parametrize("phase", list(TRICKLES))
+def test_a_host_trickling_any_part_of_its_answer_is_cut_off_at_the_total_limit(
+    loopback_venue, phase: str
+) -> None:
+    loopback_venue(TRICKLES[phase])
+
+    started = time.monotonic()
+    with pytest.raises(ScreeningError, match="took too long"):
+        request_bytes("https://venue.example/slow", allowed_hosts={"venue.example"}, accept="*/*",
+                      timeout=2, total_seconds=TRICKLE_LIMIT)
+
+    assert time.monotonic() - started < TRICKLE_BOUND
+
+
+def test_a_prompt_answer_passes_and_its_watchdog_is_always_stopped(loopback_venue, monkeypatch) -> None:
+    watchdogs: list = []
+
+    class Recorded(screenings_http._Watchdog):
+        def __init__(self, seconds: float) -> None:
+            super().__init__(seconds)
+            self.registered = 0
+            watchdogs.append(self)
+
+        def add(self, sock) -> None:
+            self.registered += 1
+            super().add(sock)
+
+    monkeypatch.setattr(screenings_http, "_Watchdog", Recorded)
+    loopback_venue([(b"HTTP/1.1 200 OK\r\nContent-Type: text/plain; charset=utf-8\r\n"
+                     b"Content-Length: 2\r\n\r\nok", 0)])
+
+    assert request_bytes("https://venue.example/x", allowed_hosts={"venue.example"}, accept="*/*",
+                         total_seconds=5) == (b"ok", "text/plain", "utf-8")
+    with pytest.raises(ScreeningError):
+        request_bytes("https://elsewhere.example/x", allowed_hosts={"venue.example"}, accept="*/*")
+
+    [first] = watchdogs  # The refused host never opened a request.
+    assert first.registered == 1  # The connection was handed to the watchdog.
+    assert first._timer.finished.is_set() and first._sockets == [] and not first.spent()
+    assert getattr(screenings_http._watch, "current", None) is None
+
+
+def test_the_total_limit_is_checked_after_every_receive(monkeypatch) -> None:
+    """Even on a connection the watchdog never saw, a trickled body stops at the limit."""
+    client, server = socket.socketpair()
+    stop = threading.Event()
+
+    def trickle() -> None:
+        with server:
+            try:
+                server.sendall(b"HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: 40\r\n\r\n")
+                for _ in range(40):
+                    if stop.wait(0.1):
+                        return
+                    server.sendall(b"x")
+            except OSError:
+                return
+
+    class SocketpairOpener:
+        def open(self, request, timeout):
+            client.settimeout(timeout)
+            response = http.client.HTTPResponse(client, method="GET", url=request.full_url)
+            response.begin()
+            response.url = request.full_url
+            return response
+
+    monkeypatch.setattr(screenings_http, "guarded_opener", lambda hosts: SocketpairOpener())
+    sender = threading.Thread(target=trickle, daemon=True)
+    sender.start()
+    started = time.monotonic()
+    try:
+        with pytest.raises(ScreeningError, match="took too long"):
+            request_bytes("https://venue.example/slow", allowed_hosts={"venue.example"}, accept="*/*",
+                          timeout=2, total_seconds=TRICKLE_LIMIT)
+        elapsed = time.monotonic() - started
+    finally:
+        stop.set()
+        client.close()
+        sender.join(5)
+
+    assert elapsed < TRICKLE_BOUND

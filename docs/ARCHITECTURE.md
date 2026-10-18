@@ -301,20 +301,27 @@ hypotheses.
 ### Singapore screening listings
 
 ```text
-browser → GET /api/screenings/singapore (3-thread limiter, ≤ 20 s)
+browser → GET /api/screenings/singapore (3-thread limiter, ≤ 20 s from each refresh's start)
 → ScreeningsService: each venue whose cache has expired is read once (single-flight), on a pool of
   up to 8 threads, through the guarded HTTPS transport
 → adapter parses the venue's page or JSON into Screening records
 → service keeps 14 days, drops sessions >30 minutes old and duplicates, re-checks link hosts and
   swaps each allow-listed poster URL for /api/screenings/posters/<id>
-→ gzipped JSON, Cache-Control: public, max-age=600
+→ gzipped JSON, Vary: Accept-Encoding, Origin; Cache-Control: public, max-age=600 when every
+  venue has settled (ok, empty or unlisted, none stale), otherwise public, max-age=30
 browser → GET {apiBase}/api/screenings/posters/<id> (4-thread limiter)
-→ PosterProxy: registered ID only → guarded download (10 s, 3 MiB) → sniffed raster type → bytes
+→ PosterProxy: registered ID only → guarded download (10 s in total, 3 MiB) → sniffed raster type
+  → bytes
 ```
 
-A venue still loading after the deadline is served from its earlier listings, marked `stale`, or
-reported as an error while its read finishes in the background; a failed refresh keeps serving the
-last good listings for up to a day. Nothing from this flow enters a Deep Study packet. Sources,
+The 20 s deadline runs from when each venue's refresh started, so requests that arrive, or queue
+for one of the three listing threads, while a long refresh runs are not held for a fresh 20 s. A
+venue still loading after the deadline is served from its earlier successful read, marked `stale`
+(a read that found nothing stays `empty`), or reported as an error while its read finishes in the
+background; a failed refresh keeps serving the last good listings for up to a day. Each guarded
+request has its own 30 s limit (posters 10 s), redirects included: a watchdog shuts its
+connections down when the limit runs out, so a host that trickles bytes cannot hold a pool thread
+past it. Nothing from this flow enters a Deep Study packet. Sources,
 lifetimes and terms notes are in [Data](DATA.md#singapore-screening-listings).
 
 ## 5. Evidence and Reliability Rules
@@ -405,10 +412,10 @@ may support.
 | Account rows exposed | RLS `auth.uid() = user_id`; no `anon` privileges; quota tables in a revoked schema behind `security definer` functions | Depends on Supabase configuration staying intact |
 | Private material leaves the device | Only selected excerpts reach DeepSeek; `.firstroll` ignored; allow-list build context | Selected excerpts do reach an external provider |
 | Server-side request forgery through venue reads or the poster proxy | No route accepts a URL. Adapters request fixed URLs on per-source host allow-lists; poster IDs resolve only to URLs the service registered from allow-listed poster hosts in the last 24 hours. HTTPS on the default port without credentials; redirects validated before following (at most three); connections only to public unicast addresses, checking the address actually connected (DNS rebinding); environment proxies ignored | A compromised or redirected allow-listed venue host can still return arbitrary content, bounded as below |
-| Hostile or oversized venue responses | 15 s read timeout, 30 s total, 4,000,000-byte cap (posters 10 s and 3 MiB); parsers keep bounded fields; text rendered escaped; links kept only on allow-listed hosts | A redesigned page can make a source fail or mislabel times; the source list reports failures |
+| Hostile or oversized venue responses | 15 s per receive; 30 s per request, redirects included, checked after every network read and enforced by a watchdog that shuts the connection down; 4,000,000-byte cap, with redirect bodies closed unread (posters: 10 s per receive, 10 s per request, 3 MiB); parsers keep bounded fields; text rendered escaped; links kept only on allow-listed hosts | A redesigned page can make a source fail or mislabel times; the source list reports failures. DNS lookups are bounded only by the system resolver |
 | Poster proxy serves active content | Type sniffed from the bytes and also declared upstream: JPEG, PNG, WebP, GIF or AVIF only, never SVG or HTML; `nosniff`, `Content-Security-Policy: default-src 'none'; sandbox`; errors `no-store` | — |
 | Venue hosts track visitors | Browsers contact only FirstRoll for listings and posters (`referrerpolicy="no-referrer"` on images); venue sites see a visitor only after a deliberate click | FirstRoll's server address and user agent are visible to every venue |
-| Slow venues exhaust workers | Single-flight per venue on a pool of at most 8 threads; separate limiters of 3 (listings) and 4 (posters) threads; a 20 s listing deadline | No per-client rate limit; repeated poster misses can still trigger upstream fetches (failures are remembered for ten minutes) |
+| Slow venues exhaust workers | Single-flight per venue on a pool of at most 8 threads; separate limiters of 3 (listings) and 4 (posters) threads; a 20 s listing deadline counted from each refresh's start, so queued requests are not held again | No per-client rate limit; repeated poster misses can still trigger upstream fetches (failures are remembered for ten minutes) |
 | Host or container compromise | `no-new-privileges` on both containers; the API also drops all capabilities, has a 768 MB default memory limit and publishes no port; `ufw`, key-only SSH, unattended security updates | The API runs as root inside its container; the Docker group is root-equivalent |
 
 ### Release-path threats and controls

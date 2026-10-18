@@ -298,7 +298,7 @@ test("source list, note, day pills and summary escape every provider value", () 
   assert.ok(views.failureMarkup(false).includes("data-screenings-retry"));
   const films = model.groupFilms(listings, { day: "2026-10-17", kind: "all", query: "" });
   assert.equal(views.summaryText(listings, films, "2026-10-17", "all"), "0 films at 0 venues · 1 source unavailable · 1 source showing earlier listings");
-  assert.match(views.summaryText(listings, [], "2026-10-19", "all"), /Evil <img[^·]* lists only the next 3 days$/);
-  assert.doesNotMatch(views.summaryText(listings, [], "2026-10-18", "all"), /lists only/);
-  assert.doesNotMatch(views.summaryText(listings, [], "2026-10-19", "programmed"), /lists only/);
+  assert.match(views.summaryText(listings, [], "2026-10-19", "all"), /Evil <img[^·]*: times read for the next 3 days$/);
+  assert.doesNotMatch(views.summaryText(listings, [], "2026-10-18", "all"), /times read for/);
+  assert.doesNotMatch(views.summaryText(listings, [], "2026-10-19", "programmed"), /times read for/);
 });

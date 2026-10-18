@@ -64,31 +64,42 @@ archive-panel redesign and the CI change-scope tool were left out.
   commercial use). Add the single sparse red token and restore the festival data colours. Keep
   the Shaw Theatres integration, including its `x-api-forward-to: internal` header, accepting the
   terms risk of that undocumented endpoint. Keep Peatix. Proxy poster images through FirstRoll.
+- **Review fixes (18 October).** A four-lens adversarial review confirmed 13 distinct defects,
+  all fixed with regression tests that fail without the fix: redirect bodies are now closed
+  unread instead of buffered past the size caps; a request-scoped watchdog shuts the connection
+  when a request's total time runs out, so a host trickling its status line, headers or body
+  cannot hold a thread (DNS lookups remain outside it); listing requests wait only for what is
+  left of each refresh's deadline; non-ASCII poster URLs are percent-encoded and a bad URL is a
+  remembered 502, not a 500; unsettled listings are cached for 30 s rather than 600 s and vary
+  by `Origin`; an empty venue stays empty while a slow refresh runs; the DNS-rebinding guard has
+  an end-to-end test; 29 February resolves to the leap year. In the interface, the header gives
+  the navigation its own row below 1,200 px (five destinations plus the longest signed-in identity
+  need about 1,190 px on one row, measured with the real fonts), quiet day pills keep readable
+  text, focus moves to the day heading after a successful retry, and the copy says FirstRoll reads
+  Shaw a week ahead rather than that Shaw publishes only a week ahead.
 - **Evidence (18 October, on the branch).** Strict TypeScript passes. `npm run test:web`:
-  **147 passed**, including 14 opening-screen, 2 heading-flight, 11 renderer, 13 listing
-  model/view, 10 listing controller, 3 layout and 9 theme cases; the same 147 pass against a
-  minified hosted build (assembled as `build.sh` does, without reinstalling dependencies).
-  `pytest tests`: **397 passed** (one existing Starlette/httpx deprecation warning), including 86
-  screening and poster-proxy cases that use stub transports, a scripted HTTPS handler and fake
-  sockets, never the network. Ruff and `git diff --check` pass. A loopback hosted-mode preview with
-  stubbed listings, in the desktop app's Chromium pane, showed the shader running and entering by
-  click and Escape with focus on the title field; five navigation tabs of 55 × 44 CSS px with no
-  clipping or horizontal overflow at 320 px; Cinemas rendering ok, stale, error and unlisted
-  sources, the Shaw coverage note and the poster fallback after a 404; the festival colours in
-  light mode. The pane was hidden for part of the check, which delayed the dialog's close event
-  until the next paint; that timing is a test-environment artefact, not verified otherwise.
-- **Known limits.** No live venue was read during verification, so parser accuracy against
-  today's pages, Shaw's poster CDN host and the AFA robots.txt question remain to be checked on
-  the server. Shaw and Peatix use undocumented JSON that can change or be withdrawn. Listing and
-  poster caches are per process: after a restart a cached page's posters return 404 until the
-  listings are rebuilt. Venue reads ignore `HTTP(S)_PROXY`. Reduced motion, real Windows/Firefox/
-  Safari rendering and physical devices were not checked in a browser. `tests/test_screenings.py`
-  is 816 lines, above the ~500-line guideline.
+  **149 passed**, and the same suite passes against the minified hosted build produced by
+  `tools/frontend/build.sh`. `pytest tests`: **417 passed** (one existing Starlette/httpx
+  deprecation warning), including 106 screening, service and poster-proxy cases that use stub
+  transports, scripted handlers, loopback sockets and fake sockets, never the network. Ruff and
+  `git diff --check` pass. A loopback hosted-mode preview in the desktop app's Chromium pane, with
+  **live venue reads**, showed: the shader opening, entry by click with focus on the title field,
+  `firstroll.welcome-seen` set and no leftover flight element; the red brand mark, active view and
+  live label in dark and light themes; Cinemas with 22 films at 9 venues for the day and every
+  source read successfully (Filmhouse 25, Alliance Française 2, Shaw 1,584 over its seven days,
+  SGIFF 123, Objectifs 6 screenings; the Asian Film Archive had none in range); all 22 poster
+  images served from FirstRoll's origin, with Google Fonts the only third-party request; no
+  horizontal overflow at 375 px, 901–1,199 px (two-row header) or 1,200 px (one row) with the
+  longest signed-in identity.
+- **Known limits.** Shaw and Peatix use undocumented JSON that can change or be withdrawn, and the
+  AFA robots.txt policy is unconfirmed. Listing and poster caches are per process: after a restart
+  a cached page's posters return 404 until the listings are rebuilt. Venue reads ignore
+  `HTTP(S)_PROXY`, and DNS lookups are not covered by the per-request watchdog. Reduced motion,
+  real Windows/Firefox/Safari rendering and physical devices were not checked in a browser.
 
 Next: open the pull request and pass CI; after merge and owner approval of the release, verify the
-listings from the server (each source's state, posters through the proxy), the opening screen on
-Windows, Firefox and Safari, and raise the AFA robots.txt question with the owner; then split
-`tests/test_screenings.py`.
+listings from the server (each source's state, posters through the proxy) and the opening screen
+on Windows, Firefox and Safari.
 
 ### Static monochrome Discover refresh
 
