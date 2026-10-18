@@ -14,6 +14,19 @@ reports a high-severity advisory. These compatibility overrides do not alter the
 The connector's software licence does not grant rights to Douban content returned through it.
 FirstRoll preserves source links and treats retrieved summaries as attributed secondary criticism.
 
+## Path to the colorful infinity
+
+- Work: "Path to the colorful infinity" by Benoit Marini (benoitM), 2020
+- Source: <https://www.shadertoy.com/view/WtjyzR>
+- Declared licence: CC BY-NC-SA 3.0 (<https://creativecommons.org/licenses/by-nc-sa/3.0/>)
+- Use in FirstRoll: adapted WebGL fragment shader behind the opening screen, in
+  `app/web/src/discovery/colourful-infinity.ts`
+
+The adapted shader remains under CC BY-NC-SA 3.0, not the repository's general licence. The opening
+screen links to the author, source and licence. `docs/SHADER_ATTRIBUTION.md` lists the adaptations
+and the non-commercial release boundary: replace the shader or obtain the author's permission before
+any commercial use. No endorsement by the author is implied.
+
 ## Pi subagent example
 
 - Project: `earendil-works/pi`

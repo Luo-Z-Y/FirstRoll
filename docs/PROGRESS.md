@@ -16,14 +16,90 @@ Status vocabulary:
 
 ## Current Snapshot
 
-**Last updated:** 16 October 2026 (Discover refresh, all-screen monochrome UI and CI trigger
-simplification, below). On 13 October the server
+**Last updated:** 18 October 2026 (opening screen, sparse red accent with festival data colours,
+and Singapore cinema listings with a poster proxy, prepared on `feat/opening-and-accents` and not
+deployed; below). On 16 October: Discover refresh, all-screen monochrome UI and CI trigger
+simplification. On 13 October the server
 also began hosting the Glass Vault hackathon demo behind Caddy until the hackathon ends; see
 "Glass Vault demo on the server" below.
 Before that (5 October 2026): Agent/Azure retirement, codebase organisation
 and the film-duration rounding fix are merged into master. Mobile festival polish
 is prepared in PR #57. Previous mobile browser acceptance passed; physical-touch
 testing remains pending. Merging does not confirm production deployment.
+
+### Opening screen, accents and Singapore cinema listings
+
+**Complete on the branch, not deployed (18 October 2026).** Ported from the owner's local work
+(`e99c354`) onto current `master` with review fixes; the local shelf, results-heading and
+archive-panel redesign and the CI change-scope tool were left out.
+
+- **Opening screen.** The first load in a browser tab opens a modal dialog with Benoit Marini's
+  "Path to the colorful infinity" WebGL shader and a centred **Find a film** button. Clicking,
+  Enter/Space or Escape enters Discover: the label flies into the heading (“Find a film”, now
+  without a full stop) over two seconds and focus moves to the film-title field. Entry sets
+  `sessionStorage` `firstroll.welcome-seen`, so later loads in the tab skip it; blocked storage
+  shows it every load. The renderer mirrors `data-shader-state` onto the dialog so the static,
+  reduced-motion and GPU-failure fallbacks use dark text without `:has()`. Rendering is capped at
+  30 fps and 960 × 540 pixels, pauses when hidden or off screen and frees its WebGL resources.
+  The root `scrollbar-gutter: stable` from the local work was dropped: in Chrome it left a 15 px
+  uncovered strip beside the dialog with classic scrollbars (measured 1,009 of 1,024 px), while
+  Discover on a fresh tab fits the viewport, so no heading shift was measured without it.
+- **Accents.** One red token, `--signal`, paints exactly five rules: the brand mark (now inline
+  SVG using `currentColor`), the active view, the inline fetch and analysis progress bars and the
+  live build label. The festival atlas regains four theme-adapted data colours for pins, legend
+  and calendar bars, beside its existing outlines and patterns. Everything else stays grey;
+  layout and theme tests pin the token counts, the five rules and the contrast pairs.
+- **Cinemas tab.** `GET /api/screenings/singapore` lists up to 14 days from the Asian Film
+  Archive, Filmhouse, Alliance Française de Singapour, SGIFF, Objectifs (via Peatix) and Shaw
+  Theatres (seven days, shown as coverage); Golden Village and the closed ArtScience Cinema are
+  named, not read. Venue reads use a guarded HTTPS transport (per-source host allow-lists,
+  validated redirects, public-address-only connections, timeouts and size caps), single-flight
+  per venue, stale fallback for up to a day and dedicated thread limiters. Posters are proxied
+  through `GET /api/screenings/posters/<id>`, so visitors' browsers contact no venue host until
+  they follow a link. The frontend adds a retry state, a debounced title filter, day counts that
+  match the active filters, coverage and stale indicators and escaped rendering throughout.
+- **Owner decisions (18 October 2026).** Ship the CC BY-NC-SA 3.0 shader on the free,
+  non-commercial public beta with visible attribution (conditions in
+  [Shader attribution](SHADER_ATTRIBUTION.md); replace it or obtain permission before any
+  commercial use). Add the single sparse red token and restore the festival data colours. Keep
+  the Shaw Theatres integration, including its `x-api-forward-to: internal` header, accepting the
+  terms risk of that undocumented endpoint. Keep Peatix. Proxy poster images through FirstRoll.
+- **Review fixes (18 October).** A four-lens adversarial review confirmed 13 distinct defects,
+  all fixed with regression tests that fail without the fix: redirect bodies are now closed
+  unread instead of buffered past the size caps; a request-scoped watchdog shuts the connection
+  when a request's total time runs out, so a host trickling its status line, headers or body
+  cannot hold a thread (DNS lookups remain outside it); listing requests wait only for what is
+  left of each refresh's deadline; non-ASCII poster URLs are percent-encoded and a bad URL is a
+  remembered 502, not a 500; unsettled listings are cached for 30 s rather than 600 s and vary
+  by `Origin`; an empty venue stays empty while a slow refresh runs; the DNS-rebinding guard has
+  an end-to-end test; 29 February resolves to the leap year. In the interface, the header gives
+  the navigation its own row below 1,200 px (five destinations plus the longest signed-in identity
+  need about 1,190 px on one row, measured with the real fonts), quiet day pills keep readable
+  text, focus moves to the day heading after a successful retry, and the copy says FirstRoll reads
+  Shaw a week ahead rather than that Shaw publishes only a week ahead.
+- **Evidence (18 October, on the branch).** Strict TypeScript passes. `npm run test:web`:
+  **149 passed**, and the same suite passes against the minified hosted build produced by
+  `tools/frontend/build.sh`. `pytest tests`: **417 passed** (one existing Starlette/httpx
+  deprecation warning), including 106 screening, service and poster-proxy cases that use stub
+  transports, scripted handlers, loopback sockets and fake sockets, never the network. Ruff and
+  `git diff --check` pass. A loopback hosted-mode preview in the desktop app's Chromium pane, with
+  **live venue reads**, showed: the shader opening, entry by click with focus on the title field,
+  `firstroll.welcome-seen` set and no leftover flight element; the red brand mark, active view and
+  live label in dark and light themes; Cinemas with 22 films at 9 venues for the day and every
+  source read successfully (Filmhouse 25, Alliance Française 2, Shaw 1,584 over its seven days,
+  SGIFF 123, Objectifs 6 screenings; the Asian Film Archive had none in range); all 22 poster
+  images served from FirstRoll's origin, with Google Fonts the only third-party request; no
+  horizontal overflow at 375 px, 901–1,199 px (two-row header) or 1,200 px (one row) with the
+  longest signed-in identity.
+- **Known limits.** Shaw and Peatix use undocumented JSON that can change or be withdrawn, and the
+  AFA robots.txt policy is unconfirmed. Listing and poster caches are per process: after a restart
+  a cached page's posters return 404 until the listings are rebuilt. Venue reads ignore
+  `HTTP(S)_PROXY`, and DNS lookups are not covered by the per-request watchdog. Reduced motion,
+  real Windows/Firefox/Safari rendering and physical devices were not checked in a browser.
+
+Next: open the pull request and pass CI; after merge and owner approval of the release, verify the
+listings from the server (each source's state, posters through the proxy) and the opening screen
+on Windows, Firefox and Safari.
 
 ### Static monochrome Discover refresh
 
@@ -193,10 +269,12 @@ Hosting and recovery procedures:
 |---|---|---|
 | Film discovery | Complete | TMDb primary catalogue with open Wikidata/Wikipedia failover, explicit ambiguity confirmation, attributed dossier enrichment and the always-available native director shelf |
 | Public video resources | Complete | Persistent cumulative catalogue; typed tabs; bounded uploader-description and public YouTube-caption extraction |
-| Product navigation | Complete | Discover, Analyse, Festivals and Settings preserve per-tab view content and scroll; versioned session storage makes Discover refresh-safe |
+| Product navigation | Complete | Discover, Analyse, Festivals, Cinemas (on the branch, not deployed) and Settings preserve per-tab view content and scroll; versioned session storage makes Discover refresh-safe |
+| Opening screen | Complete — not deployed | Once-per-tab CC BY-NC-SA 3.0 shader with visible attribution, heading flight into Discover, reduced-motion and static fallbacks; 27 frontend cases |
+| Singapore cinema listings | Complete — not deployed | Six venue sources through a guarded HTTPS transport, per-venue single-flight caches with stale fallback, poster proxy and dedicated limiters; 86 Python and 23 frontend cases; live venue reads unverified |
 | Festival atlas | Live in v232 | 32 festivals and the Oscars; inline map, month filter and calendar; typical windows, not confirmed edition dates; typed module/build integration preserved |
 | Frontend TypeScript | Complete | Strict composition root, controllers/views, decoders and adapters; shared compiler for local, Docker and hosted assets; 80 frontend tests |
-| Theme support | Complete — monochrome refresh verified locally | System-aware light/dark themes with a locally persisted accessible toggle; neutral UI and local Settings, with original film/media and measured colour data preserved |
+| Theme support | Complete — monochrome refresh verified locally | System-aware light/dark themes with a locally persisted accessible toggle; neutral UI and local Settings, with original film/media and measured colour data preserved; on the branch, one sparse `--signal` red in five rules plus festival data colours |
 | Local settings | Complete | Write-only connector credentials plus local add, remove and index controls for the private library |
 | Hosted public beta | Live — authenticated acceptance pending | v232 on Tencent with exact-run approval; live file/API and festival desktop checks passed; authenticated account/quota checks remain |
 | Accounts and quotas | Complete — hosted quota check pending | Supabase email-and-password authentication (the only provider), atomic daily Deep Study quotas through the Supabase RPC (portable PostgreSQL adapter staged, not active) and a launch-independent localhost test account; authenticated quota verification on the server is outstanding |

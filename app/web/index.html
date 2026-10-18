@@ -11,13 +11,22 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/assets/styles.css?v=20261016-1" />
+  <link rel="stylesheet" href="/assets/styles.css?v=20261018-1" />
 </head>
 <body data-api-base="">
+  <dialog id="welcomeScreen" class="welcome-screen" aria-label="Welcome to FirstRoll" data-shader-state="static">
+    <canvas id="discoveryShader" class="discovery-shader" aria-hidden="true" data-shader-state="static"></canvas>
+    <button id="welcomeEnter" class="welcome-enter" type="button">
+      <span id="welcomeLabel">Find a film</span>
+    </button>
+    <button id="shaderToggle" class="shader-toggle" type="button" aria-label="Pause background animation" hidden>Ⅱ</button>
+    <p class="shader-credit"><a href="https://www.shadertoy.com/view/WtjyzR" target="_blank" rel="noopener noreferrer">Path to the colorful infinity · Benoit Marini</a> · <a href="https://creativecommons.org/licenses/by-nc-sa/3.0/" target="_blank" rel="noopener noreferrer">CC BY-NC-SA 3.0</a></p>
+  </dialog>
+
   <div class="app-shell">
     <header class="site-header">
       <button class="brand" type="button" data-product-view="discovery" aria-label="FirstRoll home">
-        <img class="brand-mark" src="/assets/favicon.svg?v=20260814-6" alt="" aria-hidden="true" />
+        <svg class="brand-mark" viewBox="0 0 64 64" aria-hidden="true" focusable="false"><path d="M2 18H62M2 46H62M21.167 18V46M42.833 18V46" fill="none" stroke="currentColor" stroke-width="5" stroke-linejoin="miter"/></svg>
         <span>FirstRoll</span>
         <span id="buildIdentity" class="build-identity hidden" aria-label="Application build"></span>
       </button>
@@ -26,6 +35,7 @@
         <button class="nav-link active" type="button" data-product-view="discovery">Discover</button>
         <button class="nav-link" type="button" data-product-view="analyse">Analyse</button>
         <button class="nav-link" type="button" data-product-view="festivals">Festivals</button>
+        <button class="nav-link" type="button" data-product-view="screenings">Cinemas</button>
         <button class="nav-link public-settings-nav" type="button" data-product-view="settings">Settings</button>
       </nav>
 
@@ -51,7 +61,7 @@
     <main>
       <section id="product-discovery" class="product-view active">
         <header class="discovery-hero" aria-labelledby="discoveryTitle">
-          <h1 id="discoveryTitle">Find a film.</h1>
+          <h1 id="discoveryTitle">Find a film</h1>
         </header>
 
         <form id="discoveryForm" class="search-stage" role="search" aria-label="Find a film">
@@ -226,6 +236,39 @@
           </div>
           <div class="festival-calendar" data-festival-calendar></div>
         </section>
+      </section>
+
+      <section id="product-screenings" class="product-view" aria-labelledby="screeningsTitle">
+        <div class="analyse-intro">
+          <div>
+            <p class="eyebrow">Singapore screens</p>
+            <h1 id="screeningsTitle">Now showing.<br /><em>Across the island.</em></h1>
+          </div>
+          <p>
+            Independent cinemas, the film archive, cultural screens, festival programmes and Shaw Theatres
+            in one listing for up to the next fortnight (Shaw is read a week ahead). FirstRoll reads times
+            from each venue's public website; confirm and book with the venue.
+          </p>
+        </div>
+        <div class="screenings-toolbar">
+          <div class="screenings-kinds" role="group" aria-label="Filter by venue type" data-screenings-kinds>
+            <button type="button" data-screenings-kind="all" aria-pressed="true">All venues</button>
+            <button type="button" data-screenings-kind="programmed" aria-pressed="false">Art house &amp; archive</button>
+            <button type="button" data-screenings-kind="multiplex" aria-pressed="false">Multiplexes</button>
+          </div>
+          <input class="screenings-search" type="search" placeholder="Filter by title" aria-label="Filter by film title" autocomplete="off" maxlength="80" data-screenings-query />
+        </div>
+        <div class="screenings-days" role="group" aria-label="Choose a day" data-screenings-days></div>
+        <div class="section-heading screenings-heading">
+          <h2 data-screenings-day-title tabindex="-1">Showing</h2>
+          <p class="section-meta" role="status" aria-live="polite" data-screenings-summary></p>
+        </div>
+        <p class="screenings-note" data-screenings-note hidden></p>
+        <div class="screenings-list" data-screenings-list></div>
+        <details class="screenings-sources" data-screenings-sources>
+          <summary>Sources</summary>
+          <ul data-screenings-source-list></ul>
+        </details>
       </section>
 
       <section id="product-settings" class="product-view integrations-view" aria-labelledby="integrationsTitle">
@@ -446,7 +489,8 @@
   <script src="/assets/config.js"></script>
   <script src="/assets/auth-loader.js"></script>
   <script src="/assets/integrations.js?v=20260821-7"></script>
-  <script src="/assets/app.js?v=20261002-1"></script>
+  <script src="/assets/app.js?v=20261018-1"></script>
   <script src="/assets/festivals.js?v=20261009-neutral"></script>
+  <script src="/assets/screenings.js?v=20261018-1"></script>
 </body>
 </html>

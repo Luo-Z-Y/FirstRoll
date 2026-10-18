@@ -28,6 +28,7 @@ def test_missing_local_bundle_has_an_actionable_error(monkeypatch, tmp_path):
         "theme-init",
         "auth-loader",
         "festivals",
+        "screenings",
     ],
 )
 def test_local_bundle_is_compiled_javascript_not_the_raw_entry(monkeypatch, tmp_path, name):

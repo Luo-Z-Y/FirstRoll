@@ -46,6 +46,8 @@ from app.backend.research_stream import (
     StudyRunStore,
     public_progress_message,
 )
+from app.backend.screenings import ScreeningsService, default_adapters
+from app.backend.screenings_api import add_screenings_routes
 from app.backend.settings import CONNECTORS, LocalSettingsStore
 from app.backend.tmdb_discovery import HybridDiscoveryService, TmdbDiscoveryService
 from app.backend.study_observability import StudyTrace
@@ -244,6 +246,7 @@ quota_client = configured_quota_client()
 study_run_store = StudyRunStore()
 study_observability_logger = logging.getLogger("firstroll.study_observability")
 reception_cache: dict[str, dict] = {}
+screenings_service = ScreeningsService(default_adapters())
 web_directory = Path(__file__).resolve().parents[1] / "web"
 
 
@@ -301,6 +304,7 @@ def web_application_bundle(bundle_name: str) -> FileResponse:
         "theme-init",
         "auth-loader",
         "festivals",
+        "screenings",
     }:
         raise HTTPException(status_code=404, detail="Unknown frontend bundle.")
     bundle = web_directory / "generated" / f"{bundle_name}.js"
@@ -830,6 +834,10 @@ def discovery_status() -> dict:
         "authentication": auth_verifier.status(),
     }
     return status
+
+
+# Public Singapore listings and their proxied posters; each venue is cached and fails independently.
+add_screenings_routes(app, screenings_service)
 
 
 @app.get("/api/auth/me")

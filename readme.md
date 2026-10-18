@@ -49,13 +49,49 @@ The header also fits narrow phones without hiding navigation, account controls o
 label. Browser layout/interaction checks passed at 320, 390 and 430 CSS px and desktop;
 physical-device pinch testing and production deployment remain outstanding.
 
+**Cinemas (Singapore):** a **Cinemas** tab lists screenings at the Asian Film Archive,
+Filmhouse, Alliance Française de Singapour, the Singapore International Film Festival, Objectifs
+(tickets sold through Peatix) and Shaw Theatres for up to the next 14 days; Shaw is read seven days
+ahead, and the source list says so. Films are grouped with each venue's times and booking links
+and can be filtered by day, venue type and title; **Study this film** opens the title in Discover.
+The API reads each venue's public website server-side and caches each venue separately, so one
+failing site never hides the others; a slow or failed refresh keeps showing the earlier listings,
+marked as such, for up to a day. Golden Village (its site blocks automated reading) and ArtScience
+Cinema (closed from 1 September 2026) are named instead of listed. Posters are proxied through
+FirstRoll at `/api/screenings/posters/<id>`, so the tab makes visitors' browsers contact no venue
+host until they follow a booking or venue link. Times come from the venues; confirm and book with
+them. On this branch, not yet deployed. Sources, access methods and terms notes:
+[docs/DATA.md](docs/DATA.md#singapore-screening-listings).
+
 ## Interface refresh
 
-Discover now opens with “Find a film.” and the search form, without introductory promotional
-copy. Shared interface colours use a neutral black/white/grey palette in both light and dark
-mode; film artwork retains its original colours. The browser tab title is `FirstRoll`.
-Theme persistence and the existing search flow are unchanged. This is the static first phase,
-on the development branch; an animated background is not implemented or deployed.
+**Opening screen.** The first page load in a browser tab opens a full-viewport WebGL shader with a
+centred **Find a film** button. Clicking it, pressing Enter or Space on it, or pressing Escape
+enters Discover: the label moves and grows into the Discover heading over two seconds while the
+shader fades out over one and a half, then focus moves to the film-title field and GPU resources
+are released. Entering stores `firstroll.welcome-seen` in `sessionStorage`, so reloads and later
+visits in the same tab go straight to the restored view; a new tab shows the opening again, and
+where storage is blocked it appears on every load. Reduced motion enters
+immediately and shows no shader; GPU failure, a lost WebGL context or missing browser features
+leave a static paper gradient with dark text. A pause button, hidden-tab and off-screen suspension,
+a 30 fps and 960 × 540 pixel rendering cap and a safety timeout remain; no external script or
+asset is loaded at runtime.
+
+The shader adapts Benoit Marini's
+[Path to the colorful infinity](https://www.shadertoy.com/view/WtjyzR), licensed **CC BY-NC-SA
+3.0** separately from the repository's general licence. The opening screen links to the author,
+source and licence whenever it is shown, and the licence comment survives minification. On
+18 October 2026 the owner decided to ship it on the free, non-commercial public beta; replace it or
+obtain the author's permission before any commercial use. Conditions and adaptations:
+[docs/SHADER_ATTRIBUTION.md](docs/SHADER_ATTRIBUTION.md).
+
+**Palette.** Discover reads “Find a film” (no full stop, matching the opening label) above the
+search form, without introductory copy. The interface is black, white and grey in both themes with
+one sparse red accent, `--signal`, used only for the brand mark, the active view, progress bars and
+the live build label. The festival atlas keeps four theme-adapted data colours for its status pins,
+legend and calendar bars, alongside its labels, outlines and patterns. Film artwork, video and
+measured colour-analysis results retain their original colours. The browser tab title is
+`FirstRoll`; theme persistence and the search flow are unchanged. On this branch, not yet deployed.
 
 ## Documentation Map
 
@@ -73,6 +109,7 @@ server at `http://127.0.0.1:4173/` (visit that address in your browser).
 | Run the public beta: server, DNS, release approval, rollback, Supabase quota and acceptance | [docs/OPERATIONS.md](docs/OPERATIONS.md) |
 | Data sources and content-use boundaries, storage and lifetimes, and the HTTP API reference | [docs/DATA.md](docs/DATA.md) |
 | Why the major architectural choices were made | [docs/DECISIONS.md](docs/DECISIONS.md) |
+| The opening shader's CC BY-NC-SA 3.0 attribution, adaptations and non-commercial release boundary | [docs/SHADER_ATTRIBUTION.md](docs/SHADER_ATTRIBUTION.md) |
 | Current status, dated milestones, acceptance evidence and next work | [docs/PROGRESS.md](docs/PROGRESS.md) |
 | August 2026 milestone ledger | [docs/PROGRESS_ARCHIVE_2026-08.md](docs/PROGRESS_ARCHIVE_2026-08.md) |
 | The single-server stack files | [infra/vps/README.md](infra/vps/README.md) |
@@ -117,6 +154,9 @@ The original GPL-3.0 licence and contributor attribution remain applicable. See
   reasoning. Hosted progress streams over authenticated SSE; only the owner can fetch the result.
 - **Analyse (local):** import a clip; measure shot and scene boundaries, average shot length, shot
   scale, scene colour and objects (with labelled fallbacks); export JSON and CSV.
+- **Singapore listings:** `GET /api/screenings/singapore` gathers up to 14 days of screenings from
+  six venue sources through host-allow-listed, size- and time-bounded HTTPS reads, with per-venue
+  caching, stale fallback and failure states; posters arrive through FirstRoll's own proxy route.
 - **Accounts and keys:** hosted Supabase sign-up, sign-in, password recovery, saved films and an
   account Settings view with the daily allowance. Optional personal DeepSeek or YouTube keys live only
   in that tab's memory; a personal DeepSeek key never bypasses hosted enablement or quota. The hosted
@@ -124,9 +164,10 @@ The original GPL-3.0 licence and contributor attribution remain applicable. See
   write-only in the Git-ignored `.firstroll/`.
 - **Workspace:** state survives view changes and refreshes (per-tab `sessionStorage`, 24 hours);
   five recent searches stay in the browser; newer searches cancel stale requests;
-  keyboard-accessible tabs, specific retry states and black, white and grey light/dark themes,
-  including local Settings. Festival statuses use labels, outlines and patterns rather than hue.
-  Film artwork, video and measured colour-analysis results retain their original colours.
+  keyboard-accessible tabs, specific retry states and black, white and grey light/dark themes
+  with one sparse red accent, including local Settings. Festival statuses add data colours to
+  their labels, outlines and patterns. Film artwork, video and measured colour-analysis results
+  retain their original colours.
 
 ## Architecture
 
@@ -141,7 +182,7 @@ flowchart LR
         LAPP --> CLIP["Clip analysis"]
     end
     SUPA[("Supabase<br/>Auth · PostgreSQL + RLS · quota")]
-    PROV["Catalogue, criticism<br/>and video providers"]
+    PROV["Catalogue, criticism and video<br/>providers · Singapore venue sites"]
     LLM["DeepSeek"]
     B --> CADDY
     B -->|"sign-in · saved films"| SUPA
@@ -209,10 +250,12 @@ FirstRoll/
 │   │   ├── study_service.py  # DeepSeek synthesis, citation checks and quality gate
 │   │   ├── public_study.py   # built-in analytical frameworks for hosted studies
 │   │   ├── research_stream.py, study_observability.py  # SSE progress, run store, timings
+│   │   ├── screenings*.py    # Singapore venue adapters, guarded HTTPS, poster proxy and routes
 │   │   ├── settings.py, settings.html  # local write-only credential store and console
 │   │   └── main.py           # FastAPI application and routes
 │   └── web/                  # index.html/styles.css; app.ts composition root; src/ typed features;
-│                             #   auth.ts, local-auth.ts, integrations.ts, festivals.ts; generated/ ignored
+│                             #   auth.ts, local-auth.ts, integrations.ts, festivals.ts, screenings.ts;
+│                             #   generated/ ignored
 ├── database/migrations/      # portable identity-neutral quota schema (PostgreSQL client)
 ├── supabase/migrations/      # Supabase quota functions and RLS-owned account tables
 ├── docs/                     # see the Documentation Map
@@ -285,12 +328,18 @@ dates: [docs/PROGRESS.md](docs/PROGRESS.md).
 - Inherited computer-vision dependencies are large and platform-sensitive; object and shot-scale
   analysis may use clearly labelled fallbacks, and an analysis runs on the local API's event loop,
   so other requests wait until it finishes.
+- Singapore listings depend on each venue's current pages; Shaw Theatres and Peatix are read
+  through undocumented JSON their own sites use and may change or object without notice. Listing
+  and poster caches are process memory, so a restart re-reads every venue and, until the listings
+  are rebuilt, a cached page's poster links answer 404 and fall back to the title's initial.
 
 ## Licence
 
 FirstRoll inherits the GNU General Public License, version 3 or (at your option) any later version,
 from pyCinemetrics; see [LICENSE.txt](LICENSE.txt). The MIT-licensed `moria97/douban-mcp` connector
-(built into the hosted image from a pinned revision) and the Pi subagent extension adapted from
+(built into the hosted image from a pinned revision), the opening screen's CC BY-NC-SA 3.0 shader
+adapted from Benoit Marini's "Path to the colorful infinity" (non-commercial use only; see
+[docs/SHADER_ATTRIBUTION.md](docs/SHADER_ATTRIBUTION.md)) and the Pi subagent extension adapted from
 `earendil-works/pi` are listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Software
 licences grant no rights to provider content: reviews, Wikipedia text, posters and videos remain
 their owners' and are shown with attribution and source links. This product uses the TMDB API but

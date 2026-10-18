@@ -88,7 +88,7 @@ def test_loopback_preview_uses_a_separate_persistent_unlimited_test_account(appl
     assert 'runtimeConfig.accountUi ? \'<button class="detail-action"' in app
     assert "account studies remain today" in app
     assert 'src="/assets/integrations.js?v=20260821-7"' in index
-    assert 'src="/assets/app.js?v=20261002-1"' in index
+    assert 'src="/assets/app.js?v=20261018-1"' in index
     assert '"X-FirstRoll-DeepSeek-Key"' in integrations
     assert '"X-FirstRoll-YouTube-Key"' in integrations
     assert "localStorage" not in integrations
@@ -245,8 +245,8 @@ def test_archive_pullout_collapses_before_zoom_can_clip_its_copy() -> None:
     styles = (WEB / "styles.css").read_text(encoding="utf-8")
     views = (WEB / "src" / "discovery" / "views.ts").read_text(encoding="utf-8")
 
-    assert "/assets/styles.css?v=20261016-1" in index
-    assert "/assets/app.js?v=20261002-1" in index
+    assert "/assets/styles.css?v=20261018-1" in index
+    assert "/assets/app.js?v=20261018-1" in index
     assert "closet3d.js" not in index
     assert 'class="archive-pullout-shell"' in views
     assert "container-type: inline-size" in styles
@@ -346,7 +346,7 @@ def test_discovery_and_dossier_expose_a_clear_task_hierarchy(application_source:
 
     assert 'class="discovery-hero"' in index
     assert 'id="discoveryTitle"' in index
-    assert "Find a film." in index
+    assert '<h1 id="discoveryTitle">Find a film</h1>' in index
     assert "Required</small>" in index
     assert index.count("Optional</small>") == 2
     assert ".discovery-hero" in styles
@@ -366,7 +366,7 @@ def test_discovery_workspace_survives_refresh_and_product_navigation(application
     app = application_source
     index = (WEB / "index.html").read_text(encoding="utf-8")
 
-    assert "/assets/app.js?v=20261002-1" in index
+    assert "/assets/app.js?v=20261018-1" in index
     assert 'const DISCOVERY_SESSION_KEY = "firstroll.discovery-session"' in app
     assert 'const PRODUCT_SESSION_KEY = "firstroll.product-session"' in app
     assert "window.sessionStorage.setItem(DISCOVERY_SESSION_KEY" in app
@@ -442,7 +442,13 @@ def test_director_shelf_renders_immediately_then_enriches_posters(application_so
     assert "state.discovery.archiveSelectionId !== primary.id" in enrichment
     assert "hydrateDirectorShelf(primary.id" in enrichment
     assert "FirstRollCloset" not in app
-    assert "WebGL" not in app
+    # WebGL is confined to the opening screen's shader; the director shelf stays plain DOM.
+    webgl = sorted(
+        path.relative_to(WEB).as_posix()
+        for path in [WEB / "app.ts", *(WEB / "src").rglob("*.ts")]
+        if "WebGL" in path.read_text(encoding="utf-8")
+    )
+    assert webgl == ["src/discovery/atmosphere.ts", "src/discovery/colourful-infinity.ts"]
     assert "Blender" not in app
     assert "!/^Q\\d+$/i.test(text)" in films
     assert "candidate_cap = min(48, max(limit * 2, limit))" in discovery
@@ -484,3 +490,58 @@ def test_festival_atlas_tab_is_self_contained_and_shipped() -> None:
     assert "month === state.month ? 0 : month" in festivals
     assert 'id: "sgiff"' in festivals
     assert 'id: "oscars", kind: "awards"' in festivals
+
+
+def test_opening_screen_credits_its_non_commercial_shader() -> None:
+    index = (WEB / "index.html").read_text(encoding="utf-8")
+    shader = (WEB / "src/discovery/colourful-infinity.ts").read_text(encoding="utf-8")
+    notices = (ROOT / "THIRD_PARTY_NOTICES.md").read_text(encoding="utf-8")
+
+    # The dialog opens from script only (never an `open` attribute), before the application shell.
+    dialog = '<dialog id="welcomeScreen" class="welcome-screen" aria-label="Welcome to FirstRoll" data-shader-state="static">'
+    assert dialog in index
+    assert index.index(dialog) < index.index('<div class="app-shell">')
+    assert '<canvas id="discoveryShader" class="discovery-shader"' in index
+    # CC BY-NC-SA 3.0 attribution stays visible and documented wherever the shader ships.
+    for url in ("https://www.shadertoy.com/view/WtjyzR", "https://creativecommons.org/licenses/by-nc-sa/3.0/"):
+        assert f'href="{url}" target="_blank" rel="noopener noreferrer"' in index
+        assert url in shader
+        assert url in notices
+    assert "Benoit Marini" in index
+    assert (ROOT / "docs/SHADER_ATTRIBUTION.md").is_file()
+    assert shader.lstrip().startswith("/*!")
+
+
+def test_singapore_listings_tab_is_shipped_and_reads_only_the_firstroll_api() -> None:
+    index = (WEB / "index.html").read_text(encoding="utf-8")
+    app = (WEB / "src/context.ts").read_text(encoding="utf-8")
+    screenings = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in (WEB / "src/screenings").glob("*.ts")
+    )
+    build = (ROOT / "tools/frontend/build.cjs").read_text(encoding="utf-8")
+
+    assert 'data-product-view="screenings">Cinemas</button>' in index
+    assert 'id="product-screenings"' in index
+    # A successful retry moves focus here, so the heading must accept scripted focus.
+    assert '<h2 data-screenings-day-title tabindex="-1">' in index
+    # The seven-day Shaw window is how far FirstRoll reads, not a claim about Shaw itself.
+    assert "(Shaw is read a week ahead)" in index
+    assert "Shaw publishes" not in index
+    assert "lists only the next" not in screenings
+    assert '"/assets/screenings.js?v=20261018-1"' in index
+    assert 'screenings: requiredElement<HTMLElement>("product-screenings")' in app
+    assert '"screenings"' in build
+    assert not (WEB / "screenings.js").exists()
+    # Venue sites are read server-side; the browser only calls FirstRoll and links out.
+    assert "/api/screenings/singapore" in screenings
+    assert "gv.com.sg" not in screenings
+    assert "http://" not in screenings
+    assert "https://" not in screenings
+    # Posters arrive only through FirstRoll's own proxy path, never from a venue host.
+    assert r"POSTER_PATH = /^\/api\/screenings\/posters\/[0-9a-f]{32}$/" in screenings
+    assert "${apiBase}${group.poster}" in screenings
+    # Unread multiplexes are a plain link out, built from the URL the API reports.
+    assert 'class="screenings-elsewhere" href="${escapeHtml(source.url)}" target="_blank" rel="noopener noreferrer"' in screenings
+    assert 'rel="noopener noreferrer"' in screenings
+    assert 'referrerpolicy="no-referrer"' in screenings

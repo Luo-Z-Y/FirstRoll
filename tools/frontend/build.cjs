@@ -23,7 +23,7 @@ function bundleApplication(options = {}) {
   });
 }
 
-const adapterNames = ["auth", "local-auth", "integrations", "config", "theme-init", "auth-loader", "festivals"];
+const adapterNames = ["auth", "local-auth", "integrations", "config", "theme-init", "auth-loader", "festivals", "screenings"];
 function bundleAdapters(outdir, { minify = false } = {}) {
   return buildSync({
     absWorkingDir: root,
