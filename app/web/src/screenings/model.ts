@@ -4,7 +4,8 @@ import { filmKey, searchKey } from "./titles";
 export { filmKey, searchKey } from "./titles";
 
 export type VenueKind = "multiplex" | "independent" | "cinematheque" | "museum" | "cultural" | "festival";
-export type KindFilter = "all" | "multiplex" | "programmed";
+// "all" or the id of one source that has listings (shaw, sgiff, filmhouse and so on).
+export type VenueFilter = string;
 export type SourceState = "ok" | "empty" | "error" | "unlisted";
 
 export interface Screening {
@@ -60,9 +61,30 @@ export interface FilmGroup {
 }
 
 export interface ListingFilter {
+  // null shows every day in the listing range at once.
   day: string | null;
-  kind: KindFilter;
+  venue: VenueFilter;
   query: string;
+}
+
+export interface VenueOption {
+  id: string;
+  label: string;
+}
+
+// Short pill labels for the sources people name in conversation; others use the API name.
+const VENUE_LABELS: Record<string, string> = {
+  shaw: "Shaw",
+  sgiff: "SGIFF",
+  filmhouse: "Filmhouse",
+  afa: "Film Archive",
+  peatix: "Objectifs",
+  "alliance-francaise": "Alliance Française",
+  gv: "GV",
+};
+
+export function venueLabel(source: Pick<SourceStatus, "id" | "name">): string {
+  return Object.prototype.hasOwnProperty.call(VENUE_LABELS, source.id) ? VENUE_LABELS[source.id] : source.name;
 }
 
 const KINDS: readonly VenueKind[] = ["multiplex", "independent", "cinematheque", "museum", "cultural", "festival"];
@@ -200,15 +222,31 @@ export function isProgrammed(kind: VenueKind | undefined): boolean {
   return kind !== undefined && kind !== "multiplex";
 }
 
-export function kindIncludes(filter: KindFilter, kind: VenueKind | undefined): boolean {
-  if (filter === "multiplex") return !isProgrammed(kind);
-  if (filter === "programmed") return isProgrammed(kind);
-  return true;
+// One pill per source that has anything listed, in the API's source order.
+export function venueOptions(listings: Listings): VenueOption[] {
+  const listed = new Set(listings.screenings.map((screening) => screening.source));
+  return listings.sources
+    // "all" is the All venues pill, so a source can never take that id.
+    .filter((source) => source.id !== "all" && source.state !== "unlisted" && listed.has(source.id))
+    .map((source) => ({ id: source.id, label: venueLabel(source) }));
 }
 
-// True when the chosen day lies past the last day FirstRoll reads from this source.
-export function beyondCoverage(source: SourceStatus, day: string | null, from: string): boolean {
-  return Boolean(day && from && source.coverageDays !== null && day >= addDays(from, source.coverageDays));
+// Multiplexes FirstRoll does not read (Golden Village) are offered beside the pills as links.
+export function unreadMultiplexes(listings: Listings): SourceStatus[] {
+  return listings.sources.filter((source) => source.state === "unlisted" && source.kind === "multiplex"
+    && Boolean(source.url));
+}
+
+export function isVenueFilter(listings: Listings, value: unknown): value is VenueFilter {
+  return value === "all" || venueOptions(listings).some((option) => option.id === value);
+}
+
+// True when a source stops short of what is shown: past its last read day for a chosen
+// day, or short of the whole range when every date is shown at once.
+export function beyondCoverage(source: SourceStatus, day: string | null, from: string, to = ""): boolean {
+  if (!from || source.coverageDays === null) return false;
+  const lastRead = addDays(from, source.coverageDays);
+  return day ? day >= lastRead : Boolean(to) && to >= lastRead;
 }
 
 function screeningKey(screening: Screening): string {
@@ -220,16 +258,15 @@ function matcher(listings: Listings, filter: Omit<ListingFilter, "day">) {
   const sources = new Map(listings.sources.map((source) => [source.id, source]));
   const query = searchKey(filter.query);
   return (screening: Screening) => {
-    const source = sources.get(screening.source) || null;
-    if (!kindIncludes(filter.kind, source?.kind)) return null;
+    if (filter.venue !== "all" && screening.source !== filter.venue) return null;
     if (query && !searchKey(screening.title).includes(query)) return null;
-    return { source };
+    return { source: sources.get(screening.source) || null };
   };
 }
 
 export function availableDays(
   listings: Listings,
-  filter: Omit<ListingFilter, "day"> = { kind: "all", query: "" },
+  filter: Omit<ListingFilter, "day"> = { venue: "all", query: "" },
 ): Map<string, number> {
   const matches = matcher(listings, filter);
   const counts = new Map<string, Set<string>>();
@@ -242,10 +279,27 @@ export function availableDays(
   return new Map(Array.from(counts, ([day, films]) => [day, films.size]));
 }
 
+// Distinct films across every day, matching what the "All dates" view lists.
+export function filmCount(listings: Listings, filter: Omit<ListingFilter, "day"> = { venue: "all", query: "" }): number {
+  const matches = matcher(listings, filter);
+  return new Set(listings.screenings.filter((screening) => matches(screening)).map(screeningKey)).size;
+}
+
+// Sort key for a film's soonest showing; undated times sort after timed ones that day.
+function soonest(group: FilmGroup): string {
+  let first = "";
+  for (const entry of group.venues) {
+    for (const screening of entry.showings) {
+      const key = screening.startsAt || `${screening.date}T99`;
+      if (!first || key < first) first = key;
+    }
+  }
+  return first;
+}
+
 export function groupFilms(listings: Listings, filter: ListingFilter): FilmGroup[] {
   const matches = matcher(listings, filter);
-  const unlistedMultiplexes = listings.sources.filter((source) => source.state === "unlisted"
-    && source.kind === "multiplex" && Boolean(source.url));
+  const unlistedMultiplexes = unreadMultiplexes(listings);
   const groups = new Map<string, FilmGroup>();
   for (const screening of listings.screenings) {
     if (filter.day && screening.date !== filter.day) continue;
@@ -276,16 +330,16 @@ export function groupFilms(listings: Listings, filter: ListingFilter): FilmGroup
     group.venues.sort((a, b) => Number(isProgrammed(b.source?.kind)) - Number(isProgrammed(a.source?.kind))
       || a.venue.localeCompare(b.venue));
   }
-  // Programmed (archive, museum and independent) screenings are rarer, so they lead.
+  // Across every date, programmed films still lead (otherwise dozens of multiplex releases
+  // with morning sessions bury them), and within each group the soonest showing comes first.
+  if (!filter.day) {
+    const first = new Map(ordered.map((group) => [group, soonest(group)]));
+    return ordered.sort((a, b) => Number(b.programmed) - Number(a.programmed)
+      || (first.get(a) || "").localeCompare(first.get(b) || "")
+      || a.title.localeCompare(b.title));
+  }
+  // Within a day, programmed (archive, museum and independent) screenings are rarer, so they lead.
   return ordered.sort((a, b) => Number(b.programmed) - Number(a.programmed)
     || b.venues.length - a.venues.length
     || a.title.localeCompare(b.title));
-}
-
-// The first day with anything showing, preferring today.
-export function initialDay(listings: Listings): string | null {
-  const days = dayRange(listings.from, listings.to);
-  if (!days.length) return null;
-  const counts = availableDays(listings);
-  return days.find((day) => counts.has(day)) || days[0];
 }

@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/assets/styles.css?v=20261018-1" />
+  <link rel="stylesheet" href="/assets/styles.css?v=20261023-1" />
 </head>
 <body data-api-base="">
   <dialog id="welcomeScreen" class="welcome-screen" aria-label="Welcome to FirstRoll" data-shader-state="static">
@@ -251,16 +251,14 @@
           </p>
         </div>
         <div class="screenings-toolbar">
-          <div class="screenings-kinds" role="group" aria-label="Filter by venue type" data-screenings-kinds>
-            <button type="button" data-screenings-kind="all" aria-pressed="true">All venues</button>
-            <button type="button" data-screenings-kind="programmed" aria-pressed="false">Art house &amp; archive</button>
-            <button type="button" data-screenings-kind="multiplex" aria-pressed="false">Multiplexes</button>
+          <div class="screenings-kinds" role="group" aria-label="Filter by venue" data-screenings-venues>
+            <button type="button" data-screenings-venue="all" aria-pressed="true">All venues</button>
           </div>
           <input class="screenings-search" type="search" placeholder="Filter by title" aria-label="Filter by film title" autocomplete="off" maxlength="80" data-screenings-query />
         </div>
         <div class="screenings-days" role="group" aria-label="Choose a day" data-screenings-days></div>
         <div class="section-heading screenings-heading">
-          <h2 data-screenings-day-title tabindex="-1">Showing</h2>
+          <h2 data-screenings-day-title tabindex="-1">All dates</h2>
           <p class="section-meta" role="status" aria-live="polite" data-screenings-summary></p>
         </div>
         <p class="screenings-note" data-screenings-note hidden></p>
@@ -491,6 +489,6 @@
   <script src="/assets/integrations.js?v=20260821-7"></script>
   <script src="/assets/app.js?v=20261018-1"></script>
   <script src="/assets/festivals.js?v=20261009-neutral"></script>
-  <script src="/assets/screenings.js?v=20261018-1"></script>
+  <script src="/assets/screenings.js?v=20261023-1"></script>
 </body>
 </html>

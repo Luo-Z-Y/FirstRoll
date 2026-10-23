@@ -45,7 +45,7 @@ Splitting code is useful when each file has a clear responsibility, not merely f
 | `theme-init.ts`, `auth-loader.ts` | Early theme restoration and account-provider selection | Follow startup before the app |
 | `festivals.ts`, `src/festivals/controller.ts` | Self-contained atlas entry, map gestures, filtering and calendar rendering | Follow the Festivals tab |
 | `src/festivals/data.ts`, `model.ts`, `land.ts` | Typed catalogue, pure date/projection helpers and public-domain geometry | Update typical windows or understand map coordinates |
-| `screenings.ts`, `src/screenings/controller.ts` | Self-contained Cinemas entry; one fetch of the listings with a timeout and retry, debounced title filter, day/kind filters and live summary | Follow the Cinemas tab |
+| `screenings.ts`, `src/screenings/controller.ts` | Self-contained Cinemas entry; one fetch of the listings with a timeout and retry, debounced title filter, All dates and day pills, per-source venue pills and live summary | Follow the Cinemas tab |
 | `src/screenings/model.ts`, `views.ts`, `titles.ts` | Runtime decoding (HTTPS links and FirstRoll poster paths only), grouping, escaped markup and conservative title keys | Change listing markup or decoding |
 | `src/discovery/welcome.ts`, `welcome-heading.ts` | Once-per-tab opening dialog and the heading flight into Discover | Change the opening screen or its entry |
 | `src/discovery/atmosphere.ts`, `colourful-infinity.ts` | WebGL renderer with pause, suspension and static fallback; the CC BY-NC-SA 3.0 shader source | Change the shader controller; keep the licence comment and attribution |
