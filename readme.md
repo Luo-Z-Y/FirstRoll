@@ -52,15 +52,20 @@ physical-device pinch testing and production deployment remain outstanding.
 **Cinemas (Singapore):** a **Cinemas** tab lists screenings at the Asian Film Archive,
 Filmhouse, Alliance Française de Singapour, the Singapore International Film Festival, Objectifs
 (tickets sold through Peatix) and Shaw Theatres for up to the next 14 days; Shaw is read seven days
-ahead, and the source list says so. Films are grouped with each venue's times and booking links
-and can be filtered by day, venue type and title; **Study this film** opens the title in Discover.
+ahead, and the source list says so. The tab opens on **All dates**: every film showing in the
+range appears once (archive, festival and independent screenings first, then multiplex
+releases, each soonest first) with each venue's next few dated times and booking links. Day pills
+narrow it to one day, source pills (Shaw, SGIFF, Filmhouse, Film Archive, Objectifs, Alliance
+Française) to one source, and a title filter to matching films; a **GV ↗** link beside the pills
+opens Golden Village's own site. **Study this film** opens the title in Discover.
 The API reads each venue's public website server-side and caches each venue separately, so one
 failing site never hides the others; a slow or failed refresh keeps showing the earlier listings,
 marked as such, for up to a day. Golden Village (its site blocks automated reading) and ArtScience
 Cinema (closed from 1 September 2026) are named instead of listed. Posters are proxied through
 FirstRoll at `/api/screenings/posters/<id>`, so the tab makes visitors' browsers contact no venue
 host until they follow a booking or venue link. Times come from the venues; confirm and book with
-them. On this branch, not yet deployed. Sources, access methods and terms notes:
+them. Deployed on 18 October 2026; the All dates view and source pills are on this branch.
+Sources, access methods and terms notes:
 [docs/DATA.md](docs/DATA.md#singapore-screening-listings).
 
 ## Interface refresh

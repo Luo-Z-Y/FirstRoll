@@ -1,3 +1,4 @@
+import re
 from pathlib import Path
 
 
@@ -245,7 +246,7 @@ def test_archive_pullout_collapses_before_zoom_can_clip_its_copy() -> None:
     styles = (WEB / "styles.css").read_text(encoding="utf-8")
     views = (WEB / "src" / "discovery" / "views.ts").read_text(encoding="utf-8")
 
-    assert "/assets/styles.css?v=20261018-1" in index
+    assert "/assets/styles.css?v=20261023-1" in index
     assert "/assets/app.js?v=20261018-1" in index
     assert "closet3d.js" not in index
     assert 'class="archive-pullout-shell"' in views
@@ -523,13 +524,20 @@ def test_singapore_listings_tab_is_shipped_and_reads_only_the_firstroll_api() ->
 
     assert 'data-product-view="screenings">Cinemas</button>' in index
     assert 'id="product-screenings"' in index
+    # mountScreenings returns null when any hook is missing, which would silently leave the
+    # tab unloaded, so every hook the controller queries must exist in the shipped markup.
+    controller = (WEB / "src/screenings/controller.ts").read_text(encoding="utf-8")
+    hooks = set(re.findall(r'section\.querySelector<\w+>\("\[(data-screenings-[a-z-]+)\]"\)', controller))
+    assert len(hooks) == 8 and {"data-screenings-venues", "data-screenings-days", "data-screenings-list"} <= hooks
+    for hook in hooks:
+        assert hook in index, hook
     # A successful retry moves focus here, so the heading must accept scripted focus.
     assert '<h2 data-screenings-day-title tabindex="-1">' in index
     # The seven-day Shaw window is how far FirstRoll reads, not a claim about Shaw itself.
     assert "(Shaw is read a week ahead)" in index
     assert "Shaw publishes" not in index
     assert "lists only the next" not in screenings
-    assert '"/assets/screenings.js?v=20261018-1"' in index
+    assert '"/assets/screenings.js?v=20261023-1"' in index
     assert 'screenings: requiredElement<HTMLElement>("product-screenings")' in app
     assert '"screenings"' in build
     assert not (WEB / "screenings.js").exists()

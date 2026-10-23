@@ -2096,7 +2096,7 @@ button.festival-calendar-row:hover, .festival-calendar-row.is-selected { backgro
 .screenings-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
 .screenings-kinds, .screenings-days { display: flex; flex-wrap: wrap; gap: 6px; }
 .screenings-days { margin-bottom: 26px; }
-.screenings-kinds button, .screenings-days button {
+.screenings-kinds button, .screenings-days button, .screenings-kinds .screenings-venue-link {
   display: inline-flex; align-items: baseline; gap: 5px;
   border: 1px solid var(--line); border-radius: 999px; padding: 6px 12px;
   background: var(--control-fill); color: var(--ink-soft);
@@ -2106,7 +2106,9 @@ button.festival-calendar-row:hover, .festival-calendar-row.is-selected { backgro
 .screenings-days button span { font-family: "IBM Plex Mono", monospace; font-size: 0.62rem; opacity: 0.7; }
 /* Days with no films stay enabled, so mark them with a dashed rule rather than fading the label. */
 .screenings-days button.is-quiet { border-style: dashed; }
-.screenings-kinds button:hover, .screenings-days button:hover { background: var(--control-fill-hover); color: var(--ink); }
+/* A venue FirstRoll does not read is a link out, so it is dashed rather than a filter pill. */
+.screenings-kinds .screenings-venue-link { border-style: dashed; text-decoration: none; }
+.screenings-kinds button:hover, .screenings-days button:hover, .screenings-kinds .screenings-venue-link:hover { background: var(--control-fill-hover); color: var(--ink); }
 .screenings-kinds button[aria-pressed="true"], .screenings-days button[aria-pressed="true"] { background: var(--inverse-bg); color: var(--inverse-text); border-color: transparent; }
 .screenings-search { width: min(260px, 100%); padding: 8px 12px; border: 1px solid var(--line); border-radius: 999px; background: var(--control-fill); color: var(--ink); font: 500 0.82rem "DM Sans", sans-serif; }
 .screenings-list { display: flex; flex-direction: column; border-top: 1px solid var(--line); }
@@ -2153,7 +2155,7 @@ button.festival-calendar-row:hover, .festival-calendar-row.is-selected { backgro
   #product-screenings .analyse-intro > p { font-size: 0.9rem; }
   .screenings-search { width: 100%; min-height: 44px; font-size: 1rem; }
   .screenings-kinds, .screenings-days { flex-wrap: nowrap; overflow-x: auto; padding: 4px 2px 10px; gap: 8px; }
-  .screenings-kinds button, .screenings-days button { flex: 0 0 auto; min-height: 44px; align-items: center; font-size: 0.875rem; }
+  .screenings-kinds button, .screenings-days button, .screenings-kinds .screenings-venue-link { flex: 0 0 auto; min-height: 44px; align-items: center; font-size: 0.875rem; }
   .screenings-film { grid-template-columns: 56px minmax(0, 1fr); gap: 12px; }
   .screenings-poster { width: 56px; }
   .screenings-venues li { grid-template-columns: 1fr; gap: 6px; }

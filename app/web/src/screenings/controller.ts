@@ -1,8 +1,11 @@
-import { availableDays, dayLabel, dayRange, decodeListings, groupFilms, initialDay, isIsoDay } from "./model";
-import type { KindFilter, Listings } from "./model";
+import {
+  availableDays, dayLabel, dayRange, decodeListings, filmCount, groupFilms, isIsoDay, isVenueFilter,
+  unreadMultiplexes, venueOptions,
+} from "./model";
+import type { Listings, VenueFilter } from "./model";
 import {
   dayPillsMarkup, emptyMarkup, failureMarkup, filmMarkup, loadingMarkup, posterFallbackMarkup,
-  sourcesMarkup, summaryText, unlistedNote,
+  sourcesMarkup, summaryText, unlistedNote, venuePillsMarkup,
 } from "./views";
 
 const FETCH_TIMEOUT_MS = 30_000;
@@ -19,13 +22,10 @@ export interface ScreeningsOptions {
 export interface ScreeningsState {
   phase: "idle" | "loading" | "ready" | "failed";
   listings: Listings | null;
+  // null shows every date at once (the default).
   day: string | null;
-  kind: KindFilter;
+  venue: VenueFilter;
   query: string;
-}
-
-function isKindFilter(value: unknown): value is KindFilter {
-  return value === "all" || value === "multiplex" || value === "programmed";
 }
 
 function normaliseQuery(value: string): string {
@@ -45,7 +45,7 @@ function submitForm(form: HTMLFormElement) {
 // Optional listing view: loads once, on first visit, from the FirstRoll API only.
 export function mountScreenings(section: HTMLElement, options: ScreeningsOptions) {
   const refs = {
-    kinds: section.querySelector<HTMLElement>("[data-screenings-kinds]"),
+    venues: section.querySelector<HTMLElement>("[data-screenings-venues]"),
     query: section.querySelector<HTMLInputElement>("[data-screenings-query]"),
     days: section.querySelector<HTMLElement>("[data-screenings-days]"),
     dayTitle: section.querySelector<HTMLElement>("[data-screenings-day-title]"),
@@ -54,12 +54,12 @@ export function mountScreenings(section: HTMLElement, options: ScreeningsOptions
     sources: section.querySelector<HTMLElement>("[data-screenings-source-list]"),
     note: section.querySelector<HTMLElement>("[data-screenings-note]"),
   };
-  if (!refs.kinds || !refs.query || !refs.days || !refs.dayTitle || !refs.summary || !refs.list || !refs.sources || !refs.note) return null;
-  const { kinds, query, days, dayTitle, summary, list, sources, note } = refs;
+  if (!refs.venues || !refs.query || !refs.days || !refs.dayTitle || !refs.summary || !refs.list || !refs.sources || !refs.note) return null;
+  const { venues, query, days, dayTitle, summary, list, sources, note } = refs;
   const fetcher = options.fetcher || window.fetch.bind(window);
   const timeoutMs = options.timeoutMs ?? FETCH_TIMEOUT_MS;
   const debounceMs = options.debounceMs ?? QUERY_DEBOUNCE_MS;
-  const state: ScreeningsState = { phase: "idle", listings: null, day: null, kind: "all", query: "" };
+  const state: ScreeningsState = { phase: "idle", listings: null, day: null, venue: "all", query: "" };
   let queryTimer: number | null = null;
 
   // The summary is a polite live region: write it only when its words change.
@@ -84,9 +84,13 @@ export function mountScreenings(section: HTMLElement, options: ScreeningsOptions
       const listings = decodeListings(await response.json());
       state.listings = listings;
       state.phase = "ready";
-      state.day = initialDay(listings);
+      // Every date at once by default; a day pill narrows it.
+      state.day = null;
+      if (!isVenueFilter(listings, state.venue)) state.venue = "all";
       state.query = normaliseQuery(query.value || "");
       sources.innerHTML = sourcesMarkup(listings);
+      // The pills depend only on the listings, so they are built once per load.
+      venues.innerHTML = venuePillsMarkup(venueOptions(listings), state.venue, unreadMultiplexes(listings));
       const unlisted = unlistedNote(listings);
       note.hidden = !unlisted;
       note.textContent = unlisted;
@@ -102,27 +106,31 @@ export function mountScreenings(section: HTMLElement, options: ScreeningsOptions
   }
 
   function renderDays(listings: Listings) {
-    const counts = availableDays(listings, { kind: state.kind, query: state.query });
+    const filter = { venue: state.venue, query: state.query };
+    const counts = availableDays(listings, filter);
     // Re-rendering replaces the pressed pill, so keep keyboard focus on the chosen day.
     const active = document.activeElement as HTMLElement | null;
     const focusDay = active && days.contains(active) ? active.dataset?.screeningsDay : undefined;
-    days.innerHTML = dayPillsMarkup(dayRange(listings.from, listings.to), listings.from, state.day, counts);
-    if (isIsoDay(focusDay)) days.querySelector<HTMLElement>(`[data-screenings-day="${focusDay}"]`)?.focus();
+    days.innerHTML = dayPillsMarkup(dayRange(listings.from, listings.to), listings.from, state.day, counts,
+      filmCount(listings, filter));
+    if (focusDay === "all" || isIsoDay(focusDay)) {
+      days.querySelector<HTMLElement>(`[data-screenings-day="${focusDay}"]`)?.focus();
+    }
   }
 
   function render() {
     const listings = state.listings;
     if (!listings || state.phase !== "ready") return;
     renderDays(listings);
-    kinds.querySelectorAll<HTMLElement>("[data-screenings-kind]").forEach((button) => {
-      button.setAttribute("aria-pressed", String(button.dataset.screeningsKind === state.kind));
+    venues.querySelectorAll<HTMLElement>("[data-screenings-venue]").forEach((button) => {
+      button.setAttribute("aria-pressed", String(button.dataset.screeningsVenue === state.venue));
     });
-    const films = groupFilms(listings, { day: state.day, kind: state.kind, query: state.query });
-    dayTitle.textContent = state.day ? dayLabel(state.day, listings.from) : "Showing";
+    const films = groupFilms(listings, { day: state.day, venue: state.venue, query: state.query });
+    dayTitle.textContent = state.day ? dayLabel(state.day, listings.from) : "All dates";
     list.innerHTML = films.length
-      ? films.map((film) => filmMarkup(film, options.apiBase)).join("")
-      : emptyMarkup(state.query);
-    announce(summaryText(listings, films, state.day, state.kind));
+      ? films.map((film) => filmMarkup(film, options.apiBase, { allDates: state.day === null, today: listings.from })).join("")
+      : emptyMarkup(state.query, state.day === null, state.venue !== "all");
+    announce(summaryText(listings, films, state.day, state.venue));
   }
 
   // Hand a title to Discover's existing search rather than building a second lookup.
@@ -151,14 +159,20 @@ export function mountScreenings(section: HTMLElement, options: ScreeningsOptions
   days.addEventListener("click", (event) => {
     const button = (event.target as Element | null)?.closest<HTMLElement>("[data-screenings-day]");
     const day = button?.dataset.screeningsDay;
-    if (!state.listings || !isIsoDay(day) || !dayRange(state.listings.from, state.listings.to).includes(day)) return;
-    state.day = day;
+    if (!state.listings) return;
+    if (day === "all") {
+      state.day = null;
+    } else if (isIsoDay(day) && dayRange(state.listings.from, state.listings.to).includes(day)) {
+      state.day = day;
+    } else {
+      return;
+    }
     render();
   });
-  kinds.addEventListener("click", (event) => {
-    const kind = (event.target as Element | null)?.closest<HTMLElement>("[data-screenings-kind]")?.dataset.screeningsKind;
-    if (!isKindFilter(kind)) return;
-    state.kind = kind;
+  venues.addEventListener("click", (event) => {
+    const venue = (event.target as Element | null)?.closest<HTMLElement>("[data-screenings-venue]")?.dataset.screeningsVenue;
+    if (!state.listings || !isVenueFilter(state.listings, venue)) return;
+    state.venue = venue;
     render();
   });
   // Filtering waits for a pause in typing, so the live summary is not read per keystroke.

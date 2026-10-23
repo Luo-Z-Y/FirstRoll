@@ -16,9 +16,9 @@ Status vocabulary:
 
 ## Current Snapshot
 
-**Last updated:** 18 October 2026 (opening screen, sparse red accent with festival data colours,
-and Singapore cinema listings with a poster proxy, prepared on `feat/opening-and-accents` and not
-deployed; below). On 16 October: Discover refresh, all-screen monochrome UI and CI trigger
+**Last updated:** 23 October 2026 (Cinemas "All dates" view and per-source filter, below). On
+18 October the opening screen, sparse red accent with festival data colours and Singapore cinema
+listings with a poster proxy were deployed as `5b29776` (PR #67). On 16 October: Discover refresh, all-screen monochrome UI and CI trigger
 simplification. On 13 October the server
 also began hosting the Glass Vault hackathon demo behind Caddy until the hackathon ends; see
 "Glass Vault demo on the server" below.
@@ -27,9 +27,38 @@ and the film-duration rounding fix are merged into master. Mobile festival polis
 is prepared in PR #57. Previous mobile browser acceptance passed; physical-touch
 testing remains pending. Merging does not confirm production deployment.
 
+### Cinemas: all dates at once and per-source filter
+
+**Complete on the branch (23 October 2026).** At the owner's request the Cinemas tab now opens
+on an **All dates** view: every film in the 14-day range appears once. Archive, festival and
+independent screenings lead and multiplex releases follow, each group sorted by soonest showing;
+an earlier soonest-first-only order put dozens of Shaw releases with morning sessions ahead of the
+first programmed film (about 18,000 px down on a 375 px phone in a review probe). Each venue lists
+its next dated times ("Thu 23 Oct · 19:30"; undated showings read "… · times on venue site"),
+three for multiplexes and six for others, before a link to the venue's own site. Day pills still
+narrow the list to one day. The venue-type pills (art house and archive, multiplexes) are replaced
+by one pill per source that has listings (Shaw, SGIFF, Filmhouse, Film Archive, Objectifs,
+Alliance Française), built once per load; Golden Village, which the owner named but whose listings
+are not read, appears as a dashed **GV ↗** link out beside them rather than as a filter. A genre
+grouping was considered and dropped: no venue publishes genres, and a Wikidata sample of current
+titles returned no usable genres for festival films and some wrong matches. The coverage note now
+also appears in the All dates view when Shaw's seven days stop short of the range, but only while
+Shaw is actually serving listings. Frontend only; the API is unchanged. A review of the first
+version found and fixed: the ordering above, coverage claimed for a failed source, venue pills
+rebuilt on every keystroke, built-in object names leaking into labels, undated times shown as a
+bare day, the all-dates mode inferred from the listing range, empty-state wording, and a missing
+test that every hook the controller needs exists in `index.html`. Evidence (23 October): strict
+TypeScript passes; `npm run test:web` **162 passed**, also against the minified hosted build from
+`tools/frontend/build.sh`; `pytest tests` **417 passed**; Ruff and `git diff --check` pass. A
+hosted-mode preview with live venue reads showed 164 films at 29 venues on All dates
+(archive, festival and independent first), Shaw 31 and SGIFF 103 films under their pills, a day
+pill narrowing SGIFF to 17 films with plain times, the GV link opening `gv.com.sg`, and at 375 px
+scrollable pill rows with 44 px targets and no horizontal overflow. Known limit: All dates is one
+long page on phones (about 65,000 px for 164 films).
+
 ### Opening screen, accents and Singapore cinema listings
 
-**Complete on the branch, not deployed (18 October 2026).** Ported from the owner's local work
+**Deployed 18 October 2026 as `5b29776` (PR #67, release run `39120388287`).** Ported from the owner's local work
 (`e99c354`) onto current `master` with review fixes; the local shelf, results-heading and
 archive-panel redesign and the CI change-scope tool were left out.
 
@@ -97,9 +126,9 @@ archive-panel redesign and the CI change-scope tool were left out.
   `HTTP(S)_PROXY`, and DNS lookups are not covered by the per-request watchdog. Reduced motion,
   real Windows/Firefox/Safari rendering and physical devices were not checked in a browser.
 
-Next: open the pull request and pass CI; after merge and owner approval of the release, verify the
-listings from the server (each source's state, posters through the proxy) and the opening screen
-on Windows, Firefox and Safari.
+Next: the opening screen on Windows, Firefox and Safari and on physical devices. Server-side
+listings and the poster proxy were verified live on 18 October (every source read; posters served
+by FirstRoll with nosniff and sandbox headers).
 
 ### Static monochrome Discover refresh
 
