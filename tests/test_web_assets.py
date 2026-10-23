@@ -232,7 +232,9 @@ def test_production_image_pins_and_bundles_douban_mcp() -> None:
     assert "FROM node:22-bookworm-slim AS douban-mcp-builder" in dockerfile
     assert "DOUBAN_MCP_REF=1adc26d39532db893616ceb7ea851733948ae69e" in dockerfile
     assert "npm ci --ignore-scripts --audit=false" in dockerfile
-    assert "dependencies.@modelcontextprotocol/sdk=1.31.0" in dockerfile  # GHSA-6qxp-vccf-f47h
+    # 1.32.1 fixes GHSA-6qxp-vccf-f47h, GHSA-22jm-h49p-29qw, GHSA-46jr-4wx8-v453,
+    # GHSA-6prh-2h8m-c8cw and GHSA-rvq5-wwqv-78pq.
+    assert "dependencies.@modelcontextprotocol/sdk=1.32.1" in dockerfile
     assert "overrides.path-to-regexp=8.4.2" in dockerfile
     assert "overrides.qs=6.16.0" in dockerfile  # GHSA-x5fp-wj9c-mxmx, GHSA-4mjr-xmp4-gh2g
     assert "npm audit --omit=dev --audit-level=high" in dockerfile
