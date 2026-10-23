@@ -194,6 +194,12 @@ the `qs` 6.15.3 override. The Dockerfile now pins the patched `@modelcontextprot
 `qs` 6.16.0. Evidence: the image builds with the audit gate passing, and the hosted Douban MCP
 handshake lists `list-movie-reviews` and `search-movie` as before.
 
+**Again on 23 October 2026.** Four further SDK advisories, GHSA-22jm-h49p-29qw and
+GHSA-46jr-4wx8-v453 (high) and GHSA-6prh-2h8m-c8cw and GHSA-rvq5-wwqv-78pq (moderate), all fixed in
+1.32.0, failed the same gate for every pull request. The Dockerfile now pins
+`@modelcontextprotocol/sdk` 1.32.1, the latest patch release; the image builds with the audit gate
+passing and the Douban MCP handshake is unchanged.
+
 ### Codebase organisation checkpoint
 
 Frontend development tooling is grouped under `tools/frontend/`: `build.cjs`,
